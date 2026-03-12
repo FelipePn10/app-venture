@@ -1,0 +1,23 @@
+export interface ErpScreen {
+  code: string;
+  title: string;
+  description: string;
+}
+
+export const ERP_SCREENS: ErpScreen[] = [
+  {
+    code: 'FITE0200',
+    title: 'Cadastro de Itens',
+    description: 'Cadastro e manutenção de itens do estoque.'
+  },
+  {
+    code: 'FCOM0100',
+    title: 'Painel Comercial',
+    description: 'Visão inicial de negociações e propostas.'
+  },
+  {
+    code: 'FFIN0300',
+    title: 'Resumo Financeiro',
+    description: 'Acompanhamento consolidado de indicadores financeiros.'
+  }
+];
