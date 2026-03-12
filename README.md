@@ -134,7 +134,7 @@ npm run build
 
 ### Executar como desktop (Tauri)
 ```bash
-npm run tauri:dev
+npx tauri dev
 ```
 
 > Se você estiver no Linux e receber erro de ícone ausente (`failed to open icon ... src-tauri/icons/icon.png`), esta base já cria automaticamente um ícone padrão no `build.rs` antes do build.
