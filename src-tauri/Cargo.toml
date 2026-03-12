@@ -1,0 +1,15 @@
+[package]
+name = "erp_venture_desktop"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.1.0", features = [] }
+
+[dependencies]
+serde_json = "1"
+tauri = { version = "2.1.0", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
