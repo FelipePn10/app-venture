@@ -134,6 +134,45 @@ npm run build
 
 ### Executar como desktop (Tauri)
 ```bash
+npm run tauri:dev
+```
+
+### Erro: `npm error code EJSONPARSE` no `package.json`
+
+Esse erro indica JSON inválido (geralmente vírgula ausente entre scripts).
+
+1. Restaure/atualize o arquivo:
+```bash
+git checkout -- package.json
+# ou
+git pull
+```
+2. Valide o JSON:
+```bash
+npm run doctor:package
+```
+3. Instale e rode o desktop:
+```bash
+npm install
+npm run tauri:dev
+```
+
+### Erro: `npm error Missing script: "tauri:dev"`
+
+Isso indica que você está em uma versão antiga do branch/local clone. Nesta base, o script já existe no `package.json`.
+
+Atualize seu repositório local e reinstale dependências:
+
+```bash
+git pull
+npm install
+npm run tauri:dev
+```
+
+Se ainda falhar, confira os scripts disponíveis:
+
+```bash
+npm run
 npx tauri dev
 ```
 
