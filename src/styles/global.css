@@ -84,10 +84,8 @@ body {
   box-shadow: 0 0 0 4px rgba(31, 138, 85, 0.15);
 }
 
-.primary-button {
-  margin-top: 0.5rem;
-  background: var(--color-primary);
-  color: #ffffff;
+.primary-button,
+.secondary-button {
   border: none;
   border-radius: var(--radius-md);
   padding: 0.8rem 1rem;
@@ -96,8 +94,23 @@ body {
   transition: background-color 0.2s ease;
 }
 
+.primary-button {
+  margin-top: 0.5rem;
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
 .primary-button:hover:enabled {
   background: var(--color-primary-hover);
+}
+
+.secondary-button {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+.secondary-button:hover {
+  background: #c4e9d5;
 }
 
 .primary-button:disabled {
@@ -108,4 +121,114 @@ body {
 .error-message {
   color: var(--color-danger);
   font-size: 0.9rem;
+}
+
+.dashboard-layout {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.dashboard-header p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: minmax(290px, 360px) 1fr;
+  gap: 1rem;
+}
+
+.erp-menu,
+.dashboard-placeholder,
+.screen-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+}
+
+.erp-menu h2,
+.dashboard-placeholder h2,
+.screen-card h2 {
+  margin-top: 0;
+}
+
+.erp-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.erp-menu li button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #f8fcf9;
+  padding: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.erp-menu li button:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(31, 138, 85, 0.1);
+}
+
+.erp-menu li button strong {
+  color: var(--color-primary);
+}
+
+.erp-menu li button span {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.erp-menu li button small {
+  color: var(--color-text-muted);
+}
+
+.dashboard-placeholder p {
+  color: var(--color-text-muted);
+}
+
+.screen-layout {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.screen-layout header {
+  margin-bottom: 1rem;
+}
+
+.screen-layout h1 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.screen-layout p,
+.screen-layout li {
+  color: var(--color-text-muted);
 }

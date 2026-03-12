@@ -28,6 +28,12 @@ Frontend desktop inicial de um ERP moderno, com foco em **alta performance**, ba
 │   ├── components/
 │   │   ├── auth/
 │   │   │   └── LoginPage.tsx
+│   │   ├── dashboard/
+│   │   │   ├── DashboardPage.tsx
+│   │   │   └── ErpMenu.tsx
+│   │   ├── screens/
+│   │   │   ├── Fite0200Page.tsx
+│   │   │   └── ScreenHostPage.tsx
 │   │   └── ui/
 │   │       ├── Button.tsx
 │   │       └── InputField.tsx
@@ -41,7 +47,10 @@ Frontend desktop inicial de um ERP moderno, com foco em **alta performance**, ba
 │   ├── styles/
 │   │   └── global.css
 │   ├── types/
-│   │   └── auth.ts
+│   │   ├── auth.ts
+│   │   └── erpScreen.ts
+│   ├── utils/
+│   │   └── windowManager.ts
 │   └── main.tsx
 ├── src-tauri/
 │   ├── src/
@@ -95,9 +104,11 @@ Frontend desktop inicial de um ERP moderno, com foco em **alta performance**, ba
 
 - Janela desktop inicial via Tauri.
 - Rota inicial `/login` em `HashRouter` (compatível com build desktop/file protocol).
-- Tela de login sem cadastro.
+- Tela de login sem cadastro com redirecionamento para dashboard após autenticação.
+- Dashboard inicial com menu de telas ERP e abertura de cada tela em nova janela desktop.
+- Tela de teste implementada: `FITE0200` (Cadastro de Itens) em rota dedicada `/screen/FITE0200`.
 - Submissão simulada pronta para integração real com API de autenticação Go.
-- Estado de autenticação base em store global.
+- Estado de autenticação com persistência local para suportar multi-janela.
 
 ---
 

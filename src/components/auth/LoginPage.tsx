@@ -1,10 +1,12 @@
 import { FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { login } from '@/services/authService';
 import { useAuthStore } from '@/store/authStore';
 
 export function LoginPage(): JSX.Element {
+  const navigate = useNavigate();
   const setAuthData = useAuthStore((state) => state.setAuthData);
 
   const [email, setEmail] = useState('');
@@ -20,6 +22,7 @@ export function LoginPage(): JSX.Element {
     try {
       const response = await login({ email, password });
       setAuthData(response.token, response.userName);
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       const defaultMessage = 'Falha ao autenticar. Verifique suas credenciais.';
       setErrorMessage(error instanceof Error ? error.message : defaultMessage);
