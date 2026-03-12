@@ -149,3 +149,13 @@ npx tauri dev
 3. Definir Design Tokens versionados e biblioteca de componentes corporativa.
 4. Incluir testes unitários e E2E (Vitest + Playwright).
 5. Implementar observabilidade de frontend (logs, tracing e métricas de UX).
+
+
+## Resolução de conflito da branch (GitHub)
+
+Se o GitHub indicar conflito nos arquivos `README.md`, `src-tauri/build.rs`, `src-tauri/src/main.rs` e `src/services/authService.ts`, mantenha a versão deste branch (mais recente), que inclui:
+
+- compatibilidade Linux explícita no README;
+- fallback automático para `icons/icon.png` no `build.rs`;
+- `windows_subsystem` restrito a release Windows no `main.rs`;
+- `authService` com fluxo mock/real organizado em funções separadas.

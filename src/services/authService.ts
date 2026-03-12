@@ -17,11 +17,11 @@ async function simulateLogin(payload: LoginPayload): Promise<AuthResponse> {
   };
 }
 
-export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  if (USE_MOCK_AUTH) {
-    return simulateLogin(payload);
-  }
-
+async function loginWithApi(payload: LoginPayload): Promise<AuthResponse> {
   const response = await httpClient.post<AuthResponse>('/auth/login', payload);
   return response.data;
+}
+
+export async function login(payload: LoginPayload): Promise<AuthResponse> {
+  return USE_MOCK_AUTH ? simulateLogin(payload) : loginWithApi(payload);
 }

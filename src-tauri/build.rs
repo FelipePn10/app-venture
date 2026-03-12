@@ -12,6 +12,8 @@ fn ensure_default_icon() {
     fs::create_dir_all(parent).expect("failed to create icons directory");
   }
 
+  // 1x1 PNG transparente para evitar panic do macro do Tauri quando o ícone
+  // ainda não foi provisionado no projeto.
   const PNG_1X1_TRANSPARENT: &[u8] = &[
     0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
     0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -26,5 +28,5 @@ fn ensure_default_icon() {
 
 fn main() {
   ensure_default_icon();
-  tauri_build::build()
+  tauri_build::build();
 }
