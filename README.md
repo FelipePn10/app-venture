@@ -109,6 +109,18 @@ Frontend desktop inicial de um ERP moderno, com foco em **alta performance**, ba
 - Rust toolchain
 - Dependências de sistema do Tauri (de acordo com seu SO)
 
+
+### Linux (Ubuntu/Debian) dependências do Tauri
+```bash
+sudo apt update
+sudo apt install -y \
+  libwebkit2gtk-4.1-dev \
+  libgtk-3-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev \
+  patchelf
+```
+
 ### Desenvolvimento web (UI)
 ```bash
 npm install
@@ -122,8 +134,10 @@ npm run build
 
 ### Executar como desktop (Tauri)
 ```bash
-cargo tauri dev
+npx tauri dev
 ```
+
+> Se você estiver no Linux e receber erro de ícone ausente (`failed to open icon ... src-tauri/icons/icon.png`), esta base já cria automaticamente um ícone padrão no `build.rs` antes do build.
 
 > Para integração com backend Go REST/JSON, ajuste o `VITE_API_URL` e coloque `VITE_USE_MOCK_AUTH=false` no `.env` para usar autenticação real via `/auth/login`.
 
@@ -135,3 +149,13 @@ cargo tauri dev
 3. Definir Design Tokens versionados e biblioteca de componentes corporativa.
 4. Incluir testes unitários e E2E (Vitest + Playwright).
 5. Implementar observabilidade de frontend (logs, tracing e métricas de UX).
+
+
+## Resolução de conflito da branch (GitHub)
+
+Se o GitHub indicar conflito nos arquivos `README.md`, `src-tauri/build.rs`, `src-tauri/src/main.rs` e `src/services/authService.ts`, mantenha a versão deste branch (mais recente), que inclui:
+
+- compatibilidade Linux explícita no README;
+- fallback automático para `icons/icon.png` no `build.rs`;
+- `windows_subsystem` restrito a release Windows no `main.rs`;
+- `authService` com fluxo mock/real organizado em funções separadas.
