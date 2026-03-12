@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --max-warnings 0",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
     "lint": "eslint . --ext ts,tsx --max-warnings 0"
   },
   "dependencies": {
@@ -18,6 +21,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.1.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.15.0",
