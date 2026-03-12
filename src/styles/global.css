@@ -1,0 +1,111 @@
+:root {
+  --color-bg: #f6fbf8;
+  --color-surface: #ffffff;
+  --color-primary: #1f8a55;
+  --color-primary-hover: #166a40;
+  --color-primary-soft: #d9f2e4;
+  --color-text: #1e2a24;
+  --color-text-muted: #5c6b63;
+  --color-border: #d5e2da;
+  --color-danger: #c0392b;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-card: 0 20px 50px rgba(19, 66, 44, 0.12);
+  font-family: 'Segoe UI', 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #f7fcf9 0%, #edf7f1 100%);
+  color: var(--color-text);
+}
+
+.login-layout {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-card);
+}
+
+.login-card h1 {
+  margin: 0 0 0.5rem;
+  color: var(--color-primary);
+  font-size: 1.65rem;
+}
+
+.login-card p {
+  margin: 0 0 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #28483a;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: #fdfefe;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(31, 138, 85, 0.15);
+}
+
+.primary-button {
+  margin-top: 0.5rem;
+  background: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.primary-button:hover:enabled {
+  background: var(--color-primary-hover);
+}
+
+.primary-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
