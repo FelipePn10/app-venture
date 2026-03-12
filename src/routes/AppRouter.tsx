@@ -27,14 +27,7 @@ export function AppRouter(): JSX.Element {
             </PrivateRoute>
           }
         />
-        <Route
-          path="/screen/:code"
-          element={
-            <PrivateRoute>
-              <ScreenHostPage />
-            </PrivateRoute>
-          }
-        />
+        <Route path="/screen/:code" element={<ScreenHostPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </HashRouter>

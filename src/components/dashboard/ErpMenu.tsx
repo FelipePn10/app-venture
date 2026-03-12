@@ -7,15 +7,21 @@ interface ErpMenuProps {
 
 export function ErpMenu({ screens, onOpenScreen }: ErpMenuProps): JSX.Element {
   return (
-    <aside className="erp-menu" aria-label="Menu de telas do ERP">
-      <h2>Telas do ERP</h2>
+    <aside className="erp-menu glass-card" aria-label="Menu de telas do ERP">
+      <div className="erp-menu-header">
+        <h2>Navegação ERP</h2>
+        <p>Selecione o código da rotina para abrir.</p>
+      </div>
+
       <ul>
         {screens.map((screen) => (
           <li key={screen.code}>
             <button type="button" onClick={() => onOpenScreen(screen.code)}>
-              <strong>{screen.code}</strong>
-              <span>{screen.title}</span>
-              <small>{screen.description}</small>
+              <div className="screen-chip">{screen.code}</div>
+              <div className="screen-meta">
+                <span>{screen.title}</span>
+                <small>{screen.description}</small>
+              </div>
             </button>
           </li>
         ))}
