@@ -134,25 +134,7 @@ npm run build
 
 ### Executar como desktop (Tauri)
 ```bash
-npm run tauri:dev
-```
-
-### Erro: `npm error Missing script: "tauri:dev"`
-
-Isso indica que você está em uma versão antiga do branch/local clone. Nesta base, o script já existe no `package.json`.
-
-Atualize seu repositório local e reinstale dependências:
-
-```bash
-git pull
-npm install
-npm run tauri:dev
-```
-
-Se ainda falhar, confira os scripts disponíveis:
-
-```bash
-npm run
+npx tauri dev
 ```
 
 > Se você estiver no Linux e receber erro de ícone ausente (`failed to open icon ... src-tauri/icons/icon.png`), esta base já cria automaticamente um ícone padrão no `build.rs` antes do build.

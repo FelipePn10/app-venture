@@ -10,6 +10,7 @@
     "lint": "eslint . --ext ts,tsx --max-warnings 0",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
+    "lint": "eslint . --ext ts,tsx --max-warnings 0"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",
