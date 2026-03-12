@@ -107,6 +107,7 @@ Frontend desktop inicial de um ERP moderno, com foco em **alta performance**, ba
 - Tela de login sem cadastro com redirecionamento para dashboard após autenticação.
 - Dashboard inicial com menu de telas ERP e abertura de cada tela em nova janela desktop.
 - Tela de teste implementada: `FITE0200` (Cadastro de Itens) em rota dedicada `/screen/FITE0200`.
+- Capabilities Tauri habilitadas para criação/foco de janelas ERP (`src-tauri/capabilities/default.json`).
 - Submissão simulada pronta para integração real com API de autenticação Go.
 - Estado de autenticação com persistência local para suportar multi-janela.
 

@@ -12,7 +12,10 @@ export function DashboardPage(): JSX.Element {
     clearAuthData: state.clearAuthData
   }));
 
-  const [lastOpenedScreen, setLastOpenedScreen] = useState<string | null>(null);
+  const [lastOpenedScreen, setLastOpenedScreen] = useState<string>('Nenhuma');
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [isOpeningScreen, setIsOpeningScreen] = useState(false);
+
   const welcomeName = useMemo(() => userName ?? 'Usuário', [userName]);
 
   function handleLogout(): void {
@@ -21,44 +24,68 @@ export function DashboardPage(): JSX.Element {
   }
 
   async function handleOpenScreen(screenCode: string): Promise<void> {
-    await openErpScreenWindow(screenCode);
-    setLastOpenedScreen(screenCode);
+    setFeedbackMessage(null);
+    setIsOpeningScreen(true);
+
+    try {
+      await openErpScreenWindow(screenCode);
+      setLastOpenedScreen(screenCode);
+      setFeedbackMessage(`Tela ${screenCode} aberta com sucesso.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao abrir a tela selecionada.';
+      setFeedbackMessage(`Erro: ${message}`);
+    } finally {
+      setIsOpeningScreen(false);
+    }
   }
 
   return (
     <main className="dashboard-layout">
-      <header className="dashboard-header glass-card">
+      <header className="dashboard-header">
         <div>
-          <span className="dashboard-kicker">ERP VENTURE</span>
-          <h1>Central de Operações</h1>
-          <p>Olá, {welcomeName}. Escolha um módulo no menu para abrir em uma nova janela.</p>
+          <span className="dashboard-kicker">ERP VENTURE PLATFORM</span>
+          <h1>Dashboard Operacional</h1>
+          <p>Bem-vindo, {welcomeName}. Selecione uma rotina para abrir em janela dedicada.</p>
         </div>
         <button type="button" className="secondary-button" onClick={handleLogout}>
-          Sair
+          Encerrar sessão
         </button>
       </header>
 
-      <section className="dashboard-content">
-        <ErpMenu screens={ERP_SCREENS} onOpenScreen={handleOpenScreen} />
+      <section className="dashboard-body">
+        <ErpMenu screens={ERP_SCREENS} onOpenScreen={handleOpenScreen} isLoading={isOpeningScreen} />
 
-        <article className="dashboard-placeholder glass-card">
-          <h2>Visão Geral</h2>
-          <p>
-            Este painel foi redesenhado para uma navegação limpa e corporativa. O menu lateral
-            dispara janelas independentes por tela ERP, mantendo fluxo multi-janela.
-          </p>
+        <section className="dashboard-main-panel">
+          <article className="overview-card">
+            <h2>Visão executiva</h2>
+            <p>
+              Interface redesenhada com foco corporativo: melhor legibilidade, melhor contraste,
+              tipografia profissional e navegação orientada a rotinas ERP.
+            </p>
 
-          <div className="status-card">
-            <span>Última tela aberta</span>
-            <strong>{lastOpenedScreen ?? 'Nenhuma tela aberta ainda'}</strong>
-          </div>
+            <div className="metrics-grid">
+              <div className="metric-box">
+                <span>Telas disponíveis</span>
+                <strong>{ERP_SCREENS.length}</strong>
+              </div>
+              <div className="metric-box">
+                <span>Última rotina aberta</span>
+                <strong>{lastOpenedScreen}</strong>
+              </div>
+            </div>
 
-          <div className="quick-actions">
-            <button type="button" className="primary-button" onClick={() => handleOpenScreen('FITE0200')}>
-              Abrir FITE0200 (teste)
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => handleOpenScreen('FITE0200')}
+              disabled={isOpeningScreen}
+            >
+              {isOpeningScreen ? 'Abrindo...' : 'Abrir FITE0200 (teste)'}
             </button>
-          </div>
-        </article>
+
+            {feedbackMessage ? <p className="feedback-message">{feedbackMessage}</p> : null}
+          </article>
+        </section>
       </section>
     </main>
   );

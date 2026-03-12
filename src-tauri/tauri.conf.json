@@ -19,7 +19,8 @@
         "fullscreen": false,
         "center": true,
         "minWidth": 1024,
-        "minHeight": 680
+        "minHeight": 680,
+        "label": "main"
       }
     ]
   },
