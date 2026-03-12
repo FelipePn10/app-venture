@@ -10,9 +10,7 @@
     "lint": "eslint . --ext ts,tsx --max-warnings 0",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "doctor:package": "node -e \"JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json válido')\""
-    "tauri:build": "tauri build"
-    "lint": "eslint . --ext ts,tsx --max-warnings 0"
+    "doctor:package": "node scripts/verify-package-json.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",

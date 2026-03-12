@@ -141,6 +141,9 @@ npm run tauri:dev
 
 Esse erro indica JSON inválido (geralmente vírgula ausente entre scripts).
 
+Se o erro citar algo como `line 14 column 5` após `doctor:package`, normalmente é vírgula ausente entre scripts no `package.json`.
+Nesta base, o script `doctor:package` foi simplificado para evitar escape complexo de aspas.
+
 1. Restaure/atualize o arquivo:
 ```bash
 git checkout -- package.json
@@ -173,7 +176,6 @@ Se ainda falhar, confira os scripts disponíveis:
 
 ```bash
 npm run
-npx tauri dev
 ```
 
 > Se você estiver no Linux e receber erro de ícone ausente (`failed to open icon ... src-tauri/icons/icon.png`), esta base já cria automaticamente um ícone padrão no `build.rs` antes do build.
