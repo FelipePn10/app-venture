@@ -173,6 +173,7 @@ Se ainda falhar, confira os scripts disponíveis:
 
 ```bash
 npm run
+npx tauri dev
 ```
 
 > Se você estiver no Linux e receber erro de ícone ausente (`failed to open icon ... src-tauri/icons/icon.png`), esta base já cria automaticamente um ícone padrão no `build.rs` antes do build.
