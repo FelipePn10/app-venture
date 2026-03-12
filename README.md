@@ -139,9 +139,28 @@ npx tauri dev
 
 > Se você estiver no Linux e receber erro de ícone ausente (`failed to open icon ... src-tauri/icons/icon.png`), esta base já cria automaticamente um ícone padrão no `build.rs` antes do build.
 
+
+> Se aparecer `npm error could not determine executable to run`, significa que o Tauri CLI não está disponível no projeto. Esta base já inclui `@tauri-apps/cli` em `devDependencies`; rode `npm install` novamente e use `npm run tauri:dev`.
+
 > Para integração com backend Go REST/JSON, ajuste o `VITE_API_URL` e coloque `VITE_USE_MOCK_AUTH=false` no `.env` para usar autenticação real via `/auth/login`.
 
 ---
+
+## Fluxo recomendado: desenvolvimento no Linux, entrega para Windows
+
+- **Desenvolva e teste no Linux** com `npm run tauri:dev`.
+- O código já está preparado para Linux (dev) e Windows (release), incluindo `windows_subsystem` condicionado ao target Windows em release.
+- **Build final Windows**: recomendável gerar em máquina/runner Windows para evitar problemas de toolchain cross-compile.
+
+Comandos úteis:
+
+```bash
+# Desenvolvimento desktop no Linux
+npm run tauri:dev
+
+# Build desktop (no sistema atual)
+npm run tauri:build
+```
 
 ## Próximos passos recomendados
 1. Criar layout autenticado (sidebar, header, área de conteúdo).
