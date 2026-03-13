@@ -172,6 +172,26 @@ npm install
 npm run tauri:dev
 ```
 
+### Erro: `Module name, "@tauri-apps/api/webviewWindow" does not resolve to a valid URL`
+
+Causa comum: import dinâmico fora do resolver do Vite/Tauri ou instalação local inconsistente após merge.
+
+Esta base já foi corrigida para usar import dinâmico compatível com Vite/Tauri no `windowManager`.
+
+Passos recomendados no seu ambiente:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run tauri:dev
+```
+
+Se persistir, valide se o pacote existe:
+
+```bash
+npm ls @tauri-apps/api
+```
+
 ### Erro: `npm error Missing script: "tauri:dev"`
 
 Isso indica que você está em uma versão antiga do branch/local clone. Nesta base, o script já existe no `package.json`.

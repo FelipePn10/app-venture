@@ -19,13 +19,16 @@ function buildScreenRoute(screenCode: string): string {
   return `/#/screen/${encodeURIComponent(screenCode)}`;
 }
 
-async function loadTauriWebviewWindow(): Promise<TauriWebviewWindowConstructor> {
-  const dynamicImport = new Function('modulePath', 'return import(modulePath)') as (
-    modulePath: string
-  ) => Promise<{ WebviewWindow: TauriWebviewWindowConstructor }>;
+async function loadTauriWebviewWindow(): Promise<TauriWebviewWindowConstructor | null> {
+  try {
+    const tauriModule = (await import('@tauri-apps/api/webviewWindow')) as {
+      WebviewWindow: TauriWebviewWindowConstructor;
+    };
 
-  const tauriModule = await dynamicImport('@tauri-apps/api/webviewWindow');
-  return tauriModule.WebviewWindow;
+    return tauriModule.WebviewWindow;
+  } catch {
+    return null;
+  }
 }
 
 export async function openErpScreenWindow(screenCode: string): Promise<void> {
@@ -34,33 +37,35 @@ export async function openErpScreenWindow(screenCode: string): Promise<void> {
   if ('__TAURI_INTERNALS__' in window) {
     const WebviewWindow = await loadTauriWebviewWindow();
 
-    const label = `screen-${screenCode.toLowerCase()}`;
-    const existingWindow = await WebviewWindow.getByLabel(label);
+    if (WebviewWindow) {
+      const label = `screen-${screenCode.toLowerCase()}`;
+      const existingWindow = await WebviewWindow.getByLabel(label);
 
-    if (existingWindow) {
-      await existingWindow.setFocus();
+      if (existingWindow) {
+        await existingWindow.setFocus();
+        return;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const screenWindow = new WebviewWindow(label, {
+          title: getScreenTitle(screenCode),
+          url: route,
+          width: 1220,
+          height: 780,
+          minWidth: 1024,
+          minHeight: 680,
+          center: true,
+          resizable: true
+        });
+
+        screenWindow.once('tauri://created', () => resolve());
+        screenWindow.once('tauri://error', (error: unknown) => {
+          reject(new Error(String(error)));
+        });
+      });
+
       return;
     }
-
-    await new Promise<void>((resolve, reject) => {
-      const screenWindow = new WebviewWindow(label, {
-        title: getScreenTitle(screenCode),
-        url: route,
-        width: 1220,
-        height: 780,
-        minWidth: 1024,
-        minHeight: 680,
-        center: true,
-        resizable: true
-      });
-
-      screenWindow.once('tauri://created', () => resolve());
-      screenWindow.once('tauri://error', (error: unknown) => {
-        reject(new Error(String(error)));
-      });
-    });
-
-    return;
   }
 
   const popup = window.open(route, '_blank', 'width=1200,height=760');
