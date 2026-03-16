@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Permissões padrão para janela principal e janelas ERP dinâmicas","local":true,"windows":["main","screen-*"],"permissions":["core:default","core:webview:allow-create-webview-window","core:webview:allow-get-all-webviews","core:webview:allow-set-webview-focus"]}}
