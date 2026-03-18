@@ -51,8 +51,9 @@ function useLiveClock() {
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
-  const { userName, clearAuthData } = useAuthStore((state) => ({
+  const { userName, user, clearAuthData } = useAuthStore((state) => ({
     userName: state.userName,
+    user: state.user,
     clearAuthData: state.clearAuthData,
   }));
 
@@ -70,7 +71,8 @@ export function DashboardPage(): JSX.Element {
   const [recents, setRecents] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>(loadFavorites);
 
-  const welcomeName = useMemo(() => userName ?? "Usuário", [userName]);
+  const welcomeName = useMemo(() => userName ?? user?.name ?? "Usuário", [user, userName]);
+  const userRoleLabel = useMemo(() => user?.role ?? "Operador do sistema", [user]);
 
   const initials = useMemo(() => {
     const parts = (userName ?? "U").trim().split(" ");
@@ -493,7 +495,7 @@ export function DashboardPage(): JSX.Element {
             </div>
             <div className="dp-user-info">
               <span className="dp-user-name">{welcomeName}</span>
-              <span className="dp-user-role">Operador do sistema</span>
+              <span className="dp-user-role">{userRoleLabel}</span>
             </div>
             <div className="dp-avatar">{initials}</div>
             <button
