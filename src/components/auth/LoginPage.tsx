@@ -44,7 +44,7 @@ export function LoginPage(): JSX.Element {
       });
       navigate("/dashboard", { replace: true });
     } catch (error) {
-      const defaultMessage = "Falha ao autenticar no backend. Verifique as credenciais e a API.";
+      const defaultMessage = "Falha ao autenticar no backend. Verifique usuário, senha, rota e formato esperado pela API.";
       setErrorMessage(error instanceof Error ? error.message : defaultMessage);
     } finally {
       setIsSubmitting(false);
@@ -847,14 +847,14 @@ export function LoginPage(): JSX.Element {
                   <input
                     id="email"
                     className={`lp-input${fieldErrors.email ? " lp-input-error" : ""}`}
-                    type="email"
+                    type="text"
                     placeholder="voce@empresa.com"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setFieldErrors((p) => ({ ...p, email: undefined }));
                     }}
-                    autoComplete="email"
+                    autoComplete="username"
                     required
                   />
                 </div>

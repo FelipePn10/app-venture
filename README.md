@@ -235,13 +235,13 @@ VITE_ESTABLISHMENT_LOOKUP_PATH=/estabelecimentos
 ```
 
 #### Contratos esperados
-- `POST /auth/login`: retorna ao menos `token` e opcionalmente `userName`, `refreshToken`, `expiresAt` e `user`.
+- `POST /auth/login` (ou o path configurado, por exemplo `/users/login`): retorna ao menos `token` e opcionalmente `userName`, `refreshToken`, `expiresAt` e `user`.
 - `GET /auth/me`: retorna os dados atuais da sessão autenticada.
 - `GET /almoxarifados/:codigo`: consulta um almoxarifado existente para preencher a `VENT0800`.
 - `POST /almoxarifados`: persiste o cadastro da `VENT0800`.
 - `GET /clientes/:codigo`, `GET /fornecedores/:codigo`, `GET /estabelecimentos/:codigo`: validam vínculos reais informados na tela.
 
-O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`.
+O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. O login tenta primeiro o campo configurado em `VITE_AUTH_LOGIN_FIELD` e, em caso de erro compatível, faz fallback para `email`, `username`, `login` e `userName`, além de aceitar respostas com `token`, `accessToken`, `access_token` ou `data.token`.
 
 ---
 
