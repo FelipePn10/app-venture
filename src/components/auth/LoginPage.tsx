@@ -24,7 +24,7 @@ export function LoginPage(): JSX.Element {
     setErrorMessage(null);
 
     const errors: { email?: string; password?: string } = {};
-    if (!email.trim()) errors.email = "Informe seu e-mail.";
+    if (!email.trim()) errors.email = "Informe seu usuário ou e-mail.";
     if (!password) errors.password = "Informe sua senha.";
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -35,10 +35,16 @@ export function LoginPage(): JSX.Element {
 
     try {
       const response = await login({ email, password });
-      setAuthData(response.token, response.userName);
+      setAuthData({
+        token: response.token,
+        userName: response.userName,
+        refreshToken: response.refreshToken,
+        expiresAt: response.expiresAt,
+        user: response.user,
+      });
       navigate("/dashboard", { replace: true });
     } catch (error) {
-      const defaultMessage = "Falha ao autenticar. Verifique suas credenciais.";
+      const defaultMessage = "Falha ao autenticar no backend. Verifique usuário, senha, rota e formato esperado pela API.";
       setErrorMessage(error instanceof Error ? error.message : defaultMessage);
     } finally {
       setIsSubmitting(false);
@@ -813,10 +819,10 @@ export function LoginPage(): JSX.Element {
             )}
 
             <form onSubmit={handleSubmit}>
-              {/* E-mail */}
+              {/* Usuário / E-mail */}
               <div className="lp-field">
                 <div className="lp-field-label">
-                  <span className="lp-label-text">E-mail</span>
+                  <span className="lp-label-text">Usuário / E-mail</span>
                 </div>
                 <div className="lp-input-wrap">
                   <span className="lp-input-icon">
@@ -841,14 +847,14 @@ export function LoginPage(): JSX.Element {
                   <input
                     id="email"
                     className={`lp-input${fieldErrors.email ? " lp-input-error" : ""}`}
-                    type="email"
+                    type="text"
                     placeholder="voce@empresa.com"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setFieldErrors((p) => ({ ...p, email: undefined }));
                     }}
-                    autoComplete="email"
+                    autoComplete="username"
                     required
                   />
                 </div>

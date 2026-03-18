@@ -215,7 +215,34 @@ npm run
 
 > Se aparecer `npm error could not determine executable to run`, significa que o Tauri CLI não está disponível no projeto. Esta base já inclui `@tauri-apps/cli` em `devDependencies`; rode `npm install` novamente e use `npm run tauri:dev`.
 
-> Para integração com backend Go REST/JSON, ajuste o `VITE_API_URL` e coloque `VITE_USE_MOCK_AUTH=false` no `.env` para usar autenticação real via `/auth/login`.
+> Para integração com backend Go REST/JSON em desenvolvimento web sem usar prefixo `/api`, deixe `VITE_API_URL=` vazio, configure `VITE_API_PROXY_TARGET=http://localhost:5070` e mantenha `VITE_USE_MOCK_AUTH=false`. Assim o frontend chama `/users/login` e o Vite repassa para `http://localhost:5070/users/login` sem preflight de CORS no browser.
+
+### Integração real com backend e sessão
+
+O frontend agora está preparado para operar com sessão real e rotas reais do backend, incluindo a tela `VENT0800`. Configure o `.env` com os paths abaixo conforme o seu backend:
+
+```bash
+VITE_API_URL=
+VITE_API_PROXY_TARGET=http://localhost:5070
+VITE_API_TIMEOUT_MS=15000
+VITE_USE_MOCK_AUTH=false
+VITE_AUTH_LOGIN_PATH=/users/login
+VITE_AUTH_ME_PATH=
+VITE_AUTH_LOGIN_FIELD=email
+VITE_WAREHOUSE_ENDPOINT=/almoxarifados
+VITE_CUSTOMER_LOOKUP_PATH=/clientes
+VITE_SUPPLIER_LOOKUP_PATH=/fornecedores
+VITE_ESTABLISHMENT_LOOKUP_PATH=/estabelecimentos
+```
+
+#### Contratos esperados
+- `POST /users/login` (ou o path configurado em `VITE_AUTH_LOGIN_PATH`): recebe `email` e `password` em JSON e retorna ao menos `token` e opcionalmente `userName`, `refreshToken`, `expiresAt` e `user`.
+- `GET /auth/me`: opcional. Se o backend não expuser essa rota, deixe `VITE_AUTH_ME_PATH=` vazio para o frontend não chamá-la.
+- `GET /almoxarifados/:codigo`: consulta um almoxarifado existente para preencher a `VENT0800`.
+- `POST /almoxarifados`: persiste o cadastro da `VENT0800`.
+- `GET /clientes/:codigo`, `GET /fornecedores/:codigo`, `GET /estabelecimentos/:codigo`: validam vínculos reais informados na tela.
+
+O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. Em desenvolvimento web, o recomendado é deixar `VITE_API_URL=` vazio e usar `VITE_API_PROXY_TARGET=http://localhost:5070`, para que o frontend faça chamadas relativas como `/users/login`, `/almoxarifados/...` e `/clientes/...`, enquanto o Vite repassa tudo ao backend sem gerar `OPTIONS` de CORS para `/users/login`. O login usa `email` como campo principal e aceita respostas com `token`, `accessToken`, `access_token` ou `data.token`.
 
 ---
 
