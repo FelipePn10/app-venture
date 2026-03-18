@@ -1,5 +1,6 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '@/components/auth/LoginPage';
+import { SessionBootstrap } from '@/components/auth/SessionBootstrap';
 import { DashboardPage } from '@/components/dashboard/DashboardPage';
 import { ScreenHostPage } from '@/components/screens/ScreenHostPage';
 import { useAuthStore } from '@/store/authStore';
@@ -17,19 +18,21 @@ function PrivateRoute({ children }: { children: JSX.Element }): JSX.Element {
 export function AppRouter(): JSX.Element {
   return (
     <HashRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/screen/:code" element={<ScreenHostPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <SessionBootstrap>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/screen/:code" element={<ScreenHostPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </SessionBootstrap>
     </HashRouter>
   );
 }
