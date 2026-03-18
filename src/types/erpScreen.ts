@@ -16,6 +16,11 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Consultar todos os pedidos de vendas",
   },
   {
+    code: "VENT0800",
+    title: "Cadastro de Almoxarifado",
+    description: "Cadastrar almoxarifado",
+  },
+  {
     code: "FCOM0100",
     title: "Painel Comercial",
     description: "Visão inicial de negociações e propostas.",
