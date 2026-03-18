@@ -1,4 +1,13 @@
 import { useState, useCallback } from "react";
+import axios from "axios";
+import {
+  fetchWarehouseByCode,
+  lookupCustomer,
+  lookupSupplier,
+  saveWarehouse,
+  validateEstablishment,
+} from "@/services/warehouseService";
+import type { LookupEntity, WarehousePayload } from "@/types/warehouse";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +24,11 @@ type Localizacao =
 type TipoAlmoxarifado = "Normal" | "Linha de Produção";
 
 type AbaAtiva = "dados" | "clientes" | "fornecedores";
+
+type FeedbackState = {
+  type: "success" | "error" | "info";
+  message: string;
+} | null;
 
 interface FormAlmoxarifado {
   codigo: string;
@@ -86,6 +100,39 @@ function localizacaoBloqueada(loc: Localizacao): boolean {
   return loc === "Assistência Técnica";
 }
 
+function normalizeErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const apiMessage =
+      (error.response?.data as { message?: string; error?: string } | undefined)
+        ?.message ??
+      (error.response?.data as { message?: string; error?: string } | undefined)
+        ?.error;
+
+    if (apiMessage) {
+      return apiMessage;
+    }
+  }
+
+  return error instanceof Error ? error.message : fallback;
+}
+
+function buildWarehousePayload(
+  form: FormAlmoxarifado,
+  clientes: VinculoRow[],
+  fornecedores: VinculoRow[],
+): WarehousePayload {
+  return {
+    ...form,
+    clientes,
+    fornecedores,
+  };
+}
+
+function mergeLookup(list: VinculoRow[], item: LookupEntity): VinculoRow[] {
+  const filtered = list.filter((entry) => entry.codigo !== item.codigo);
+  return [...filtered, item];
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Vent0800Page(): JSX.Element {
@@ -94,9 +141,13 @@ export function Vent0800Page(): JSX.Element {
   const [clientes, setClientes] = useState<VinculoRow[]>([]);
   const [fornecedores, setFornecedores] = useState<VinculoRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [savedFeedback, setSavedFeedback] = useState<
-    "success" | "error" | null
-  >(null);
+  const [isLoadingRecord, setIsLoadingRecord] = useState(false);
+  const [isSearchingCliente, setIsSearchingCliente] = useState(false);
+  const [isSearchingFornecedor, setIsSearchingFornecedor] = useState(false);
+  const [isSearchingEstabelecimento, setIsSearchingEstabelecimento] = useState(false);
+  const [isSearchingExpedicao, setIsSearchingExpedicao] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [lookupHint, setLookupHint] = useState<string | null>(null);
   const [errors, setErrors] = useState<
     Partial<Record<keyof FormAlmoxarifado, string>>
   >({});
@@ -107,6 +158,7 @@ export function Vent0800Page(): JSX.Element {
     <K extends keyof FormAlmoxarifado>(key: K, value: FormAlmoxarifado[K]) => {
       setForm((prev) => ({ ...prev, [key]: value }));
       setErrors((prev) => ({ ...prev, [key]: undefined }));
+      setFeedback(null);
     },
     [],
   );
@@ -128,16 +180,48 @@ export function Vent0800Page(): JSX.Element {
     return Object.keys(e).length === 0;
   }
 
-  function handleSalvar() {
+  function applyWarehouseData(payload: WarehousePayload): void {
+    setForm({
+      codigo: payload.codigo ?? "",
+      descricao: payload.descricao ?? "",
+      localizacao: (payload.localizacao as Localizacao) ?? "Interno",
+      tipo: (payload.tipo as TipoAlmoxarifado) ?? "Normal",
+      disponivel: payload.disponivel ?? true,
+      almoxExpedicao: payload.almoxExpedicao ?? "",
+      cliente: payload.cliente ?? "",
+      estabelecimento: payload.estabelecimento ?? "",
+      fornecedor: payload.fornecedor ?? "",
+      observacao: payload.observacao ?? "",
+    });
+    setClientes(payload.clientes ?? []);
+    setFornecedores(payload.fornecedores ?? []);
+  }
+
+  async function handleSalvar() {
     if (!validate()) return;
     setIsSaving(true);
-    setSavedFeedback(null);
-    // Aqui você conecta ao seu serviço real: almoxarifadoService.salvar(form)
-    setTimeout(() => {
+    setFeedback(null);
+
+    try {
+      const response = await saveWarehouse(
+        buildWarehousePayload(form, clientes, fornecedores),
+      );
+      applyWarehouseData(response);
+      setFeedback({
+        type: "success",
+        message: `Almoxarifado ${response.codigo} salvo com sucesso no backend.`,
+      });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: normalizeErrorMessage(
+          error,
+          "Erro ao salvar no backend. Verifique a API e os campos obrigatórios.",
+        ),
+      });
+    } finally {
       setIsSaving(false);
-      setSavedFeedback("success");
-      setTimeout(() => setSavedFeedback(null), 4000);
-    }, 800);
+    }
   }
 
   function handleLimpar() {
@@ -145,19 +229,145 @@ export function Vent0800Page(): JSX.Element {
     setErrors({});
     setClientes([]);
     setFornecedores([]);
-    setSavedFeedback(null);
+    setFeedback(null);
+    setLookupHint(null);
     setAbaAtiva("dados");
   }
 
-  function adicionarCliente() {
+  async function handleLoadWarehouseByCode(code?: string) {
+    const codigo = (code ?? form.codigo).trim();
+    if (!codigo) {
+      setErrors((prev) => ({ ...prev, codigo: "Informe um código para consultar." }));
+      return;
+    }
+
+    setIsLoadingRecord(true);
+    setFeedback(null);
+
+    try {
+      const warehouse = await fetchWarehouseByCode(codigo);
+      if (!warehouse) {
+        setFeedback({ type: "info", message: `Nenhum almoxarifado encontrado para ${codigo}.` });
+        return;
+      }
+      applyWarehouseData(warehouse);
+      setFeedback({ type: "info", message: `Registro ${codigo} carregado a partir do backend.` });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: normalizeErrorMessage(error, "Não foi possível consultar o almoxarifado no backend."),
+      });
+    } finally {
+      setIsLoadingRecord(false);
+    }
+  }
+
+  async function handleLookupCliente(code?: string) {
+    const codigo = (code ?? form.cliente ?? novoCliente).trim();
+    if (!codigo) {
+      setErrors((prev) => ({ ...prev, cliente: "Informe um código de cliente." }));
+      return;
+    }
+
+    setIsSearchingCliente(true);
+    try {
+      const customer = await lookupCustomer(codigo);
+      if (code == null || code === form.cliente) {
+        setField("cliente", customer.codigo);
+      }
+      setClientes((prev) => mergeLookup(prev, customer));
+      setLookupHint(`Cliente ${customer.codigo} — ${customer.nome} validado no backend.`);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: normalizeErrorMessage(error, "Não foi possível localizar o cliente informado."),
+      });
+    } finally {
+      setIsSearchingCliente(false);
+    }
+  }
+
+  async function handleLookupFornecedor(code?: string) {
+    const codigo = (code ?? form.fornecedor ?? novoFornecedor).trim();
+    if (!codigo) {
+      setErrors((prev) => ({ ...prev, fornecedor: "Informe um código de fornecedor." }));
+      return;
+    }
+
+    setIsSearchingFornecedor(true);
+    try {
+      const supplier = await lookupSupplier(codigo);
+      if (code == null || code === form.fornecedor) {
+        setField("fornecedor", supplier.codigo);
+      }
+      setFornecedores((prev) => mergeLookup(prev, supplier));
+      setLookupHint(`Fornecedor ${supplier.codigo} — ${supplier.nome} validado no backend.`);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: normalizeErrorMessage(error, "Não foi possível localizar o fornecedor informado."),
+      });
+    } finally {
+      setIsSearchingFornecedor(false);
+    }
+  }
+
+  async function handleLookupEstabelecimento() {
+    const codigo = form.estabelecimento.trim();
+    if (!codigo) {
+      setErrors((prev) => ({ ...prev, estabelecimento: "Informe um código de estabelecimento." }));
+      return;
+    }
+
+    setIsSearchingEstabelecimento(true);
+    try {
+      const establishment = await validateEstablishment(codigo);
+      setLookupHint(`Estabelecimento ${establishment.codigo} — ${establishment.nome} validado no backend.`);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: normalizeErrorMessage(error, "Não foi possível validar o estabelecimento informado."),
+      });
+    } finally {
+      setIsSearchingEstabelecimento(false);
+    }
+  }
+
+  async function handleLookupExpedicao() {
+    const codigo = form.almoxExpedicao.trim();
+    if (!codigo) {
+      setFeedback({ type: "error", message: "Informe o almoxarifado de expedição para consultar." });
+      return;
+    }
+
+    setIsSearchingExpedicao(true);
+    try {
+      const warehouse = await fetchWarehouseByCode(codigo);
+      if (!warehouse) {
+        setFeedback({ type: "info", message: `Almoxarifado de expedição ${codigo} não encontrado.` });
+        return;
+      }
+      setField("almoxExpedicao", warehouse.codigo);
+      setLookupHint(`Almox. de expedição ${warehouse.codigo} — ${warehouse.descricao} validado no backend.`);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: normalizeErrorMessage(error, "Não foi possível validar o almoxarifado de expedição."),
+      });
+    } finally {
+      setIsSearchingExpedicao(false);
+    }
+  }
+
+  async function adicionarCliente() {
     if (!novoCliente.trim()) return;
-    setClientes((p) => [...p, { codigo: novoCliente, nome: "" }]);
+    await handleLookupCliente(novoCliente);
     setNovoCliente("");
   }
 
-  function adicionarFornecedor() {
+  async function adicionarFornecedor() {
     if (!novoFornecedor.trim()) return;
-    setFornecedores((p) => [...p, { codigo: novoFornecedor, nome: "" }]);
+    await handleLookupFornecedor(novoFornecedor);
     setNovoFornecedor("");
   }
 
@@ -443,6 +653,7 @@ export function Vent0800Page(): JSX.Element {
         }
         .al-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
         .al-feedback.error   { background: #fff5f5; border: 1px solid #f8c0c0; border-left: 3px solid #e05252; color: #b91c1c; }
+        .al-feedback.info    { background: #f0f8ff; border: 1px solid #c7def8; border-left: 3px solid #4a90d9; color: #1a4070; }
 
         /* ── FOOTER ── */
         .al-footer {
@@ -530,7 +741,7 @@ export function Vent0800Page(): JSX.Element {
         <div className="al-actionbar">
           <div className="al-action-group">
             <span className="al-action-label">Nav</span>
-            <button className="al-nav-btn" title="Primeiro">
+            <button className="al-nav-btn" title="Carregar registro" onClick={() => void handleLoadWarehouseByCode()} disabled={isLoadingRecord}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path
                   d="M9 2L3 6l6 4M2 2v8"
@@ -541,7 +752,7 @@ export function Vent0800Page(): JSX.Element {
                 />
               </svg>
             </button>
-            <button className="al-nav-btn" title="Anterior">
+            <button className="al-nav-btn" title="Limpar formulário" onClick={handleLimpar}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path
                   d="M8 2L4 6l4 4"
@@ -552,7 +763,7 @@ export function Vent0800Page(): JSX.Element {
                 />
               </svg>
             </button>
-            <button className="al-nav-btn" title="Próximo">
+            <button className="al-nav-btn" title="Consultar código digitado" onClick={() => void handleLoadWarehouseByCode()} disabled={isLoadingRecord}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path
                   d="M4 2l4 4-4 4"
@@ -563,7 +774,7 @@ export function Vent0800Page(): JSX.Element {
                 />
               </svg>
             </button>
-            <button className="al-nav-btn" title="Último">
+            <button className="al-nav-btn" title="Atualizar do backend" onClick={() => void handleLoadWarehouseByCode()} disabled={isLoadingRecord}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path
                   d="M3 2l6 4-6 4M10 2v8"
@@ -665,40 +876,34 @@ export function Vent0800Page(): JSX.Element {
         {/* BODY */}
         <div className="al-body">
           {/* Feedback */}
-          {savedFeedback === "success" && (
-            <div className="al-feedback success">
+          {feedback && (
+            <div className={`al-feedback ${feedback.type}`}>
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M3 8l3.5 3.5L13 5"
-                  stroke="#1e6030"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                {feedback.type === "success" ? (
+                  <path
+                    d="M3 8l3.5 3.5L13 5"
+                    stroke="#1e6030"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ) : feedback.type === "error" ? (
+                  <>
+                    <circle cx="8" cy="8" r="6" stroke="#e05252" strokeWidth="1.4" />
+                    <path d="M8 5v3.5M8 10.5h.01" stroke="#e05252" strokeWidth="1.4" strokeLinecap="round" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="8" cy="8" r="6" stroke="#4a90d9" strokeWidth="1.4" />
+                    <path d="M8 7v4M8 5.5h.01" stroke="#4a90d9" strokeWidth="1.4" strokeLinecap="round" />
+                  </>
+                )}
               </svg>
-              Almoxarifado salvo com sucesso.
+              {feedback.message}
             </div>
           )}
-          {savedFeedback === "error" && (
-            <div className="al-feedback error">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="6"
-                  stroke="#e05252"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M8 5v3.5M8 10.5h.01"
-                  stroke="#e05252"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              Erro ao salvar. Verifique os campos obrigatórios.
-            </div>
-          )}
+
+          {lookupHint && <div className="al-feedback info">{lookupHint}</div>}
 
           {/* MAIN CARD */}
           <div className="al-card">
@@ -948,6 +1153,9 @@ export function Vent0800Page(): JSX.Element {
                       <button
                         className="al-input-btn"
                         title="Buscar almoxarifado"
+                        type="button"
+                        onClick={() => void handleLookupExpedicao()}
+                        disabled={isSearchingExpedicao}
                       >
                         <svg
                           width="13"
@@ -1034,6 +1242,9 @@ export function Vent0800Page(): JSX.Element {
                           <button
                             className="al-input-btn"
                             title="Buscar cliente"
+                            type="button"
+                            onClick={() => void handleLookupCliente(form.cliente)}
+                            disabled={isSearchingCliente}
                           >
                             <svg
                               width="13"
@@ -1102,6 +1313,9 @@ export function Vent0800Page(): JSX.Element {
                           <button
                             className="al-input-btn"
                             title="Buscar estabelecimento"
+                            type="button"
+                            onClick={() => void handleLookupEstabelecimento()}
+                            disabled={isSearchingEstabelecimento}
                           >
                             <svg
                               width="13"
@@ -1169,6 +1383,9 @@ export function Vent0800Page(): JSX.Element {
                           <button
                             className="al-input-btn"
                             title="Buscar fornecedor"
+                            type="button"
+                            onClick={() => void handleLookupFornecedor(form.fornecedor)}
+                            disabled={isSearchingFornecedor}
                           >
                             <svg
                               width="13"
@@ -1255,7 +1472,7 @@ export function Vent0800Page(): JSX.Element {
                     />
                     <button
                       className="al-btn al-btn-ghost al-btn-sm"
-                      onClick={adicionarCliente}
+                      onClick={() => void adicionarCliente()}
                     >
                       <svg
                         width="12"
@@ -1335,7 +1552,7 @@ export function Vent0800Page(): JSX.Element {
                     />
                     <button
                       className="al-btn al-btn-ghost al-btn-sm"
-                      onClick={adicionarFornecedor}
+                      onClick={() => void adicionarFornecedor()}
                     >
                       <svg
                         width="12"

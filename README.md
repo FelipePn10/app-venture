@@ -217,6 +217,32 @@ npm run
 
 > Para integração com backend Go REST/JSON, ajuste o `VITE_API_URL` e coloque `VITE_USE_MOCK_AUTH=false` no `.env` para usar autenticação real via `/auth/login`.
 
+### Integração real com backend e sessão
+
+O frontend agora está preparado para operar com sessão real e rotas reais do backend, incluindo a tela `VENT0800`. Configure o `.env` com os paths abaixo conforme o seu backend:
+
+```bash
+VITE_API_URL=http://localhost:8080/api
+VITE_API_TIMEOUT_MS=15000
+VITE_USE_MOCK_AUTH=false
+VITE_AUTH_LOGIN_PATH=/auth/login
+VITE_AUTH_ME_PATH=/auth/me
+VITE_AUTH_LOGIN_FIELD=email
+VITE_WAREHOUSE_ENDPOINT=/almoxarifados
+VITE_CUSTOMER_LOOKUP_PATH=/clientes
+VITE_SUPPLIER_LOOKUP_PATH=/fornecedores
+VITE_ESTABLISHMENT_LOOKUP_PATH=/estabelecimentos
+```
+
+#### Contratos esperados
+- `POST /auth/login`: retorna ao menos `token` e opcionalmente `userName`, `refreshToken`, `expiresAt` e `user`.
+- `GET /auth/me`: retorna os dados atuais da sessão autenticada.
+- `GET /almoxarifados/:codigo`: consulta um almoxarifado existente para preencher a `VENT0800`.
+- `POST /almoxarifados`: persiste o cadastro da `VENT0800`.
+- `GET /clientes/:codigo`, `GET /fornecedores/:codigo`, `GET /estabelecimentos/:codigo`: validam vínculos reais informados na tela.
+
+O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`.
+
 ---
 
 ## Fluxo recomendado: desenvolvimento no Linux, entrega para Windows
