@@ -215,14 +215,14 @@ npm run
 
 > Se aparecer `npm error could not determine executable to run`, significa que o Tauri CLI não está disponível no projeto. Esta base já inclui `@tauri-apps/cli` em `devDependencies`; rode `npm install` novamente e use `npm run tauri:dev`.
 
-> Para integração com backend Go REST/JSON em desenvolvimento web, use `VITE_API_URL=/api`, configure `VITE_API_PROXY_TARGET=http://localhost:5070` e mantenha `VITE_USE_MOCK_AUTH=false` para evitar o preflight `OPTIONS` direto no backend.
+> Para integração com backend Go REST/JSON em desenvolvimento web sem usar prefixo `/api`, deixe `VITE_API_URL=` vazio, configure `VITE_API_PROXY_TARGET=http://localhost:5070` e mantenha `VITE_USE_MOCK_AUTH=false`. Assim o frontend chama `/users/login` e o Vite repassa para `http://localhost:5070/users/login` sem preflight de CORS no browser.
 
 ### Integração real com backend e sessão
 
 O frontend agora está preparado para operar com sessão real e rotas reais do backend, incluindo a tela `VENT0800`. Configure o `.env` com os paths abaixo conforme o seu backend:
 
 ```bash
-VITE_API_URL=/api
+VITE_API_URL=
 VITE_API_PROXY_TARGET=http://localhost:5070
 VITE_API_TIMEOUT_MS=15000
 VITE_USE_MOCK_AUTH=false
@@ -242,33 +242,7 @@ VITE_ESTABLISHMENT_LOOKUP_PATH=/estabelecimentos
 - `POST /almoxarifados`: persiste o cadastro da `VENT0800`.
 - `GET /clientes/:codigo`, `GET /fornecedores/:codigo`, `GET /estabelecimentos/:codigo`: validam vínculos reais informados na tela.
 
-O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. Em desenvolvimento web, o recomendado é usar `VITE_API_URL=/api` com `VITE_API_PROXY_TARGET=http://localhost:5070`, assim o browser fala com o Vite e o Vite repassa ao backend sem gerar `OPTIONS` de CORS para `/users/login`. O login usa `email` como campo principal e aceita respostas com `token`, `accessToken`, `access_token` ou `data.token`.
-
-### Integração real com backend e sessão
-
-O frontend agora está preparado para operar com sessão real e rotas reais do backend, incluindo a tela `VENT0800`. Configure o `.env` com os paths abaixo conforme o seu backend:
-
-```bash
-VITE_API_URL=http://localhost:8080/api
-VITE_API_TIMEOUT_MS=15000
-VITE_USE_MOCK_AUTH=false
-VITE_AUTH_LOGIN_PATH=/auth/login
-VITE_AUTH_ME_PATH=/auth/me
-VITE_AUTH_LOGIN_FIELD=email
-VITE_WAREHOUSE_ENDPOINT=/almoxarifados
-VITE_CUSTOMER_LOOKUP_PATH=/clientes
-VITE_SUPPLIER_LOOKUP_PATH=/fornecedores
-VITE_ESTABLISHMENT_LOOKUP_PATH=/estabelecimentos
-```
-
-#### Contratos esperados
-- `POST /auth/login` (ou o path configurado, por exemplo `/users/login`): retorna ao menos `token` e opcionalmente `userName`, `refreshToken`, `expiresAt` e `user`.
-- `GET /auth/me`: retorna os dados atuais da sessão autenticada.
-- `GET /almoxarifados/:codigo`: consulta um almoxarifado existente para preencher a `VENT0800`.
-- `POST /almoxarifados`: persiste o cadastro da `VENT0800`.
-- `GET /clientes/:codigo`, `GET /fornecedores/:codigo`, `GET /estabelecimentos/:codigo`: validam vínculos reais informados na tela.
-
-O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. O login tenta primeiro o campo configurado em `VITE_AUTH_LOGIN_FIELD` e, em caso de erro compatível, faz fallback para `email`, `username`, `login` e `userName`, além de aceitar respostas com `token`, `accessToken`, `access_token` ou `data.token`.
+O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. Em desenvolvimento web, o recomendado é deixar `VITE_API_URL=` vazio e usar `VITE_API_PROXY_TARGET=http://localhost:5070`, para que o frontend faça chamadas relativas como `/users/login`, `/almoxarifados/...` e `/clientes/...`, enquanto o Vite repassa tudo ao backend sem gerar `OPTIONS` de CORS para `/users/login`. O login usa `email` como campo principal e aceita respostas com `token`, `accessToken`, `access_token` ou `data.token`.
 
 ---
 
