@@ -4,8 +4,8 @@ import type { AuthResponse, LoginPayload, SessionProfileResponse } from '@/types
 
 const SIMULATED_DELAY_MS = 800;
 const USE_MOCK_AUTH = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
-const AUTH_LOGIN_PATH = import.meta.env.VITE_AUTH_LOGIN_PATH ?? '/auth/login';
-const AUTH_ME_PATH = import.meta.env.VITE_AUTH_ME_PATH ?? '/auth/me';
+const AUTH_LOGIN_PATH = import.meta.env.VITE_AUTH_LOGIN_PATH ?? '/users/login';
+const AUTH_ME_PATH = import.meta.env.VITE_AUTH_ME_PATH ?? '';
 const AUTH_LOGIN_FIELD = import.meta.env.VITE_AUTH_LOGIN_FIELD ?? 'email';
 const AUTH_LOGIN_FALLBACK_FIELDS = [AUTH_LOGIN_FIELD, 'email', 'username', 'login', 'userName'];
 
@@ -147,7 +147,7 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 }
 
 export async function fetchSessionProfile(): Promise<SessionProfileResponse | null> {
-  if (USE_MOCK_AUTH) {
+  if (USE_MOCK_AUTH || !AUTH_ME_PATH.trim()) {
     return null;
   }
 

@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 15000);
 
 export const httpClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api',
   timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
