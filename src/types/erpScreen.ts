@@ -6,7 +6,7 @@ export interface ErpScreen {
 
 export const ERP_SCREENS: ErpScreen[] = [
   {
-    code: "FITE0200",
+    code: "VENT0200",
     title: "Cadastro de Itens",
     description: "Cadastro e manutenção de itens do estoque.",
   },
