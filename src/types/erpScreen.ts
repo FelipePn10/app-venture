@@ -11,6 +11,11 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Cadastro e manutenção de itens do estoque.",
   },
   {
+    code: "VENT0204",
+    title: "Cadastro de Grupo",
+    description: "Cadastro e manutenção de grupos do pdm.",
+  },
+  {
     code: "VENT0100",
     title: "Consulta de pedido de venda",
     description: "Consultar todos os pedidos de vendas",

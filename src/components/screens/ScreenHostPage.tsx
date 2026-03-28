@@ -3,11 +3,13 @@ import { useParams } from "react-router-dom";
 import { Vent0100Page } from "./comercial/Vent0100Page";
 import { Vent0800Page } from "./almoxarifado/Vent0800Page";
 import { Vent0200Page } from "./engenharia/Vent0200Page";
+import { Vent0204Page } from "./engenharia/pdm/Vent0204Page";
 
 const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VENT0200: <Vent0200Page />,
   VENT0100: <Vent0100Page />,
   VENT0800: <Vent0800Page />,
+  VENT0204: <Vent0204Page />,
 };
 
 export function ScreenHostPage(): JSX.Element {
