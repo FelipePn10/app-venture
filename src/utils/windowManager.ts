@@ -1,8 +1,11 @@
-import { ERP_SCREENS } from '@/types/erpScreen';
+import { ERP_SCREENS } from "@/types/erpScreen";
 
 interface TauriWebviewWindow {
   setFocus: () => Promise<void>;
-  once: (event: 'tauri://created' | 'tauri://error', handler: (event: unknown) => void) => Promise<() => void>;
+  once: (
+    event: "tauri://created" | "tauri://error",
+    handler: (event: unknown) => void,
+  ) => Promise<() => void>;
 }
 
 interface TauriWebviewWindowConstructor {
@@ -21,7 +24,7 @@ function buildScreenRoute(screenCode: string): string {
 
 async function loadTauriWebviewWindow(): Promise<TauriWebviewWindowConstructor | null> {
   try {
-    const tauriModule = (await import('@tauri-apps/api/webviewWindow')) as {
+    const tauriModule = (await import("@tauri-apps/api/webviewWindow")) as {
       WebviewWindow: TauriWebviewWindowConstructor;
     };
 
@@ -34,7 +37,7 @@ async function loadTauriWebviewWindow(): Promise<TauriWebviewWindowConstructor |
 export async function openErpScreenWindow(screenCode: string): Promise<void> {
   const route = buildScreenRoute(screenCode);
 
-  if ('__TAURI_INTERNALS__' in window) {
+  if ("__TAURI_INTERNALS__" in window) {
     const WebviewWindow = await loadTauriWebviewWindow();
 
     if (WebviewWindow) {
@@ -55,11 +58,12 @@ export async function openErpScreenWindow(screenCode: string): Promise<void> {
           minWidth: 1024,
           minHeight: 680,
           center: true,
-          resizable: true
+          resizable: true,
+          decorations: false,
         });
 
-        screenWindow.once('tauri://created', () => resolve());
-        screenWindow.once('tauri://error', (error: unknown) => {
+        screenWindow.once("tauri://created", () => resolve());
+        screenWindow.once("tauri://error", (error: unknown) => {
           reject(new Error(String(error)));
         });
       });
@@ -68,9 +72,11 @@ export async function openErpScreenWindow(screenCode: string): Promise<void> {
     }
   }
 
-  const popup = window.open(route, '_blank', 'width=1200,height=760');
+  const popup = window.open(route, "_blank", "width=1200,height=760");
 
   if (!popup) {
-    throw new Error('Não foi possível abrir a nova janela. Verifique bloqueio de pop-up.');
+    throw new Error(
+      "Não foi possível abrir a nova janela. Verifique bloqueio de pop-up.",
+    );
   }
 }
