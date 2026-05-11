@@ -1,7 +1,9 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { login } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
+import { WindowControls } from "@/components/window/WindowControls";
 
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
@@ -57,15 +59,28 @@ export function LoginPage(): JSX.Element {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');
 
         .lp-root {
-          min-height: 100vh;
+          height: 100vh;
           display: grid;
           grid-template-columns: 420px 1fr;
+          grid-template-rows: 38px 1fr;
+          grid-template-areas: "titlebar titlebar" "sidebar form";
           font-family: 'DM Sans', sans-serif;
           background: #f2f6f0;
         }
 
+        .lp-titlebar {
+          grid-area: titlebar;
+          background: #0d1f12;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding: 0 6px;
+          cursor: grab;
+        }
+
         /* ── LEFT SIDEBAR ── */
         .lp-sidebar {
+          grid-area: sidebar;
           background: #162e20;
           display: flex;
           flex-direction: column;
@@ -251,12 +266,14 @@ export function LoginPage(): JSX.Element {
 
         /* ── RIGHT FORM PANEL ── */
         .lp-form-panel {
+          grid-area: form;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 60px 48px;
           background: #f2f6f0;
           position: relative;
+          overflow-y: auto;
         }
 
         .lp-dots-pattern {
@@ -594,6 +611,18 @@ export function LoginPage(): JSX.Element {
       `}</style>
 
       <main className="lp-root">
+        {/* ── TITLE BAR ── */}
+        <header
+          className="lp-titlebar"
+          onMouseDown={(e) => {
+            if (!(e.target as HTMLElement).closest("button")) {
+              void getCurrentWindow().startDragging();
+            }
+          }}
+        >
+          <WindowControls />
+        </header>
+
         {/* ── SIDEBAR ── */}
         <aside className="lp-sidebar" aria-label="Apresentação do ERP Venture">
           <div className="lp-logo">
