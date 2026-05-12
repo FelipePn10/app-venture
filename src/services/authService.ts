@@ -9,72 +9,113 @@ const AUTH_ME_PATH = import.meta.env.VITE_AUTH_ME_PATH ?? '';
 const AUTH_LOGIN_FIELD = import.meta.env.VITE_AUTH_LOGIN_FIELD ?? 'email';
 const AUTH_LOGIN_FALLBACK_FIELDS = [AUTH_LOGIN_FIELD, 'email', 'username', 'login', 'userName'];
 
-function getObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+/**
+ * Deep-search flattens an unknown payload into a flat string→string map.
+ * Keys are built as lowercased dot-separated paths (e.g. "data.user.name").
+ * Only scalar values under depth 12 are collected to avoid cyclic/giant payloads.
+ */
+function flattenPayload(value: unknown, prefix = '', depth = 0): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (depth > 12 || value === null || value === undefined) return out;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed) out[prefix] = trimmed;
+    return out;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    out[prefix] = String(value);
+    return out;
+  }
+
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      Object.assign(out, flattenPayload(value[i], `${prefix}[${i}]`, depth + 1));
+    }
+    return out;
+  }
+
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    for (const [k, v] of Object.entries(obj)) {
+      const path = prefix ? `${prefix}.${k.toLowerCase()}` : k.toLowerCase();
+      if (v === null || v === undefined) continue;
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+        const s = typeof v === 'string' ? v.trim() : String(v);
+        if (s) out[path] = s;
+      } else {
+        Object.assign(out, flattenPayload(v, path, depth + 1));
+      }
+    }
+  }
+
+  return out;
 }
 
-function getString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value : undefined;
+/** Search a flat map for any key ending with one of the candidates, returning the first match. */
+function findInFlat(flat: Record<string, string>, ...candidates: string[]): string | undefined {
+  for (const c of candidates) {
+    const target = c.toLowerCase();
+    // Exact match
+    if (flat[target] && flat[target].length > 1) return flat[target];
+    // Suffix match (e.g. any path ending with .name or .nome)
+    for (const [path, val] of Object.entries(flat)) {
+      if ((path === target || path.endsWith(`.${target}`)) && val.length > 1) return val;
+    }
+  }
+  return undefined;
 }
 
 function extractAuthResponse(payload: unknown): AuthResponse {
-  const root = getObject(payload);
-  const nestedData = getObject(root?.data);
-  const user = getObject(root?.user) ?? getObject(nestedData?.user);
+  const flat = flattenPayload(payload);
 
   const token =
-    getString(root?.token) ??
-    getString(root?.accessToken) ??
-    getString(root?.access_token) ??
-    getString(root?.jwt) ??
-    getString(nestedData?.token) ??
-    getString(nestedData?.accessToken) ??
-    getString(nestedData?.access_token) ??
-    getString(nestedData?.jwt);
+    flat['token'] ??
+    flat['accesstoken'] ??
+    flat['access_token'] ??
+    flat['jwt'] ??
+    findInFlat(flat, 'token', 'accesstoken', 'access_token', 'jwt');
 
   if (!token) {
     throw new Error('Resposta de login inválida: token não encontrado.');
   }
 
-  const userName =
-    getString(root?.userName) ??
-    getString(root?.name) ??
-    getString(root?.username) ??
-    getString(nestedData?.userName) ??
-    getString(nestedData?.name) ??
-    getString(nestedData?.username) ??
-    getString(user?.name) ??
-    getString(user?.username) ??
-    'Usuário ERP';
+  const NAME_CANDIDATES = [
+    'username', 'name', 'nome', 'nom_usuario', 'nomusuario',
+    'displayname', 'display_name', 'fullname', 'full_name',
+    'login', 'apelido',
+  ];
+
+  const userName = findInFlat(flat, ...NAME_CANDIDATES) ?? 'Usuário ERP';
 
   const userEmail =
-    getString(root?.email) ??
-    getString(nestedData?.email) ??
-    getString(user?.email);
+    findInFlat(flat, 'email', 'e-mail') ??
+    flat['email'];
 
   const userRole =
-    getString(root?.role) ??
-    getString(nestedData?.role) ??
-    getString(user?.role);
+    findInFlat(flat, 'role', 'perfil', 'tipo', 'cargo', 'funcao', 'type') ??
+    flat['role'] ??
+    flat['perfil'];
 
   return {
     token,
     userName,
     refreshToken:
-      getString(root?.refreshToken) ??
-      getString(root?.refresh_token) ??
-      getString(nestedData?.refreshToken) ??
-      getString(nestedData?.refresh_token),
+      flat['refreshtoken'] ??
+      flat['refresh_token'] ??
+      findInFlat(flat, 'refreshtoken', 'refresh_token'),
     expiresAt:
-      getString(root?.expiresAt) ??
-      getString(root?.expires_at) ??
-      getString(nestedData?.expiresAt) ??
-      getString(nestedData?.expires_at),
+      flat['expiresat'] ??
+      flat['expires_at'] ??
+      findInFlat(flat, 'expiresat', 'expires_at'),
     user: {
       id:
-        getString(root?.id) ??
-        getString(nestedData?.id) ??
-        getString(user?.id),
+        flat['id'] ??
+        flat['userid'] ??
+        flat['user_id'] ??
+        findInFlat(flat, 'id', 'userid', 'user_id'),
       name: userName,
       email: userEmail,
       role: userRole,
@@ -147,18 +188,45 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 }
 
 export async function fetchSessionProfile(): Promise<SessionProfileResponse | null> {
-  if (USE_MOCK_AUTH || !AUTH_ME_PATH.trim()) {
-    return null;
-  }
+  const mePath = AUTH_ME_PATH.trim() || '/users/me';
+
+  if (USE_MOCK_AUTH) return null;
 
   try {
-    const response = await httpClient.get<SessionProfileResponse>(AUTH_ME_PATH);
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && [401, 404, 405].includes(error.response?.status ?? 0)) {
-      return null;
+    const response = await httpClient.get<unknown>(mePath);
+    const flat = flattenPayload(response.data);
+
+    const NAME_CANDIDATES = [
+      'username', 'name', 'nome', 'nom_usuario', 'nomusuario',
+      'displayname', 'display_name', 'fullname', 'full_name',
+      'login', 'apelido',
+    ];
+
+    const fetchedName = findInFlat(flat, ...NAME_CANDIDATES);
+    const fetchedEmail =
+      findInFlat(flat, 'email', 'e-mail') ?? flat['email'];
+    const fetchedRole =
+      findInFlat(flat, 'role', 'perfil', 'tipo', 'cargo', 'funcao') ??
+      flat['role'] ??
+      flat['perfil'];
+
+    if (fetchedName || fetchedEmail || fetchedRole) {
+      return {
+        userName: fetchedName,
+        user: {
+          id: flat['id'] ?? flat['userid'] ?? findInFlat(flat, 'id', 'userid', 'user_id'),
+          name: fetchedName ?? '',
+          email: fetchedEmail,
+          role: fetchedRole,
+        },
+      };
     }
 
+    return null;
+  } catch (error) {
+    if (axios.isAxiosError(error) && [401, 404, 405, 403].includes(error.response?.status ?? 0)) {
+      return null;
+    }
     throw error;
   }
 }
