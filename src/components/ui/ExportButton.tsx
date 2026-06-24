@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useReportExport } from '@/hooks/useReportExport';
 import {
   EXPORT_FORMATS,
@@ -90,17 +91,39 @@ export function ExportButton({
 }: ExportButtonProps): JSX.Element | null {
   const { exporting, toast, clearToast, run } = useReportExport();
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fecha o menu ao clicar fora.
+  // Posiciona o menu (portal/fixed) a partir do retângulo do botão, evitando que
+  // o overflow/stacking da actionbar recorte ou esconda o dropdown.
+  const reposition = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open) reposition();
+  }, [open, reposition]);
+
+  // Reposiciona ao rolar/redimensionar; fecha ao clicar fora (botão ou menu).
   useEffect(() => {
     if (!open) return;
+    const onScrollResize = () => reposition();
     const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!wrapRef.current?.contains(t) && !menuRef.current?.contains(t)) setOpen(false);
     };
+    window.addEventListener('scroll', onScrollResize, true);
+    window.addEventListener('resize', onScrollResize);
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
+    return () => {
+      window.removeEventListener('scroll', onScrollResize, true);
+      window.removeEventListener('resize', onScrollResize);
+      document.removeEventListener('mousedown', onDoc);
+    };
+  }, [open, reposition]);
 
   // Auto-dismiss do toast.
   useEffect(() => {
@@ -137,8 +160,9 @@ export function ExportButton({
   const busy = exporting !== null;
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', display: 'inline-flex' }}>
+    <div ref={wrapRef} style={{ display: 'inline-flex' }}>
       <button
+        ref={btnRef}
         type="button"
         className="fsc-btn fsc-btn-ghost"
         onClick={() => setOpen((o) => !o)}
@@ -152,13 +176,14 @@ export function ExportButton({
         <span style={{ marginLeft: 5, fontSize: 9, opacity: 0.7 }}>▼</span>
       </button>
 
-      {open && !busy && (
+      {open && !busy && pos && createPortal(
         <div
+          ref={menuRef}
           role="menu"
           style={{
-            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 50,
+            position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999,
             background: '#0f231a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
-            minWidth: 168, padding: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+            minWidth: 172, padding: 4, boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
           }}
         >
           {items.map((f) => (
@@ -179,22 +204,25 @@ export function ExportButton({
               {f.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {toast && (
+      {toast && createPortal(
         <div
           style={{
-            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
+            position: 'fixed', bottom: 20, right: 20, zIndex: 10000,
             background: toast.type === 'success' ? '#13351f' : '#3a1414',
             border: `1px solid ${toast.type === 'success' ? '#2e7d4f' : '#a13b3b'}`,
-            color: '#eaf3ee', borderRadius: 8, padding: '8px 12px', fontSize: 12,
-            maxWidth: 280, boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+            color: '#eaf3ee', borderRadius: 10, padding: '12px 16px', fontSize: 13,
+            maxWidth: 340, boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+            animation: 'fscBodyIn 0.2s ease both',
           }}
           role="status"
         >
           {toast.message}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
