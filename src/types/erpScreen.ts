@@ -1,8 +1,11 @@
 export type ErpModule =
   | 'comercial'
   | 'financeiro'
+  | 'fiscal'
   | 'contabilidade'
+  | 'cadastros'
   | 'engenharia'
+  | 'producao'
   | 'almoxarifado'
   | 'planejamento'
   | 'assistencia'
@@ -29,11 +32,11 @@ export const PARENT_CATEGORIES: Record<ParentCategory, ParentMeta> = {
   },
   industrial_producao: {
     label: 'Industrial & Produção',
-    modules: ['engenharia', 'manutencao', 'planejamento', 'suprimento', 'almoxarifado', 'importacao', 'inspecao'],
+    modules: ['engenharia', 'producao', 'manutencao', 'planejamento', 'suprimento', 'almoxarifado', 'importacao', 'inspecao'],
   },
   administrativo_financeiro: {
     label: 'Administrativo & Financeiro',
-    modules: ['financeiro', 'contabilidade'],
+    modules: ['financeiro', 'fiscal', 'contabilidade', 'cadastros'],
   },
 };
 
@@ -52,8 +55,10 @@ export interface ModuleMeta {
 export const MODULE_META: Record<ErpModule, ModuleMeta> = {
   comercial:     { label: 'Comercial',           color: '#2563eb', bgColor: '#eff6ff' },
   financeiro:    { label: 'Financeiro',          color: '#059669', bgColor: '#ecfdf5' },
+  fiscal:        { label: 'Fiscal',              color: '#0d9488', bgColor: '#f0fdfa' },
   contabilidade: { label: 'Contabilidade',       color: '#6d28d9', bgColor: '#f5f3ff' },
   engenharia:    { label: 'Engenharia',          color: '#d97706', bgColor: '#fffbeb' },
+  producao:      { label: 'Produção',             color: '#c2410c', bgColor: '#fff7ed' },
   almoxarifado:  { label: 'Almoxarifado',        color: '#b45309', bgColor: '#fef3c7' },
   planejamento:  { label: 'Planejamento',        color: '#0e7490', bgColor: '#ecfeff' },
   assistencia:   { label: 'Assistência Técnica', color: '#dc2626', bgColor: '#fef2f2' },
@@ -65,6 +70,7 @@ export const MODULE_META: Record<ErpModule, ModuleMeta> = {
   suprimento:    { label: 'Suprimento',          color: '#15803d', bgColor: '#f0fdf4' },
   importacao:    { label: 'Importação',          color: '#0369a1', bgColor: '#f0f9ff' },
   inspecao:      { label: 'Inspeção',            color: '#a21caf', bgColor: '#fdf4ff' },
+  cadastros:     { label: 'Cadastros & Plataforma', color: '#475569', bgColor: '#f8fafc' },
 };
 
 export interface ErpScreen {
@@ -82,21 +88,67 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Consultar todos os pedidos de vendas.",
     module: "comercial",
   },
+  // ── Produção
   {
-    code: "FCOM0100",
-    title: "Painel Comercial",
-    description: "Visão inicial de negociações e propostas.",
-    module: "comercial",
+    code: "VPRO0100",
+    title: "Roteiro de Fabricação",
+    description: "Cadastrar operações, roteiros, rede de dependências e calcular lead time via CPM.",
+    module: "producao",
   },
-
-  // ── Financeiro
   {
-    code: "FFIN0300",
-    title: "Resumo Financeiro",
-    description: "Acompanhamento consolidado de indicadores financeiros.",
-    module: "financeiro",
+    code: "VPRO0200",
+    title: "CRP — Capacity Requirements Planning",
+    description: "Calcular carga por centro de trabalho/dia e identificar sobrecargas de um plano MRP.",
+    module: "producao",
   },
-
+  {
+    code: "VPRO0210",
+    title: "APS — Sequenciamento / Gantt",
+    description: "Sequenciar ordens em capacidade finita (EDD) e visualizar o Gantt por ordem/centro.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0300",
+    title: "Custo Padrão",
+    description: "Calcular o custo padrão (material + operação + overhead) com rollup multinível.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0400",
+    title: "Qualidade — Pontos de Inspeção",
+    description: "Cadastrar pontos de inspeção (recebimento/processo/final) e registrar laudos.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0500",
+    title: "Manutenção Preventiva",
+    description: "Planos de manutenção e ordens (PLANNED→IN_PROGRESS→DONE); horas descontadas no CRP.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0600",
+    title: "Previsão Estatística",
+    description: "Prever demanda com modelos estatísticos (Holt-Winters, suavização, média móvel) — menor MAPE.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0700",
+    title: "Alertas de Exceções MRP",
+    description: "Consolidar e notificar exceções do MRP via webhook e/ou e-mail.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0800",
+    title: "Restrições e Configurador",
+    description: "Definir regras de validade de combinações de atributos e avaliá-las com um contexto.",
+    module: "producao",
+  },
+  {
+    code: "VPRO0900",
+    title: "Ordem de Produção",
+    description: "Gerir a OF: ciclo OPEN→IN_PROGRESS→COMPLETED→CLOSED, apontamentos, consumos (OUT), conclusão (IN+lote), custo real e sucata.",
+    module: "producao",
+  },
   // ── Contabilidade
   {
     code: "VCTB0102",
@@ -116,6 +168,18 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VPME0102ITE",
     title: "Calendário de Promessa de Entrega por Item",
     description: "Cadastrar dias úteis e não úteis para enchimento de tanques por item e máscara.",
+    module: "engenharia",
+  },
+  {
+    code: "VMAQ0101",
+    title: "Tipos de Máquina",
+    description: "Cadastrar categorias de equipamento (corte, dobra, solda, pintura, torno…).",
+    module: "engenharia",
+  },
+  {
+    code: "VMAQ0200",
+    title: "Máquinas, Tempos e Cálculo",
+    description: "Cadastrar máquinas (capacidade/eficiência), tempos por item × máquina, agenda e calcular o tempo de produção (ciclos, setup, gargalo).",
     module: "engenharia",
   },
   {
@@ -246,6 +310,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Criar simulação e formar diversos preços de venda.",
     module: "custo",
   },
+  {
+    code: "VCUS0100",
+    title: "Custos — Centro, Compra, Alocação e Overhead",
+    description: "Custo/hora por centro de trabalho, custo de compra por item, base de alocação, overhead e rollup do custo padrão.",
+    module: "custo",
+  },
 
   // ── PDV
   {
@@ -308,6 +378,30 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VCLI0117",
     title: "Cadastro de Permissões e Restrições de Venda",
     description: "Restringir ou permitir a venda de itens ou classificação fiscal para clientes, estabelecimentos ou representantes.",
+    module: "cliente",
+  },
+  {
+    code: "VCLI0500",
+    title: "Cadastro de Cliente",
+    description: "Cadastrar clientes (matriz/filiais), dados fiscais, apoios vinculados, endereços, contatos e bloqueio/desbloqueio.",
+    module: "cliente",
+  },
+  {
+    code: "VCLI0510",
+    title: "Apoio de Cliente — Básico",
+    description: "Manter os cadastros de apoio básicos: região, segmento de mercado, tipo de contato, tipo de cliente, portador e grupo de portadores.",
+    module: "cliente",
+  },
+  {
+    code: "VCLI0520",
+    title: "Apoio de Cliente — Comercial",
+    description: "Manter condições de pagamento (com parcelas) e tabelas de vendas usadas pelo pedido de venda.",
+    module: "cliente",
+  },
+  {
+    code: "VCLI0530",
+    title: "Apoio de Cliente — Fiscal",
+    description: "Manter tipos de nota fiscal de saída e tipos de imposto (composição de base de cálculo) padrão do cliente.",
     module: "cliente",
   },
 
@@ -529,5 +623,264 @@ export const ERP_SCREENS: ErpScreen[] = [
     title: "Envio de IQF aos Fornecedores",
     description: "Calcular e enviar o IQF aos fornecedores com layout de e-mail personalizado.",
     module: "inspecao",
+  },
+
+  // ── Fiscal & Financeiro
+  {
+    code: "VFIN0100",
+    title: "Contas Bancárias",
+    description: "Cadastrar contas bancárias com saldo inicial e chave PIX.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0110",
+    title: "Condições de Pagamento",
+    description: "Cadastrar condições de pagamento (parcelas em dias) do módulo financeiro.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0120",
+    title: "Plano de Contas",
+    description: "Manter o plano de contas (tipo/natureza, hierarquia).",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0130",
+    title: "Centros de Custo",
+    description: "Cadastrar centros de custo.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0200",
+    title: "Contas a Pagar",
+    description: "Lançar, aprovar, baixar e cancelar contas a pagar; aging.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0210",
+    title: "Contas a Receber",
+    description: "Lançar, baixar e cancelar contas a receber; aging.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0300",
+    title: "Fluxo de Caixa e Saldos",
+    description: "Extrato realizado, projeção de caixa e saldos das contas.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0400",
+    title: "Apuração de Impostos",
+    description: "Apurar ICMS/IPI/PIS/COFINS por competência.",
+    module: "financeiro",
+  },
+  {
+    code: "VFIN0500",
+    title: "Relatórios Fiscais e Financeiros",
+    description: "Relatórios R01–R19 (livros, DRE, aging, curva ABC, produtos).",
+    module: "financeiro",
+  },
+  {
+    code: "VFIS0100",
+    title: "Configuração Fiscal",
+    description: "Configurar emitente, endereço, Focus NF-e, alíquotas e vencimentos.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0110",
+    title: "Tabelas Tributárias",
+    description: "Manter tabelas NCM (IPI/PIS/COFINS) e ICMS interno/interestadual.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0200",
+    title: "NF-e de Saída",
+    description: "Emitir NF-e de saída: rascunho, autorização, CC-e, cancelamento, status.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0210",
+    title: "NF-e de Entrada",
+    description: "Lançar/importar NF-e de entrada (XML ou chave) e aprovar.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0220",
+    title: "CT-e (Conhecimento de Transporte)",
+    description: "Registrar CT-e e ratear frete vinculado à NF-e de entrada.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0300",
+    title: "CFOPs e Naturezas de Operação",
+    description: "Manter CFOPs e suas classificações de utilização.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0310",
+    title: "Dispositivos Legais",
+    description: "Cadastrar dispositivos legais (ICMS/IPI/PIS/COFINS/laudo).",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0320",
+    title: "Parâmetros ICMS/IPI",
+    description: "Parâmetros básicos de ICMS/IPI por NCM/Item, UF e operação.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0330",
+    title: "Redução / Substituição / Diferimento de ICMS",
+    description: "Parametrização avançada de ICMS por item/NCM/UF/cliente (hierarquia).",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0340",
+    title: "Apuração do Simples Nacional",
+    description: "Apuração mensal do Simples Nacional por anexo.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0350",
+    title: "Classificações Fiscais",
+    description: "Cadastro de classificação fiscal de mercadorias (NCM/CEST), idiomas e atributos de exportação.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0360",
+    title: "Tipos de Operação de Entrada",
+    description: "Natureza fiscal das compras, grupos de estado e validação UF×natureza.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0500",
+    title: "Motivos de Transferência DAPI",
+    description: "Cadastrar motivos de transferência usados na DAPI.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0510",
+    title: "Códigos de Ajuste de Apuração ICMS (5.1.1)",
+    description: "Códigos de ajuste de apuração ICMS do SPED Fiscal por UF.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0520",
+    title: "Códigos de Ajuste ICMS (5.2/5.3/5.6/5.7)",
+    description: "Códigos de ajuste ICMS para benefícios, incentivos e estornos.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0530",
+    title: "Linhas de Apuração de ICMS",
+    description: "Linhas do bloco E do SPED Fiscal (apuração de ICMS).",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0540",
+    title: "Lançamentos Resumo de ICMS",
+    description: "Resumo de ICMS por período/UF/CFOP e notas vinculadas (+ adicionais C197).",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0550",
+    title: "Restituição / Ressarcimento de ICMS ST",
+    description: "Pedidos de restituição/ressarcimento/complementação de ICMS ST.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0560",
+    title: "Notas Especiais de Ajuste",
+    description: "Notas complementares e de ajuste de apuração de ICMS (com itens).",
+    module: "fiscal",
+  },
+
+  // ── Cadastros & Plataforma / Contabilidade / NFS-e (novas)
+  {
+    code: "VEMP0100",
+    title: "Cadastro de Empresa",
+    description: "Cadastrar empresa (CNPJ, inscrições, regime tributário, endereço SEFAZ); matriz/filiais.",
+    module: "cadastros",
+  },
+  {
+    code: "VFUN0100",
+    title: "Cadastro de Funcionário",
+    description: "Cadastrar, editar e desativar funcionários (função, situação, flags).",
+    module: "cadastros",
+  },
+  {
+    code: "VLOC0100",
+    title: "Localização (Países e UFs)",
+    description: "Manter países e UFs (base para endereços e regras fiscais).",
+    module: "cadastros",
+  },
+  {
+    code: "VCLA0100",
+    title: "Classificação de Itens",
+    description: "Manter máscaras de classificação e a árvore de classificações de itens.",
+    module: "cadastros",
+  },
+  {
+    code: "VCAL0100",
+    title: "Calendário Industrial",
+    description: "Cadastrar dias úteis/não úteis da fábrica, consumidos pelo planejamento.",
+    module: "cadastros",
+  },
+  {
+    code: "VPRI0100",
+    title: "Prioridade de Ordens",
+    description: "Cadastrar níveis de prioridade usados pelo APS no sequenciamento.",
+    module: "cadastros",
+  },
+  {
+    code: "VCTB0200",
+    title: "Contabilidade (SPED ECD)",
+    description: "Plano de contas, contas contábeis, lançamentos e balancete (escrituração).",
+    module: "contabilidade",
+  },
+  {
+    code: "VNFS0100",
+    title: "NFS-e (Nota Fiscal de Serviço)",
+    description: "Emitir, autorizar e cancelar NFS-e (modelo ABRASF via Focus), com cálculo de ISS.",
+    module: "fiscal",
+  },
+
+  // ── Estoque / Almoxarifado
+  {
+    code: "VEST0100",
+    title: "Estoque — Movimentos, Saldos, ATP, Reservas, Lotes",
+    description: "Lançar movimentos, consultar saldos/ATP, criar reservas, registrar lotes (genealogia) e consumo médio (ROP).",
+    module: "almoxarifado",
+  },
+  {
+    code: "VEST0200",
+    title: "Inventário e Tipos de Movimento",
+    description: "Criar inventário, contar, ajustar diferenças e fechar; CRUD dos tipos de movimento de estoque.",
+    module: "almoxarifado",
+  },
+  // ── Vendas & Expedição (novas)
+  {
+    code: "VEXP0100",
+    title: "Expedição / Romaneio",
+    description: "Montar romaneio de expedição: itens, conferência e despacho (OPEN→SEPARATED→CONFERRED→SHIPPED).",
+    module: "almoxarifado",
+  },
+  {
+    code: "VVND0100",
+    title: "Divisão de Vendas",
+    description: "Cadastrar divisões de vendas (equipe/região/unidade) associáveis ao pedido.",
+    module: "comercial",
+  },
+  {
+    code: "VVND0200",
+    title: "Pedido de Venda",
+    description: "Gerir pedidos de venda: capa, itens, confirmação (crédito/reserva/demanda), bloqueio e cancelamento (R→P→F).",
+    module: "comercial",
+  },
+  {
+    code: "VEXR0100",
+    title: "Reprogramação de Entrega",
+    description: "Registrar e consultar reprogramações de data de entrega por pedido (data original × nova × motivo).",
+    module: "comercial",
   },
 ];

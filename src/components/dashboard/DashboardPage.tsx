@@ -148,6 +148,8 @@ export function DashboardPage(): JSX.Element {
       .av{width:32px;height:32px;background:rgba(62,150,84,.2);border:1.5px solid rgba(62,150,84,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:#7ecb8f;flex-shrink:0}
       .lo{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:6px 12px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:#5a8a68;cursor:pointer;transition:background .15s,color .15s}
       .lo:hover{background:rgba(224,82,82,.08);border-color:rgba(224,82,82,.2);color:#e07070}
+      .hl{display:flex;align-items:center;justify-content:center;width:32px;height:30px;background:transparent;border:1px solid rgba(255,255,255,.08);border-radius:7px;font-family:'Inter',sans-serif;color:#5a8a68;cursor:pointer;transition:background .15s,color .15s}
+      .hl:hover{background:rgba(62,150,84,.12);border-color:rgba(62,150,84,.35);color:#3e9654}
       .s{grid-area:s;background:#fff;border-right:1px solid #dbe8d5;display:flex;flex-direction:column;overflow:hidden}
       .stp{padding:14px 14px 10px;border-bottom:1px solid #edf5e8;flex-shrink:0}
       .sh{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8ab09a;margin-bottom:10px}
@@ -261,6 +263,7 @@ export function DashboardPage(): JSX.Element {
           <div className="ui"><span className="un">{welcomeName}</span><span className="ur">{userRoleLabel}</span></div>
           <div className="av">{initials}</div>
           <button type="button" className="lo" onClick={handleLogout}><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>Sair</button>
+          <button type="button" className="hl" onClick={() => { import("@tauri-apps/plugin-opener").then(m => m.openUrl("https://help.venturerp.com")); }} title="Ajuda"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/><path d="M6.2 6a2 2 0 012.6-1.8 1.9 1.9 0 011 2.5c-.4.9-1.2 1.3-1.8 1.8M8 11.4h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
           <WindowControls />
         </div>
       </header>

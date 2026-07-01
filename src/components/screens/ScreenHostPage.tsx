@@ -38,6 +38,10 @@ import { Vatc0380Page } from "./assistencia/Vatc0380Page";
 import { Vgar0211Page } from "./garantia/Vgar0211Page";
 import { Vcli0202Page } from "./cliente/Vcli0202Page";
 import { Vcli0117Page } from "./cliente/Vcli0117Page";
+import { Vcli0500Page } from "./cliente/Vcli0500Page";
+import { Vcli0510Page } from "./cliente/Vcli0510Page";
+import { Vcli0520Page } from "./cliente/Vcli0520Page";
+import { Vcli0530Page } from "./cliente/Vcli0530Page";
 import { Vcst0202Page } from "./custo/Vcst0202Page";
 import { Vpdv0200Page } from "./pdv/Vpdv0200Page";
 import { Vpdv0253Page } from "./pdv/Vpdv0253Page";
@@ -68,6 +72,61 @@ import { Vins0211Page } from "./inspecao/Vins0211Page";
 import { Vavf0105Page } from "./inspecao/Vavf0105Page";
 import { Vavf0101Page } from "./inspecao/Vavf0101Page";
 import { Vavf0204Page } from "./inspecao/Vavf0204Page";
+import { Vfin0100Page } from "./financeiro/Vfin0100Page";
+import { Vfin0110Page } from "./financeiro/Vfin0110Page";
+import { Vfin0120Page } from "./financeiro/Vfin0120Page";
+import { Vfin0130Page } from "./financeiro/Vfin0130Page";
+import { Vfin0200Page } from "./financeiro/Vfin0200Page";
+import { Vfin0210Page } from "./financeiro/Vfin0210Page";
+import { Vfin0300Page } from "./financeiro/Vfin0300Page";
+import { Vfin0400Page } from "./financeiro/Vfin0400Page";
+import { Vfin0500Page } from "./financeiro/Vfin0500Page";
+import { Vfis0100Page } from "./fiscal/Vfis0100Page";
+import { Vfis0110Page } from "./fiscal/Vfis0110Page";
+import { Vfis0200Page } from "./fiscal/Vfis0200Page";
+import { Vfis0210Page } from "./fiscal/Vfis0210Page";
+import { Vfis0220Page } from "./fiscal/Vfis0220Page";
+import { Vfis0300Page } from "./fiscal/Vfis0300Page";
+import { Vfis0310Page } from "./fiscal/Vfis0310Page";
+import { Vfis0320Page } from "./fiscal/Vfis0320Page";
+import { Vfis0330Page } from "./fiscal/Vfis0330Page";
+import { Vfis0340Page } from "./fiscal/Vfis0340Page";
+import { Vfis0350Page } from "./fiscal/Vfis0350Page";
+import { Vfis0360Page } from "./fiscal/Vfis0360Page";
+import { Vfis0500Page } from "./fiscal/Vfis0500Page";
+import { Vfis0510Page } from "./fiscal/Vfis0510Page";
+import { Vfis0520Page } from "./fiscal/Vfis0520Page";
+import { Vfis0530Page } from "./fiscal/Vfis0530Page";
+import { Vfis0540Page } from "./fiscal/Vfis0540Page";
+import { Vfis0550Page } from "./fiscal/Vfis0550Page";
+import { Vfis0560Page } from "./fiscal/Vfis0560Page";
+import { Vemp0100Page } from "./cadastros/Vemp0100Page";
+import { Vfun0100Page } from "./cadastros/Vfun0100Page";
+import { Vloc0100Page } from "./cadastros/Vloc0100Page";
+import { Vcla0100Page } from "./cadastros/Vcla0100Page";
+import { Vcal0100Page } from "./cadastros/Vcal0100Page";
+import { Vpri0100Page } from "./cadastros/Vpri0100Page";
+import { Vctb0200Page } from "./contabilidade/Vctb0200Page";
+import { Vnfs0100Page } from "./fiscal/Vnfs0100Page";
+import { Vexp0100Page } from "./almoxarifado/Vexp0100Page";
+import { Vvnd0100Page } from "./comercial/Vvnd0100Page";
+import { Vvnd0200Page } from "./comercial/Vvnd0200Page";
+import { Vpro0900Page } from "./producao/Vpro0900Page";
+import { Vpro0100Page } from "./producao/Vpro0100Page";
+import { Vpro0200Page } from "./producao/Vpro0200Page";
+import { Vpro0210Page } from "./producao/Vpro0210Page";
+import { Vpro0300Page } from "./producao/Vpro0300Page";
+import { Vpro0400Page } from "./producao/Vpro0400Page";
+import { Vpro0500Page } from "./producao/Vpro0500Page";
+import { Vpro0600Page } from "./producao/Vpro0600Page";
+import { Vpro0700Page } from "./producao/Vpro0700Page";
+import { Vpro0800Page } from "./producao/Vpro0800Page";
+import { Vcus0100Page } from "./custo/Vcus0100Page";
+import { Vest0100Page } from "./almoxarifado/Vest0100Page";
+import { Vest0200Page } from "./almoxarifado/Vest0200Page";
+import { Vmaq0101Page } from "./engenharia/Vmaq0101Page";
+import { Vmaq0200Page } from "./engenharia/Vmaq0200Page";
+import { Vexr0100Page } from "./comercial/Vexr0100Page";
 import { WindowControls } from "@/components/window/WindowControls";
 
 const SCREEN_REGISTRY: Record<string, JSX.Element> = {
@@ -115,6 +174,71 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   // Cliente
   VCLI0202: <Vcli0202Page />,
   VCLI0117: <Vcli0117Page />,
+  VCLI0500: <Vcli0500Page />,
+  VCLI0510: <Vcli0510Page />,
+  VCLI0520: <Vcli0520Page />,
+  VCLI0530: <Vcli0530Page />,
+
+  // Vendas & Expedição (novas)
+  VEXP0100: <Vexp0100Page />,
+  VVND0100: <Vvnd0100Page />,
+  VVND0200: <Vvnd0200Page />,
+  VPRO0900: <Vpro0900Page />,
+  VPRO0100: <Vpro0100Page />,
+  VPRO0200: <Vpro0200Page />,
+  VPRO0210: <Vpro0210Page />,
+  VPRO0300: <Vpro0300Page />,
+  VPRO0400: <Vpro0400Page />,
+  VPRO0500: <Vpro0500Page />,
+  VPRO0600: <Vpro0600Page />,
+  VPRO0700: <Vpro0700Page />,
+  VPRO0800: <Vpro0800Page />,
+  VCUS0100: <Vcus0100Page />,
+  VEST0100: <Vest0100Page />,
+  VEST0200: <Vest0200Page />,
+  VMAQ0101: <Vmaq0101Page />,
+  VMAQ0200: <Vmaq0200Page />,
+  VEXR0100: <Vexr0100Page />,
+
+  // Cadastros & Plataforma (novas)
+  VEMP0100: <Vemp0100Page />,
+  VFUN0100: <Vfun0100Page />,
+  VLOC0100: <Vloc0100Page />,
+  VCLA0100: <Vcla0100Page />,
+  VCAL0100: <Vcal0100Page />,
+  VPRI0100: <Vpri0100Page />,
+  VCTB0200: <Vctb0200Page />,
+  VNFS0100: <Vnfs0100Page />,
+
+  // Fiscal & Financeiro
+  VFIN0100: <Vfin0100Page />,
+  VFIN0110: <Vfin0110Page />,
+  VFIN0120: <Vfin0120Page />,
+  VFIN0130: <Vfin0130Page />,
+  VFIN0200: <Vfin0200Page />,
+  VFIN0210: <Vfin0210Page />,
+  VFIN0300: <Vfin0300Page />,
+  VFIN0400: <Vfin0400Page />,
+  VFIN0500: <Vfin0500Page />,
+  VFIS0100: <Vfis0100Page />,
+  VFIS0110: <Vfis0110Page />,
+  VFIS0200: <Vfis0200Page />,
+  VFIS0210: <Vfis0210Page />,
+  VFIS0220: <Vfis0220Page />,
+  VFIS0300: <Vfis0300Page />,
+  VFIS0310: <Vfis0310Page />,
+  VFIS0320: <Vfis0320Page />,
+  VFIS0330: <Vfis0330Page />,
+  VFIS0340: <Vfis0340Page />,
+  VFIS0350: <Vfis0350Page />,
+  VFIS0360: <Vfis0360Page />,
+  VFIS0500: <Vfis0500Page />,
+  VFIS0510: <Vfis0510Page />,
+  VFIS0520: <Vfis0520Page />,
+  VFIS0530: <Vfis0530Page />,
+  VFIS0540: <Vfis0540Page />,
+  VFIS0550: <Vfis0550Page />,
+  VFIS0560: <Vfis0560Page />,
   // Custos
   VCST0202: <Vcst0202Page />,
   // PDV
