@@ -2333,45 +2333,6 @@ Replicar parâmetros de um item de origem para múltiplos itens de destino, em l
 
 ---
 
-#### VMAQ0101 — Tipos de Máquina
-
-##### Objetivo
-Cadastrar os tipos de máquinas utilizadas nos Centros de Trabalho, com 9 categorias predefinidas: Corte (CUT), Dobra (BEND), Solda (WELD), Montagem (ASSEMBLE), Pintura (PAINT), Torno (LATHE), Fresadora (MILL), Prensa (PRESS) e Injeção (INJECT). Layout de 2 colunas: formulário à esquerda, lista à direita.
-
-##### Pré-requisitos
-- Nenhum.
-
-##### Passo a passo
-
-1. Acesse **VMAQ0101** pelo menu _Engenharia > Tipos de Máquina_.
-2. O layout exibe: **formulário** (coluna esquerda) e **lista** (coluna direita).
-3. Para criar, preencha os campos no formulário: **Código**, **Descrição** e **Tipo**.
-4. Selecione um dos 9 tipos na lista suspensa.
-5. Clique em **Salvar** (F9).
-6. O novo tipo aparece na lista à direita.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Código | Texto (10) | Sim | Código do tipo de máquina |
-| Descrição | Texto (120) | Sim | Nome descritivo |
-| Tipo | Select | Sim | CUT / BEND / WELD / ASSEMBLE / PAINT / LATHE / MILL / PRESS / INJECT |
-
-##### Observações importantes
-- Os tipos de máquina são usados para categorizar Centros de Trabalho e calcular custos-hora diferenciados.
-- O layout de 2 colunas permite visualizar a lista enquanto edita o formulário.
-
-##### Telas relacionadas
-
-| Tela | Relação |
-|------|---------|
-| VENT0202 | Roteiro de Fabricação — CTs referenciam tipos de máquina |
-| VENT0115 | Roteiro Padrão — CTs com seus tipos de máquina |
-| VENT0363 | Relatório Tempo CT — custos calculados por tipo de máquina |
-
----
-
 ## 2. PLANEJAMENTO
 
 #### VPLA0102 — Demandas Independentes
@@ -4295,7 +4256,6 @@ Antes de operar qualquer tela do processo comercial, os seguintes cadastros de b
 
 O fluxo acima é **linear e sequencial**: não se pode faturar um pedido que não foi criado, não se pode expedir um pedido que não está liberado, e não se pode criar um pedido sem cliente e itens cadastrados. A integridade referencial entre as telas garante a consistência dos dados em toda a cadeia.
 
----
 
 ---
 
@@ -4374,7 +4334,6 @@ Consultar todos os pedidos de venda cadastrados no sistema. Esta tela é **exclu
 - **VEXR0100 (Reprogramação de Entrega)**: Se um pedido listado aqui precisar de ajuste na data de entrega, esta tela registra a reprogramação com histórico.
 - **VPDV0253 (Console de Acompanhamento de Pedidos)**: Oferece visão gerencial com cards de posição e drill-down por item, complementar à consulta tabular desta tela.
 
----
 
 ---
 
@@ -4433,7 +4392,6 @@ Cadastrar e gerenciar as **Divisões de Vendas** da empresa — estruturas organ
 - **VCLI0510 (Apoio Básico)**: A aba "Região" fornece as regiões que podem ser vinculadas às divisões.
 - **VPDV0253 (Console de Acompanhamento)**: Permite filtrar e agrupar pedidos por divisão de vendas.
 
----
 
 ---
 
@@ -4491,7 +4449,6 @@ Registrar e consultar **reprogramações de data de entrega** de pedidos de vend
 - **VENT0100 (Consulta de Pedido de Venda)**: Permite localizar pedidos e verificar datas de entrega antes de registrar uma reprogramação.
 - **VPDV0253 (Console de Acompanhamento de Pedidos)**: Exibe o status atual de cada pedido, incluindo alertas de prazo (verde/amarelo/vermelho) que podem motivar uma reprogramação.
 
----
 
 ---
 
@@ -4637,7 +4594,6 @@ Antes de cadastrar um cliente, os seguintes cadastros de apoio devem existir:
 - **VCLI0202 (Percentuais de Frete)**: Configure taxas de frete específicas para este cliente.
 - **VPDV0200 (Cadastro de Pedido de Venda)**: Ao criar um pedido, o cliente é selecionado a partir deste cadastro. Todos os parâmetros são carregados automaticamente.
 
----
 
 ---
 
@@ -4743,7 +4699,6 @@ Centralizar os **cadastros de apoio básico** referenciados pelo cadastro de cli
 - **VCLI0520 (Apoio Comercial)**: Complementa os cadastros de apoio com Condições de Pagamento e Tabelas de Venda.
 - **VPDV0200 (Cadastro de Pedido de Venda)**: Utiliza Portador e Tipo Cliente indiretamente através dos dados carregados do cliente.
 
----
 
 ---
 
@@ -4861,7 +4816,6 @@ Gerenciar os **cadastros de apoio comercial** essenciais para o processo de vend
 - **VPDV0200 (Cadastro de Pedido de Venda)**: Ao criar um pedido, a condição de pagamento e tabela de venda do cliente são carregadas. O preço dos itens é calculado conforme a formação definida na tabela.
 - **VFIN0110 (Condições de Pagamento — Financeiro)**: Cadastro paralelo no módulo financeiro, mais simplificado.
 
----
 
 ---
 
@@ -4990,7 +4944,6 @@ Gerenciar os **cadastros de apoio fiscal** que definem o comportamento tributár
 - **VFIS0100 (Configuração Fiscal)**: Complementa as configurações fiscais para emissão de NF-e.
 - **VFIS0210 (NF-e de Saída)**: Utiliza os Tipos de NF e Tipos de Imposto para emissão do documento fiscal.
 
----
 
 ---
 
@@ -5050,7 +5003,6 @@ Controlar **quais itens ou classificações de itens** podem (Permissão) ou nã
 - **VCLA0100 (Classificação de Itens)**: Categorias utilizadas no escopo por classificação.
 - **VPDV0200 (Cadastro de Pedido de Venda)**: Regras validadas ao adicionar itens ao pedido.
 
----
 
 ---
 
@@ -5102,7 +5054,6 @@ Configurar **percentuais de frete diferenciados** por cliente, com faixas de val
 - **VPDV0111 (Política Comercial de Fretes)**: Políticas mais abrangentes que trabalham em conjunto.
 - **VPLC0200 (Montagem de Carga)**: Utiliza os percentuais para compor frete total.
 
----
 
 ---
 
@@ -5196,7 +5147,6 @@ Cadastrar e gerenciar **políticas comerciais de descontos** aplicadas automatic
 - **VPDV0111 (Política Comercial de Fretes)**: Trabalha em conjunto para desconto e frete.
 - **VCLI0500 (Cadastro de Cliente)**: O cliente selecionado dispara a consulta às políticas vinculadas.
 
----
 
 ---
 
@@ -5289,7 +5239,6 @@ Cadastrar e gerenciar **políticas comerciais de frete** que determinam automati
 - **VPLC0200 (Montagem de Carga)**: Consolida fretes de múltiplos pedidos.
 - **VPDV0108 (Política de Descontos)**: Impacta o valor base do cálculo de frete.
 
----
 
 ---
 
@@ -5422,7 +5371,6 @@ Todos os cadastros de apoio devem estar concluídos: VCLI0500, VENT0200, VCLI051
 - **VVND0100**: Divisão de vendas.
 - **VRE0203**: Projeção de comissões.
 
----
 
 ---
 
@@ -5487,7 +5435,6 @@ Oferecer uma **visão gerencial em tempo real** do andamento dos pedidos. Aprese
 - **VEXR0100**: Reprogramação para pedidos com indicador vermelho.
 - **VEXP0100**: A posição reflete o andamento da expedição.
 
----
 
 ---
 
@@ -5535,7 +5482,6 @@ Gerenciar **contratos de vendas recorrentes** (assinaturas), com suporte a upgra
 - **VCLI0500**: Clientes titulares.
 - **VFIN0210**: Contas a receber após faturamento.
 
----
 
 ---
 
@@ -5578,11 +5524,10 @@ Projetar **comissões futuras** a serem pagas aos representantes, baseadas em pe
 - **VVRE0200**: Vendas recorrentes também geram projeções.
 - **VFIN0210**: Contas a receber quando as comissões se tornam efetivas.
 
----
 
 ---
 
-### Módulo: Almoxarifado (2 telas)
+### Módulo: Almoxarifado (1 tela)
 
 ---
 
@@ -5646,77 +5591,6 @@ Cadastrar e gerenciar os **almoxarifados** do sistema — locais físicos ou ló
 - **VEXP0100 (Expedição / Romaneio)**: Utiliza o almoxarifado de expedição.
 - **VPDV0200 (Cadastro de Pedido de Venda)**: Campo "Estab Entrega" referencia o almoxarifado.
 
----
-
----
-
-#### VEXP0100 — Expedição / Romaneio
-
-##### Objetivo
-
-Controlar o **processo completo de expedição** de pedidos de venda. Implementa um **workflow de 4 etapas** (Aberto → Em Separação → Conferido → Expedido) e gerencia itens com quantidades pedidas, separadas e conferidas. É a ponte entre o comercial e a logística.
-
-##### Pré-requisitos
-
-- **Pedido de venda** liberado no **VPDV0200**.
-- **Almoxarifado** de expedição no **VENT0800**.
-- **Transportadora** (opcional) no **VCLI0510**.
-
-##### Passo a passo
-
-1. Acesse **VEXP0100 — Expedição / Romaneio**.
-2. Para criar um romaneio:
-   - **Pedido de Venda** (obrigatório): número do pedido.
-   - **Transportadora**: código (opcional).
-   - **Volumes** e **Peso (kg)**.
-3. Clique em **Criar** (status: Aberto).
-4. Selecione o romaneio na lista para abrir o detalhe.
-5. Adicione **itens** informando código do item e quantidade.
-6. Inicie o workflow:
-   - **Iniciar Separação** → status muda para "Em Separação".
-   - Lance as quantidades separadas por item.
-   - **Conferir** → status "Conferido". Informe quantidades conferidas.
-   - **Expedir** → status "Expedido" (SHIPPED).
-7. Para cancelar, use a ação **Cancelar** (status CANCELLED).
-
-##### Campos
-
-**Cabeçalho do Romaneio:**
-
-| Campo | Tipo | Obrigatório | Opções | Função |
-|-------|------|-------------|--------|--------|
-| Pedido de Venda | número | Sim | — | Número do pedido vinculado |
-| Transportadora | número | Não | — | Código da transportadora |
-| Volumes | número | Não | — | Quantidade de volumes |
-| Peso (kg) | número | Não | — | Peso total em kg |
-| Status | status | Sim | OPEN / SEPARATED / CONFERRED / SHIPPED / CANCELLED | Status do romaneio |
-
-**Itens do Romaneio:**
-
-| Campo | Função |
-|-------|--------|
-| Item | Código do produto |
-| Descrição | Descrição do produto |
-| Qtd Pedido | Quantidade original do pedido |
-| Qtd Separado | Quantidade separada no almoxarifado |
-| Qtd Conferido | Quantidade conferida (validada) |
-
-##### Observações importantes
-
-- **Workflow linear**: OPEN → SEPARATED → CONFERRED → SHIPPED. Não é possível pular etapas.
-- Conferência pode divergir da separação (danos, erros). Divergências devem ser tratadas.
-- Cancelamento possível a qualquer momento antes de SHIPPED.
-- Após SHIPPED, o romaneio está pronto para faturamento (VFIS0100).
-- Para cargas consolidadas (múltiplos pedidos), utilize VPLC0200 (Montagem de Carga).
-
-##### Telas relacionadas
-
-- **VPDV0200 (Cadastro de Pedido de Venda)**: Origem do pedido expedido.
-- **VENT0800 (Cadastro de Almoxarifado)**: Almoxarifados de origem/destino.
-- **VPLC0200 (Montagem de Carga)**: Para cargas consolidadas.
-- **VFIS0100 (Configuração Fiscal)**: Próximo passo após expedição.
-
----
 
 ---
 
@@ -5829,7 +5703,6 @@ Realizar a **simulação e formação de preços de venda** baseados em custos, 
 - **VPDV0200 (Cadastro de Pedido de Venda)**: Precificações aprovadas podem originar pedidos com origem "Precificação".
 - **VCLA0100 (Classificação de Itens)**: Máscaras configuráveis.
 
----
 
 ---
 
@@ -7581,8 +7454,6 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 > Documentação atualizada em Junho 2026.
 
 
----
-
 
 ---
 
@@ -7705,13 +7576,18 @@ produto final, e cada papel exige configurações diferentes.
    ativação** e mostra se o item está ✅ **pronto** ou ⚠️ com **pendências**/**alertas**,
    além da **estrutura (BOM)** do item.
 
-##### O checklist de prontidão (§ automação)
+##### O checklist de prontidão
 
-- Item **fabricado** → exige **estrutura (BOM)** e **roteiro**.
-- Item **comprado** → exige **fornecedor preferencial** e alerta se faltar **conversão
-  de UM** (necessária quando a UM de compra ≠ UM de estoque).
-- O endpoint **valida sem alterar o estado** do item — use como *gate* antes de colocar
-  o item em operação.
+Ao clicar em **Prontidão**, o sistema confere automaticamente se o item tem tudo o que
+precisa para participar do planejamento e da produção:
+
+- Item **fabricado** → precisa de **estrutura (BOM)** e **roteiro**.
+- Item **comprado** → precisa de **fornecedor preferencial** e recebe um alerta se
+  faltar a **conversão de unidade de medida** (necessária quando a UM de compra é
+  diferente da UM de estoque).
+
+A verificação **apenas informa** o que está pronto ou pendente — ela **não altera** o
+item. Use-a como uma conferência final antes de colocar o item para operar.
 
 ##### Observações importantes
 
@@ -8435,7 +8311,7 @@ Conduzir o **inventário** físico (criar → contar → ajustar → fechar) e m
 
 ---
 
-#### VEXP0100 — Expedição / Romaneio (atualizado)
+#### VEXP0100 — Expedição / Romaneio
 
 ##### Objetivo
 
