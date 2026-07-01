@@ -3,12 +3,9 @@ import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject } from '@/ser
 /**
  * Overhead e Base de Alocação (Custos §3).
  *  - Base de alocação (`/api/allocations`): critério de rateio.
- *  - Alocação de overhead (`/api/overhead-allocation`): distribui indiretos pela base.
- *
- * ⚠️ BUG de backend: `POST /api/overhead-allocation/create` falha sempre com
- * `null value in column "cost_center_id"` (SQLSTATE 23502) — o handler não lê
- * nenhum campo de cost center do corpo (testado cost_center_id/code/...). Create
- * de overhead inoperante até correção no backend.
+ *  - Alocação de overhead (`/api/overhead-allocation`): distribui indiretos entre
+ *    centros de custo (`targets[]`). Campo obrigatório: `cost_center_code` (na capa e
+ *    em cada target); ausência → 422. Código duplicado em `allocations` → 409.
  */
 export interface AllocationBase {
   code: number;
@@ -17,12 +14,13 @@ export interface AllocationBase {
 }
 
 export interface OverheadAllocation {
-  code: number;
-  cost_center_id?: number;
-  allocation_base_code?: number;
+  id?: number;
+  cost_center_code: number;
+  period_start: string;
+  period_end: string;
+  allocation_type?: string;
   description?: string;
-  rate?: number;
-  period?: string;
+  targets?: { cost_center_code: number; percentage: number }[];
 }
 
 function parseBase(raw: unknown): AllocationBase {
@@ -35,13 +33,18 @@ function parseBase(raw: unknown): AllocationBase {
 }
 function parseOverhead(raw: unknown): OverheadAllocation {
   const o = unwrapObject(raw);
+  const targets = unwrapArray(o['targets'] ?? o['Targets']).map((t) => {
+    const to = unwrapObject(t);
+    return { cost_center_code: parseNum(to, 'cost_center_code', 'CostCenterCode'), percentage: parseNum(to, 'percentage', 'Percentage') };
+  });
   return {
-    code: parseNum(o, 'code', 'Code'),
-    cost_center_id: parseNum(o, 'cost_center_id', 'CostCenterID') || undefined,
-    allocation_base_code: parseNum(o, 'allocation_base_code', 'AllocationBaseCode') || undefined,
+    id: parseNum(o, 'id', 'ID') || undefined,
+    cost_center_code: parseNum(o, 'cost_center_code', 'CostCenterCode'),
+    period_start: parseStr(o, 'period_start', 'PeriodStart') || '',
+    period_end: parseStr(o, 'period_end', 'PeriodEnd') || '',
+    allocation_type: parseStr(o, 'allocation_type', 'AllocationType') || undefined,
     description: parseStr(o, 'description', 'Description') || undefined,
-    rate: parseNum(o, 'rate', 'Rate') || undefined,
-    period: parseStr(o, 'period', 'Period') || undefined,
+    targets,
   };
 }
 

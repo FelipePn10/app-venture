@@ -9,13 +9,10 @@ const BASE = '/api/production-order';
  * Automações de estoque: consumo → `OUT` do insumo; conclusão → `IN` do acabado
  * (com `lot` habilita genealogia); fechar a OF apura o custo real.
  *
- * ⚠️ Quirks/bugs confirmados na demo (localhost:5072):
- *  - respostas de leitura (list/get/histórico) são **snake_case**; respostas de
- *    mutação (create/start/complete/...) vêm **PascalCase**. Os parsers toleram ambos.
- *  - **consumo** usa `consumed_qty` (não `quantity`); enviar `quantity` é ignorado (vira 0).
- *  - `start`/`complete` não persistem datas reais (voltam `0001-01-01`).
- *  - **BUG: `operations/advance` → 500** `inconsistent types deduced for parameter $2`
- *    (SQLSTATE 42P08) — avanço de operação quebrado no backend.
+ * Notas: leitura vem snake_case, mutação PascalCase (parsers toleram ambos). Consumo
+ * usa **`consumed_qty`** (não `quantity`). Datas (`start`/`complete`/consumo/apontamento)
+ * aceitam `YYYY-MM-DD`/ISO; omitidas assumem agora. `create` exige `item_code` e
+ * `planned_qty > 0`. `operations/advance` usa `{operation_id,status,actual_hours}`.
  */
 export interface ProductionOrderDTO {
   id?: number;
@@ -235,9 +232,13 @@ export async function listOperations(id: number): Promise<OperationDTO[]> {
   const { data } = await httpClient.get(`${BASE}/${id}/operations`);
   return unwrapArray(data).map(parseOperation);
 }
-/** ⚠️ Backend com bug SQL (42P08) — pode retornar 500 até ser corrigido. */
-export async function advanceOperation(id: number): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/operations/advance`, { production_order_id: id });
+/**
+ * Avança uma operação da OF. Corpo: `{operation_id, status, actual_hours}`.
+ * `status` ∈ PENDING · IN_PROGRESS · DONE · SKIPPED (IN_PROGRESS carimba started_at;
+ * DONE/SKIPPED carimbam completed_at).
+ */
+export async function advanceOperation(operationId: number, status = 'IN_PROGRESS', actualHours = 0): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/operations/advance`, { operation_id: operationId, status, actual_hours: actualHours });
   return unwrapObject(data);
 }
 

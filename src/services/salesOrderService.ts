@@ -14,11 +14,9 @@ const BASE = '/api/sales-order';
  *  - geração de demanda independente idempotente por item.
  * A autorização da NF-e de saída posta `OUT`, consome reservas e marca o pedido `F`.
  *
- * ⚠️ Quirks do backend confirmados na demo (localhost:5072):
- *  - `POST /create` e `PUT /{code}` **ignoram** `emission_date`/`delivery_date`
- *    (voltam `0001-01-01`); idem `delivery_date` no item create. Mantemos os campos
- *    no DTO porque a leitura os traz e a correção é no backend.
- *  - `create` não valida obrigatórios (corpo vazio cria rascunho com enterprise 0).
+ * Datas (`emission_date`/`delivery_date`) aceitam `YYYY-MM-DD` ou ISO; `emission_date`
+ * omitido assume hoje. `enterprise_code` é obrigatório no create (422). A coluna
+ * `status` comporta `CANCELLED` (migration 000170) — cancelamento operante.
  */
 export interface SalesOrderItemDTO {
   code?: number;

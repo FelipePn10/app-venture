@@ -124,8 +124,9 @@ export async function createCustomer(dto: CustomerDTO): Promise<CustomerDTO> {
  * (apenas POST de criação e block/unblock), então reenviamos via POST — que faz
  * upsert quando suportado. Ver nota de lacuna do backend nos docs do projeto.
  */
+/** Atualiza o cliente via `PUT /api/customers/{code}` (mesmo corpo por códigos do POST). */
 export async function updateCustomer(dto: CustomerDTO): Promise<CustomerDTO> {
-  const { data } = await httpClient.post(BASE, { created_by: SYS_USER, ...dto });
+  const { data } = await httpClient.put(`${BASE}/${dto.code}`, { created_by: SYS_USER, ...dto });
   return parseCustomer(data);
 }
 
@@ -150,4 +151,56 @@ export async function addCustomerContact(code: number, contact: Record<string, u
 export async function listEstablishments(corporateCode: number): Promise<CustomerDTO[]> {
   const { data } = await httpClient.get(`${BASE}/${corporateCode}/establishments`);
   return unwrapArray(data).map(parseCustomer);
+}
+
+/** Dados retornados pela consulta de CNPJ (Receita/BrasilAPI via `/api/cnpj/{cnpj}`). */
+export interface CnpjLookup {
+  cnpj: string;
+  legal_name: string;
+  trade_name: string;
+  registration_status?: string;
+  email?: string;
+  phone?: string;
+  state_registration?: string;
+  address?: { zip_code?: string; street?: string; number?: string; complement?: string; neighborhood?: string; city?: string; uf?: string };
+  main_activity?: { code?: string; description?: string };
+}
+
+/** Auto-fill: consulta a Receita pelo CNPJ para pré-preencher o cadastro. */
+export async function lookupCnpj(cnpj: string): Promise<CnpjLookup> {
+  const digits = cnpj.replace(/\D/g, '');
+  const { data } = await httpClient.get(`/api/cnpj/${digits}`);
+  const root = unwrapObject(data);
+  const o = unwrapObject(root['data'] ?? root);
+  const addr = unwrapObject(o['address'] ?? o['Address']);
+  const act = unwrapObject(o['main_activity'] ?? o['MainActivity']);
+  return {
+    cnpj: parseStr(o, 'cnpj', 'Cnpj'),
+    legal_name: parseStr(o, 'legal_name', 'LegalName'),
+    trade_name: parseStr(o, 'trade_name', 'TradeName'),
+    registration_status: parseStr(o, 'registration_status', 'RegistrationStatus') || undefined,
+    email: parseStr(o, 'email', 'Email') || undefined,
+    phone: parseStr(o, 'phone', 'Phone') || undefined,
+    state_registration: parseStr(o, 'state_registration', 'StateRegistration') || undefined,
+    address: {
+      zip_code: parseStr(addr, 'zip_code', 'ZipCode') || undefined,
+      street: parseStr(addr, 'street', 'Street') || undefined,
+      number: parseStr(addr, 'number', 'Number') || undefined,
+      complement: parseStr(addr, 'complement', 'Complement') || undefined,
+      neighborhood: parseStr(addr, 'neighborhood', 'Neighborhood') || undefined,
+      city: parseStr(addr, 'city', 'City') || undefined,
+      uf: parseStr(addr, 'uf', 'Uf') || undefined,
+    },
+    main_activity: { code: parseStr(act, 'code', 'Code') || undefined, description: parseStr(act, 'description', 'Description') || undefined },
+  };
+}
+
+/** Exporta a lista de clientes como arquivo (xlsx/pdf/csv), com download no navegador. */
+export async function exportCustomers(fmt: 'xlsx' | 'pdf' | 'csv'): Promise<void> {
+  const { data } = await httpClient.get(BASE, { params: { format: fmt }, responseType: 'blob' });
+  const url = URL.createObjectURL(data as Blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `clientes.${fmt}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
 }

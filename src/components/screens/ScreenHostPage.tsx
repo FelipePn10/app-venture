@@ -123,6 +123,17 @@ import { Vpro0700Page } from "./producao/Vpro0700Page";
 import { Vpro0800Page } from "./producao/Vpro0800Page";
 import { Vcus0100Page } from "./custo/Vcus0100Page";
 import { Vest0100Page } from "./almoxarifado/Vest0100Page";
+import { Vcut0100Page } from "./producao/Vcut0100Page";
+import { Vmrp0100Page } from "./planejamento/Vmrp0100Page";
+import { Vsup0500Page } from "./suprimento/Vsup0500Page";
+import { Vsup0510Page } from "./suprimento/Vsup0510Page";
+import { Vsup0110Page } from "./suprimento/Vsup0110Page";
+import { Vsup0120Page } from "./suprimento/Vsup0120Page";
+import { Vsup0130Page } from "./suprimento/Vsup0130Page";
+import { Vsup0200Page } from "./suprimento/Vsup0200Page";
+import { Vsup0300Page } from "./suprimento/Vsup0300Page";
+import { Vsup0400Page } from "./suprimento/Vsup0400Page";
+import { Vitm0100Page } from "./engenharia/Vitm0100Page";
 import { Vest0200Page } from "./almoxarifado/Vest0200Page";
 import { Vmaq0101Page } from "./engenharia/Vmaq0101Page";
 import { Vmaq0200Page } from "./engenharia/Vmaq0200Page";
@@ -196,6 +207,17 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VCUS0100: <Vcus0100Page />,
   VEST0100: <Vest0100Page />,
   VEST0200: <Vest0200Page />,
+  VCUT0100: <Vcut0100Page />,
+  VMRP0100: <Vmrp0100Page />,
+  VSUP0500: <Vsup0500Page />,
+  VSUP0510: <Vsup0510Page />,
+  VSUP0110: <Vsup0110Page />,
+  VSUP0120: <Vsup0120Page />,
+  VSUP0130: <Vsup0130Page />,
+  VSUP0200: <Vsup0200Page />,
+  VSUP0300: <Vsup0300Page />,
+  VSUP0400: <Vsup0400Page />,
+  VITM0100: <Vitm0100Page />,
   VMAQ0101: <Vmaq0101Page />,
   VMAQ0200: <Vmaq0200Page />,
   VEXR0100: <Vexr0100Page />,

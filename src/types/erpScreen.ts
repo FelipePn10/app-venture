@@ -144,6 +144,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "producao",
   },
   {
+    code: "VCUT0100",
+    title: "Plano de Corte",
+    description: "Otimizar aproveitamento de matéria-prima (nesting 1D/2D/true-shape): demanda, estoque, otimizar, firmar (baixa + retalhos), programa, agenda e export SVG/DXF/PDF.",
+    module: "producao",
+  },
+  {
     code: "VPRO0900",
     title: "Ordem de Produção",
     description: "Gerir a OF: ciclo OPEN→IN_PROGRESS→COMPLETED→CLOSED, apontamentos, consumos (OUT), conclusão (IN+lote), custo real e sucata.",
@@ -168,6 +174,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VPME0102ITE",
     title: "Calendário de Promessa de Entrega por Item",
     description: "Cadastrar dias úteis e não úteis para enchimento de tanques por item e máscara.",
+    module: "engenharia",
+  },
+  {
+    code: "VITM0100",
+    title: "Item & Prontidão para o MRP",
+    description: "Listar itens, cadastrar (pastas PDM/Almox/Engenharia/Planejamento) e validar a prontidão para o MRP (checklist de BOM/roteiro/fornecedor/conversão) + estrutura.",
     module: "engenharia",
   },
   {
@@ -238,6 +250,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VPLA0102",
     title: "Cadastro de Demandas Independentes",
     description: "Cadastrar demandas independentes para o Cálculo do Planejamento.",
+    module: "planejamento",
+  },
+  {
+    code: "VMRP0100",
+    title: "MRP — Planejamento de Materiais",
+    description: "Rodar o MRP por plano, analisar sugestões de ordens, firmar (→ Ordem Planejada/OF), perfil MRP por item, exceções e regras configuradas.",
     module: "planejamento",
   },
 
@@ -350,6 +368,54 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VPDC0200",
     title: "Cadastro de Pedido de Compra",
     description: "Gerar o pedido de compra e enviá-lo ao fornecedor.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0500",
+    title: "Cadastro de Fornecedor",
+    description: "Cadastrar fornecedores/transportadoras: dados, endereço, pastas (telefones/emails/vencimentos/contatos/empresas), SEFAZ, auto-fill CNPJ e bloqueio.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0510",
+    title: "Apoio de Fornecedores",
+    description: "Cadastros de apoio do fornecedor: tipos de fornecedor (kind), tipos de contato e parâmetros por empresa.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0110",
+    title: "Conversão de UM por Item",
+    description: "Cadastrar fatores de conversão entre unidades de medida de um item (ex.: 1 CX = 12 UN) para o pedido de compra.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0120",
+    title: "Tabela de Preço de Compra",
+    description: "Cadastrar tabelas de preço de compra (genéricas ou por fornecedor) com vigência, moeda e itens.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0130",
+    title: "Fornecedor Preferencial por Item",
+    description: "Vincular fornecedores a um item com ranking de preferência, código/descrição/UM do item no fornecedor e lead time.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0200",
+    title: "Pedido de Compra",
+    description: "Gerir pedidos de compra (capa + itens com preço/IPI/UM resolvidos), cancelar, e aprovar/rejeitar sugestões de compra do MRP.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0300",
+    title: "Solicitação de Compra",
+    description: "Registrar solicitações de compra (itens com saldo/atendimento) e gerar pedidos agrupando por fornecedor.",
+    module: "suprimento",
+  },
+  {
+    code: "VSUP0400",
+    title: "Cotação de Compra",
+    description: "Liberar itens para cotação, registrar preços por fornecedor, selecionar o vencedor e gerar pedidos.",
     module: "suprimento",
   },
 

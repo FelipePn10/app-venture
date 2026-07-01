@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   type SalesDivisionDTO,
+  DIVISION_ANALYSIS,
   listSalesDivisions, createSalesDivision, updateSalesDivision, deleteSalesDivision,
 } from "@/services/salesDivisionService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const EMPTY: SalesDivisionDTO = { code: 0, description: "", commercial_analysis: "" };
+const EMPTY: SalesDivisionDTO = { code: 0, description: "", commercial_analysis: "FREE", financial_analysis: "FREE", consider_mrp: true };
 
 export function Vvnd0100Page(): JSX.Element {
   const [list, setList] = useState<SalesDivisionDTO[]>([]);
@@ -61,8 +62,12 @@ export function Vvnd0100Page(): JSX.Element {
         <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Organização comercial</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">Equipe / região / unidade associável ao pedido de venda.</span></div>
         <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
           <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código</label><input className="fsc-input fsc-input-right" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-6"><label className="fsc-label fsc-label-req">Descrição</label><input className="fsc-input" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-4"><label className="fsc-label">Análise comercial</label><input className="fsc-input" value={form.commercial_analysis ?? ""} placeholder="enum exigido pelo backend" onChange={(e) => setForm((p) => ({ ...p, commercial_analysis: e.target.value }))} /></div>
+          <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Descrição</label><input className="fsc-input" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} /></div>
+          <div className="fsc-field fsc-col-3"><label className="fsc-label">Análise comercial</label>
+            <select className="fsc-input" value={form.commercial_analysis ?? "FREE"} onChange={(e) => setForm((p) => ({ ...p, commercial_analysis: e.target.value as SalesDivisionDTO["commercial_analysis"] }))}>{DIVISION_ANALYSIS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}</select></div>
+          <div className="fsc-field fsc-col-3"><label className="fsc-label">Análise financeira</label>
+            <select className="fsc-input" value={form.financial_analysis ?? "FREE"} onChange={(e) => setForm((p) => ({ ...p, financial_analysis: e.target.value as SalesDivisionDTO["financial_analysis"] }))}>{DIVISION_ANALYSIS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}</select></div>
+          <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><label className="fsc-action-label" style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={!!form.consider_mrp} onChange={(e) => setForm((p) => ({ ...p, consider_mrp: e.target.checked }))} /> Considera MRP</label></div>
         </div></div></div>
 
         <div className="fsc-card"><div className="fsc-results-wrap">

@@ -33,7 +33,7 @@ export function Vcus0100Page(): JSX.Element {
   const [rollupItem, setRollupItem] = useState(0);
   const [rollup, setRollup] = useState<StandardCost | null>(null);
   const [baseForm, setBaseForm] = useState<AllocationBase>({ code: 0, description: "", period: "" });
-  const [ovhForm, setOvhForm] = useState<OverheadAllocation>({ code: 0, cost_center_id: 0, allocation_base_code: 0, description: "", rate: 0, period: "" });
+  const [ovhForm, setOvhForm] = useState({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100 });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -77,9 +77,16 @@ export function Vcus0100Page(): JSX.Element {
     setFeedback({ type: "success", message: "Base de alocação criada." });
   });
   const salvarOvh = () => run(async () => {
-    if (!ovhForm.code) { setFeedback({ type: "error", message: "Código é obrigatório." }); return; }
-    await createOverheadAllocation(ovhForm);
-    setOvhForm({ code: 0, cost_center_id: 0, allocation_base_code: 0, description: "", rate: 0, period: "" });
+    if (!ovhForm.cost_center_code || !ovhForm.period_start || !ovhForm.period_end) { setFeedback({ type: "error", message: "Centro de custo e período (início/fim) são obrigatórios." }); return; }
+    await createOverheadAllocation({
+      cost_center_code: ovhForm.cost_center_code,
+      period_start: ovhForm.period_start,
+      period_end: ovhForm.period_end,
+      allocation_type: ovhForm.allocation_type,
+      description: ovhForm.description || undefined,
+      targets: ovhForm.target_cost_center ? [{ cost_center_code: ovhForm.target_cost_center, percentage: ovhForm.target_pct }] : [],
+    });
+    setOvhForm({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100 });
     setOvhs(await listOverheadAllocations());
     setFeedback({ type: "success", message: "Alocação de overhead criada." });
   });
@@ -166,19 +173,20 @@ export function Vcus0100Page(): JSX.Element {
         {/* Alocação de overhead */}
         <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Alocação de overhead</span><div className="fsc-section-banner-line" /></div>
         <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Centro de custo</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.cost_center_id || ""} onChange={(e) => setOvhForm((p) => ({ ...p, cost_center_id: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Base (cód.)</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.allocation_base_code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, allocation_base_code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Taxa %</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={ovhForm.rate || ""} onChange={(e) => setOvhForm((p) => ({ ...p, rate: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-4"><label className="fsc-label">Descrição</label><input className="fsc-input" value={ovhForm.description ?? ""} onChange={(e) => setOvhForm((p) => ({ ...p, description: e.target.value }))} /></div>
+          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Centro de custo</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.cost_center_code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, cost_center_code: Number(e.target.value) }))} /></div>
+          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Início</label><input className="fsc-input" type="date" value={ovhForm.period_start} onChange={(e) => setOvhForm((p) => ({ ...p, period_start: e.target.value }))} /></div>
+          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Fim</label><input className="fsc-input" type="date" value={ovhForm.period_end} onChange={(e) => setOvhForm((p) => ({ ...p, period_end: e.target.value }))} /></div>
+          <div className="fsc-field fsc-col-2"><label className="fsc-label">Alvo (centro)</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.target_cost_center || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_cost_center: Number(e.target.value) }))} /></div>
+          <div className="fsc-field fsc-col-2"><label className="fsc-label">Alvo %</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={ovhForm.target_pct || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_pct: Number(e.target.value) }))} /></div>
+          <div className="fsc-field fsc-col-2"><label className="fsc-label">Descrição</label><input className="fsc-input" value={ovhForm.description} onChange={(e) => setOvhForm((p) => ({ ...p, description: e.target.value }))} /></div>
           <div className="fsc-field fsc-col-12"><button className="fsc-btn fsc-btn-primary" onClick={salvarOvh} disabled={busy}>Criar alocação de overhead</button></div>
         </div></div></div>
         <div className="fsc-card"><div className="fsc-results-wrap">
           <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Código</th><th className="fsc-num">Centro custo</th><th className="fsc-num">Base</th><th className="fsc-num">Taxa</th><th>Período</th></tr></thead>
+            <thead><tr><th className="fsc-num">Centro custo</th><th>Período</th><th>Tipo</th><th className="fsc-num">Alvos</th></tr></thead>
             <tbody>
-              {ovhs.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhuma alocação de overhead.</td></tr>}
-              {ovhs.map((o, i) => <tr key={o.code || i}><td className="fsc-num">{o.code}</td><td className="fsc-num">{o.cost_center_id ?? "—"}</td><td className="fsc-num">{o.allocation_base_code ?? "—"}</td><td className="fsc-num">{o.rate ?? "—"}</td><td>{o.period || "—"}</td></tr>)}
+              {ovhs.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma alocação de overhead.</td></tr>}
+              {ovhs.map((o, i) => <tr key={o.id ?? i}><td className="fsc-num">{o.cost_center_code}</td><td>{o.period_start?.slice(0, 10)} → {o.period_end?.slice(0, 10)}</td><td>{o.allocation_type ?? "—"}</td><td className="fsc-num">{o.targets?.length ?? 0}</td></tr>)}
             </tbody>
           </table>
         </div></div>

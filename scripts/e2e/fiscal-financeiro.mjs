@@ -179,6 +179,10 @@ async function journeyCadastroCliente() {
   for (const r of ['regions', 'market-segments', 'contact-types', 'customer-types', 'carriers', 'carrier-groups', 'payment-conditions', 'sales-tables', 'invoice-types', 'tax-types']) {
     await call('GET', `/api/customers/support/${r}`, undefined, { journey: J, label: `Apoio: ${r}` });
   }
+  // Auto-fill por CNPJ (Receita) + export server-side da lista (xlsx/pdf/csv)
+  await call('GET', '/api/cnpj/19131243000197', undefined, { journey: J, label: 'Auto-fill: consulta CNPJ na Receita' });
+  await call('GET', '/api/customers?format=xlsx', undefined, { journey: J, label: 'Exportar clientes (Excel)' });
+  await call('GET', '/api/customers?format=csv', undefined, { journey: J, label: 'Exportar clientes (CSV)' });
   if (!RUN_WRITES) return;
 
   // Escrita: cadastra apoios na ordem recomendada, depois o cliente.
@@ -262,7 +266,7 @@ async function journeyVendasExpedicao() {
   await call('GET', '/api/shipments/', undefined, { journey: J, label: 'Expedição: listar romaneios' });
   if (!RUN_WRITES) return;
 
-  await call('POST', '/api/sales-division/create', { code: 9000 + (RUN % 900), description: `Divisão E2E ${RUN}` }, { journey: J, label: 'Criar divisão (LACUNA: enum commercial_analysis)', expect: [200, 201, 409, 422, 500] });
+  await call('POST', '/api/sales-division/create', { code: 9000 + (RUN % 900), description: `Divisão E2E ${RUN}`, commercial_analysis: 'ALWAYS_ANALYZE', financial_analysis: 'FREE', consider_mrp: true }, { journey: J, label: 'Criar divisão (enum FREE/BLOCK_ALWAYS/ALWAYS_ANALYZE)', expect: [200, 201, 409, 422] });
   await call('POST', '/api/delivery-reschedule/create', { code: 50000 + RUN, sales_order_code: 1, item_code: 1, old_date: '2025-08-10T00:00:00Z', new_date: '2025-08-20T00:00:00Z', reason: 'Atraso de produção E2E' }, { journey: J, label: 'Registrar reprogramação', expect: [200, 201, 404, 409, 422] });
 
   // ── Pedido de Venda — ciclo de vida (§1): create → item → confirmar (P) →
@@ -418,8 +422,8 @@ async function journeyCustos() {
   await call('POST', '/api/standard-cost/purchase-costs', { item_code: 10050, cost: 12.5, updated_by: UID }, { journey: J, label: 'Upsert custo de compra (item 10050)', expect: [200, 201, 422] });
   // code amplo p/ evitar colisão entre runs; backend retorna 500 em duplicata (deveria ser 409)
   await call('POST', '/api/allocations/create', { code: 700000 + RUN, description: `Base E2E ${RUN}`, period: '2026-06' }, { journey: J, label: 'Criar base de alocação', expect: [200, 201, 409, 422, 500] });
-  // BUG: overhead-allocation/create grava cost_center_id NULL (handler não lê o campo) → 500 (23502)
-  await call('POST', '/api/overhead-allocation/create', { code: 600 + (RUN % 400), cost_center_id: 1, allocation_base_code: 501, description: 'OH E2E', rate: 15, period: '2026-06' }, { journey: J, label: 'Criar overhead (BUG: cost_center_id NULL 23502)', expect: [200, 201, 422, 500] });
+  // overhead: cost_center_code obrigatório + targets[] (migration 000172). Demo antigo pode 500.
+  await call('POST', '/api/overhead-allocation/create', { cost_center_code: 1, period_start: '2026-01-01', period_end: '2026-01-31', allocation_type: 'PERCENTAGE', description: 'OH E2E', targets: [{ cost_center_code: 1, percentage: 100 }] }, { journey: J, label: 'Criar overhead (cost_center_code + targets)', expect: [200, 201, 422, 500] });
 }
 
 async function journeyEstoque() {
@@ -461,6 +465,177 @@ async function journeyEstoque() {
   await call('GET', '/api/stock/consumption-average/10001', undefined, { journey: J, label: 'Consumo médio do item 10001', expect: [200, 404] });
 }
 
+async function journeyPlanoCorte() {
+  const J = 'Plano de Corte';
+  const UID = '00000000-0000-0000-0000-000000000001';
+  await call('GET', '/api/cutting-settings', undefined, { journey: J, label: 'Ler padrões da empresa (consumo/sobra)' });
+  await call('GET', '/api/cutting-plans?only_open=true', undefined, { journey: J, label: 'Listar planos abertos' });
+  await call('GET', '/api/stock-remnants?item_code=5001&only_available=true', undefined, { journey: J, label: 'Listar retalhos do material', expect: [200, 400] });
+  if (!RUN_WRITES) return;
+
+  // 1D: criar (com depósito p/ firmar) → otimizar → firmar → programa → export
+  const plan = await call('POST', '/api/cutting-plans', {
+    material_item_code: 5001, description: 'Corte E2E 1D', cut_type: 'LINEAR_1D', kerf_mm: 3, trim_mm: 0, min_remnant_mm: 300,
+    stock_uom: 'M', warehouse_id: 2,
+    parts: [{ label: 'Perna 720', length_mm: 720, quantity: 8 }, { label: 'Travessa 1200', length_mm: 1200, quantity: 4 }],
+    stock_pieces: [{ length_mm: 6000, quantity: 5 }, { length_mm: 2300, quantity: 1, is_remnant: true }],
+    created_by: UID,
+  }, { journey: J, label: 'Criar plano 1D (com peças + estoque)', expect: [200, 201] });
+  const pid = (plan.json && (plan.json.id ?? plan.json.ID)) || codeOf(plan.json);
+  if (pid) {
+    await call('POST', `/api/cutting-plans/${pid}/parts`, { label: 'Extra 500', length_mm: 500, quantity: 2 }, { journey: J, label: 'Adicionar peça', expect: [200, 201] });
+    await call('POST', `/api/cutting-plans/${pid}/stock`, { length_mm: 5000, quantity: 2 }, { journey: J, label: 'Adicionar estoque', expect: [200, 201] });
+    const opt = await call('POST', `/api/cutting-plans/${pid}/optimize`, {}, { journey: J, label: 'Otimizar (BFD/column-generation)', expect: [200, 201] });
+    const util = opt.json && opt.json.plan && opt.json.plan.utilization_pct;
+    if (util != null) results.push({ journey: J, label: `  → aproveitamento ${Number(util).toFixed(1)}%`, ok: true, status: 200, note: '' });
+    await call('GET', `/api/cutting-plans/${pid}`, undefined, { journey: J, label: 'Detalhe (padrões + posições)' });
+    await call('GET', `/api/cutting-plans/${pid}/program`, undefined, { journey: J, label: 'Programa de corte' });
+    await call('GET', `/api/cutting-plans/${pid}/export?format=svg`, undefined, { journey: J, label: 'Export SVG do mapa' });
+    await call('GET', `/api/cutting-plans/${pid}/export?format=dxf`, undefined, { journey: J, label: 'Export DXF do mapa' });
+    await call('POST', `/api/cutting-plans/${pid}/release`, {}, { journey: J, label: 'Firmar (baixa estoque + retalhos)', expect: [200, 201, 422] });
+    await call('GET', `/api/cutting-plans/${pid}/order-costs`, undefined, { journey: J, label: 'Rateio de custo por OP', expect: [200, 404] });
+  }
+  // from-orders (sem ordens válidas → 422 esperado)
+  await call('POST', '/api/cutting-plans/from-orders', { production_order_codes: [600], created_by: UID }, { journey: J, label: 'Gerar planos a partir de OP (Fase 5)', expect: [200, 201, 422] });
+}
+
+async function journeyMRP() {
+  const J = 'MRP (Planejamento)';
+  const UID = '00000000-0000-0000-0000-000000000001';
+  // Leituras (funcionam; vazias sem plano semeado)
+  await call('GET', '/api/mrp-calculation/suggestions/1', undefined, { journey: J, label: 'Sugestões do plano 1' });
+  await call('GET', '/api/mrp-calculation/exceptions/1', undefined, { journey: J, label: 'Exceções do plano 1' });
+  await call('GET', '/api/mrp-calculation/profile/10001/1', undefined, { journey: J, label: 'Perfil MRP do item 10001' });
+  await call('GET', '/api/mrp-calculation/configured-rules/10001', undefined, { journey: J, label: 'Regras configuradas do item 10001' });
+  await call('GET', '/api/planned-order/list', undefined, { journey: J, label: 'Ordens planejadas: listar' });
+  if (!RUN_WRITES) return;
+
+  // Criar plano de produção (o "plano" que o MRP roda) — code positivo obrigatório
+  const RUN = Date.now() % 90000;
+  const plan = await call('POST', '/api/production-plan/create', { code: 8000 + RUN, name: `Plano E2E ${RUN}`, planning_types: ['MRP'], independent_demands: 'ALL', is_active: true, created_by: UID }, { journey: J, label: 'Criar plano de produção', expect: [200, 201, 409, 422] });
+  const planCode = (plan.json && plan.json.code) || (8000 + RUN);
+  await call('GET', '/api/production-plan/list', undefined, { journey: J, label: 'Listar planos de produção' });
+  // Agora o run tem um plano real (sem demanda pode gerar 0 ordens, mas roda)
+  await call('POST', '/api/mrp-calculation/run', { plan_code: planCode }, { journey: J, label: 'Rodar MRP no plano criado (202 = log de cálculo)', expect: [200, 201, 202, 400, 500] });
+  await call('GET', `/api/mrp-calculation/suggestions/${planCode}`, undefined, { journey: J, label: 'Sugestões do plano recém-rodado' });
+  await call('POST', '/api/mrp-calculation/configured-rules', { item_code: 10001, table_type: 'PLANNING_DATA', field_name: 'lead_time', rule_type: 'EQUAL', rule_value: '15', sequence: 1 }, { journey: J, label: 'Criar regra configurada', expect: [200, 201, 409, 422] });
+  // BUG: planned-order/create não lê demand_type do corpo → invalid enum demand_type_enum
+  await call('POST', '/api/planned-order/create', { item_code: 10001, quantity: 10, order_type: 'PRODUCTION', demand_type: 'INDEPENDENT', need_date: '2026-08-01T00:00:00Z', start_date: '2026-07-20T00:00:00Z', created_by: UID }, { journey: J, label: 'Criar ordem planejada (BUG: demand_type não bindado → 500)', expect: [200, 201, 422, 500] });
+}
+
+function genCNPJ(seed) {
+  const base = String(10000000 + (seed % 89999999)).padStart(8, '0') + '0001';
+  const calc = (nums) => {
+    const w = nums.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const sum = nums.split('').reduce((acc, d, i) => acc + Number(d) * w[i], 0);
+    const r = sum % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  const d1 = calc(base);
+  const d2 = calc(base + d1);
+  return base + d1 + d2;
+}
+
+async function journeyFornecedor() {
+  const J = 'Cadastro de Fornecedor';
+  const RUN = Date.now() % 90000;
+  const UID = '00000000-0000-0000-0000-000000000000';
+  await call('GET', '/api/suppliers', undefined, { journey: J, label: 'Listar fornecedores' });
+  await call('GET', '/api/suppliers/support/supplier-types', undefined, { journey: J, label: 'Apoio: tipos de fornecedor' });
+  await call('GET', '/api/suppliers/support/contact-types', undefined, { journey: J, label: 'Apoio: tipos de contato' });
+  await call('GET', '/api/suppliers/1', undefined, { journey: J, label: 'Abrir fornecedor #1 (pastas hidratadas)', expect: [200, 404] });
+  await call('GET', '/api/cnpj/19131243000197', undefined, { journey: J, label: 'Auto-fill: consulta CNPJ na Receita' });
+  await call('GET', '/api/suppliers?format=csv', undefined, { journey: J, label: 'Exportar fornecedores (CSV)' });
+  if (!RUN_WRITES) return;
+
+  // Apoios → parâmetros → tipo → fornecedor → block/unblock → defaults
+  const st = await call('POST', '/api/suppliers/support/supplier-types', { description: `Tipo E2E ${RUN}`, kind: 'NORMAL', created_by: UID }, { journey: J, label: 'Criar tipo de fornecedor', expect: [200, 201, 409, 422] });
+  const stc = codeOf(st.json);
+  await call('POST', '/api/suppliers/support/contact-types', { description: `Comprador E2E ${RUN}` }, { journey: J, label: 'Criar tipo de contato', expect: [200, 201, 409, 422] });
+  await call('PUT', '/api/suppliers/support/parameters', { enterprise_code: 1, default_due_base_date: 'EMISSAO', requires_financial_account: false, homologation_default: true }, { journey: J, label: 'Salvar parâmetros da empresa 1', expect: [200, 201] });
+  await call('GET', '/api/suppliers/support/parameters/1', undefined, { journey: J, label: 'Ler parâmetros da empresa 1' });
+  // CNPJ VÁLIDO (dígito verificador) único por run; type FK real
+  const doc = genCNPJ(RUN);
+  const sup = await call('POST', '/api/suppliers', { name: `Fornecedor E2E ${RUN}`, trade_name: 'Forn E2E', person_type: 'JURIDICA', document_type: 'CNPJ', document_number: doc, state_registration: '123456', supplier_type_code: stc || 1, freight_type: 'CIF', icms_contributor: 'CONTRIBUINTE', created_by: UID }, { journey: J, label: 'Criar fornecedor PJ', expect: [200, 201, 409, 422] });
+  const sc = codeOf(sup.json);
+  if (sc) {
+    await call('POST', '/api/suppliers/addresses', { supplier_code: sc, zip_code: '88010-000', street: 'Rua E2E', number: '100', city: 'Florianópolis', uf: 'SC', country: 'Brasil' }, { journey: J, label: 'Pasta: adicionar endereço', expect: [200, 201, 422] });
+    await call('POST', '/api/suppliers/phones', { supplier_code: sc, number: '(48) 3333-4444', ranking: 1 }, { journey: J, label: 'Pasta: adicionar telefone', expect: [200, 201, 422] });
+    await call('POST', '/api/suppliers/emails', { supplier_code: sc, email: 'e2e@forn.com', ranking: 1 }, { journey: J, label: 'Pasta: adicionar e-mail', expect: [200, 201, 422] });
+    await call('POST', '/api/suppliers/enterprises', { supplier_code: sc, enterprise_code: 1, ipi: false }, { journey: J, label: 'Pasta: vínculo de empresa', expect: [200, 201, 422] });
+    await call('GET', `/api/suppliers/${sc}/enterprises`, undefined, { journey: J, label: 'Listar vínculos de empresa' });
+    await call('GET', `/api/suppliers/${sc}/purchasing-defaults?enterprise=1`, undefined, { journey: J, label: 'Provider de defaults de compra', expect: [200, 404, 422] });
+    await call('PATCH', `/api/suppliers/${sc}/block`, { reason: 'Teste E2E' }, { journey: J, label: 'Bloquear fornecedor', expect: [200, 201, 204] });
+    await call('PATCH', `/api/suppliers/${sc}/unblock`, {}, { journey: J, label: 'Desbloquear fornecedor', expect: [200, 201, 204] });
+    // SEFAZ: estados sem serviço / sem token retornam erro informativo
+    await call('POST', `/api/suppliers/${sc}/sefaz-query`, {}, { journey: J, label: 'Consulta cadastral SEFAZ (erro informativo esperado)', expect: [200, 201, 400, 422, 500] });
+  }
+}
+
+async function journeyCompras() {
+  const J = 'Compras (Suprimento)';
+  const RUN = Date.now() % 90000;
+  const UID = '00000000-0000-0000-0000-000000000000';
+  // Leituras
+  await call('GET', '/api/item-conversions/item/10050', undefined, { journey: J, label: 'Conversões UM do item 10050' });
+  await call('GET', '/api/purchase-price-tables', undefined, { journey: J, label: 'Tabelas de preço de compra' });
+  await call('GET', '/api/item-suppliers/item/10050', undefined, { journey: J, label: 'Fornecedores preferenciais do item 10050' });
+  await call('GET', '/api/purchase-order/list', undefined, { journey: J, label: 'Pedidos de compra' });
+  await call('GET', '/api/purchase-order/suggestions', undefined, { journey: J, label: 'Sugestões de compra (MRP)' });
+  await call('GET', '/api/purchase-requisitions?only_open=true', undefined, { journey: J, label: 'Solicitações de compra abertas' });
+  await call('GET', '/api/purchase-quotations?only_open=true', undefined, { journey: J, label: 'Cotações abertas' });
+  if (!RUN_WRITES) return;
+
+  // §11 Conversão UM: upsert → convert
+  await call('POST', '/api/item-conversions', { item_code: 10050, from_uom: 'CX', to_uom: 'UN', factor: 12 }, { journey: J, label: 'Cadastrar conversão 1 CX = 12 UN', expect: [200, 201, 409, 422] });
+  await call('GET', '/api/item-conversions/convert?item=10050&from=CX&to=UN&qty=2', undefined, { journey: J, label: 'Converter 2 CX → UN', expect: [200, 404] });
+  // §14 Fornecedor preferencial
+  await call('POST', '/api/item-suppliers', { item_code: 10050, supplier_code: 1, ranking: 1, supplier_item_code: 'ABC', supplier_uom: 'UN', lead_time_days: 7 }, { journey: J, label: 'Vincular fornecedor preferencial', expect: [200, 201, 409, 422] });
+  // §12 Tabela de preço: criar → item
+  const tbl = await call('POST', '/api/purchase-price-tables', { description: `Tabela E2E ${RUN}`, currency: 'BRL', valid_from: '2026-01-01T00:00:00Z' }, { journey: J, label: 'Criar tabela de preço', expect: [200, 201, 409, 422] });
+  const tcode = codeOf(tbl.json);
+  if (tcode) await call('POST', '/api/purchase-price-tables/items', { table_code: tcode, item_code: 10050, price: 9.9, uom: 'UN', min_qty: 0 }, { journey: J, label: 'Adicionar item à tabela', expect: [200, 201, 422] });
+  // §13 Pedido de compra: criar (defaults do fornecedor) → item → cancelar
+  const po = await call('POST', '/api/purchase-order/create', { enterprise_code: 1, supplier_code: 1, currency_code: 'BRL', freight_type: 'CIF' }, { journey: J, label: 'Criar pedido de compra (defaults do fornecedor)', expect: [200, 201] });
+  const pcode = codeOf(po.json);
+  if (pcode) {
+    await call('POST', `/api/purchase-order/${pcode}/items`, { item_code: 10050, requested_qty: 5, unit_price: 10 }, { journey: J, label: 'Adicionar item (preço/IPI/UM resolvidos)', expect: [200, 201, 422] });
+    await call('DELETE', `/api/purchase-order/${pcode}/cancel`, undefined, { journey: J, label: 'Cancelar pedido de compra', expect: [200, 201, 204] });
+  }
+  // §15 Solicitação: criar (com item) → gerar pedidos
+  const req = await call('POST', '/api/purchase-requisitions', { enterprise_code: 1, items: [{ item_code: 10050, quantity: 8, uom: 'UN', suggested_price: 9.9 }] }, { journey: J, label: 'Criar solicitação de compra', expect: [200, 201] });
+  const rcode = codeOf(req.json);
+  if (rcode) {
+    const rdet = await call('GET', `/api/purchase-requisitions/${rcode}`, undefined, { journey: J, label: 'Detalhe da solicitação (itens)' });
+    const item = rdet.json && (rdet.json.items || [])[0];
+    if (item && (item.id ?? item.ID)) {
+      await call('POST', '/api/purchase-requisitions/generate-orders', { selections: [{ requisition_item_id: item.id ?? item.ID, qty_to_attend: 8, supplier_code: 1 }] }, { journey: J, label: 'Gerar pedidos da solicitação (agrupa por fornecedor)', expect: [200, 201, 422] });
+    }
+  }
+  // §16 Cotação: criar → convidar fornecedores
+  const quo = await call('POST', '/api/purchase-quotations', { enterprise_code: 1, supplier_codes: [1] }, { journey: J, label: 'Criar cotação', expect: [200, 201] });
+  const qcode = codeOf(quo.json);
+  if (qcode) await call('POST', `/api/purchase-quotations/${qcode}/suppliers`, { supplier_codes: [1] }, { journey: J, label: 'Convidar fornecedores para cotação', expect: [200, 201, 422] });
+}
+
+async function journeyItem() {
+  const J = 'Cadastro de Item';
+  const UID = '00000000-0000-0000-0000-000000000000';
+  await call('GET', '/api/items/', undefined, { journey: J, label: 'Listar itens' });
+  await call('GET', '/api/items/with-masks', undefined, { journey: J, label: 'Listar itens com máscaras' });
+  await call('GET', '/api/items/search/10001', undefined, { journey: J, label: 'Detalhe do item 10001 (search)' });
+  await call('GET', '/api/items/10001/activation-readiness', undefined, { journey: J, label: 'Prontidão do item 10001 p/ o MRP (§8)' });
+  await call('POST', '/api/reports/export?format=csv', { title: 'Relatório E2E', columns: ['A', 'B'], rows: [['1', '2']] }, { journey: J, label: 'Export genérico de relatório (CSV)', expect: [200, 201] });
+  await call('GET', '/api/items/structure/resolve/10001', undefined, { journey: J, label: 'Resolver estrutura/BOM do item 10001' });
+  await call('GET', '/api/items/structure/where-used/10050', undefined, { journey: J, label: 'Onde-é-usado do item 10050' });
+  await call('GET', '/api/item-conversions/item/1020', undefined, { journey: J, label: 'Conversões de UM do item (compra≠estoque)' });
+  await call('GET', '/api/item-suppliers/item/1020', undefined, { journey: J, label: 'Fornecedor preferencial do item' });
+  if (!RUN_WRITES) return;
+
+  // BUG/divergência: create rejeita o corpo do exemplo da doc ("invalid request body")
+  await call('POST', '/api/items/create', { nature: 0, pdm: { group_code: 10, modifier_code: 5, attributes: [] }, warehouse: { warehouse_code: 1, unit_of_measurement: 'UN', minimum_stock: 0 }, engineering: { type: 'MANUFACTURED', type_struct: 'SIMPLE', oem: false, weight: { gross: 1, net: 1, unit: 'KG' } }, planning: { type_mrp: 'MRP', llc: 2, ghost: false }, supplies: { type_of_use: 'INDUSTRIALIZATION' }, created_by: UID }, { journey: J, label: 'Criar item (DIVERGÊNCIA: binding do create rejeita corpo)', expect: [200, 201, 400, 422] });
+}
+
 async function journeyContador() {
   const J = 'Contador';
   await call('GET', '/api/accounting/plans?empresa_id=1', undefined, { journey: J, label: 'Planos de conta' });
@@ -488,6 +663,11 @@ async function main() {
   await journeyManufatura();
   await journeyCustos();
   await journeyEstoque();
+  await journeyPlanoCorte();
+  await journeyMRP();
+  await journeyFornecedor();
+  await journeyCompras();
+  await journeyItem();
   await journeyContador();
 
   // Print grouped report

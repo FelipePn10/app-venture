@@ -1,7 +1,7 @@
 # HELP - Telas do ERP Venture
 
 > Documentação completa de todas as telas do sistema ERP Venture Desktop.
-> Total de telas documentadas: **125**
+> Total de telas documentadas: **136**
 > Estilo: Processos de negócio com fluxos, pré-requisitos e passo a passo.
 > Última atualização: Junho 2026
 
@@ -15,7 +15,8 @@
 | [Industrial e Produção](#processo-industrial-e-producao) | 54 |
 | [Comercial, Vendas e PDV](#processo-comercial-vendas-e-pdv) | 18 |
 | [Fiscal](#processo-fiscal) | 20 |
-| [PCP, Chão de Fábrica, Estoque e Custos](#processo-pcp-chao-de-fabrica-estoque-e-custos) | 15 |
+| [PCP, Chão de Fábrica, Estoque e Custos](#processo-pcp-chao-de-fabrica-estoque-e-custos) | 18 |
+| [Suprimento e Compras](#processo-suprimento-e-compras) | 8 |
 
 > **Novo neste ciclo (PCP & Chão de Fábrica):** este processo reúne as rotinas que
 > transformam a demanda em produto acabado e o entregam ao cliente — **Pedido de
@@ -23,6 +24,88 @@
 > Alertas MRP/Configurador** (VPRO0100–0800), **Ordem de Produção** (VPRO0900),
 > **Máquinas e Tempos** (VMAQ0101/0200), **Custos auxiliares** (VCUS0100), **Estoque**
 > (VEST0100/0200) e o **Romaneio de Expedição** profissional (VEXP0100).
+
+---
+
+## Introdução — Como usar este guia
+
+Bem-vindo ao guia de telas (rotinas) do **VentureERP**. Este documento descreve, tela
+por tela, **o que cada rotina faz, quando usar, o passo a passo e como ela se conecta às
+demais** — organizado por **processos de negócio** (não por menus), para que você
+aprenda o *fluxo*, não apenas os botões.
+
+### O que é o VentureERP em uma frase
+
+Um sistema que acompanha o produto do **pedido do cliente** até a **entrega e o
+faturamento**, passando por **planejamento (MRP)**, **compras**, **produção** e
+**estoque** — mantendo o **fiscal** e o **financeiro** sincronizados automaticamente.
+
+### O grande fluxo (visão de 30 segundos)
+
+```
+CLIENTE  →  Pedido de Venda  →  (confirma)  →  gera DEMANDA + reserva estoque
+                                                   │
+                                                   ▼
+                                                  MRP  →  sugere COMPRAS e PRODUÇÃO
+                                                   │              │
+                          ┌────────────────────────┘              │
+                          ▼                                        ▼
+                 Pedido de Compra                        Ordem de Produção
+                 (recebe → estoque)                       (consome → produz → estoque)
+                                                                   │
+                                                                   ▼
+                                          NF-e de Saída  →  baixa estoque + gera Conta a Receber
+                                                                   │
+                                                                   ▼
+                                                    Romaneio / Expedição  →  ENTREGA
+```
+
+Cada seta é **automática** no VentureERP: confirmar o pedido já gera a demanda do MRP;
+firmar a sugestão do MRP já cria a ordem; concluir a produção já movimenta o estoque; e
+autorizar a NF-e já baixa o estoque e gera o título financeiro.
+
+### Como as telas são nomeadas
+
+Cada tela tem um **código** (ex.: `VVND0200`) e um **título** (ex.: "Pedido de Venda").
+O prefixo indica a área: `VCLI`=Cliente, `VSUP`=Fornecedor/Compras, `VVND`=Vendas,
+`VPRO`=Produção/PCP, `VEST`=Estoque, `VFIS`=Fiscal, `VFIN`=Financeiro, `VMAQ`=Máquinas,
+`VMRP`=Planejamento MRP, `VCUS`=Custos, `VITM`=Item, `VCUT`=Plano de Corte, etc. Você
+pode buscar qualquer tela pelo código ou pelo título na busca do sistema.
+
+### Convenções deste guia
+
+Cada tela é descrita com a mesma estrutura, para você achar o que precisa rapidamente:
+
+- **Objetivo** — o que a tela resolve, em linguagem de negócio.
+- **Pré-requisitos** — o que precisa existir antes (cadastros, permissões).
+- **Passo a passo** — a sequência de ações para concluir a tarefa.
+- **Campos** — o significado de cada campo e suas opções.
+- **Observações importantes** — regras, automações e “pegadinhas”.
+- **Telas relacionadas** — para onde ir antes/depois.
+
+### Glossário universal (termos que aparecem em todo o ERP)
+
+| Termo | O que significa |
+|-------|-----------------|
+| **Item** | Tudo que a empresa compra, produz ou vende (matéria-prima, componente, produto). |
+| **Estrutura / BOM** | A "receita" do produto: quais componentes e quantidades formam cada item. |
+| **MRP** | O "cérebro" que calcula **o que** comprar/produzir, **quanto** e **até quando**. |
+| **Demanda** | Necessidade de um item — independente (pedido/previsão) ou dependente (explosão da BOM). |
+| **Ordem** | O trabalho a executar: de **Produção** (fabricar) ou de **Compra** (adquirir). |
+| **Firmar** | Aprovar uma **sugestão** (do MRP) ou proposta, transformando-a em ordem real. |
+| **Estoque / Saldo** | Quantidade disponível de um item por depósito; o **ATP** é o disponível para prometer. |
+| **Reserva** | Bloqueio lógico do estoque (não baixa o físico) — a NF-e é que baixa de verdade. |
+| **NF-e** | Nota Fiscal eletrônica; sua autorização baixa estoque e gera o título financeiro. |
+| **Romaneio** | Documento logístico de saída (separar → conferir → despachar). |
+| **Lote / Rastreabilidade** | Identificação da corrida/certificado que segue a mercadoria (genealogia). |
+| **Situação / Status** | O estado atual de um documento (ex.: Rascunho → Confirmado → Faturado). |
+
+### Segurança e acesso
+
+Todas as telas exigem **login** (usuário + senha). O acesso é controlado por **perfil**:
+`ADMIN` (tudo), `USER` (operacional) e `VIEWER` (somente leitura). Ações sensíveis
+(rodar o planejamento, aprovar compra, autorizar fiscal, gerir financeiro) podem exigir
+permissão específica.
 
 ---
 
@@ -4310,10 +4393,11 @@ Cadastrar e gerenciar as **Divisões de Vendas** da empresa — estruturas organ
 1. Acesse a tela **VVND0100 — Divisão de Vendas**.
 2. Para criar uma nova divisão, clique em **Novo**.
 3. Preencha os campos:
-   - **Código** (obrigatório): identificador único da divisão (alfanumérico).
+   - **Código** (obrigatório): identificador único da divisão.
    - **Descrição** (obrigatório): nome da divisão (ex: "Equipe São Paulo", "Vendas Online", "Região Sul").
-   - **Região**: selecione a região vinculada a esta divisão (opcional).
-   - **Ativo**: marque para habilitar a divisão; desmarque para desativá-la temporariamente.
+   - **Análise comercial** e **Análise financeira**: definem se pedidos desta divisão
+     passam por análise/bloqueio (ver tabela abaixo). Padrão: **Livre**.
+   - **Considera MRP**: quando marcado, a demanda desta divisão entra no cálculo do MRP.
 4. Clique em **Salvar** para persistir o registro.
 5. Para editar uma divisão existente, selecione-a na tabela de listagem, altere os campos e salve novamente.
 6. Utilize **Exportar** para gerar um relatório das divisões cadastradas.
@@ -4322,17 +4406,26 @@ Cadastrar e gerenciar as **Divisões de Vendas** da empresa — estruturas organ
 
 | Campo | Tipo | Obrigatório | Opções | Função |
 |-------|------|-------------|--------|--------|
-| Código | texto | Sim | — | Identificador único da divisão de vendas |
+| Código | número | Sim | — | Identificador único (positivo) da divisão |
 | Descrição | texto | Sim | — | Nome descritivo da divisão |
-| Região | seleção | Não | Regiões cadastradas no VCLI0510 | Região geográfica vinculada à divisão |
-| Ativo | toggle | Não | — | Status da divisão (ativo/inativo) |
+| Análise comercial | seleção | Não | Livre / Bloqueia sempre / Sempre analisa | Regra de análise comercial do pedido (default: Livre) |
+| Análise financeira | seleção | Não | Livre / Bloqueia sempre / Sempre analisa | Regra de análise financeira do pedido (default: Livre) |
+| Considera MRP | toggle | Não | — | Inclui a demanda da divisão no cálculo do MRP |
+
+**Valores de análise:**
+
+| Valor | Significado |
+|-------|-------------|
+| **Livre** (`FREE`) | Sem análise ou bloqueio — o pedido segue normalmente. |
+| **Bloqueia sempre** (`BLOCK_ALWAYS`) | Todo pedido da divisão é bloqueado, independentemente de crédito. |
+| **Sempre analisa** (`ALWAYS_ANALYZE`) | Todo pedido passa por análise antes de liberar. |
 
 ##### Observações importantes
 
-- Divisões inativas não aparecem como opção no cadastro de pedidos (VPDV0200), mas seus dados históricos são preservados.
-- O código da divisão é utilizado como chave de relacionamento em relatórios gerenciais.
-- Uma região pode ter múltiplas divisões (ex: "Equipe Interior SP" e "Equipe Capital SP" ambas vinculadas à região "São Paulo").
-- A divisão de vendas é um dos critérios de segmentação no Console de Acompanhamento (VPDV0253).
+- Os campos de análise são **opcionais** — se não informados, assumem **Livre**.
+- A divisão de vendas é associável ao **Pedido de Venda (VVND0200)** para análise de
+  resultado por equipe/região/unidade e para as regras comerciais acima.
+- A divisão de vendas é um dos critérios de segmentação nos consoles de acompanhamento.
 
 ##### Telas relacionadas
 
@@ -7498,7 +7591,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 > Documentação dos módulos que transformam a **demanda** em **produto acabado** e o
 > entregam ao cliente: Pedido de Venda, Planejamento (MRP/CRP/APS), Roteiro,
 > Máquinas, Ordem de Produção, Custos, Estoque e Romaneio de Expedição.
-> Total de telas deste processo: **15**.
+> Total de telas deste processo: **18**.
 > Última atualização: Junho 2026.
 
 ---
@@ -7577,6 +7670,154 @@ Antes de operar este processo, garanta que os cadastros-base existem:
 | **Backflush** | Baixa automática dos componentes da BOM ao apontar produção, proporcional à quantidade produzida. |
 | **Genealogia de lote** | Rastreabilidade bidirecional: quais OFs consumiram um lote e quais o produziram. |
 | **Custo padrão × real** | Padrão = custo *planejado* do item (rollup). Real = custo *incorrido* na OF. A diferença é a **variância**. |
+
+---
+
+### Módulo: Engenharia — Item
+
+---
+
+#### VITM0100 — Item & Prontidão para o MRP
+
+##### Objetivo
+
+Listar os itens cadastrados, criar novos itens pelas **pastas** (PDM, Almoxarifado,
+Engenharia, Planejamento, Suprimentos) e, principalmente, **validar se um item está
+pronto para participar do MRP/produção/compras**. O item vai da matéria-prima ao
+produto final, e cada papel exige configurações diferentes.
+
+##### Conceitos-chave
+
+| Conceito | O que significa |
+|----------|-----------------|
+| **Natureza** | Item Base (molde de variações), Genérico ou Configurado (gera máscara por atributos/PDM). |
+| **PDM** | A descrição técnica é **composta** por Grupo + Modificador + Atributos (ex.: "Chapa Aço Carbono 1020 6,35mm"), não digitada livre. |
+| **LLC** | Nível do item na estrutura: **1** = produto final; **2–8** = intermediários; **9** = matéria-prima. Ordena o processamento do MRP. |
+| **Tipo MRP** | MRP, Min/Max, Kanban, Ponto de Pedido (ROP), MPS — a política que decide como o item é reposto. |
+
+##### Passo a passo
+
+1. Clique em **Listar** para trazer os itens (filtre por código/descrição).
+2. Para cadastrar, use o **Cadastro rápido**: código (opcional), natureza, **grupo/
+   modificador** (PDM), UM de estoque, tipo de engenharia, estrutura, **tipo MRP** e
+   **LLC**. Clique em **Criar item**.
+3. Selecione um item e clique em **Prontidão**: o sistema roda o **checklist de
+   ativação** e mostra se o item está ✅ **pronto** ou ⚠️ com **pendências**/**alertas**,
+   além da **estrutura (BOM)** do item.
+
+##### O checklist de prontidão (§ automação)
+
+- Item **fabricado** → exige **estrutura (BOM)** e **roteiro**.
+- Item **comprado** → exige **fornecedor preferencial** e alerta se faltar **conversão
+  de UM** (necessária quando a UM de compra ≠ UM de estoque).
+- O endpoint **valida sem alterar o estado** do item — use como *gate* antes de colocar
+  o item em operação.
+
+##### Observações importantes
+
+- **UM de compra ≠ UM de estoque** (ex.: chapa comprada em KG, estocada em UN): cadastre
+  o fator de conversão em **VSUP0110** (Conversão de UM), senão o pedido de compra não
+  calcula a quantidade interna.
+- **Ponto de pedido (ROP)** = `(TR × CM / CR) + ES` — usado quando o Tipo MRP é Ponto de
+  Pedido.
+- **Percentual de perda** na estrutura (corte/estampagem) aumenta a necessidade que o
+  MRP calcula.
+
+##### Telas relacionadas
+
+- **VENT0210 (Estrutura de Produto)**: cadastra a BOM (pai → filho, quantidade, perda).
+- **VSUP0110/0130 (Conversão de UM / Fornecedor Preferencial)**: pré-requisitos de
+  compra.
+- **VFIS0350 (Classificações Fiscais)**: NCM/IPI vinculados ao item.
+- **VMAQ0200 (Máquinas e Tempos)**: tempos por item × máquina (APS/CRP).
+- **VMRP0100 (MRP)**: consome o item pronto no cálculo.
+
+---
+
+### Módulo: Planejamento — MRP
+
+---
+
+#### VMRP0100 — MRP (Planejamento de Materiais)
+
+##### Objetivo
+
+Ser o **posto de comando do planejador**: acionar o cálculo do **MRP** (Planejamento
+das Necessidades de Materiais), **analisar as sugestões** de ordens que o motor gera e
+decidir o que **firmar** (aprovar) ou descartar. O MRP responde: *"o que produzir/
+comprar, quanto e até quando, para entregar tudo que foi pedido?"*
+
+> **Importante — o MRP calcula "por baixo dos panos", mas quem decide é uma pessoa.**
+> O motor roda o cálculo automaticamente (explode a estrutura, verifica estoque,
+> calcula necessidade líquida), porém ele gera **sugestões**, não ordens definitivas. A
+> tela existe para o planejador **rever e aprovar** essas sugestões — é o padrão de todo
+> ERP sério: *"o MRP propõe, o planejador dispõe"*. Uma sugestão só vira **Ordem
+> Planejada** (e, se for produção, **Ordem de Fabricação**) quando você a **firma**.
+
+##### Pré-requisitos
+
+- **Demandas** registradas — pedidos de venda confirmados (VVND0200) geram demanda
+  automaticamente, ou demanda independente manual (VPLA0102).
+- **Estrutura de Produto / BOM** (VENT0210) e **itens** (VENT0200) com tipo (Fabricado/
+  Comprado), lead time, lote mínimo e estoque de segurança configurados.
+- Um **plano** de planejamento cadastrado (é o `plano` que o MRP roda).
+
+##### Passo a passo
+
+1. Acesse **VMRP0100 — MRP**. Em **Planos de produção**, **crie um plano** (código +
+   nome + modos de planejamento) ou selecione um existente — é o plano que o cálculo roda.
+2. Clique em **Rodar MRP**. O motor: tira um *snapshot* do estoque, calcula o **LLC**
+   (nível mais baixo de cada item), processa item a item (demanda − estoque − ordens
+   abertas = necessidade líquida), aplica as regras do item e **gera as sugestões**.
+   O resumo mostra itens processados e ordens geradas.
+3. Clique em **Consultar** para carregar as **sugestões**, **exceções** e **ordens
+   planejadas**.
+4. Na tabela de **Sugestões**, analise cada proposta (item, quantidade, tipo —
+   Fabricação/Compra, demanda Independente/Dependente, data de necessidade e de início,
+   LLC). Clique em **Firmar** para aprovar: a sugestão vira **Ordem Planejada** real
+   (com número); se for **Fabricação**, uma **Ordem de Produção** é criada
+   automaticamente.
+5. Consulte o **Perfil MRP** de um item (a "tabela MRP" clássica): demanda, ordens
+   planejadas, ordens firmes e **estoque projetado** ao longo do horizonte.
+6. Veja as **exceções** (ordens atrasadas, compras vencidas, excesso de estoque,
+   sobrecarga) e cadastre **regras configuradas** por item (ex.: "se lead_time = 0, usar
+   15 dias") sem alterar o cadastro do item.
+
+##### Conceitos-chave
+
+| Termo | Significado |
+|-------|-------------|
+| **Demanda independente** | O que o cliente pediu (pedido/previsão). É a entrada do MRP. |
+| **Demanda dependente** | O que precisa ser feito *por causa* da independente (explosão da BOM). |
+| **Necessidade líquida** | Demanda − estoque disponível − ordens já abertas. Se ≤ 0, o MRP não sugere nada. |
+| **LLC (Low-Level Code)** | Nível mais fundo em que um item aparece; garante somar toda a demanda dele de uma vez. |
+| **Sugestão × Ordem** | O MRP gera **sugestões** (propostas). **Firmar** converte em **Ordem Planejada** real. |
+| **Firmar** | Ação irreversível: aprova a sugestão. Ordens firmes passam a contar nos próximos cálculos. |
+
+##### Regras de geração
+
+- Item **Fabricado** + necessidade líquida > 0 → sugere **Ordem de Produção**.
+- Item **Comprado** + necessidade líquida > 0 → sugere **Ordem de Compra**.
+- **Não gera nada** para: item de terceiro, item tipo MRP = Projeto, estoque
+  suficiente, ou item de estrutura Comercial.
+- Rodar o MRP de novo **recalcula do zero** as sugestões; **ordens já firmadas não são
+  afetadas**.
+
+##### Observações importantes
+
+- O **calendário industrial** (VCAL0100) empurra datas que caem em fim de semana/feriado
+  para o próximo dia útil.
+- As **regras do item** (lote mínimo, lead time, estoque de segurança) ajustam as
+  quantidades e datas das sugestões.
+
+##### Telas relacionadas
+
+- **VVND0200 (Pedido de Venda)**: origem automática da demanda (ao confirmar).
+- **VPLA0102 (Demandas Independentes)**: demanda manual/previsão.
+- **VENT0210 (Estrutura de Produtos)**: a BOM que o MRP explode.
+- **VPRO0900 (Ordem de Produção)**: criada ao firmar uma sugestão de fabricação.
+- **VPRO0200/0210 (CRP/APS)**: analisam a capacidade das ordens que o MRP propôs.
+- **VPRO0700 (Alertas de Exceções MRP)**: notifica as exceções por webhook/e-mail.
 
 ---
 
@@ -8023,6 +8264,72 @@ são válidas (configurador de produto / validação de cadastro). Suporta os op
 
 ---
 
+#### VCUT0100 — Plano de Corte
+
+##### Objetivo
+
+Otimizar o **aproveitamento de matéria-prima** encaixando (*nesting*) as peças
+demandadas no estoque disponível, minimizando sobra e sucata. Suporta três tipos de
+corte: **linear 1D** (barras, perfis, tubos), **2D guilhotinado** (chapa, painel MDF) e
+**true-shape** (irregular, laser/plasma). Ao **firmar**, baixa o estoque, gera
+**retalhos reaproveitáveis rastreáveis** (herdando lote/corrida/certificado) e a trilha
+de consumo. Exporta o **mapa de corte** (SVG/DXF/PDF) e agenda o corte na máquina.
+
+##### Pré-requisitos
+
+- **Item de matéria-prima** cadastrado (VENT0200) com estoque (VEST0100).
+- **Almoxarifado** (VENT0800) — obrigatório informar o **depósito** para poder firmar.
+
+##### Passo a passo
+
+1. Acesse **VCUT0100 — Plano de Corte** e clique em **Listar** (carrega planos e os
+   padrões da empresa).
+2. Em **Novo plano**, informe a **matéria-prima**, o **tipo de corte** (1D/2D/
+   true-shape), **kerf** (espessura da serra), **refile** (aparo da cabeça da barra),
+   **sobra mínima** (a partir da qual a sobra vira retalho reaproveitável), a **UoM de
+   estoque** e o **depósito**. Clique em **Criar plano** (nasce **Rascunho**).
+3. **Demanda / peças**: adicione as peças a cortar — comprimento (1D) ou largura×altura
+   (2D) e quantidade.
+4. **Estoque disponível**: adicione as peças de estoque (cada uma com seu tamanho); marque
+   **retalho** quando for sobra reaproveitada. (Ou marque **semear retalhos** no cadastro
+   para o sistema puxar os retalhos do inventário automaticamente.)
+5. Clique em **Otimizar**. O sistema calcula os **padrões de corte** (layout repetido N
+   vezes), o **aproveitamento** (%), a **sucata** e lista peças **sem encaixe**.
+6. Revise os padrões (posição de cada peça ao longo da barra/chapa).
+7. Clique em **Firmar (baixa)** para consumir o estoque de verdade (gera os retalhos e a
+   trilha de consumo). O plano passa a **Firmado**.
+8. **Programa** mostra a sequência de cortes; **Agendar** leva o corte à agenda da
+   máquina; **SVG/DXF/PDF** baixam o mapa para a seccionadora/CAM.
+
+##### Conceitos
+
+| Termo | Significado |
+|-------|-------------|
+| **Kerf** | Material perdido na espessura da serra entre dois cortes. |
+| **Refile (trim)** | Aparo removido da cabeça da barra/chapa antes do primeiro corte. |
+| **Retalho** | Sobra ≥ sobra mínima — volta ao estoque como material reaproveitável, com rastreabilidade. |
+| **Aproveitamento** | Demanda ÷ estoque consumido. Inclui a sobra da última barra (que pode virar retalho). |
+| **Sucata** | Perda real (exclui o retalho reaproveitável) — vira custo. |
+| **Status** | Rascunho → Otimizado → Firmado → Em execução → Concluído. |
+
+##### Observações importantes
+
+- **Materiais diferentes são planos diferentes** — cada plano corta um único item de
+  matéria-prima. O estoque é heterogêneo (cada peça tem seu comprimento).
+- **Firmar exige depósito** no plano (ou depósito padrão nos parâmetros da empresa).
+- **Modo de consumo** (padrão da empresa): **Automático (FIFO)** baixa da corrida mais
+  antiga; **Manual** usa o lote atribuído.
+- Peças maiores que qualquer estoque ficam **sem encaixe** (aviso ao operador).
+
+##### Telas relacionadas
+
+- **VEST0100 (Estoque)**: origem do estoque e destino dos retalhos.
+- **VPRO0900 (Ordem de Produção)**: a baixa do corte pode referenciar a OP; o custo é
+  rateado por ordem.
+- **VMAQ0200 (Máquinas)**: a agenda do corte entra no calendário da máquina (CRP/APS).
+
+---
+
 ### Módulo: Custos
 
 ---
@@ -8209,4 +8516,299 @@ Sim. Cancelar **libera as reservas**. O físico só teria sido baixado pela NF-e
 ---
 
 > **Fim do Processo PCP, Chão de Fábrica, Estoque e Custos.**
+> Documentação atualizada em Junho 2026.
+
+---
+
+## Processo Suprimento e Compras
+
+> Documentação do módulo de **Suprimento**: cadastro de fornecedor/transportadora,
+> cadastros mestres de compra (conversão de UM, tabela de preço, fornecedor
+> preferencial) e o ciclo de aquisição (solicitação → cotação → pedido de compra),
+> integrado ao MRP.
+> Total de telas deste processo: **8**.
+> Última atualização: Junho 2026.
+
+---
+
+### Visão Geral do Processo
+
+O suprimento garante que a fábrica tenha os materiais certos, do fornecedor certo, no
+prazo certo. A necessidade nasce do **MRP** (sugestões de compra) ou de uma
+**solicitação** manual; passa (opcionalmente) por uma **cotação** para escolher o
+melhor preço; e vira um **pedido de compra** enviado ao fornecedor. Os cadastros de
+apoio (fornecedor, conversão de UM, tabela de preço, fornecedor preferencial) alimentam
+o pedido com dados automáticos (condição de pagamento, preço, %IPI, UM interna).
+
+#### Fluxo macro
+
+```
+Cadastro de Fornecedor (VSUP0500)  +  Mestres de compra (VSUP0110/0120/0130)
+        │
+        ▼
+MRP → Sugestão de Compra ─────────────►  Pedido de Compra (VSUP0200)  ──► Fornecedor
+        │                                        ▲
+Solicitação (VSUP0300) ── gerar pedidos ─────────┤
+        │                                        │
+        └──► Cotação (VSUP0400) ── selecionar vencedor → gerar pedidos ┘
+```
+
+---
+
+### Módulo: Cadastro de Fornecedor
+
+---
+
+#### VSUP0500 — Cadastro de Fornecedor
+
+##### Objetivo
+
+Cadastrar **fornecedores e transportadoras** com todos os dados fiscais e comerciais,
+organizados em **pastas** (endereço, telefones, e-mails, vencimentos, contatos,
+empresas). Reaproveita condição de pagamento, transportadora e região do módulo de
+Cliente. Alimenta o Pedido de Compra e a NF de entrada com defaults automáticos.
+
+##### Pré-requisitos
+
+- **Tipos de fornecedor** cadastrados (VSUP0510) — obrigatório para criar o fornecedor.
+
+##### Passo a passo
+
+1. Acesse **VSUP0500** e clique em **Novo**.
+2. Na aba **Dados**, informe **Razão social**, tipo de pessoa (Jurídica/Física),
+   **CNPJ/CPF** (com validação de dígito), **Inscrição Estadual**, **Tipo de
+   fornecedor**, **Tipo de frete** e **Contribuinte de ICMS**. Use **🔎 CNPJ** para
+   pré-preencher pela Receita.
+3. Preencha o **Endereço** (a UF do endereço é usada na consulta SEFAZ).
+4. Nas pastas, adicione **telefones**, **e-mails**, **vencimentos** (condições de
+   pagamento), **contatos** e o **vínculo por empresa** (conta financeira, IPI, tipo de
+   NF, tabela de preço de compra).
+5. Salve. Use **Bloquear/Desbloquear** para controlar a situação de faturamento.
+6. **Consulta SEFAZ** grava a situação cadastral (Liberado/Bloqueado) no fornecedor.
+
+##### Regras de negócio
+
+- **Inscrição Estadual obrigatória**, exceto para transportadoras (kind
+  `TRANSPORTADORA`/`TRANSP_REDESP`/`REDESPACHO`).
+- **MEI** não pode ser marcado para Pessoa Física.
+- **Registro M.A.** (Ministério da Agricultura) deve seguir o formato `AA-99999-9`.
+- **Documento duplicado** → o sistema retorna conflito indicando o fornecedor existente.
+
+##### Observações importantes
+
+- Diferente do cliente, o fornecedor **tem atualização** (edição do cadastro).
+- O **provider de defaults** (condição de pagamento, tipo de frete, conta financeira,
+  tabela de preço) é consumido automaticamente pelo Pedido de Compra.
+- Exportação da lista em **Excel/PDF/CSV**.
+
+##### Telas relacionadas
+
+- **VSUP0510 (Apoio de Fornecedores)**: tipos e parâmetros.
+- **VSUP0200 (Pedido de Compra)**: usa os defaults do fornecedor.
+- **VFIS0210 (NF-e de Entrada)**: casa o CNPJ do emitente ao fornecedor.
+
+---
+
+#### VSUP0510 — Apoio de Fornecedores
+
+##### Objetivo
+
+Manter os cadastros de apoio do fornecedor: **Tipos de Fornecedor** (com o `kind` que
+controla a obrigatoriedade da IE), **Tipos de Contato** e os **Parâmetros por empresa**
+(10 parâmetros que governam o comportamento do módulo).
+
+##### Passo a passo
+
+1. Aba **Tipos**: cadastre tipos de fornecedor informando descrição e **kind** (Normal,
+   Transportadora, Transp. Redespacho, Redespacho).
+2. Aba **Contatos**: cadastre os tipos de contato (Comprador, Gerente…).
+3. Aba **Parâmetros**: por empresa, defina conta financeira default, se exige conta,
+   homologação default, **data base padrão para vencimentos** (Emissão/Entrada/
+   Digitação), fornecedor genérico da NF-e, etc.
+
+##### Telas relacionadas
+
+- **VSUP0500 (Cadastro de Fornecedor)**: consome estes apoios.
+
+---
+
+### Módulo: Cadastros Mestres de Compra
+
+---
+
+#### VSUP0110 — Conversão de UM por Item
+
+##### Objetivo
+
+Cadastrar **fatores de conversão** entre unidades de medida de um item (ex.: `1 CX = 12
+UN`), usado quando a UM de compra difere da UM de estoque. O Pedido de Compra usa isso
+para calcular UM interna, quantidade interna e preço interno.
+
+##### Passo a passo
+
+1. Informe o **item** e clique em **Carregar** para ver as conversões existentes.
+2. Cadastre uma conversão: **De** (UM origem), **Para** (UM destino) e o **fator**.
+3. Use o bloco **Converter** para testar: informe De/Para/Quantidade e veja o resultado
+   (o sistema tenta a conversão direta; se ausente, usa a inversa `1/fator`).
+
+##### Observações importantes
+
+- Sem cadastro de conversão para a UM da pasta Estoque, o Pedido de Compra orienta a
+  abrir esta tela.
+
+---
+
+#### VSUP0120 — Tabela de Preço de Compra
+
+##### Objetivo
+
+Cadastrar **tabelas de preço de compra** (cabeçalho com código, descrição, moeda e
+vigência) e seus **itens** (preço por item, com UM e quantidade mínima). O preço pode
+ser **genérico** (qualquer fornecedor) ou **específico por fornecedor**.
+
+##### Passo a passo
+
+1. Crie a **tabela** (descrição, moeda, vigência).
+2. Selecione a tabela e adicione **itens**: item, preço, UM, quantidade mínima e,
+   opcionalmente, o fornecedor específico.
+
+##### Observações importantes
+
+- É o **1º nível** da hierarquia de preço do Pedido de Compra (prefere o preço
+  específico do fornecedor, cai para o genérico).
+
+---
+
+#### VSUP0130 — Fornecedor Preferencial por Item
+
+##### Objetivo
+
+Vincular um **item** a **fornecedores** com **ranking** de preferência. Também guarda o
+código, a descrição e a UM do item **no fornecedor**, além do lead time. O sistema
+usa o fornecedor de menor ranking ao gerar pedidos a partir de solicitações.
+
+##### Passo a passo
+
+1. Informe o **item** e carregue os vínculos.
+2. Cadastre um fornecedor com **ranking** (1 = preferido), código/descrição/UM do item
+   no fornecedor e **lead time** em dias.
+
+##### Telas relacionadas
+
+- **VSUP0300 (Solicitação)**: sugere o fornecedor preferencial na geração de pedidos.
+
+---
+
+### Módulo: Ciclo de Aquisição
+
+---
+
+#### VSUP0200 — Pedido de Compra
+
+##### Objetivo
+
+Gerir o **pedido de compra** (capa + itens) enviado ao fornecedor, e **aprovar/rejeitar
+as sugestões de compra** geradas pelo MRP. Ao adicionar um item, o backend resolve
+automaticamente **preço** (tabela), **%IPI** (classificação fiscal) e **UM interna**
+(conversões).
+
+##### Pré-requisitos
+
+- **Fornecedor** cadastrado (VSUP0500); itens (VENT0200).
+
+##### Passo a passo
+
+1. Aba **Pedidos**: crie a capa (empresa, **fornecedor**, moeda, tipo de frete). Se não
+   informar a condição de pagamento, ela vem dos **defaults do fornecedor**.
+2. Abra o pedido e **adicione itens** (item, quantidade, preço). Preço/IPI/UM são
+   resolvidos pelo sistema.
+3. **Cancele** o pedido quando necessário.
+4. Aba **Sugestões**: veja as sugestões do MRP e **Aprove** (informando fornecedor e
+   preço → gera um pedido de compra firme) ou **Rejeite**.
+
+##### Observações importantes
+
+- Aprovar uma sugestão gera um `purchase_order` (origem MRP) e torna a ordem planejada
+  firme — só suprimentos firmes entram no *netting* do MRP.
+
+##### Telas relacionadas
+
+- **VMRP0100 (MRP)**: origem das sugestões de compra.
+- **VSUP0500 (Fornecedor)**: defaults de condição/frete/conta.
+
+---
+
+#### VSUP0300 — Solicitação de Compra
+
+##### Objetivo
+
+Registrar **solicitações de compra** (cabeçalho + itens com quantidade, UM, preço
+sugerido) e **gerar pedidos de compra** a partir delas, agrupando por fornecedor. O
+**saldo** do item = quantidade − atendida − cancelada; o status evolui Aberto →
+Parcial → Atendido.
+
+##### Passo a passo
+
+1. Crie a solicitação (empresa, solicitante) com um ou mais **itens**.
+2. Abra a solicitação e adicione itens, se necessário.
+3. Em **Gerar pedidos**, informe a **quantidade a atender** e (opcional) o **fornecedor**
+   de cada item — sem fornecedor, usa o **preferencial** (VSUP0130). O sistema agrupa por
+   fornecedor e gera um pedido por grupo, registrando o atendimento de volta na
+   solicitação.
+
+##### Telas relacionadas
+
+- **VSUP0130 (Fornecedor Preferencial)**: resolve o fornecedor de cada item.
+- **VSUP0200 (Pedido de Compra)**: destino da geração.
+
+---
+
+#### VSUP0400 — Cotação de Compra
+
+##### Objetivo
+
+Conduzir a **cotação**: liberar itens (de solicitações ou ordens planejadas) para
+cotação, convidar fornecedores, **registrar os preços** de cada um, **selecionar o
+vencedor** por item e **gerar os pedidos** a partir das seleções.
+
+##### Passo a passo
+
+1. **Crie a cotação** informando os itens (IDs de itens de solicitação e/ou códigos de
+   ordens planejadas) e os **fornecedores convidados**.
+2. Abra a cotação e **convide** mais fornecedores, se necessário.
+3. **Registre os preços** por item × fornecedor (preço, lead time, condição de
+   pagamento). A cotação passa a *Cotada*.
+4. **Selecione** o preço vencedor de cada item.
+5. **Gere os pedidos**: agrupa os preços selecionados por fornecedor, cria um pedido por
+   fornecedor e registra o atendimento nas solicitações de origem.
+
+##### Telas relacionadas
+
+- **VSUP0300 (Solicitação)**: origem dos itens de cotação.
+- **VSUP0200 (Pedido de Compra)**: resultado da cotação.
+
+---
+
+### Perguntas Frequentes (Suprimento)
+
+**Criei o fornecedor e deu erro de "tipo inválido".**
+Cadastre primeiro um **Tipo de Fornecedor** na VSUP0510 — o cadastro exige um tipo
+válido.
+
+**O preço do item do pedido veio automático. De onde?**
+Da **Tabela de Preço de Compra** (VSUP0120), preferindo o preço específico do
+fornecedor. O %IPI vem da classificação fiscal e a UM interna das conversões (VSUP0110).
+
+**Qual a diferença entre Solicitação e Cotação?**
+A **solicitação** é o pedido interno de compra (o que preciso). A **cotação** é o
+processo de comparar preços de vários fornecedores antes de comprar. Ambas geram
+**pedidos de compra** ao final.
+
+**A sugestão do MRP virou pedido sozinha?**
+Não — o MRP **sugere**; o comprador **aprova** na aba Sugestões da VSUP0200 (informando
+fornecedor e preço). Só então vira pedido firme.
+
+---
+
+> **Fim do Processo Suprimento e Compras.**
 > Documentação atualizada em Junho 2026.
