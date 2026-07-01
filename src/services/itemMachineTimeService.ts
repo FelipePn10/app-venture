@@ -26,7 +26,8 @@ export interface CalculateProductionDTO {
   item_code: number;
   mask?: string | null;
   machine_code: number;
-  quantity: number;
+  /** Backend exige `demand_qty` (não `quantity`); `quantity` é rejeitado. */
+  demand_qty: number;
 }
 
 export interface ProductionCalcResult {

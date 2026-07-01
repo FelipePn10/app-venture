@@ -189,7 +189,8 @@ function unwrapArray(raw: unknown): unknown[] {
 // ─── Grupos PDM ────────────────────────────────────────────────────────────────
 
 export async function criarGrupoPDM(dto: GrupoPDM_DTO): Promise<GrupoPDM_Response> {
-  const { data } = await httpClient.post(`${BASE}/grupos`, dto);
+  // Backend expõe apenas POST /create-group (sem list/get/update — ver doc Cadastros).
+  const { data } = await httpClient.post(`${BASE}/create-group`, dto);
   return parseGrupo(data);
 }
 
@@ -215,7 +216,8 @@ export async function listarGruposPDM(): Promise<GrupoPDM_Response[]> {
 // ─── Modificadores PDM ─────────────────────────────────────────────────────────
 
 export async function criarModificadorPDM(dto: ModificadorPDM_DTO): Promise<ModificadorPDM_Response> {
-  const { data } = await httpClient.post(`${BASE}/modificadores`, dto);
+  // Backend expõe apenas POST /create-modifier.
+  const { data } = await httpClient.post(`${BASE}/create-modifier`, dto);
   return parseModificador(data);
 }
 

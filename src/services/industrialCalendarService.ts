@@ -98,3 +98,18 @@ export async function getCalendarMonth(year: number, month: number): Promise<Par
 export async function createCalendarDay(dto: CreateCalendarDayDTO): Promise<void> {
   await httpClient.post(`${BASE}/create`, dto);
 }
+
+/** Retorna apenas os dias úteis do mês (GET /workdays/{year}/{month}). */
+export async function getWorkdays(year: number, month: number): Promise<ParsedCalendarDay[]> {
+  const response = await httpClient.get<unknown>(`${BASE}/workdays/${year}/${month}`);
+  const raw = response.data;
+  if (!Array.isArray(raw)) return [];
+  const result: ParsedCalendarDay[] = [];
+  for (const item of raw as unknown[]) {
+    if (!item || typeof item !== 'object') continue;
+    const obj = item as Obj;
+    const date = parseDateFields(obj);
+    if (date) result.push({ ...date, is_workday: true });
+  }
+  return result;
+}

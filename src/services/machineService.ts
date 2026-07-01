@@ -1,21 +1,25 @@
 import axios from 'axios';
 import { httpClient } from '@/services/httpClient';
 
+// Valores reais do enum `machine_capacity_unit_enum` (backend, em PT) — confirmados
+// ao vivo. Os antigos (PIECES/KG/DAY...) NÃO existem no enum e quebravam todo create.
 export const CAPACITY_UNITS = [
-  { value: 'PIECES', label: 'Peças' },
+  { value: 'PEÇAS',  label: 'Peças' },
+  { value: 'UN',     label: 'Unidades' },
+  { value: 'CHAPAS', label: 'Chapas' },
   { value: 'KG',     label: 'Quilogramas (kg)' },
-  { value: 'TONS',   label: 'Toneladas (t)' },
-  { value: 'METERS', label: 'Metros (m)' },
-  { value: 'MM',     label: 'Milímetros (mm)' },
+  { value: 'T',      label: 'Toneladas (t)' },
+  { value: 'M',      label: 'Metros (m)' },
   { value: 'M2',     label: 'Metros quadrados (m²)' },
   { value: 'M3',     label: 'Metros cúbicos (m³)' },
-  { value: 'LITERS', label: 'Litros (L)' },
+  { value: 'LITROS', label: 'Litros (L)' },
 ] as const;
 
+// Valores reais do enum `machine_capacity_period_enum` (backend, em PT).
 export const CAPACITY_PERIODS = [
-  { value: 'MINUTE', label: 'Por Minuto' },
-  { value: 'HOUR',   label: 'Por Hora' },
-  { value: 'DAY',    label: 'Por Dia' },
+  { value: 'MINUTO', label: 'Por Minuto' },
+  { value: 'HORA',   label: 'Por Hora' },
+  { value: 'DIA',    label: 'Por Dia' },
 ] as const;
 
 export type CapacityUnit   = typeof CAPACITY_UNITS[number]['value'];
