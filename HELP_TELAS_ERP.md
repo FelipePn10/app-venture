@@ -1548,9 +1548,11 @@ O produto nasce na **Engenharia** (VENT0200), onde recebe código, estrutura e r
 #### VENT0200 — Cadastro de Itens
 
 ##### Objetivo
+
 Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semiacabados, acabados, serviços e insumos). É a tela de cadastro mais complexa do ERP Venture, centralizando informações de engenharia, estoque, planejamento, comercial, contábil/fiscal e suprimentos em sete abas.
 
 ##### Pré-requisitos
+
 - Empresa cadastrada no sistema.
 - Para itens do tipo Fabricado: Estrutura de Produtos (VENT0210) e Roteiro de Fabricação (VENT0202) devem existir.
 - Para itens configurados: Grupo PDM (VENT0204), Modificadores (VITE0115) e Atributos (VITE0116) devem estar parametrizados.
@@ -1628,6 +1630,7 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 | Safra | Suprimentos | Texto (20) | Não | Identificação de safra para itens agrícolas |
 
 ##### Observações importantes
+
 - O campo **Saúde** com valor _Crítico_ ou _Obsoleto_ altera o comportamento do MRP e pode bloquear novas ordens de compra/venda.
 - Itens com flag **Configurado** exigem máscara gerada via VITE0313 e regras de configuração via VITE0118 antes do uso em planejamento.
 - A aba **Planejamento** controla como o MRP/MPS trata o item; alterações aqui impactam diretamente a geração de ordens.
@@ -1653,9 +1656,11 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 #### VENT0210 — Estrutura de Produtos (BOM)
 
 ##### Objetivo
+
 Manter a lista de materiais (Bill of Materials) dos itens fabricados, representando hierarquicamente os componentes, subconjuntos e matérias-primas necessários à produção. Utiliza árvore hierárquica com navegação via breadcrumb, grid inline editável e painel de detalhe lateral.
 
 ##### Pré-requisitos
+
 - Item pai cadastrado em VENT0200 com Tipo = Fabricado e Estrutura diferente de Fantasma.
 - Componentes cadastrados em VENT0200.
 
@@ -1686,6 +1691,7 @@ Manter a lista de materiais (Bill of Materials) dos itens fabricados, representa
 | Observação | Texto (255) | Não | Notas sobre o vínculo |
 
 ##### Observações importantes
+
 - **Itens Fantasma** na estrutura são ignorados pelo MRP — suas necessidades são "explodidas" para o nível inferior.
 - O **painel lateral** mostra: código, nome, tipo, estrutura, unidade de medida, lead time e saldo atual.
 - A edição inline permite alterar quantidade e flags sem abrir modais — ideal para ajustes rápidos.
@@ -1705,9 +1711,11 @@ Manter a lista de materiais (Bill of Materials) dos itens fabricados, representa
 #### VENT0204 — Cadastro de Grupo PDM
 
 ##### Objetivo
+
 Cadastrar os grupos (famílias) PDM que agrupam itens configurados com características e variáveis comuns. O grupo PDM é o primeiro nível da hierarquia de configuração.
 
 ##### Pré-requisitos
+
 - Empresa cadastrada no sistema.
 
 ##### Passo a passo
@@ -1728,6 +1736,7 @@ Cadastrar os grupos (famílias) PDM que agrupam itens configurados com caracter�
 | Descrição | Texto (120) | Sim | Nome descritivo do grupo PDM |
 
 ##### Observações importantes
+
 - O grupo PDM é a entidade raiz do configurador. Sem ele, não é possível criar modificadores nem atributos.
 - Um mesmo grupo pode ser usado por múltiplos itens configurados da mesma família.
 
@@ -1746,9 +1755,11 @@ Cadastrar os grupos (famílias) PDM que agrupam itens configurados com caracter�
 #### VENT0202 — Roteiro de Fabricação
 
 ##### Objetivo
+
 Definir a sequência de operações necessárias para fabricar um item específico, vinculando cada operação a um Centro de Trabalho (CT), tempo de execução e número de homens. Suporta origem interna e externa (terceirização) e permite copiar operações de um roteiro padrão pré-definido.
 
 ##### Pré-requisitos
+
 - Item cadastrado em VENT0200 com Tipo = Fabricado.
 - Centros de Trabalho cadastrados no sistema.
 - (Opcional) Roteiro Padrão (VENT0115) para usar o botão Copiar.
@@ -1786,6 +1797,7 @@ Definir a sequência de operações necessárias para fabricar um item específi
 | Apontamento | Select | Não | Sim / Não — exige ou não apontamento do operador |
 
 ##### Observações importantes
+
 - A **Fórmula** aplica um fator sobre o tempo base (`T`). Exemplo: `T * 1.2` adiciona 20% ao tempo padrão.
 - Operações com **Situação Inativa** não são consideradas no cálculo de carga dos CTs.
 - Operações **Fantasma** existem apenas para documentação — não geram apontamento nem custo.
@@ -1805,9 +1817,11 @@ Definir a sequência de operações necessárias para fabricar um item específi
 #### VENT0115 — Roteiro Padrão
 
 ##### Objetivo
+
 Criar templates de roteiro reutilizáveis, que servem como base para copiar operações para roteiros de fabricação de itens específicos (VENT0202). Ideal para famílias de produtos que seguem a mesma sequência produtiva.
 
 ##### Pré-requisitos
+
 - Centros de Trabalho cadastrados no sistema.
 
 ##### Passo a passo
@@ -1837,6 +1851,7 @@ Criar templates de roteiro reutilizáveis, que servem como base para copiar oper
 | Origem | Select | Sim | Interna / Terceiros |
 
 ##### Observações importantes
+
 - O código do roteiro padrão é **auto-gerado** e sequencial, não editável pelo usuário.
 - Roteiros padrão não estão vinculados a nenhum item — são puramente templates.
 - Um roteiro padrão pode ser copiado para múltiplos roteiros de fabricação.
@@ -1853,9 +1868,11 @@ Criar templates de roteiro reutilizáveis, que servem como base para copiar oper
 #### VENT0363 — Relatório Tempo CT
 
 ##### Objetivo
+
 Exibir relatório de tempos e custos por Centro de Trabalho, totalizando horas trabalhadas e custo em reais para itens produzidos. Permite filtrar por período, CT, tipo de estrutura e seleção de documentos (NF de Saída ou Ordens de Fabricação Encerradas).
 
 ##### Pré-requisitos
+
 - Itens com roteiro de fabricação (VENT0202) e ordens de fabricação encerradas ou notas fiscais de saída emitidas.
 
 ##### Passo a passo
@@ -1884,6 +1901,7 @@ Exibir relatório de tempos e custos por Centro de Trabalho, totalizando horas t
 | Flags | Checkbox | Não | Filtros complementares |
 
 ##### Observações importantes
+
 - A coluna **Custo (R$)** é calculada multiplicando o tempo (h) pelo custo-hora do Centro de Trabalho.
 - O relatório pode ser exportado para Excel.
 
@@ -1900,9 +1918,11 @@ Exibir relatório de tempos e custos por Centro de Trabalho, totalizando horas t
 #### VPME0102 — Parâmetros Promessa de Entrega
 
 ##### Objetivo
+
 Configurar os parâmetros globais do módulo de Promessa de Entrega, controlando o comportamento do sistema para promessas de data de entrega, recálculos e bloqueios.
 
 ##### Pré-requisitos
+
 - Permissão de acesso ao módulo de Promessa de Entrega.
 - Módulo VPME habilitado na licença.
 
@@ -1930,6 +1950,7 @@ Configurar os parâmetros globais do módulo de Promessa de Entrega, controlando
 | show_order_values | Number | Não | Quantidade de valores de ordem a exibir |
 
 ##### Observações importantes
+
 - O toggle **use_delivery_promise** é o master switch — desativá-lo desabilita todas as funcionalidades de promessa.
 - **break_tank** está relacionado a movimentações de tanque (líquidos/granéis).
 - O **dirty state** é indicado visualmente (borda do campo muda de cor) sempre que um valor difere do salvo no banco.
@@ -1946,9 +1967,11 @@ Configurar os parâmetros globais do módulo de Promessa de Entrega, controlando
 #### VPME0102ITE — Calendário Promessa por Item
 
 ##### Objetivo
+
 Definir, para cada item, os dias úteis e não úteis para promessa de entrega em um calendário mensal. Utiliza 5 estados visuais (cores) para identificar a situação de cada dia e permite transferência de saldo entre dias para movimentações de tanque.
 
 ##### Pré-requisitos
+
 - Parâmetros de Promessa de Entrega (VPME0102) configurados.
 - Item cadastrado em VENT0200.
 
@@ -1973,6 +1996,7 @@ Definir, para cada item, os dias úteis e não úteis para promessa de entrega e
 | Dia | Click | Não | Estado do dia: útil confirmado / não útil / padrão |
 
 ##### Observações importantes
+
 - Os 5 estados de cor representam: útil confirmado, útil previsto, não útil, feriado, bloqueado.
 - O modal de **transferência** é específico para itens líquidos/granéis controlados por tanque.
 
@@ -1988,9 +2012,11 @@ Definir, para cada item, os dias úteis e não úteis para promessa de entrega e
 #### VENT0108 — Calendário Financeiro/Industrial
 
 ##### Objetivo
+
 Definir o calendário corporativo mensal, marcando dias úteis, fins de semana, feriados e bloqueios. Utilizado tanto pelo módulo financeiro quanto pelo industrial (MRP, promessa de entrega, planejamento de capacidade).
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -2011,6 +2037,7 @@ Definir o calendário corporativo mensal, marcando dias úteis, fins de semana, 
 | Limpar Mês | Button | Não | Remove todas as marcações do mês atual |
 
 ##### Observações importantes
+
 - O calendário é **corporativo** (vale para toda a empresa), não por item.
 - Dias marcados como **não útil** são ignorados pelo MRP no cálculo de datas de necessidade.
 - O botão **Limpar Mês** reseta todos os dias para o estado padrão (útil).
@@ -2028,9 +2055,11 @@ Definir o calendário corporativo mensal, marcando dias úteis, fins de semana, 
 #### VENG0204 — Regras Variáveis Equivalentes
 
 ##### Objetivo
+
 Estabelecer regras de equivalência entre itens pai e filho baseadas em características com operadores lógicos (=, <>, >, <, >=, <=). Permite definir que um determinado componente é selecionado quando a característica do item pai atende a uma condição.
 
 ##### Pré-requisitos
+
 - Itens pai e filho cadastrados em VENT0200.
 - Características definidas no configurador PDM (VITE0116).
 
@@ -2057,6 +2086,7 @@ Estabelecer regras de equivalência entre itens pai e filho baseadas em caracter
 | F (fórmula) | Button | Não | Abre editor de fórmula avançada |
 
 ##### Observações importantes
+
 - O botão **F** permite expressões como `(COR = 'AZUL') AND (TENSAO >= 220)`.
 - Estas regras são avaliadas em tempo de configuração para selecionar automaticamente os componentes corretos.
 
@@ -2074,9 +2104,11 @@ Estabelecer regras de equivalência entre itens pai e filho baseadas em caracter
 #### VITE0313 — Geração Máscara Itens Configurados
 
 ##### Objetivo
+
 Gerar máscaras (códigos configurados) para itens configuráveis a partir da seleção de características e variáveis de um grupo PDM. A máscara gerada é o código do item configurado final.
 
 ##### Pré-requisitos
+
 - Item configurável cadastrado em VENT0200 com flag Configurado = Sim.
 - Grupo PDM (VENT0204), Modificadores (VITE0115) e Atributos (VITE0116) configurados.
 
@@ -2100,6 +2132,7 @@ Gerar máscaras (códigos configurados) para itens configuráveis a partir da se
 | Máscara | Texto (read-only) | — | Código configurado gerado |
 
 ##### Observações importantes
+
 - A máscara gerada segue o padrão definido no grupo PDM (ex.: `BOMBA-123-220V-AZUL`).
 - Máscaras geradas criam automaticamente novos códigos no cadastro de itens (VENT0200) com flag Configurado = Sim.
 
@@ -2118,9 +2151,11 @@ Gerar máscaras (códigos configurados) para itens configuráveis a partir da se
 #### VITE0114 — Grupos PDM (Tema Azul)
 
 ##### Objetivo
+
 Cadastro alternativo de Grupos PDM com tema visual azul, oferecendo modal de vínculo com empresa e item base. Permite pesquisa rápida por código ou descrição.
 
 ##### Pré-requisitos
+
 - Empresa cadastrada.
 - (Opcional) Item base cadastrado em VENT0200.
 
@@ -2144,6 +2179,7 @@ Cadastro alternativo de Grupos PDM com tema visual azul, oferecendo modal de ví
 | Item Base | Select (modal) | Não | Item de referência do grupo |
 
 ##### Observações importantes
+
 - O **Item Base** serve como template para os itens configurados gerados a partir deste grupo.
 - A versão "tema azul" é cosmeticamente diferente de VENT0204, mas os dados são compartilhados.
 
@@ -2161,9 +2197,11 @@ Cadastro alternativo de Grupos PDM com tema visual azul, oferecendo modal de ví
 #### VITE0115 — Modificadores PDM
 
 ##### Objetivo
+
 Gerenciar os modificadores dentro de cada grupo PDM. O modificador representa uma dimensão de variação do produto (ex.: Cor, Tensão, Material) e contém os atributos que definem os valores possíveis.
 
 ##### Pré-requisitos
+
 - Grupo PDM cadastrado em VENT0204 ou VITE0114.
 
 ##### Passo a passo
@@ -2185,6 +2223,7 @@ Gerenciar os modificadores dentro de cada grupo PDM. O modificador representa um
 | Ordem | Number | Não | Ordem de exibição no configurador |
 
 ##### Observações importantes
+
 - Um grupo PDM pode ter múltiplos modificadores (ex.: Cor, Tensão, Material, Dimensão).
 - O modal de vínculo é o mesmo usado em VITE0114 para associar empresa e item base.
 
@@ -2201,9 +2240,11 @@ Gerenciar os modificadores dentro de cada grupo PDM. O modificador representa um
 #### VITE0116 — Atributos PDM
 
 ##### Objetivo
+
 Gerenciar os atributos (valores possíveis) de cada modificador PDM. Apresenta pesquisa hierárquica em 3 níveis (Grupo → Modificador → Atributo) e oferece funcionalidade de Copiar/Colar atributos entre modificadores.
 
 ##### Pré-requisitos
+
 - Grupo PDM (VITE0114) e Modificador PDM (VITE0115) cadastrados.
 
 ##### Passo a passo
@@ -2232,6 +2273,7 @@ Gerenciar os atributos (valores possíveis) de cada modificador PDM. Apresenta p
 | Copiar / Colar | Button | Não | Copia atributos entre modificadores |
 
 ##### Observações importantes
+
 - Atributos **Essenciais** são obrigatórios na configuração; **Complementares** são opcionais.
 - O campo **TAM** define quantos caracteres o valor ocupa na máscara gerada.
 - A funcionalidade **Copiar/Colar** é útil quando dois modificadores compartilham os mesmos valores (ex.: "Cor" para pintura e "Cor" para acabamento).
@@ -2250,9 +2292,11 @@ Gerenciar os atributos (valores possíveis) de cada modificador PDM. Apresenta p
 #### VITE0118 — Regras Itens Configurados
 
 ##### Objetivo
+
 Definir regras que mapeiam características do configurador para tabelas do sistema (Contábil, Comercial, Custos, Planejamento, etc.). Quando um item configurado é gerado, estas regras determinam automaticamente classificações fiscais, preços, centros de custo e outros parâmetros.
 
 ##### Pré-requisitos
+
 - Grupo PDM, Modificadores e Atributos (VITE0114, VITE0115, VITE0116) configurados.
 - Tabelas de destino parametrizadas (plano de contas, tabelas de preço, etc.).
 
@@ -2278,6 +2322,7 @@ Definir regras que mapeiam características do configurador para tabelas do sist
 | Valor | Varia | Sim | Valor a ser atribuído quando a condição for atendida |
 
 ##### Observações importantes
+
 - O **campo dinâmico** é o diferencial desta tela — ele se adapta ao domínio da tabela selecionada, mostrando selects ou inputs apropriados.
 - As regras são avaliadas sequencialmente; a primeira que satisfizer a condição é aplicada.
 - Tabelas de destino típicas: Classificação Fiscal (Contábil), Tabela de Preço (Comercial), Centro de Custo (Custos), Tipo de Planejamento (Planejamento).
@@ -2296,9 +2341,11 @@ Definir regras que mapeiam características do configurador para tabelas do sist
 #### VITE0129 — Replicação Parâmetros
 
 ##### Objetivo
+
 Replicar parâmetros de um item de origem para múltiplos itens de destino, em lote. Permite selecionar quais categorias de parâmetros (pastas) serão copiadas através de 8 checkboxes.
 
 ##### Pré-requisitos
+
 - Item de origem cadastrado em VENT0200 com os parâmetros a replicar.
 - Itens de destino cadastrados em VENT0200.
 
@@ -2320,6 +2367,7 @@ Replicar parâmetros de um item de origem para múltiplos itens de destino, em l
 | Pasta 1–8 | Checkbox (8) | Não | Categorias de parâmetros a replicar (Planejamento, Comercial, Contábil, Custos, Estoque, Engenharia, Suprimentos, Fiscal) |
 
 ##### Observações importantes
+
 - Cada checkbox corresponde a uma das abas do cadastro de itens (VENT0200).
 - A replicação é uma operação **em lote** e não pode ser desfeita automaticamente.
 - Parâmetros fiscais (pasta Contábil) podem exigir validação adicional após a replicação.
@@ -2338,9 +2386,11 @@ Replicar parâmetros de um item de origem para múltiplos itens de destino, em l
 #### VPLA0102 — Demandas Independentes
 
 ##### Objetivo
+
 Registrar demandas independentes de itens (previsões de venda, ordens de produção manuais, pedidos especiais) que alimentam o MRP/MPS. Para itens configurados, exige que a máscara esteja gerada.
 
 ##### Pré-requisitos
+
 - Item cadastrado em VENT0200.
 - Para itens configurados: máscara gerada via VITE0313.
 - Centro de Custo (VCTB0102) cadastrado.
@@ -2370,6 +2420,7 @@ Registrar demandas independentes de itens (previsões de venda, ordens de produ�
 | Data | Date | Sim | Data de entrega desejada (deve ser dia útil) |
 
 ##### Observações importantes
+
 - A **data deve ser dia útil** — o sistema valida contra o calendário VENT0108 e rejeita datas em fins de semana ou feriados.
 - Itens configurados **exigem** máscara — sem ela, a demanda não pode ser salva.
 - A pesquisa permite filtrar por **item** e **data** para localizar demandas existentes.
@@ -2391,9 +2442,11 @@ Registrar demandas independentes de itens (previsões de venda, ordens de produ�
 #### VPLC0200 — Montagem de Carga
 
 ##### Objetivo
+
 Agrupar pedidos de venda em cargas de transporte, categorizando por tipo de frete (10 opções). Exibe tabela hierárquica com cargas (nível pai) e pedidos (nível filho), totalizadores de cargas, pedidos, valor e peso.
 
 ##### Pré-requisitos
+
 - Pedidos de venda liberados no sistema.
 
 ##### Passo a passo
@@ -2420,6 +2473,7 @@ Agrupar pedidos de venda em cargas de transporte, categorizando por tipo de fret
 | Peso Total | (totalizador) | — | Soma do peso de todos os pedidos |
 
 ##### Observações importantes
+
 - Pedidos só podem pertencer a uma carga por vez.
 - A tabela hierárquica permite expandir/colapsar cargas para visualizar seus pedidos.
 - Alterações na montagem de carga podem afetar a **promessa de entrega** (VPME0102).
@@ -2438,9 +2492,11 @@ Agrupar pedidos de venda em cargas de transporte, categorizando por tipo de fret
 #### VPLC0211 — Orientações Entrega
 
 ##### Objetivo
+
 Registrar orientações para a entrega de cargas, incluindo CEP com auto-preenchimento de endereço, seleção de rota e campo de orientações em texto livre (até 500 caracteres).
 
 ##### Pré-requisitos
+
 - Carga montada em VPLC0200.
 
 ##### Passo a passo
@@ -2460,6 +2516,7 @@ Registrar orientações para a entrega de cargas, incluindo CEP com auto-preench
 | Orientação | Textarea (500) | Não | Instruções adicionais para entrega |
 
 ##### Observações importantes
+
 - O **auto-preenchimento** do CEP consulta uma base de CEPs integrada ao sistema.
 - O campo **Orientação** tem limite de 500 caracteres — use para informações como "entregar no depósito B", "contatar fulano antes", etc.
 
@@ -2477,9 +2534,11 @@ Registrar orientações para a entrega de cargas, incluindo CEP com auto-preench
 #### VPRE0101 — Tabela Apropriação
 
 ##### Objetivo
+
 Definir a distribuição percentual das vendas previstas nos dias da semana (Segunda a Sexta). A soma dos percentuais deve totalizar 100% e a validação ocorre em tempo real.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -2502,6 +2561,7 @@ Definir a distribuição percentual das vendas previstas nos dias da semana (Seg
 | Total | Number (read-only) | — | Soma dos percentuais (deve ser 100%) |
 
 ##### Observações importantes
+
 - A **validação em tempo real** atualiza o total a cada campo alterado, destacando em vermelho se diferente de 100%.
 - Esta tabela é usada pelo módulo de **previsão de vendas** (VPRE0201) para distribuir previsões mensais em semanas e dias.
 
@@ -2517,9 +2577,11 @@ Definir a distribuição percentual das vendas previstas nos dias da semana (Seg
 #### VPRE0102 — Bloqueio Previsão
 
 ##### Objetivo
+
 Definir intervalos de semanas em que a previsão de vendas fica bloqueada para alterações. Útil para períodos de fechamento ou auditoria.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -2540,6 +2602,7 @@ Definir intervalos de semanas em que a previsão de vendas fica bloqueada para a
 | Ano Final | Number | Sim | Ano da semana final |
 
 ##### Observações importantes
+
 - A validação `ano * 100 + semana` garante que o intervalo final não seja anterior ao inicial, considerando viradas de ano.
 - Durante o período bloqueado, a previsão não pode ser alterada em VPRE0201.
 
@@ -2555,9 +2618,11 @@ Definir intervalos de semanas em que a previsão de vendas fica bloqueada para a
 #### VPRE0201 — Cadastro Previsão Vendas
 
 ##### Objetivo
+
 Cadastrar e ajustar previsões de vendas por item, com visão mensal e semanal. Oferece distribuição fracionada (valores iguais por semana) ou inteira (piso com resto concentrado nas primeiras semanas), além de modal de ajuste semanal com redistribuição automática.
 
 ##### Pré-requisitos
+
 - Tabela de Apropriação (VPRE0101) configurada.
 - Calendário financeiro/industrial (VENT0108) com dias úteis.
 - Itens cadastrados em VENT0200.
@@ -2587,6 +2652,7 @@ Cadastrar e ajustar previsões de vendas por item, com visão mensal e semanal. 
 | Total Semanal | Number (read-only) | — | Soma das semanas (deve igualar o total mensal) |
 
 ##### Observações importantes
+
 - Na distribuição **Fracionada**, se a quantidade for 10 e houver 4 semanas, cada semana recebe 2,5 (valores decimais).
 - Na distribuição **Inteira**, se a quantidade for 10 e houver 4 semanas: semanas 1 e 2 recebem 3, semanas 3 e 4 recebem 2 (piso = 2, resto = 2 concentrado no início).
 - O **modal de ajuste semanal** recalcula automaticamente para manter o total.
@@ -2607,9 +2673,11 @@ Cadastrar e ajustar previsões de vendas por item, com visão mensal e semanal. 
 #### VPRE0251 — Geração Previsão
 
 ##### Objetivo
+
 Gerar previsões de vendas a partir de dados históricos (pedidos ou faturamento), aplicando índice de projeção percentual sobre a média histórica. Permite selecionar quais itens incluir na geração via checkboxes.
 
 ##### Pré-requisitos
+
 - Histórico de pedidos de venda ou faturamento no sistema.
 - Tabela de Apropriação (VPRE0101) configurada.
 
@@ -2639,6 +2707,7 @@ Gerar previsões de vendas a partir de dados históricos (pedidos ou faturamento
 | Projeção Calculada | Number (read-only) | — | Média x Índice (%) |
 
 ##### Observações importantes
+
 - O **índice de projeção** de 100% replica exatamente a média histórica; acima de 100% projeta crescimento; abaixo de 100% projeta retração.
 - Itens sem histórico suficiente podem apresentar projeção zerada.
 
@@ -2656,9 +2725,11 @@ Gerar previsões de vendas a partir de dados históricos (pedidos ou faturamento
 #### VPRE0301 — Previsto X Realizado
 
 ##### Objetivo
+
 Comparar visualmente a previsão de vendas com o efetivamente realizado, exibindo 4 cards de KPI no topo e uma tabela com barras de progresso. Permite ordenação por qualquer coluna.
 
 ##### Pré-requisitos
+
 - Previsões cadastradas em VPRE0201 ou VPRE0251.
 - Dados de realização (pedidos/faturamento) no período.
 
@@ -2683,6 +2754,7 @@ Comparar visualmente a previsão de vendas com o efetivamente realizado, exibind
 | Barra Progresso | (visual) | — | Barra horizontal colorida (verde = atingido, vermelho = abaixo) |
 
 ##### Observações importantes
+
 - A barra de progresso é **colorida**: verde quando realizado maior ou igual a previsto, vermelho quando abaixo.
 - A ordenação por coluna permite identificar rapidamente itens com maior desvio ou melhor aderência.
 - Os 4 cards KPI fornecem uma visão gerencial rápida.
@@ -2702,9 +2774,11 @@ Comparar visualmente a previsão de vendas com o efetivamente realizado, exibind
 #### VMAN0202 — Apontamento OS Manutenção
 
 ##### Objetivo
+
 Registrar os apontamentos (movimentações) das Ordens de Serviço de manutenção, incluindo horas trabalhadas, materiais consumidos e serviços executados.
 
 ##### Pré-requisitos
+
 - Ordem de Serviço de manutenção aberta no sistema.
 - Itens e serviços cadastrados em VENT0200.
 - Funcionários/operadores cadastrados.
@@ -2734,6 +2808,7 @@ Registrar os apontamentos (movimentações) das Ordens de Serviço de manutenç�
 | Observação | Texto (255) | Não | Descrição do trabalho executado |
 
 ##### Observações importantes
+
 - Apontamentos de **Mão de Obra** geralmente usam horas; **Material** usa unidades de estoque; **Serviço** pode usar horas ou valor fixo.
 - Cada apontamento gera movimentação de estoque para o tipo Material (baixa no almoxarifado).
 
@@ -2749,9 +2824,11 @@ Registrar os apontamentos (movimentações) das Ordens de Serviço de manutenç�
 #### VMAN0401 — Consulta OS
 
 ##### Objetivo
+
 Consultar e listar Ordens de Serviço de manutenção com múltiplos filtros. Permite visualizar status, datas, itens, responsáveis e custos.
 
 ##### Pré-requisitos
+
 - Ordens de Serviço geradas no sistema.
 
 ##### Passo a passo
@@ -2773,6 +2850,7 @@ Consultar e listar Ordens de Serviço de manutenção com múltiplos filtros. Pe
 | Responsável | Select | Não | Filtro por responsável técnico |
 
 ##### Observações importantes
+
 - A listagem é **read-only** — para editar, acesse a tela de origem da OS.
 - Os filtros são cumulativos (AND lógico).
 
@@ -2790,9 +2868,11 @@ Consultar e listar Ordens de Serviço de manutenção com múltiplos filtros. Pe
 #### VAVR0200 — Cadastro Aviso de Recebimento (Fornecedores/Transportadoras)
 
 ##### Objetivo
+
 Cadastrar fornecedores e transportadoras no sistema, com 5 abas de informações. Suporta Pessoa Jurídica e Pessoa Física condicionalmente. Inclui sub-tabelas para Telefones, E-mails e Transporte.
 
 ##### Pré-requisitos
+
 - Nenhum (cadastro básico).
 
 ##### Passo a passo
@@ -2822,6 +2902,7 @@ Cadastrar fornecedores e transportadoras no sistema, com 5 abas de informações
 | Transporte | Sub-tabela | Não | Dados de veículo/ANTT (transportadoras) |
 
 ##### Observações importantes
+
 - O campo **CNPJ/CPF** é condicional: se Pessoa Jurídica, espera CNPJ (14 dígitos); se Física, CPF (11 dígitos).
 - As **sub-tabelas** (Telefones, E-mails, Transporte) permitem múltiplos registros inline.
 - O **Tipo** define como o cadastro pode ser usado: Fornecedor em pedidos de compra, Transportadora em fretes e cargas.
@@ -2842,9 +2923,11 @@ Cadastrar fornecedores e transportadoras no sistema, com 5 abas de informações
 #### VCON0100 — Tipos de Contratos
 
 ##### Objetivo
+
 Cadastrar os tipos de contrato (tabela de domínio) utilizados na gestão de contratos com fornecedores.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -2865,6 +2948,7 @@ Cadastrar os tipos de contrato (tabela de domínio) utilizados na gestão de con
 | Ativo | Checkbox | Sim | Indica se o tipo está disponível para uso |
 
 ##### Observações importantes
+
 - É uma **tabela de domínio** — os tipos aqui cadastrados aparecem no select de VCON0200.
 - Tipos inativos não aparecem para seleção em novos contratos.
 
@@ -2880,9 +2964,11 @@ Cadastrar os tipos de contrato (tabela de domínio) utilizados na gestão de con
 #### VCON0200 — Contratos Fornecedores
 
 ##### Objetivo
+
 Cadastrar e gerenciar contratos com fornecedores em modo dual (pesquisa + cadastro). Suporta datas condicionais, moeda com data de referência condicional e condições de pagamento.
 
 ##### Pré-requisitos
+
 - Fornecedor cadastrado em VAVR0200.
 - Tipo de Contrato cadastrado em VCON0100.
 
@@ -2913,6 +2999,7 @@ Cadastrar e gerenciar contratos com fornecedores em modo dual (pesquisa + cadast
 | Pagamento | Texto (255) | Não | Condições de pagamento negociadas |
 
 ##### Observações importantes
+
 - **Datas condicionais**: se o tipo for Tempo Determinado = Sim, Data Fim é obrigatória; se Não, é ocultada.
 - **Data Moeda condicional**: _Data Atual_ usa a data do sistema; _Abertura_ usa a data de criação do contrato; _Informado_ exibe campo de data; _Valor Fixo_ exibe campo de texto.
 - O modo dual permite pesquisar contratos existentes enquanto edita um novo.
@@ -2932,9 +3019,11 @@ Cadastrar e gerenciar contratos com fornecedores em modo dual (pesquisa + cadast
 #### VCON0202 — Cancelamento Itens Contrato
 
 ##### Objetivo
+
 Permitir o cancelamento ou descancelamento de itens individuais de um contrato, com 6 motivos de cancelamento disponíveis e histórico de alterações por item.
 
 ##### Pré-requisitos
+
 - Contrato cadastrado em VCON0200 com itens vinculados.
 
 ##### Passo a passo
@@ -2958,6 +3047,7 @@ Permitir o cancelamento ou descancelamento de itens individuais de um contrato, 
 | Histórico | (read-only) | — | Log de alterações do item |
 
 ##### Observações importantes
+
 - O **histórico por item** registra data, usuário e motivo de cada alteração de status.
 - Itens cancelados não geram obrigações de compra, mas permanecem visíveis para auditoria.
 - O descancelamento reverte o status, registrando novo evento no histórico.
@@ -2975,9 +3065,11 @@ Permitir o cancelamento ou descancelamento de itens individuais de um contrato, 
 #### VCON0400 — Consulta Contratos
 
 ##### Objetivo
+
 Consultar contratos com 13 filtros opcionais. Tela exclusivamente de consulta (read-only), permitindo análises gerenciais sobre a carteira de contratos.
 
 ##### Pré-requisitos
+
 - Contratos cadastrados em VCON0200.
 
 ##### Passo a passo
@@ -3002,6 +3094,7 @@ Consultar contratos com 13 filtros opcionais. Tela exclusivamente de consulta (r
 | + outros 7 filtros | Varia | Não | Filtros complementares |
 
 ##### Observações importantes
+
 - Tela **100% read-only** — não permite edições, apenas consulta e exportação.
 - Os 13 filtros permitem granularidade fina na pesquisa.
 
@@ -3018,9 +3111,11 @@ Consultar contratos com 13 filtros opcionais. Tela exclusivamente de consulta (r
 #### VPDC0200 — Pedido de Compra
 
 ##### Objetivo
+
 Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transporte, Vencimento, Itens) e status inicial Pendente. Os itens são adicionados via modal de seleção.
 
 ##### Pré-requisitos
+
 - Fornecedor cadastrado em VAVR0200.
 - Itens comprados cadastrados em VENT0200.
 - (Opcional) Contrato vigente em VCON0200.
@@ -3053,6 +3148,7 @@ Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transpo
 | Status | (sistema) | Read-only | — | Pendente (inicial) |
 
 ##### Observações importantes
+
 - O status inicial é sempre **Pendente**. O workflow posterior (aprovação, envio ao fornecedor, recebimento) é tratado em outras telas.
 - O **modal de itens** permite busca por código, nome ou descrição, com filtros por fornecedor e tipo.
 - Pedidos de compra alimentam o **Aviso de Recebimento** e a **Inspeção de Recebimento**.
@@ -3072,9 +3168,11 @@ Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transpo
 #### VVOR0202 — Itens por Fornecedor
 
 ##### Objetivo
+
 Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, em um grid editável de 18 colunas. Inclui modal de PDM e modal de Dados de Qualidade por linha, além de classificação ABC por fornecedor.
 
 ##### Pré-requisitos
+
 - Fornecedor cadastrado em VAVR0200.
 - Itens cadastrados em VENT0200.
 
@@ -3106,6 +3204,7 @@ Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, 
 | Modal Dados Qualidade | Button | Não | Parâmetros de qualidade por item/fornecedor |
 
 ##### Observações importantes
+
 - O grid é **totalmente editável** — alterações são feitas inline, sem abrir modais para cada campo.
 - A **classificação ABC** por fornecedor pode diferir da classificação ABC do item (aba Planejamento em VENT0200).
 - Os **Dados de Qualidade** por linha alimentam o módulo de inspeção (VINS0200).
@@ -3126,9 +3225,11 @@ Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, 
 #### VIMP0101 — Status Logístico da Carga
 
 ##### Objetivo
+
 Acompanhar o status logístico de cargas de importação, registrando etapas como embarque, trânsito, chegada ao porto, desembaraço e liberação.
 
 ##### Pré-requisitos
+
 - Processo de importação iniciado.
 - Cargas de importação registradas.
 
@@ -3151,6 +3252,7 @@ Acompanhar o status logístico de cargas de importação, registrando etapas com
 | Observação | Texto (255) | Não | Detalhes da etapa |
 
 ##### Observações importantes
+
 - As etapas típicas incluem: Embarque Origem, Em Trânsito, Chegada Porto, Desembaraço, Liberação, Entrega.
 - O histórico de etapas é cumulativo e não pode ser alterado retroativamente.
 
@@ -3166,9 +3268,11 @@ Acompanhar o status logístico de cargas de importação, registrando etapas com
 #### VIMP0102 — Tipos Conhecimentos Transporte
 
 ##### Objetivo
+
 Cadastrar os tipos de Conhecimento de Transporte Eletrônico (CT-e) utilizados em processos de importação.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -3186,6 +3290,7 @@ Cadastrar os tipos de Conhecimento de Transporte Eletrônico (CT-e) utilizados e
 | Descrição | Texto (120) | Sim | Descrição do tipo |
 
 ##### Observações importantes
+
 - Tabela de domínio — tipos cadastrados aqui são referenciados nos processos de importação.
 - Tipos típicos: Marítimo, Aéreo, Rodoviário, Ferroviário, Multimodal.
 
@@ -3201,9 +3306,11 @@ Cadastrar os tipos de Conhecimento de Transporte Eletrônico (CT-e) utilizados e
 #### VIMP0200 — Console Processos Importação
 
 ##### Objetivo
+
 Central de acompanhamento de todos os processos de importação, consolidando informações de status logístico, documentação, custos e prazos em uma única interface.
 
 ##### Pré-requisitos
+
 - Processos de importação registrados no sistema.
 - Cargas (VIMP0101) e CT-e (VIMP0102) vinculados.
 
@@ -3227,6 +3334,7 @@ Central de acompanhamento de todos os processos de importação, consolidando in
 | Prazo | (indicador) | — | Dias restantes até a data prevista |
 
 ##### Observações importantes
+
 - O console é a **visão 360 graus** do processo de importação — integra informações de múltiplas telas.
 - Indicadores visuais (cores) destacam processos com atraso ou pendências críticas.
 
@@ -3247,9 +3355,11 @@ Central de acompanhamento de todos os processos de importação, consolidando in
 #### VINS0105 — Tipos de Ocorrências
 
 ##### Objetivo
+
 Configurar os tipos de ocorrências de inspeção com 4 layouts disponíveis (Padrão, Simplificado, Detalhado, Relatório Técnico) e 7 toggles que habilitam/desabilitam seções do formulário de ocorrência.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -3270,6 +3380,7 @@ Configurar os tipos de ocorrências de inspeção com 4 layouts disponíveis (Pa
 | Toggle 1–7 | Toggle (7) | Não | Seções configuráveis do formulário |
 
 ##### Observações importantes
+
 - Os **7 toggles** controlam quais campos e seções aparecem ao registrar uma ocorrência daquele tipo (ex.: fotos obrigatórias, análise de causa, ação corretiva).
 - O layout **Relatório Técnico** inclui campos adicionais para laudos e evidências técnicas.
 
@@ -3285,9 +3396,11 @@ Configurar os tipos de ocorrências de inspeção com 4 layouts disponíveis (Pa
 #### VINS0106 — Ocorrências
 
 ##### Objetivo
+
 Registrar ocorrências de inspeção (não conformidades, divergências, avisos, desvios de qualidade) vinculadas a fornecedor, item e ordem. Suporta abono com justificativa e fechamento com 4 status possíveis.
 
 ##### Pré-requisitos
+
 - Tipos de Ocorrências (VINS0105) cadastrados.
 - Fornecedor (VAVR0200), Item (VENT0200) e Ordem de Compra ou Inspeção associados.
 
@@ -3317,6 +3430,7 @@ Registrar ocorrências de inspeção (não conformidades, divergências, avisos,
 | Fechamento | Select | Sim | Aprovado / Reprovado / Devolvido / Retrabalho |
 
 ##### Observações importantes
+
 - Tipos de ocorrência: **NC** = Não Conformidade crítica, **DI** = Divergência, **AV** = Aviso/observação, **DQ** = Desvio de Qualidade.
 - **Abonado = Sim** significa que a divergência foi aceita (ex.: diferença de quantidade aceita comercialmente).
 - O **Fechamento** define o destino do item: Aprovado segue para estoque; Reprovado/Devolvido retorna ao fornecedor; Retrabalho passa por correção.
@@ -3337,9 +3451,11 @@ Registrar ocorrências de inspeção (não conformidades, divergências, avisos,
 #### VINS0200 — Roteiro Inspeção
 
 ##### Objetivo
+
 Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção para itens recebidos, com cabeçalho de 10 campos informativos, sequências dinâmicas de inspeção e modal por sequência com seleção de espécie/tipo (valor, atributo ou estrutura).
 
 ##### Pré-requisitos
+
 - Item cadastrado em VENT0200.
 - Fornecedor cadastrado em VAVR0200.
 - Tipos de Roteiro Inspeção (VINS0211) configurados.
@@ -3377,6 +3493,7 @@ Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção 
 | Critério Aprovação | Modal (Atributo) | Condicional | Condição de aprovação/reprovação |
 
 ##### Observações importantes
+
 - Esta é a **tela mais rica** de inspeção — combina cabeçalho, sequências dinâmicas e modais contextuais.
 - **Espécie Valor**: para medições quantitativas (ex.: diâmetro 10mm +/- 0.1mm).
 - **Espécie Atributo**: para verificações qualitativas (ex.: cor conforme, sem arranhões).
@@ -3399,9 +3516,11 @@ Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção 
 #### VINS0201 — Manutenção Ordens Inspeção
 
 ##### Objetivo
+
 Gerenciar as ordens de inspeção geradas, com filtros, listagem de resultados e ações inline disponíveis: Tp.Rot. (alterar tipo de roteiro), Inspeção (executar inspeção), Aprovar (aprovar ordem) e Análise (registrar análise técnica).
 
 ##### Pré-requisitos
+
 - Ordens de inspeção geradas via VINS0200.
 
 ##### Passo a passo
@@ -3429,6 +3548,7 @@ Gerenciar as ordens de inspeção geradas, com filtros, listagem de resultados e
 | Análise | Button (inline) | Não | Registra análise técnica |
 
 ##### Observações importantes
+
 - As **ações inline** são exibidas condicionalmente conforme o status da ordem (ex.: "Aprovar" só aparece para ordens com inspeção concluída).
 - A ação **Tp.Rot.** permite trocar o roteiro de inspeção se necessário (ex.: de normal para rigoroso).
 
@@ -3446,9 +3566,11 @@ Gerenciar as ordens de inspeção geradas, com filtros, listagem de resultados e
 #### VINS0206 — Exclusão Ordens Inspeção
 
 ##### Objetivo
+
 Realizar exclusão em lote de ordens de inspeção, com seleção por checkbox em duas abas: Ordens (seleção do que excluir) e Exclusão (confirmação e log da exclusão).
 
 ##### Pré-requisitos
+
 - Ordens de inspeção existentes em VINS0201.
 
 ##### Passo a passo
@@ -3471,6 +3593,7 @@ Realizar exclusão em lote de ordens de inspeção, com seleção por checkbox e
 | Lista Exclusão | Exclusão | Read-only | — | Ordens selecionadas para exclusão |
 
 ##### Observações importantes
+
 - A exclusão é uma operação **em lote** e irreversível — utilize com cautela.
 - Apenas ordens em status Pendente podem ser excluídas (ordens em execução ou concluídas são protegidas).
 - O **log de exclusão** registra data, usuário e ordens excluídas para auditoria.
@@ -3487,9 +3610,11 @@ Realizar exclusão em lote de ordens de inspeção, com seleção por checkbox e
 #### VINS0211 — Tipos Roteiro Inspeção
 
 ##### Objetivo
+
 Cadastrar os tipos de roteiro de inspeção, com configuração mínima: código (auto-gerado) e descrição.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -3507,6 +3632,7 @@ Cadastrar os tipos de roteiro de inspeção, com configuração mínima: código
 | Descrição | Texto (120) | Sim | Nome do tipo de roteiro |
 
 ##### Observações importantes
+
 - Tipos de roteiro são usados para classificar e agrupar roteiros de inspeção com critérios semelhantes.
 - Exemplos: Normal (NBR 5426), Rigorosa, Simplificada, Inspeção Visual, Inspeção Dimensional.
 
@@ -3522,9 +3648,11 @@ Cadastrar os tipos de roteiro de inspeção, com configuração mínima: código
 #### VINS0313 — Consulta Inspeções Recebimento
 
 ##### Objetivo
+
 Consultar inspeções de recebimento realizadas, com 11 filtros disponíveis e opção de exportar resultados para Excel.
 
 ##### Pré-requisitos
+
 - Inspeções realizadas via VINS0200/VINS0201.
 
 ##### Passo a passo
@@ -3547,6 +3675,7 @@ Consultar inspeções de recebimento realizadas, com 11 filtros disponíveis e o
 | + outros 6 filtros | Varia | Não | Filtros complementares |
 
 ##### Observações importantes
+
 - Tela de consulta **read-only** — não permite alterações nos resultados das inspeções.
 - A exportação para Excel inclui todas as colunas visíveis na listagem.
 
@@ -3563,9 +3692,11 @@ Consultar inspeções de recebimento realizadas, com 11 filtros disponíveis e o
 #### VINS0400 — Consulta Ocorrências/Ordens
 
 ##### Objetivo
+
 Consultar ocorrências e ordens de inspeção em duas abas independentes, cada uma com seus próprios filtros. Fornece visão consolidada do histórico de qualidade.
 
 ##### Pré-requisitos
+
 - Ocorrências registradas em VINS0106 e/ou ordens de inspeção em VINS0201.
 
 ##### Passo a passo
@@ -3596,6 +3727,7 @@ Consultar ocorrências e ordens de inspeção em duas abas independentes, cada u
 | Ordens | Tipo Roteiro | Select | Não | Tipo de roteiro |
 
 ##### Observações importantes
+
 - As **abas independentes** permitem comparar visões de ocorrências e ordens sem perder os filtros.
 - Ideal para analisar correlações: um fornecedor com muitas ocorrências tende a ter mais ordens reprovadas.
 
@@ -3612,9 +3744,11 @@ Consultar ocorrências e ordens de inspeção em duas abas independentes, cada u
 #### VAVF0101 — Parâmetros Avaliação Fornecedores
 
 ##### Objetivo
+
 Configurar os parâmetros para avaliação de fornecedores (IQF — Índice de Qualidade do Fornecedor) com 3 sub-tabelas: Dimensões (com peso), Critérios (com peso e tipo: MAIOR_MELHOR, MENOR_MELHOR, NOMINAL_MELHOR) e Intervalos (7 colunas, conceito de 0 a 10).
 
 ##### Pré-requisitos
+
 - Fornecedores cadastrados em VAVR0200.
 
 ##### Passo a passo
@@ -3643,6 +3777,7 @@ Configurar os parâmetros para avaliação de fornecedores (IQF — Índice de Q
 | Intervalos | + outras 4 colunas | Varia | Não | Colunas complementares de parametrização |
 
 ##### Observações importantes
+
 - **MAIOR_MELHOR**: quanto maior o valor real, melhor (ex.: nota de qualidade).
 - **MENOR_MELHOR**: quanto menor o valor real, melhor (ex.: preço, prazo de entrega).
 - **NOMINAL_MELHOR**: o valor ideal é um alvo específico (ex.: quantidade exata entregue).
@@ -3660,9 +3795,11 @@ Configurar os parâmetros para avaliação de fornecedores (IQF — Índice de Q
 #### VAVF0105 — Tipos Abono Divergências
 
 ##### Objetivo
+
 Cadastrar os tipos de abono (justificativas) para divergências encontradas em inspeções. Tela ultra-simples com apenas o campo descrição.
 
 ##### Pré-requisitos
+
 - Nenhum.
 
 ##### Passo a passo
@@ -3679,6 +3816,7 @@ Cadastrar os tipos de abono (justificativas) para divergências encontradas em i
 | Descrição | Texto (120) | Sim | Nome do tipo de abono |
 
 ##### Observações importantes
+
 - Os tipos de abono aparecem no campo Motivo Abono em VINS0106 quando a ocorrência é abonada.
 - Exemplos: Divergência Comercial, Aceite Técnico, Divergência Menor, Urgência, Acordo Contratual.
 
@@ -3693,9 +3831,11 @@ Cadastrar os tipos de abono (justificativas) para divergências encontradas em i
 #### VAVF0204 — Envio IQF Fornecedores
 
 ##### Objetivo
+
 Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tabela com bar chart colorido (verde maior ou igual a 70, amarelo 50–69, vermelho abaixo de 50) e enviar o resultado por e-mail ao fornecedor.
 
 ##### Pré-requisitos
+
 - Parâmetros de Avaliação (VAVF0101) configurados.
 - Fornecedores (VAVR0200) com histórico de inspeções (VINS0200/VINS0106).
 - E-mails dos fornecedores cadastrados.
@@ -3725,6 +3865,7 @@ Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tab
 | Enviar E-mail | Button | Não | Dispara e-mail com o relatório IQF |
 
 ##### Observações importantes
+
 - O **IQF** é calculado com base nos parâmetros de VAVF0101 e no histórico real de entregas e ocorrências do período.
 - **Verde (maior ou igual a 70)**: fornecedor aprovado — desempenho satisfatório.
 - **Amarelo (50–69)**: fornecedor em observação — requer atenção.
@@ -3748,9 +3889,11 @@ Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tab
 #### VASS0201 — Cadastro Chamado Assistência
 
 ##### Objetivo
+
 Cadastrar e gerenciar chamados de assistência técnica, com 6 tipos (Garantia, Fora Garantia, Troca, Conserto, Revisão, Recall), workflow de status e vínculo de itens via modal com nota fiscal, lote e número de série.
 
 ##### Pré-requisitos
+
 - Consumidor/cliente cadastrado.
 - Itens cadastrados em VENT0200.
 - Nota fiscal de venda do item (se aplicável).
@@ -3783,6 +3926,7 @@ Cadastrar e gerenciar chamados de assistência técnica, com 6 tipos (Garantia, 
 | Status | Select (workflow) | Sim | Aberto / Em Análise / Em Execução / Aguard. Peças / Concluído / Fechado |
 
 ##### Observações importantes
+
 - Chamados tipo **Recall** indicam campanha de recall — podem gerar múltiplos chamados para o mesmo defeito de fabricação.
 - O **modal de itens** permite vincular mais de um item ao mesmo chamado (ex.: kit de componentes).
 - O **workflow de status** controla a progressão do atendimento — cada transição pode gerar notificações.
@@ -3802,9 +3946,11 @@ Cadastrar e gerenciar chamados de assistência técnica, com 6 tipos (Garantia, 
 #### VASS0402 — Consulta Assistência
 
 ##### Objetivo
+
 Consultar chamados de assistência com 14 filtros disponíveis. Os resultados exibem status como pills coloridas para rápida identificação visual.
 
 ##### Pré-requisitos
+
 - Chamados cadastrados em VASS0201.
 
 ##### Passo a passo
@@ -3828,6 +3974,7 @@ Consultar chamados de assistência com 14 filtros disponíveis. Os resultados ex
 | + outros 8 filtros | Varia | Não | Filtros complementares |
 
 ##### Observações importantes
+
 - As **status pills** usam cores semânticas: verde (concluído/fechado), azul (em andamento), amarelo (aguardando), vermelho (atrasado).
 - A consulta é **read-only** — para editar um chamado, acesse VASS0201.
 
@@ -3844,9 +3991,11 @@ Consultar chamados de assistência com 14 filtros disponíveis. Os resultados ex
 #### VATC0280 — Cadastro Chamados (Alternativo)
 
 ##### Objetivo
+
 Cadastro alternativo de chamados de assistência com foco no consumidor, garantia toggle e vistoria workflow com campos condicionais que aparecem/desaparecem conforme o andamento.
 
 ##### Pré-requisitos
+
 - Consumidor cadastrado.
 - Itens cadastrados em VENT0200.
 
@@ -3878,6 +4027,7 @@ Cadastro alternativo de chamados de assistência com foco no consumidor, garanti
 | Laudo | Textarea | Condicional | Laudo final (se Vistoria Concluída) |
 
 ##### Observações importantes
+
 - O **workflow de vistoria** controla quais campos são exibidos — campos condicionais reduzem a poluição visual.
 - A versão "alternativa" possui uma interface mais enxuta que VASS0201, focada no fluxo de vistoria técnica.
 - Ambos os cadastros (VASS0201 e VATC0280) compartilham a mesma base de dados de chamados.
@@ -3896,9 +4046,11 @@ Cadastro alternativo de chamados de assistência com foco no consumidor, garanti
 #### VATC0380 — Relatório Chamados
 
 ##### Objetivo
+
 Emitir relatórios gerenciais de chamados de assistência com 16 filtros disponíveis e configuração de saída (Análise, Quebra, Opções) para personalizar o formato do relatório.
 
 ##### Pré-requisitos
+
 - Chamados cadastrados em VASS0201 ou VATC0280.
 
 ##### Passo a passo
@@ -3929,6 +4081,7 @@ Emitir relatórios gerenciais de chamados de assistência com 16 filtros dispon�
 | Opções | Config | Sim | Formato, ordenação e visualização |
 
 ##### Observações importantes
+
 - As **configurações de saída** (Análise/Quebra/Opções) permitem alta customização do relatório.
 - A **Análise** permite agrupar por consumidor, item, tipo ou período.
 - A **Quebra** insere quebras de página a cada mudança do campo selecionado.
@@ -3946,9 +4099,11 @@ Emitir relatórios gerenciais de chamados de assistência com 16 filtros dispon�
 #### VATC0480 — Consulta Chamados
 
 ##### Objetivo
+
 Consultar chamados de assistência com 12 filtros e filtro client-side adicional. Exibe colunas de vistoria para acompanhamento do processo técnico.
 
 ##### Pré-requisitos
+
 - Chamados cadastrados em VASS0201 ou VATC0280.
 
 ##### Passo a passo
@@ -3974,6 +4129,7 @@ Consultar chamados de assistência com 12 filtros e filtro client-side adicional
 | Filtro Client-Side | Texto | Não | Filtro adicional sobre resultados carregados |
 
 ##### Observações importantes
+
 - O **filtro client-side** opera sobre os dados já carregados no navegador, sem nova consulta ao servidor — ideal para refinar rapidamente.
 - As **colunas de vistoria** incluem: Data Agendada, Técnico, Diagnóstico, Laudo, Data Conclusão.
 
@@ -3992,9 +4148,11 @@ Consultar chamados de assistência com 12 filtros e filtro client-side adicional
 #### VGAR0211 — Gerar Pedido Devolução
 
 ##### Objetivo
+
 Gerar pedidos de devolução a partir de chamados de assistência em garantia, transformando um chamado de garantia aprovado em um pedido de devolução para o fornecedor ou para o estoque de avarias.
 
 ##### Pré-requisitos
+
 - Chamado de garantia cadastrado em VASS0201 com status que permita devolução.
 - Item do chamado com fornecedor ou almoxarifado de devolução configurado em VENT0200.
 
@@ -4022,6 +4180,7 @@ Gerar pedidos de devolução a partir de chamados de assistência em garantia, t
 | Pedido Devolução | (gerado) | — | Número do pedido de devolução gerado |
 
 ##### Observações importantes
+
 - Apenas chamados com **status que permitam devolução** (ex.: Fechado como Reprovado, Aguardando Devolução) podem ser usados.
 - O pedido de devolução gerado segue o workflow padrão de devoluções do sistema.
 - Chamados de **Recall** podem gerar múltiplos pedidos de devolução.
@@ -5887,14 +6046,17 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0100 — Configuração Fiscal
 
-**Objetivo:** Cadastrar a identidade fiscal completa do emitente, configurar o token de integração com a API Focus NF-e para comunicação com a SEFAZ, definir as alíquotas padrão de ICMS (interno, diferimento, juros, multa) e os prazos de vencimento dos tributos. É a tela fundação de todo o módulo fiscal — sem esta configuração, nenhuma outra tela fiscal opera.
+##### Objetivo
 
-**Pré-requisitos:**
+Cadastrar a identidade fiscal completa do emitente, configurar o token de integração com a API Focus NF-e para comunicação com a SEFAZ, definir as alíquotas padrão de ICMS (interno, diferimento, juros, multa) e os prazos de vencimento dos tributos. É a tela fundação de todo o módulo fiscal — sem esta configuração, nenhuma outra tela fiscal opera.
+
+##### Pré-requisitos
+
 - VEMP0100 (Cadastro Empresa): A empresa emitente deve estar previamente cadastrada no sistema com CNPJ e Razão Social válidos.
 - VLOC0100 (Localização Países/UFs): As UFs para o campo UF Empresa devem existir na tabela de localização.
 - Token Focus NF-e: O usuário deve possuir um token válido da API Focus NF-e, obtido no painel Focus (https://focusnfe.com.br). O token é necessário para autorização de NF-e e consulta de chaves de acesso.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0100 — Configuração Fiscal no menu Fiscal do ERP Venture.
 2. Na seção **Emitente**, preencha o CNPJ da empresa emitente. O sistema valida o dígito verificador em tempo real pelo algoritmo módulo 11. Um indicador verde (&#10003; CNPJ/CPF válido) ou vermelho (&#10007; CNPJ/CPF inválido) aparece abaixo do campo conforme você digita.
@@ -5915,7 +6077,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 12. Para recarregar os dados do banco, utilize o botão **Recarregar** (descarta alterações não salvas).
 13. Para exportar a configuração, utilize o botão **Exportar** (formato CSV/JSON para backup ou transferência entre ambientes).
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -5942,7 +6104,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Venc. IPI (dia) | number | Não | 1 a 31 | Dia do mês de vencimento do IPI. |
 | Venc. PIS/COFINS (dia) | number | Não | 1 a 31 | Dia do mês de vencimento do PIS e COFINS. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O CNPJ é validado pelo algoritmo módulo 11 padrão da Receita Federal. O indicador visual aparece apenas quando o campo possui conteúdo.
 - O Token Focus NF-e é um dado sensível. Ele é armazenado com criptografia no banco de dados e nunca é incluído em logs de erro ou exportações. Mantenha o token em segurança e não o compartilhe.
 - As alíquotas configuradas nesta tela funcionam como **sugestão padrão** para os cálculos automáticos nas telas VFIS0200 (NF-e de Saída), VFIS0210 (NF-e de Entrada) e VFIS0220 (CT-e). Em cada tela de emissão, as alíquotas podem ser sobrescritas manualmente por item ou por nota.
@@ -5950,7 +6113,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - O rodapé da tela exibe um resumo com o regime tributário selecionado e o ambiente Focus NF-e ativo, facilitando a verificação rápida da configuração atual.
 - A alteração entre ambientes (Homologação/Produção) é uma operação sensível: certifique-se de estar no ambiente correto antes de emitir notas fiscais.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0110 (Tabelas Tributárias):** As alíquotas padrão configuradas aqui são usadas como fallback quando as tabelas tributárias não possuem uma alíquota específica para o NCM/UF. O regime tributário da VFIS0100 também afeta quais CSTs são aplicáveis.
 - **VFIS0200 (NF-e de Saída):** Consome diretamente o Token Focus NF-e para autorizar notas na SEFAZ. Utiliza o CNPJ, Razão Social, IE, endereço e UF do emitente no XML da NF-e. As alíquotas padrão de ICMS são o valor inicial para os cálculos automáticos.
 - **VFIS0210 (NF-e de Entrada):** Utiliza o Token Focus NF-e para importar NF-e por chave de acesso de 44 dígitos. O regime tributário define as regras de creditamento (PIS/COFINS não-cumulativo para Lucro Real).
@@ -5964,13 +6128,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0110 — Tabelas Tributárias
 
-**Objetivo:** Manter o repositório central de tabelas tributárias do sistema, organizado em três abas: NCM (com alíquotas de IPI, PIS, COFINS e CSTs), ICMS Interno (alíquotas por UF incluindo FCP) e ICMS Interestadual (pares origem-destino com alíquotas conforme regras do CONFAZ). Estas alíquotas são a base de cálculo para todas as telas de emissão fiscal.
+##### Objetivo
 
-**Pré-requisitos:**
+Manter o repositório central de tabelas tributárias do sistema, organizado em três abas: NCM (com alíquotas de IPI, PIS, COFINS e CSTs), ICMS Interno (alíquotas por UF incluindo FCP) e ICMS Interestadual (pares origem-destino com alíquotas conforme regras do CONFAZ). Estas alíquotas são a base de cálculo para todas as telas de emissão fiscal.
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): O regime tributário e as alíquotas padrão precisam estar configurados para que as tabelas tributárias possam ser utilizadas como referência.
 - Conhecimento das tabelas oficiais da Receita Federal (NCM, CST) e das alíquotas estaduais de ICMS vigentes.
 
-**Passo a passo:**
+##### Passo a passo
 
 **Aba NCM (IPI/PIS/COFINS):**
 1. Na aba **NCM (IPI/PIS/COFINS)**, preencha o código NCM de 8 dígitos no campo NCM. Este código é a chave primária da tabela — não pode ser duplicado.
@@ -5999,6 +6166,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
    - 4% para operações interestaduais com produtos importados.
 5. Clique em **Salvar**. A chave composta (UF Origem, UF Destino, Alíquota) é tratada como única.
 6. A tabela inferior exibe todos os pares cadastrados.
+
+##### Campos
 
 **Campos (Aba NCM):**
 
@@ -6031,14 +6200,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Alíq. ICMS | number | Sim | 0,0000 a 1,0000 | Alíquota interestadual aplicável (4%, 7% ou 12% conforme regras CONFAZ). |
 | Ativo | toggle | Não | — | Indica se a alíquota está ativa para seleção. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O NCM é imutável após a criação. Se precisar alterar um código NCM, será necessário desativar o registro existente e criar um novo com o código correto.
 - As alíquotas de ICMS Interno e Interestadual seguem as regras do CONFAZ e devem ser mantidas atualizadas conforme alterações na legislação estadual. A responsabilidade pela atualização é do usuário.
 - Na hierarquia de busca de alíquotas do sistema, a VFIS0110 é o **fallback** (último nível). A VFIS0350 (Classificações Fiscais) tem precedência máxima, seguida pela VFIS0320 (Parâmetros ICMS/IPI). Se um item não possui classificação fiscal específica nem parâmetro por UF+NCM, o sistema recorre às alíquotas desta tela.
 - Os CSTs seguem as tabelas oficiais da Receita Federal. Consulte a documentação da NF-e (Nota Técnica) para os códigos atualizados.
 - O rodapé da tela exibe a contagem de NCMs, UFs internas e pares interestaduais cadastrados, permitindo verificar rapidamente a cobertura das tabelas.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** O regime tributário definido na VFIS0100 influencia quais CSTs e alíquotas são aplicáveis. As alíquotas padrão da VFIS0100 servem como último fallback.
 - **VFIS0200 (NF-e de Saída):** As alíquotas de NCM (IPI/PIS/COFINS) são carregadas automaticamente ao adicionar um item com determinado NCM. A alíquota interestadual é consultada quando a UF de destino difere da UF do emitente.
 - **VFIS0210 (NF-e de Entrada):** As alíquotas de NCM são utilizadas como referência para os valores de impostos dos itens de entrada. Os CSTs são sugeridos conforme o NCM.
@@ -6051,16 +6222,19 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0200 — NF-e de Saída
 
-**Objetivo:** Realizar o ciclo completo de emissão de Nota Fiscal Eletrônica de saída: criação de rascunho, cálculo automático de ICMS/IPI/PIS/COFINS, autorização via API Focus/SEFAZ, cancelamento com justificativa e emissão de Carta de Correção Eletrônica (CC-e). É a tela operacional mais importante do módulo fiscal.
+##### Objetivo
 
-**Pré-requisitos:**
+Realizar o ciclo completo de emissão de Nota Fiscal Eletrônica de saída: criação de rascunho, cálculo automático de ICMS/IPI/PIS/COFINS, autorização via API Focus/SEFAZ, cancelamento com justificativa e emissão de Carta de Correção Eletrônica (CC-e). É a tela operacional mais importante do módulo fiscal.
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): Token Focus NF-e configurado, CNPJ do emitente, regime tributário e endereço completo.
 - VFIS0110 (Tabelas Tributárias): NCMs com alíquotas de IPI/PIS/COFINS e pares interestaduais de ICMS.
 - VFIS0300 (CFOPs): CFOPs de saída cadastrados (ex.: 5101, 5102, 6101, 6102).
 - VFIS0350 (Classificações Fiscais): Classificações fiscais dos itens a serem faturados (opcional, mas recomendado).
 - VCLI0500 (Cadastro de Clientes): Destinatários cadastrados com CNPJ/CPF, Razão Social, IE e endereço.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0200 — NF-e de Saída. A visão padrão é a **Listagem**, exibindo todas as NF-es de saída emitidas com seus status (pills coloridos: verde = autorizada, vermelho = cancelada, âmbar = rejeitada, azul = processando, cinza = rascunho).
 
@@ -6113,6 +6287,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 11. Utilize o botão **Exportar** para gerar relatórios nos formatos disponíveis.
 
+##### Campos
+
 **Campos (Cabeçalho):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -6156,7 +6332,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Valor COFINS | number (auto) | — | — | COFINS calculado automaticamente. |
 | Status | badge | — | Rascunho / Autorizada / Cancelada / Rejeitada / Processando | Pill colorida na listagem: verde=autorizada, vermelho=cancelada, âmbar=rejeitada, azul=processando, cinza=rascunho. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O cálculo automático de impostos ocorre no momento em que a NF-e é salva como rascunho. O sistema consulta a seguinte hierarquia para cada alíquota: VFIS0350 (Classificações Fiscais — precedência máxima) → VFIS0320 (Parâmetros ICMS/IPI) → VFIS0330 (Regras de redução/diferimento) → VFIS0110 (Tabelas Tributárias — fallback).
 - O CNPJ do destinatário é validado em tempo real (algoritmo módulo 11). Um indicador verde ou vermelho aparece abaixo do campo.
 - A UF de Destino é crítica: se for igual à UF do emitente (VFIS0100), a operação é interna e utiliza a alíquota de ICMS interno. Se for diferente, é interestadual e utiliza a alíquota da tabela interestadual (VFIS0110) + DIFAL quando aplicável.
@@ -6165,7 +6342,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - O texto da CC-e e da justificativa de cancelamento têm requisito mínimo de 15 caracteres, conforme regra da SEFAZ.
 - Os totais de Valor Produtos e Valor Total da nota são recalculados automaticamente a cada alteração nos itens, frete, seguro ou desconto.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** Token Focus NF-e (obrigatório para autorização e cancelamento), CNPJ e endereço do emitente (usados no XML da NF-e), regime tributário e alíquotas padrão.
 - **VFIS0110 (Tabelas Tributárias):** Alíquotas de NCM (IPI/PIS/COFINS), ICMS interno (por UF) e ICMS interestadual (pares origem-destino) são a base dos cálculos automáticos.
 - **VFIS0300 (CFOPs):** Seleção de CFOP no cabeçalho e nos itens. A natureza da operação é herdada do CFOP.
@@ -6179,16 +6357,19 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0210 — NF-e de Entrada
 
-**Objetivo:** Registrar notas fiscais de entrada de mercadorias em três modos flexíveis: entrada manual (todos os campos preenchidos pelo usuário), importação por chave de acesso de 44 dígitos via API Focus (consulta automática à SEFAZ) e upload de arquivo XML (parsing local). Após aprovação, gera automaticamente contas a pagar no módulo financeiro (VFIN0200) e registra créditos tributários.
+##### Objetivo
 
-**Pré-requisitos:**
+Registrar notas fiscais de entrada de mercadorias em três modos flexíveis: entrada manual (todos os campos preenchidos pelo usuário), importação por chave de acesso de 44 dígitos via API Focus (consulta automática à SEFAZ) e upload de arquivo XML (parsing local). Após aprovação, gera automaticamente contas a pagar no módulo financeiro (VFIN0200) e registra créditos tributários.
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): Token Focus NF-e (para modo importação por chave), regime tributário (define regras de creditamento).
 - VFIS0110 (Tabelas Tributárias): NCMs com alíquotas e CSTs de referência.
 - VFIS0300 (CFOPs): CFOPs de entrada cadastrados (ex.: 1101, 1102, 2101, 2102).
 - VFIS0360 (Tipos Operação Entrada): Tipos de operação de entrada configurados para validação de UF.
 - VAVR0200 (Cadastro de Fornecedores): Fornecedores cadastrados para referência como emitentes.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0210 — NF-e de Entrada. A visão padrão é a **Listagem**, exibindo todas as NF-es de entrada com status (aprovada = verde, pendente = âmbar, rascunho = cinza).
 
@@ -6226,6 +6407,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
    - Altera o status para **Aprovada** (verde).
 
 4. Utilize **Exportar** para gerar relatórios nos formatos disponíveis.
+
+##### Campos
 
 **Campos (Cabeçalho):**
 
@@ -6273,7 +6456,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | CST COFINS | text | Não | 01 a 99 | CST da COFINS. |
 | Status | badge | — | Pendente / Aprovada | Pill colorida na listagem. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A importação por chave de acesso utiliza a API Focus NF-e — o Token Focus NF-e configurado na VFIS0100 deve estar válido e o ambiente (Homologação/Produção) deve corresponder à NF-e que se deseja importar.
 - A chave de acesso de 44 dígitos é o identificador universal da NF-e e contém informações codificadas: UF, ano/mês, CNPJ, modelo, série, número e dígito verificador. O campo aceita apenas números — caracteres não numéricos são automaticamente removidos.
 - O upload de XML aceita o conteúdo completo do arquivo XML (elemento `<nfeProc>`). O sistema faz o parsing localmente, portanto não depende de conexão com a API Focus.
@@ -6282,7 +6466,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - A conta a pagar gerada automaticamente no VFIN0200 é vinculada ao fornecedor emitente. Se o fornecedor não estiver cadastrado no VAVR0200, a geração da conta a pagar pode falhar.
 - Os totais de impostos (ICMS, IPI, PIS, COFINS) e valor total da nota são recalculados automaticamente como somatório dos itens + frete + seguro - desconto.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** Token Focus NF-e para importação por chave. Regime tributário define regras de creditamento.
 - **VFIS0110 (Tabelas Tributárias):** Alíquotas de NCM e CSTs sugeridos para os itens.
 - **VFIS0300 (CFOPs):** CFOPs de entrada disponíveis para seleção.
@@ -6295,14 +6480,17 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0220 — CT-e (Conhecimento de Transporte Eletrônico)
 
-**Objetivo:** Registrar localmente Conhecimentos de Transporte Eletrônicos para controle de fretes e rateio de valores de transporte entre NF-es de entrada. Não possui integração com a SEFAZ — é um registro interno para fins de custeio e controle.
+##### Objetivo
 
-**Pré-requisitos:**
+Registrar localmente Conhecimentos de Transporte Eletrônicos para controle de fretes e rateio de valores de transporte entre NF-es de entrada. Não possui integração com a SEFAZ — é um registro interno para fins de custeio e controle.
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): Alíquotas padrão de ICMS para cálculo de ICMS sobre frete.
 - VFIS0300 (CFOPs): CFOPs de transporte disponíveis (ex.: 1352, 2352).
 - VFIS0210 (NF-e de Entrada): NF-es de entrada às quais o CT-e pode ser vinculado para rateio.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0220 — CT-e. A visão padrão é a **Listagem**, exibindo todos os CT-es registrados.
 
@@ -6333,7 +6521,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 5. O Valor Total é recalculado automaticamente como Frete + Seguro + Outros Custos.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6356,14 +6544,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | NF-e Entrada vinculada (ID) | number | Não | — | ID da NF-e de entrada (VFIS0210) vinculada para rateio. |
 | Valor Total | number (auto) | — | — | Calculado automaticamente: Frete + Seguro + Outros. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A VFIS0220 é um registro **local**, sem comunicação com a SEFAZ. Diferente das NF-es (VFIS0200 e VFIS0210), o CT-e aqui registrado não é transmitido para autorização — serve apenas para controle interno de custos de frete e rateio.
 - O Tipo Rateio determina como o valor do frete é distribuído entre as NF-es vinculadas. No modo VALOR, o rateio é proporcional ao valor total de cada nota. No modo PESO, o rateio é proporcional à quantidade de itens.
 - A vinculação do CT-e a uma NF-e de entrada (campo fiscal_entry_id) é opcional. Se não vinculado, o CT-e é um registro independente.
 - O Valor Total é recalculado automaticamente sempre que Frete, Seguro ou Outros são alterados.
 - O ICMS sobre frete pode gerar crédito tributário, dependendo da legislação estadual e do CFOP utilizado.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** Alíquotas padrão de ICMS.
 - **VFIS0210 (NF-e de Entrada):** CT-es podem ser vinculados a NF-es de entrada para rateio dos custos de transporte no custo de aquisição.
 - **VFIS0300 (CFOPs):** Seleção de CFOPs de transporte.
@@ -6373,13 +6563,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0300 — CFOPs / Naturezas de Operação
 
-**Objetivo:** Manter a tabela mestra de Códigos Fiscais de Operação (CFOP) com suas naturezas de operação, classificações de utilização, indicadores de operação e flags de DIFAL e Doação. É a fonte de dados de CFOPs para todas as telas de emissão fiscal do sistema.
+##### Objetivo
 
-**Pré-requisitos:**
+Manter a tabela mestra de Códigos Fiscais de Operação (CFOP) com suas naturezas de operação, classificações de utilização, indicadores de operação e flags de DIFAL e Doação. É a fonte de dados de CFOPs para todas as telas de emissão fiscal do sistema.
+
+##### Pré-requisitos
+
 - Conhecimento da tabela oficial de CFOPs da SEFAZ/Receita Federal (códigos de 4 dígitos, naturezas e classificações).
 - Nenhuma tela fiscal específica é pré-requisito para esta — a VFIS0300 é ela própria um cadastro base.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0300 — CFOPs / Naturezas de Operação. A tela exibe a lista de CFOPs já cadastrados e o formulário de cadastro/edição.
 
@@ -6412,7 +6605,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 7. Use **Exportar** para gerar relatórios.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6424,14 +6617,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | DIFAL | toggle | Não | Sim / Não | Habilita cálculo de Diferencial de Alíquota para operações interestaduais com consumidor final. |
 | Doação | toggle | Não | Sim / Não | Indica CFOP de doação com tratamento fiscal específico. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O código do CFOP é imutável após a criação. Esta restrição existe para preservar a integridade referencial — uma vez que um CFOP é referenciado por NF-es emitidas, alterar seu código invalidaria todo o histórico fiscal.
 - Os campos de classificação (Utilização, Ind. Operação, Tipo Utilização) são utilizados em múltiplos contextos: (a) na apuração de ICMS (VFIS0530/VFIS0540) para classificar débitos e créditos; (b) no SPED Fiscal para preencher campos específicos dos registros C190/C195; (c) nos cálculos de DIFAL quando o toggle está ativo.
 - O toggle DIFAL deve ser ativado para CFOPs de venda interestadual a consumidor final não-contribuinte (ex.: 6108, 6109). Nesses casos, o sistema calcula automaticamente o diferencial de alíquota (diferença entre alíquota interna e interestadual) devido à UF de destino.
 - O toggle Doação altera o comportamento do cálculo de ICMS: em operações de doação, a base de cálculo do ICMS pode ser o valor de mercado ou o custo de aquisição, dependendo da legislação estadual — o sistema ajusta a base conforme o CFOP.
 - A natureza da operação (campo herdado pelas telas de emissão) é o texto que aparece impresso no documento fiscal — certifique-se de que as descrições estejam corretas e em conformidade com a tabela oficial.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0200 (NF-e de Saída):** Seleção de CFOP no cabeçalho e nos itens. A natureza da operação é herdada do CFOP.
 - **VFIS0210 (NF-e de Entrada):** Seleção de CFOP nos itens de entrada.
 - **VFIS0220 (CT-e):** Seleção de CFOP do CT-e.
@@ -6442,13 +6637,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0310 — Dispositivos Legais
 
-**Objetivo:** Cadastrar os embasamentos legais (artigos de lei, decretos, convênios, laudos) que fundamentam alíquotas diferenciadas, reduções de base de cálculo, isenções, diferimentos e substituições tributárias aplicadas nas regras fiscais e nas NF-es emitidas.
+##### Objetivo
 
-**Pré-requisitos:**
+Cadastrar os embasamentos legais (artigos de lei, decretos, convênios, laudos) que fundamentam alíquotas diferenciadas, reduções de base de cálculo, isenções, diferimentos e substituições tributárias aplicadas nas regras fiscais e nas NF-es emitidas.
+
+##### Pré-requisitos
+
 - Conhecimento da legislação tributária aplicável (RICMS, Convênios CONFAZ, Leis Complementares, etc.).
 - Nenhuma tela fiscal é pré-requisito — a VFIS0310 é um cadastro de apoio.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0310 — Dispositivos Legais. A tela exibe a lista de dispositivos cadastrados e o formulário de cadastro/edição.
 
@@ -6469,7 +6667,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 6. A coluna **Ativo** na tabela indica se o dispositivo está vigente (Sim = pill verde) ou foi desativado (Não = pill vermelho). Dispositivos inativos não aparecem nas listas de seleção das telas de emissão, mas permanecem no histórico.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6477,14 +6675,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Descrição | text | Sim | — | Texto completo do dispositivo legal com referência normativa e resumo do efeito tributário. |
 | Ativo | toggle | — | Sim / Não | Indica se o dispositivo está em vigor. Controlado pelo backend — ao desativar, o registro fica indisponível para novas seleções. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - Os dispositivos legais são referenciados nos registros fiscais (VFIS0200, VFIS0210) para justificar alíquotas diferenciadas, reduções de base de cálculo, isenções e diferimentos. No XML da NF-e, cada item pode ter um dispositivo legal associado no campo `infAdProd`.
 - Dispositivos do tipo `LAUDO` são utilizados para fundamentar classificações fiscais específicas de produtos (ex.: laudo de classificação de NCM emitido por perito credenciado).
 - O toggle Ativo permite "aposentar" dispositivos revogados sem excluí-los do banco de dados, preservando o histórico — notas fiscais já emitidas continuam referenciando o dispositivo, mas ele não aparece como opção em novas emissões.
 - A descrição do dispositivo deve ser precisa e completa, incluindo o número da norma, artigo e parágrafo. Isso é fundamental para auditoria fiscal e para a correta escrituração no SPED.
 - Os dispositivos são consumidos principalmente pela VFIS0330 (motor de regras), onde cada regra pode ser vinculada a um dispositivo que a fundamenta legalmente.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0200 (NF-e de Saída) e VFIS0210 (NF-e de Entrada):** Dispositivos legais podem ser referenciados por item nas notas fiscais para justificar tratamentos tributários diferenciados.
 - **VFIS0330 (Redução/Substituição/Diferimento ICMS):** Cada regra do motor tributário pode ser vinculada a um dispositivo legal que a fundamenta. Esta é a principal tela consumidora da VFIS0310.
 
@@ -6492,13 +6692,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0320 — Parâmetros ICMS/IPI
 
-**Objetivo:** Definir parâmetros específicos de alíquotas de ICMS e IPI por combinações de UF, classificação fiscal (NCM ou Item) e tipo de operação, com distinção entre contribuintes e não-contribuintes do ICMS. Esta tela oferece granularidade intermediária na hierarquia de busca de alíquotas do sistema.
+##### Objetivo
 
-**Pré-requisitos:**
+Definir parâmetros específicos de alíquotas de ICMS e IPI por combinações de UF, classificação fiscal (NCM ou Item) e tipo de operação, com distinção entre contribuintes e não-contribuintes do ICMS. Esta tela oferece granularidade intermediária na hierarquia de busca de alíquotas do sistema.
+
+##### Pré-requisitos
+
 - VFIS0110 (Tabelas Tributárias): NCMs e alíquotas base já cadastrados, pois os parâmetros desta tela refinam as alíquotas genéricas.
 - VLOC0100 (Localização Países/UFs): UFs para o campo UF.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0320 — Parâmetros ICMS/IPI. A tela exibe a lista de parâmetros cadastrados e o formulário.
 
@@ -6527,7 +6730,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 6. Para editar um parâmetro existente, clique em **Editar** na linha correspondente. Altere os campos e clique em **Atualizar**.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6540,13 +6743,15 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | CST Contrib. | text | Não | 00 a 90 | CST de ICMS para contribuintes. |
 | CST Não-Contrib. | text | Não | 00 a 90 | CST de ICMS para não-contribuintes. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - NCM e Item ID são **mutuamente exclusivos**: o parâmetro deve ser vinculado ou a um NCM (aplica-se a todos os itens com aquele NCM) ou a um Item específico (aplica-se apenas àquele produto). Se ambos forem preenchidos, o Item ID tem precedência.
 - O Tipo Operação (`AMBAS`, `ENTRADA`, `SAIDA`, `CUSTOS`) filtra o contexto de aplicação. Um parâmetro com Tipo Operação `ENTRADA` só é considerado nas NF-es de entrada (VFIS0210); com `SAIDA`, apenas nas NF-es de saída (VFIS0200).
 - Na hierarquia de busca de alíquotas do sistema, a VFIS0320 é consultada **após** a VFIS0350 (Classificações Fiscais, que tem precedência máxima) e **antes** da VFIS0110 (tabelas padrão, que é o fallback). O motor de regras da VFIS0330 pode sobrescrever os valores encontrados aqui.
 - As alíquotas para contribuintes e não-contribuintes podem ser diferentes. Isso é particularmente relevante para operações interestaduais destinadas a consumidor final, onde a alíquota interestadual se aplica ao contribuinte e a alíquota interna (com DIFAL) ao não-contribuinte.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0110 (Tabelas Tributárias):** Alíquotas padrão usadas como fallback quando não há parâmetro específico nesta tela.
 - **VFIS0200 (NF-e de Saída) e VFIS0210 (NF-e de Entrada):** As alíquotas parametrizadas são consultadas durante o cálculo automático de impostos dos itens.
 - **VFIS0350 (Classificações Fiscais):** Nível superior na hierarquia de busca — se o item possui classificação fiscal, suas alíquotas têm precedência sobre os parâmetros da VFIS0320.
@@ -6556,14 +6761,17 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0330 — Redução / Substituição / Diferimento de ICMS
 
-**Objetivo:** Implementar o motor hierárquico de regras tributárias para redução de base de cálculo, substituição tributária (ICMS ST) e diferimento de ICMS. Permite definir regras com múltiplos escopos (UF, NCM, Item, Cliente, Fornecedor, Estabelecimento, Segmento de Mercado) e inclui um simulador de busca prioritária por cenário.
+##### Objetivo
 
-**Pré-requisitos:**
+Implementar o motor hierárquico de regras tributárias para redução de base de cálculo, substituição tributária (ICMS ST) e diferimento de ICMS. Permite definir regras com múltiplos escopos (UF, NCM, Item, Cliente, Fornecedor, Estabelecimento, Segmento de Mercado) e inclui um simulador de busca prioritária por cenário.
+
+##### Pré-requisitos
+
 - VFIS0110 (Tabelas Tributárias): Alíquotas base de ICMS que as regras podem modificar.
 - VFIS0310 (Dispositivos Legais): Dispositivos legais para fundamentar as regras (opcional, mas recomendado).
 - VFIS0320 (Parâmetros ICMS/IPI): Parâmetros específicos que podem ser sobrescritos por regras desta tela.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0330 — Redução / Substituição / Diferimento de ICMS. A tela exibe três seções: Identificação (cadastro da regra), Alíquotas & CST (efeitos tributários) e Busca da regra prioritária (simulador).
 
@@ -6597,6 +6805,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 7. Para filtrar a lista de regras por UF, preencha o campo de filtro na barra de ações e clique em **Filtrar**.
 
+##### Campos
+
 **Campos (Identificação):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -6624,7 +6834,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | % Diferimento | number | Não | 0,00 a 100,00 | Percentual do ICMS diferido (postergado). |
 | % Substituição | number | Não | 0,00 a 100,00 | Percentual de MVA para ICMS ST ou alíquota direta de ST. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A hierarquia de prioridade na busca de regras segue esta ordem: (1) Regras com toggle Preferencial ativo sempre vencem; (2) Regras com Item específico têm precedência sobre regras com NCM; (3) Regras com Cliente/Fornecedor específico vencem sobre regras genéricas; (4) Regras com maior número de condições preenchidas têm precedência; (5) Em caso de empate, o ID mais recente (maior) vence.
 - Os efeitos da regra são aplicados cumulativamente: uma mesma operação pode ter redução de base E substituição tributária aplicadas simultaneamente.
 - O % Redução com Alvo BASE reduz a base de cálculo do ICMS antes de aplicar a alíquota. Exemplo: BC = R$ 1.000, Redução = 41,67% → BC reduzida = R$ 583,30 → ICMS = R$ 583,30 x alíquota.
@@ -6633,7 +6844,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - O % Substituição configura o ICMS ST: a MVA é aplicada sobre o valor total para compor a BC do ICMS ST, e o ICMS próprio é deduzido do ICMS ST total.
 - Use o simulador (Busca da regra prioritária) sempre que houver dúvida sobre qual regra se aplica a um cenário específico. Isso evita erros de configuração que podem resultar em cálculos incorretos de ICMS nas NF-es.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0110 (Tabelas Tributárias):** NCM e alíquotas base que as regras modificam.
 - **VFIS0310 (Dispositivos Legais):** Fundamentação legal das regras (cada regra pode ser vinculada a um dispositivo).
 - **VFIS0320 (Parâmetros ICMS/IPI):** Parâmetros específicos que as regras podem sobrescrever.
@@ -6643,13 +6855,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0340 — Apuração do Simples Nacional
 
-**Objetivo:** Registrar a apuração mensal do Simples Nacional com base nos parâmetros de receita bruta (interna, externa e acumulada 12 meses) e folha de pagamento, utilizando as tabelas progressivas oficiais dos anexos I a VI para calcular a alíquota nominal, alíquota efetiva, alíquota efetiva de ICMS e o valor a recolher (DAS).
+##### Objetivo
 
-**Pré-requisitos:**
+Registrar a apuração mensal do Simples Nacional com base nos parâmetros de receita bruta (interna, externa e acumulada 12 meses) e folha de pagamento, utilizando as tabelas progressivas oficiais dos anexos I a VI para calcular a alíquota nominal, alíquota efetiva, alíquota efetiva de ICMS e o valor a recolher (DAS).
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): O regime tributário da empresa deve ser "1 — Simples Nacional". Esta tela não se aplica aos regimes de Lucro Presumido ou Lucro Real.
 - Dados contábeis do período: Receita Bruta do período (interna e externa), Receita Bruta acumulada dos últimos 12 meses (RBT12) e Folha de Pagamento (para anexos III e V).
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0340 — Apuração do Simples Nacional. A tela exibe a lista de apurações já realizadas.
 
@@ -6681,7 +6896,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 6. Use **Exportar** para gerar relatórios.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6698,7 +6913,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Parcela a Deduzir | number | Não | >= 0 | Valor a deduzir conforme faixa da tabela do Simples. |
 | Observação | text | Não | — | Observações sobre a apuração. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A chave (Período, Anexo) é única e imutável após a criação. Isso garante que uma vez apurado um período com determinado anexo, os parâmetros não possam ser alterados acidentalmente.
 - O cálculo das alíquotas segue a metodologia oficial da Receita Federal: a partir da RBT12, o sistema determina a faixa de enquadramento e obtém a Alíquota Nominal e a Parcela a Deduzir das tabelas oficiais (anexos I a VI da LC 123/2006). A Alíquota Efetiva = `(RBT12 x Alíquota Nominal - Parcela a Deduzir) / RBT12`. O Simples Recolhido = Receita do Período x Alíquota Efetiva.
 - A Receita Externa (exportação) é imune a PIS/COFINS, portanto não compõe a base de cálculo desses tributos dentro da alíquota do Simples.
@@ -6706,7 +6922,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - Esta tela se aplica apenas a empresas do Simples Nacional. Empresas do Lucro Presumido ou Lucro Real devem utilizar as telas de apuração detalhada (VFIS0530 + VFIS0540).
 - Os valores apurados aqui podem ser integrados ao módulo financeiro (VFIN0200) para geração automática do DAS a pagar.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** A VFIS0340 só é relevante se o Regime Tributário for "1 — Simples Nacional". O CNPJ da empresa é o sujeito passivo da apuração.
 - **VFIN0200 (Contas a Pagar):** O valor apurado (Simples Recolhido) pode gerar automaticamente um DAS (Documento de Arrecadação do Simples Nacional) a pagar no módulo financeiro.
 
@@ -6714,13 +6931,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0350 — Classificações Fiscais
 
-**Objetivo:** Manter a tabela detalhada de classificações fiscais por item/produto, incluindo NCM, CEST, Exceção Tarifária, alíquotas de IPI/PIS/COFINS, modalidades de base de cálculo de ICMS e ICMS ST, e códigos de classificação tributária (CBS/IBS). Inclui sub-entidades para traduções (idiomas para exportação) e atributos de exportação (Drawback, Reintegra) com controle de vigência. É o nível máximo de especificidade na hierarquia de busca de alíquotas.
+##### Objetivo
 
-**Pré-requisitos:**
+Manter a tabela detalhada de classificações fiscais por item/produto, incluindo NCM, CEST, Exceção Tarifária, alíquotas de IPI/PIS/COFINS, modalidades de base de cálculo de ICMS e ICMS ST, e códigos de classificação tributária (CBS/IBS). Inclui sub-entidades para traduções (idiomas para exportação) e atributos de exportação (Drawback, Reintegra) com controle de vigência. É o nível máximo de especificidade na hierarquia de busca de alíquotas.
+
+##### Pré-requisitos
+
 - VFIS0110 (Tabelas Tributárias): NCMs base já cadastrados. A VFIS0350 complementa a VFIS0110 com dados adicionais.
 - Cadastro de Itens (Produtos): Os itens aos quais as classificações fiscais serão vinculadas.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0350 — Classificações Fiscais. A tela exibe a lista de classificações cadastradas.
 
@@ -6758,6 +6978,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
       - **Vigência início e Vigência fim:** Datas de validade do atributo (opcional — se não preenchidas, vigência indeterminada).
    b. Clique em **+ Atributo**.
 
+##### Campos
+
 **Campos (Principal):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -6793,13 +7015,15 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Vigência início | date | Não | — | Data de início de vigência do atributo. |
 | Vigência fim | date | Não | — | Data de fim de vigência (vazio = indeterminada). |
 
-**Observações importantes:**
+##### Observações importantes
+
 - Na hierarquia de busca de alíquotas, a VFIS0350 tem a **precedência máxima**. Se um item possui classificação fiscal cadastrada aqui, suas alíquotas de IPI, PIS e COFINS, modalidades de BC e CSTs são utilizadas prioritariamente, ignorando as configurações da VFIS0110 e VFIS0320.
 - A sub-entidade Idiomas é essencial para empresas exportadoras que precisam emitir documentos fiscais com descrições em inglês, espanhol ou outros idiomas. Cada classificação pode ter múltiplas traduções.
 - A sub-entidade Atributos de Exportação gerencia regimes aduaneiros especiais: Drawback (suspensão/imunidade de tributos na importação para posterior exportação) e Reintegra (reintegração de valores para empresas exportadoras). O controle de vigência por data permite gerenciar atributos temporais.
 - O campo Cód. Clas. Trib (CBS/IBS) é uma preparação para a reforma tributária brasileira, que prevê a substituição de PIS, COFINS, IPI, ICMS e ISS pela CBS e IBS.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0110 (Tabelas Tributárias):** Alíquotas padrão usadas como fallback quando o item não possui classificação fiscal específica.
 - **VFIS0200 (NF-e de Saída) e VFIS0210 (NF-e de Entrada):** As classificações fiscais são a primeira fonte consultada para determinar as alíquotas dos itens.
 - **VFIS0360 (Tipos Operação Entrada):** Classificações fiscais podem ser vinculadas como padrão para tipos de operação de entrada.
@@ -6809,14 +7033,17 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0360 — Tipos de Operação de Entrada
 
-**Objetivo:** Padronizar os tipos de operação de entrada utilizados na VFIS0210 (NF-e de Entrada), definindo códigos de operação, naturezas fiscais, tipos de nota, grupos de estados (para validação de UF) e classificações fiscais padrão. Inclui um validador inline para verificar se uma combinação (operação, UF) é permitida.
+##### Objetivo
 
-**Pré-requisitos:**
+Padronizar os tipos de operação de entrada utilizados na VFIS0210 (NF-e de Entrada), definindo códigos de operação, naturezas fiscais, tipos de nota, grupos de estados (para validação de UF) e classificações fiscais padrão. Inclui um validador inline para verificar se uma combinação (operação, UF) é permitida.
+
+##### Pré-requisitos
+
 - VFIS0300 (CFOPs): Naturezas de operação referenciadas.
 - VFIS0350 (Classificações Fiscais): Classificações fiscais padrão que podem ser vinculadas às operações.
 - VLOC0100 (Localização Países/UFs): UFs para composição dos grupos de estado.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0360 — Tipos de Operação de Entrada. A tela possui duas abas: **Tipos de Operação** e **Grupos de Estado**.
 
@@ -6847,6 +7074,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 5. Use **Exportar** para gerar relatórios.
 
+##### Campos
+
 **Campos (Aba 1 — Tipos de Operação):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -6868,14 +7097,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Descrição | text | Não | — | Descrição do grupo. |
 | UFs | multi-select | Sim | Todas as UFs | Lista de UFs que compõem o grupo. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - Configure os **Grupos de Estado primeiro**, antes de criar os Tipos de Operação, pois as operações referenciam os grupos.
 - O validador inline de UF é uma ferramenta de diagnóstico: ele permite verificar em tempo real se uma combinação de código de operação + UF é permitida, sem precisar acessar a VFIS0210. Esta validação é integrada na VFIS0210 como parte do fluxo de registro.
 - O campo Classif. (código) vincula uma classificação fiscal da VFIS0350 à operação. Ao registrar uma NF-e de entrada com este tipo de operação, os itens herdam automaticamente as alíquotas e CSTs da classificação vinculada, agilizando o lançamento.
 - O código da operação é imutável após a criação — revise cuidadosamente antes de salvar.
 - Empresas que operam em múltiplos estados devem criar grupos de estado para cada cenário (ex.: "SUL" = PR, SC, RS; "SUDESTE" = SP, RJ, MG, ES; "NORDESTE" = BA, PE, CE, etc.) e vincular cada operação ao grupo adequado.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0210 (NF-e de Entrada):** Utiliza os tipos de operação como referência para padronizar o registro de NF-es de entrada e validar as UFs dos emitentes.
 - **VFIS0300 (CFOPs):** Naturezas de operação referenciadas.
 - **VFIS0350 (Classificações Fiscais):** Classificação fiscal padrão vinculada à operação.
@@ -6885,13 +7116,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0500 — Motivos de Transferência DAPI
 
-**Objetivo:** Cadastrar os motivos legais de transferência de crédito de ICMS utilizados na Declaração de Apuração e Informações (DAPI), com controle de UF de destino e vigência. Os motivos cadastrados aqui são referenciados na apuração de ICMS (VFIS0540) quando há movimentação de crédito entre estabelecimentos ou entre UFs.
+##### Objetivo
 
-**Pré-requisitos:**
+Cadastrar os motivos legais de transferência de crédito de ICMS utilizados na Declaração de Apuração e Informações (DAPI), com controle de UF de destino e vigência. Os motivos cadastrados aqui são referenciados na apuração de ICMS (VFIS0540) quando há movimentação de crédito entre estabelecimentos ou entre UFs.
+
+##### Pré-requisitos
+
 - VLOC0100 (Localização Países/UFs): UFs para o campo Destino.
 - Conhecimento dos motivos de transferência previstos na legislação estadual (Regulamento do ICMS).
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0500 — Motivos de Transferência DAPI. A tela exibe a lista de motivos cadastrados.
 
@@ -6909,7 +7143,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 6. A coluna **Ativo** (Sim = pill verde, Não = pill vermelho) indica se o motivo está vigente.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6919,13 +7153,15 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Vigência | date | Não | — | Data de início de vigência do motivo. |
 | Ativo | toggle | — | Sim / Não | Indica se o motivo está vigente (controlado pelo backend). |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O código do motivo é imutável após a criação, pois é referenciado em declarações já entregues. Altere a descrição e vigência conforme necessário.
 - A DAPI (Declaração de Apuração e Informações do ICMS) é uma obrigação acessória mensal exigida por diversas SEFAZs estaduais. O campo "motivo de transferência" é obrigatório quando há movimentação de crédito entre filiais ou entre empresas do mesmo grupo.
 - O controle de vigência permite gerenciar motivos temporários — motivos fora da vigência não aparecem para seleção nas telas de lançamento, mas permanecem no histórico.
 - Os motivos cadastrados aqui são consumidos pela VFIS0540 (Lançamentos Resumo ICMS) quando o lançamento envolve transferência de crédito.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0540 (Lançamentos Resumo ICMS):** Seleção de motivo de transferência em lançamentos que envolvem movimentação de crédito entre UFs.
 - **Módulo DAPI:** Geração do arquivo da Declaração de Apuração e Informações do ICMS.
 
@@ -6933,13 +7169,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0510 — Códigos de Ajuste de Apuração ICMS (5.1.1)
 
-**Objetivo:** Manter a tabela de códigos de ajuste da apuração de ICMS — tabela 5.1.1 do SPED Fiscal (EFD ICMS/IPI). Cada código é vinculado a uma UF e possui vigência. A chave primária é composta por (código, UF), garantindo que o mesmo código numérico possa existir em diferentes estados.
+##### Objetivo
 
-**Pré-requisitos:**
+Manter a tabela de códigos de ajuste da apuração de ICMS — tabela 5.1.1 do SPED Fiscal (EFD ICMS/IPI). Cada código é vinculado a uma UF e possui vigência. A chave primária é composta por (código, UF), garantindo que o mesmo código numérico possa existir em diferentes estados.
+
+##### Pré-requisitos
+
 - VLOC0100 (Localização Países/UFs): UFs para vinculação dos códigos.
 - Conhecimento dos códigos de ajuste oficiais publicados pelas SEFAZs estaduais.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0510 — Códigos de Ajuste de Apuração ICMS (5.1.1). A tela exibe a lista de códigos cadastrados.
 
@@ -6955,7 +7194,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 5. Para editar, clique em **Editar** na linha correspondente.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -6965,14 +7204,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Descrição | text | Sim | — | Descrição do código de ajuste conforme tabela oficial da SEFAZ. |
 | Ativo | toggle | — | Sim / Não | Indica se o código está vigente. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A tabela 5.1.1 contém os códigos de ajuste genéricos da apuração de ICMS, utilizados no Bloco E da EFD para justificar ajustes que não constam diretamente nos documentos fiscais de entrada/saída, como estornos de crédito, complementos de débito ou ajustes decorrentes de ação fiscal.
 - O campo Código segue o padrão oficial: duas letras da UF + sequencial numérico. Ex.: "SP000001" para o primeiro código de São Paulo.
 - A chave única é composta por (código, UF) — códigos iguais em UFs diferentes são permitidos (ex.: "SP000001" e "RJ000001" podem coexistir).
 - O usuário é responsável por manter esta tabela atualizada conforme as publicações das SEFAZs estaduais. Códigos podem ser criados, alterados ou revogados por legislação estadual.
 - O controle de vigência permite desativar códigos obsoletos sem excluí-los, preservando o histórico de declarações já entregues.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0530 (Linhas Apuração ICMS):** As linhas do Bloco E podem ser associadas a códigos de ajuste desta tabela.
 - **VFIS0540 (Lançamentos Resumo ICMS):** Seleção de códigos de ajuste nos lançamentos manuais.
 - **VFIS0560 (Notas Especiais Ajuste):** Utilização de códigos de ajuste em notas de ajuste.
@@ -6981,13 +7222,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0520 — Códigos de Ajuste ICMS (5.2 / 5.3 / 5.6 / 5.7)
 
-**Objetivo:** Complementar a VFIS0510 gerenciando os códigos de ajuste das demais tabelas do Bloco E do SPED Fiscal: 5.2 (Ajustes de ICMS de Substituição Tributária), 5.3 (Ajustes de ICMS de Diferencial de Alíquota), 5.6 (Ajustes de ICMS de operações com energia elétrica) e 5.7 (Ajustes de ICMS de operações com telecomunicações). A chave única é composta por (UF, código, tabela).
+##### Objetivo
 
-**Pré-requisitos:**
+Complementar a VFIS0510 gerenciando os códigos de ajuste das demais tabelas do Bloco E do SPED Fiscal: 5.2 (Ajustes de ICMS de Substituição Tributária), 5.3 (Ajustes de ICMS de Diferencial de Alíquota), 5.6 (Ajustes de ICMS de operações com energia elétrica) e 5.7 (Ajustes de ICMS de operações com telecomunicações). A chave única é composta por (UF, código, tabela).
+
+##### Pré-requisitos
+
 - VLOC0100 (Localização Países/UFs): UFs para vinculação dos códigos.
 - Conhecimento das tabelas oficiais 5.2, 5.3, 5.6 e 5.7 do SPED Fiscal publicadas pelas SEFAZs.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0520 — Códigos de Ajuste ICMS (5.2/5.3/5.6/5.7). A tela exibe a lista de códigos cadastrados.
 
@@ -7006,7 +7250,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 4. Clique em **Salvar**. O sistema valida a unicidade da combinação (UF, código, tabela).
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -7017,7 +7261,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Descrição | text | Sim | — | Descrição do código de ajuste. |
 | Ativo | toggle | — | Sim / Não | Indica se o código está vigente. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A chave única é tripla (UF, código, tabela), permitindo que um mesmo código numérico exista em diferentes UFs ou em diferentes tabelas. Por exemplo, "SP000001" pode existir simultaneamente na tabela 5.2 e na 5.6.
 - As tabelas têm finalidades específicas:
   - **5.2:** Ajustes relacionados a ICMS de Substituição Tributária (ST).
@@ -7026,7 +7271,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
   - **5.7:** Ajustes de ICMS de operações com telecomunicações (CFOPs 5.3XX/6.3XX).
 - O seletor de Tabela é um dropdown com as 4 opções, permitindo filtrar corretamente os códigos disponíveis conforme o contexto (linha de apuração ou nota de ajuste).
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0530 (Linhas Apuração ICMS):** Associação de códigos de ajuste às linhas de apuração.
 - **VFIS0540 (Lançamentos Resumo ICMS):** Seleção de códigos nos lançamentos manuais.
 - **VFIS0560 (Notas Especiais Ajuste):** Utilização em notas de ajuste.
@@ -7035,13 +7281,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0530 — Linhas de Apuração de ICMS (Bloco E)
 
-**Objetivo:** Definir a estrutura do Bloco E do SPED Fiscal/EFD ICMS IPI, cadastrando as linhas de apuração (ex.: E110, E111, E210, E211) com sua classificação contábil (débito, crédito, saldo, dedução) e indicando se a linha aceita lançamentos manuais. As linhas aqui cadastradas estruturam toda a apuração de ICMS do sistema.
+##### Objetivo
 
-**Pré-requisitos:**
+Definir a estrutura do Bloco E do SPED Fiscal/EFD ICMS IPI, cadastrando as linhas de apuração (ex.: E110, E111, E210, E211) com sua classificação contábil (débito, crédito, saldo, dedução) e indicando se a linha aceita lançamentos manuais. As linhas aqui cadastradas estruturam toda a apuração de ICMS do sistema.
+
+##### Pré-requisitos
+
 - Conhecimento do guia prático do SPED Fiscal (EFD ICMS/IPI) — Bloco E.
 - VFIS0510 e VFIS0520: Códigos de ajuste que serão vinculados às linhas.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0530 — Linhas de Apuração de ICMS (Bloco E). A tela exibe a lista de linhas cadastradas.
 
@@ -7061,7 +7310,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 4. Clique em **Salvar**.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -7071,13 +7320,15 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Aceita lançamentos | toggle | Não | Sim / Não | Se ativo, permite lançamentos manuais via VFIS0540. |
 | Natureza | text | Não | — | Campo adicional para detalhamento. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - As linhas de apuração seguem a nomenclatura oficial do SPED: E110 (totais de débitos por saídas), E111 (detalhamento dos ajustes de débito), E210 (totais de créditos por entradas), E211 (detalhamento dos ajustes de crédito), etc.
 - O campo Tipo classifica a linha contabilmente: linhas de DEBITO representam ICMS a recolher (saídas), linhas de CREDITO representam ICMS a compensar (entradas), linhas de DEDUCAO abatem do saldo devedor (isenções, reduções) e SALDO é o resultado líquido.
 - O toggle "Aceita Lançamentos" é a chave de controle: linhas como E110 (total de débitos por saída) tipicamente NÃO aceitam lançamentos manuais, pois são alimentadas automaticamente pelas NF-es emitidas. Já linhas como E111 (ajustes de débito) aceitam lançamentos, permitindo ao usuário registrar ajustes manuais baseados nos códigos das tabelas VFIS0510 e VFIS0520. Esta arquitetura garante que os totais automáticos não possam ser adulterados manualmente.
 - O código da linha é imutável após a criação.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0510 (Códigos Ajuste 5.1.1) e VFIS0520 (Códigos 5.2/5.3/5.6/5.7):** Códigos de ajuste vinculados às linhas de apuração.
 - **VFIS0540 (Lançamentos Resumo ICMS):** Lançamentos manuais nas linhas que aceitam entradas.
 - **VFIS0560 (Notas Especiais Ajuste):** Notas de ajuste que alimentam estas linhas.
@@ -7086,15 +7337,18 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0540 — Lançamentos Resumo de ICMS
 
-**Objetivo:** Centralizar os lançamentos manuais na apuração de ICMS por período e UF, com vinculação a CFOPs e a notas fiscais individuais. Inclui sub-entidades para notas vinculadas e registros C197 (processos judiciais/administrativos que fundamentam os ajustes).
+##### Objetivo
 
-**Pré-requisitos:**
+Centralizar os lançamentos manuais na apuração de ICMS por período e UF, com vinculação a CFOPs e a notas fiscais individuais. Inclui sub-entidades para notas vinculadas e registros C197 (processos judiciais/administrativos que fundamentam os ajustes).
+
+##### Pré-requisitos
+
 - VFIS0300 (CFOPs): CFOPs para vinculação nos lançamentos.
 - VFIS0500 (Motivos Transferência DAPI): Motivos de transferência para lançamentos de movimentação de crédito.
 - VFIS0510 e VFIS0520 (Códigos de Ajuste): Códigos que fundamentam os lançamentos.
 - VFIS0530 (Linhas Apuração ICMS): Linhas que aceitam lançamentos manuais.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0540 — Lançamentos Resumo de ICMS. A tela exibe a lista de lançamentos cadastrados.
 
@@ -7129,6 +7383,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 7. Para editar um lançamento, clique em **Editar** na linha correspondente.
 
+##### Campos
+
 **Campos (Principal):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -7159,13 +7415,15 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Processo | text | Não | — | Número do processo judicial ou administrativo. |
 | Descrição | text | Não | — | Descrição complementar do processo. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O lançamento é vinculado a um Período (mês/ano), uma UF e um CFOP. A combinação destes três elementos é tratada como única na apuração.
 - A sub-entidade Notas Vinculadas permite registrar individualmente cada NF-e que compõe o total do lançamento — essencial para rastreabilidade e para a geração correta do SPED Fiscal.
 - A sub-entidade Adicionais C197 captura informações sobre processos judiciais ou administrativos que originaram o ajuste, preenchendo o registro C197 da EFD. O indicador aponta a origem (SEFAZ, JUSTIÇA FEDERAL, JUSTIÇA ESTADUAL, OUTROS).
 - O sistema filtra automaticamente as linhas de apuração disponíveis para seleção com base no toggle "Aceita Lançamentos" da VFIS0530.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0300 (CFOPs):** CFOP associado ao lançamento.
 - **VFIS0500 (Motivos Transferência DAPI):** Motivo de transferência para lançamentos de movimentação de crédito.
 - **VFIS0510 e VFIS0520 (Códigos Ajuste):** Códigos que fundamentam os lançamentos.
@@ -7176,14 +7434,17 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0550 — Restituição / Ressarcimento de ICMS ST
 
-**Objetivo:** Controlar pedidos de restituição, ressarcimento e complementação de ICMS Substituição Tributária (ICMS ST), com referência ao documento fiscal de origem e detalhamento dos valores de ST original e valores a restituir. Requer filtro por período para listagem.
+##### Objetivo
 
-**Pré-requisitos:**
+Controlar pedidos de restituição, ressarcimento e complementação de ICMS Substituição Tributária (ICMS ST), com referência ao documento fiscal de origem e detalhamento dos valores de ST original e valores a restituir. Requer filtro por período para listagem.
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): Dados da empresa solicitante.
 - VFIS0110 (Tabelas Tributárias): Alíquotas de ICMS e ICMS ST de referência.
 - VFIS0210 (NF-e de Entrada): Notas fiscais de entrada que geraram o ICMS ST a ser restituído.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0550 — Restituição / Ressarcimento de ICMS ST.
 
@@ -7214,7 +7475,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 7. O pedido aparece na listagem do período selecionado após recarregar.
 
-**Campos:**
+##### Campos
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
 |-------|------|-------------|--------|-----------|
@@ -7234,14 +7495,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Base Restituição | number | Sim | >= 0 | Base de cálculo sobre a qual se pede restituição. |
 | Valor Restituição | number | Sim | >= 0 | Valor da restituição/ressarcimento solicitado. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - O filtro por período é obrigatório para exibir os registros na grid — uma medida de performance para evitar carregar todo o histórico de uma vez.
 - O ICMS ST é recolhido antecipadamente pelo substituto tributário. Quando a operação efetiva com consumidor final resulta em base de cálculo menor que a presumida, o contribuinte substituído tem direito à restituição. O complemento ocorre quando a base real é maior que a presumida.
 - O Valor ST original é informado manualmente pelo usuário (não calculado automaticamente, apesar de o rótulo sugerir o contrário).
 - O Valor Restituição é calculado com base na diferença entre o ICMS ST recolhido e o ICMS próprio devido na operação real.
 - Estes valores alimentam a apuração de ICMS e podem ser utilizados para compensação em períodos subsequentes.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** Dados da empresa solicitante.
 - **VFIS0110 (Tabelas Tributárias):** Alíquotas de ICMS e ICMS ST.
 - **VFIS0210 (NF-e de Entrada):** Notas de entrada que geraram o ICMS ST.
@@ -7250,14 +7513,17 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VFIS0560 — Notas Especiais de Ajuste
 
-**Objetivo:** Emitir notas fiscais especiais de ajuste (complementares e de ajuste) que não são NF-es convencionais, mas servem para ajustar valores na apuração de ICMS. As notas possuem itens detalhados, status de rascunho e a opção de gerar automaticamente lançamentos resumo na VFIS0540 ao serem salvas. Requer filtro por período para listagem.
+##### Objetivo
 
-**Pré-requisitos:**
+Emitir notas fiscais especiais de ajuste (complementares e de ajuste) que não são NF-es convencionais, mas servem para ajustar valores na apuração de ICMS. As notas possuem itens detalhados, status de rascunho e a opção de gerar automaticamente lançamentos resumo na VFIS0540 ao serem salvas. Requer filtro por período para listagem.
+
+##### Pré-requisitos
+
 - VFIS0300 (CFOPs): CFOPs para notas de ajuste.
 - VFIS0510 e VFIS0520 (Códigos de Ajuste): Códigos que fundamentam os ajustes.
 - VFIS0530 (Linhas Apuração ICMS): Linhas de apuração onde os ajustes serão lançados.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VFIS0560 — Notas Especiais de Ajuste.
 
@@ -7299,6 +7565,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 8. Após o lançamento (manual ou automático), o status da nota muda para **LANÇADO** e ela não pode mais ser editada.
 
+##### Campos
+
 **Campos (Cabeçalho):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -7331,7 +7599,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Valor ICMS | number | Não | — | Valor do ICMS do item. |
 | CST | text | Não | 00 a 90 | CST do ICMS do item. |
 
-**Observações importantes:**
+##### Observações importantes
+
 - A VFIS0560 é especializada para emissão de notas fiscais de ajuste — documentos que não são NF-es convencionais de entrada ou saída, mas servem para ajustar valores na apuração de ICMS.
 - Finalidade COMPLEMENTAR: complementa valor de uma NF-e já emitida (ex.: reajuste de preço após a emissão).
 - Finalidade AJUSTE: ajuste contábil/fiscal sem vínculo com uma NF-e específica (ex.: estornos, correções de apuração).
@@ -7340,7 +7609,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - O Valor Total e ICMS Total do cabeçalho são recalculados automaticamente a partir dos itens.
 - O filtro por período é obrigatório para listagem, por questões de performance.
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0300 (CFOPs):** Seleção de CFOP para a nota de ajuste.
 - **VFIS0510 e VFIS0520 (Códigos Ajuste):** Códigos que fundamentam o ajuste.
 - **VFIS0530 (Linhas Apuração ICMS):** Linhas de apuração onde o ajuste é lançado.
@@ -7350,13 +7620,16 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 #### VNFS0100 — NFS-e (Nota Fiscal de Serviço Eletrônica)
 
-**Objetivo:** Realizar o ciclo completo de emissão de Nota Fiscal de Serviço Eletrônica: preenchimento dos dados do RPS (Recibo Provisório de Serviço), do tomador e do serviço prestado; cálculo automático de ISS; autorização via webservice municipal; e cancelamento com justificativa. Integra-se com a API do município conforme padrão ABRASF/GINFES.
+##### Objetivo
 
-**Pré-requisitos:**
+Realizar o ciclo completo de emissão de Nota Fiscal de Serviço Eletrônica: preenchimento dos dados do RPS (Recibo Provisório de Serviço), do tomador e do serviço prestado; cálculo automático de ISS; autorização via webservice municipal; e cancelamento com justificativa. Integra-se com a API do município conforme padrão ABRASF/GINFES.
+
+##### Pré-requisitos
+
 - VFIS0100 (Configuração Fiscal): CNPJ do emitente, endereço, código de município (IBGE) e Token Focus NF-e (para integração com webservice municipal).
 - Cadastro de serviços: Conhecimento do item da lista de serviços da LC 116/2003 aplicável (1 a 40) e do código de tributação municipal.
 
-**Passo a passo:**
+##### Passo a passo
 
 1. Acesse a tela VNFS0100 — NFS-e. A visão padrão é a **Listagem**, exibindo todas as NFS-es emitidas com seus status (autorizada = verde, cancelada = vermelho, rascunho = cinza).
 
@@ -7398,6 +7671,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 
 9. Use **Exportar** para gerar relatórios (PDF, XML).
 
+##### Campos
+
 **Campos (RPS):**
 
 | Campo | Tipo | Obrigatório | Opções | Descrição |
@@ -7430,7 +7705,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | Alíquota ISS (ratio) | number | Sim | 0,0000 a 1,0000 | Alíquota de ISS em decimal. Padrão: 0,05 (5%). |
 | ISS retido | toggle | Não | Sim / Não | Se ativo, ISS foi retido pelo tomador (substituição tributária). |
 
-**Observações importantes:**
+##### Observações importantes
+
 - Diferente das NF-es de mercadorias (VFIS0200), a NFS-e é regulamentada por legislação municipal. A comunicação com o webservice da prefeitura segue o padrão ABRASF ou GINFES, dependendo do município.
 - O campo Cód. município (prestador) determina qual webservice municipal será acionado. Certifique-se de que o código IBGE está correto.
 - O cálculo do ISS é automático: Base de Cálculo = Valor Serviços - Deduções. ISS = Base de Cálculo x Alíquota ISS.
@@ -7439,7 +7715,8 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 - O toggle "Optante Simples Nacional" altera o tratamento do ISS: empresas do Simples recolhem ISS em guia única (DAS) ou em separado, dependendo do município e do anexo.
 - O cancelamento exige justificativa e está sujeito às regras de prazo do município (tipicamente 24h a 5 dias).
 
-**Telas relacionadas:**
+##### Telas relacionadas
+
 - **VFIS0100 (Configuração Fiscal):** CNPJ do emitente, endereço completo e código de município (IBGE). O Token Focus NF-e pode ser utilizado para integração com o webservice municipal, dependendo da configuração.
 
 ---
@@ -7452,7 +7729,6 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 > - Módulo Contábil (VCTB0102, VCTB0200)
 > 
 > Documentação atualizada em Junho 2026.
-
 
 
 ---
@@ -7477,7 +7753,7 @@ executadas no chão de fábrica (apontamento, consumo, conclusão), consomem e p
 **estoque** (com rastreabilidade de lote), apuram **custo real** e, ao final, o produto
 é separado, conferido e despachado por **romaneio**.
 
-#### Fluxo macro (do pedido à entrega)
+### Fluxo macro (do pedido à entrega)
 
 ```
 Pedido de Venda (VVND0200)  ── confirmar (P) ──►  Demanda independente + Reserva de estoque
@@ -8416,7 +8692,7 @@ melhor preço; e vira um **pedido de compra** enviado ao fornecedor. Os cadastro
 apoio (fornecedor, conversão de UM, tabela de preço, fornecedor preferencial) alimentam
 o pedido com dados automáticos (condição de pagamento, preço, %IPI, UM interna).
 
-#### Fluxo macro
+### Fluxo macro
 
 ```
 Cadastro de Fornecedor (VSUP0500)  +  Mestres de compra (VSUP0110/0120/0130)
