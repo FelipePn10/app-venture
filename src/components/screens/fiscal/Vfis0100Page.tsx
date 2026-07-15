@@ -5,6 +5,11 @@ import {
   type FocusAmbiente,
   getFiscalConfig,
   updateFiscalConfig,
+  updateFiscalBranding,
+  getFiscalBrandingLogo,
+  validateBrandingLogo,
+  BRAND_COLOR_PATTERN,
+  MAX_BRANDING_LOGO_BYTES,
 } from "@/services/fiscalConfigService";
 import { errMessage } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
@@ -48,6 +53,22 @@ export function Vfis0100Page(): JSX.Element {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [brandColor, setBrandColor] = useState("#1B5E36");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isSavingBranding, setIsSavingBranding] = useState(false);
+
+  const loadLogo = useCallback(async () => {
+    try {
+      const blob = await getFiscalBrandingLogo();
+      setLogoUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return blob ? URL.createObjectURL(blob) : null;
+      });
+    } catch (e) {
+      setFeedback({ type: "error", message: errMessage(e, "Falha ao carregar o logo persistido.") });
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -55,6 +76,7 @@ export function Vfis0100Page(): JSX.Element {
     try {
       const cfg = await getFiscalConfig();
       setForm({ ...EMPTY, ...cfg });
+      if (cfg.brand_color && BRAND_COLOR_PATTERN.test(cfg.brand_color)) setBrandColor(cfg.brand_color.toUpperCase());
     } catch (e) {
       setFeedback({ type: "error", message: errMessage(e, "Falha ao carregar a configuração fiscal.") });
     } finally {
@@ -62,7 +84,8 @@ export function Vfis0100Page(): JSX.Element {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); void loadLogo(); }, [load, loadLogo]);
+  useEffect(() => () => { if (logoUrl) URL.revokeObjectURL(logoUrl); }, [logoUrl]);
 
   const setField = useCallback(<K extends keyof FiscalConfig>(key: K, value: FiscalConfig[K]) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -93,6 +116,34 @@ export function Vfis0100Page(): JSX.Element {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleLogoChange(file: File | null) {
+    setFeedback(null);
+    if (!file) { setLogoFile(null); return; }
+    try {
+      await validateBrandingLogo(file);
+      setLogoFile(file);
+    } catch (e) {
+      setLogoFile(null);
+      setFeedback({ type: "error", message: errMessage(e, "Logo inválido.") });
+    }
+  }
+
+  async function handleSalvarBranding() {
+    if (!BRAND_COLOR_PATTERN.test(brandColor)) {
+      setFeedback({ type: "error", message: "A cor da marca deve usar o formato #RRGGBB." });
+      return;
+    }
+    setIsSavingBranding(true); setFeedback(null);
+    try {
+      await updateFiscalBranding({ logo: logoFile ?? undefined, brandColor });
+      await loadLogo();
+      setLogoFile(null);
+      setFeedback({ type: "success", message: "Identidade visual salva e preview recarregado do backend." });
+    } catch (e) {
+      setFeedback({ type: "error", message: errMessage(e, "Falha ao salvar a identidade visual.") });
+    } finally { setIsSavingBranding(false); }
   }
 
   return (
@@ -182,6 +233,41 @@ export function Vfis0100Page(): JSX.Element {
             </div>
           </div>
         </div>
+
+        <div className="fsc-section-banner">
+          <span className="fsc-section-banner-pill">Identidade visual</span>
+          <div className="fsc-section-banner-line" />
+          <span className="fsc-section-banner-hint">Logo persistido usado em relatórios e romaneios</span>
+        </div>
+        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
+          <div className="fsc-field fsc-col-4">
+            <label className="fsc-label">Logo PNG ou JPEG</label>
+            <input className="fsc-input" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+              onChange={(e) => void handleLogoChange(e.target.files?.[0] ?? null)} />
+            <span className="fsc-field-hint">Máximo {MAX_BRANDING_LOGO_BYTES / 1024 / 1024} MB. O conteúdo do arquivo é validado.</span>
+            {logoFile && <span className="fsc-field-hint">Selecionado: {logoFile.name} ({Math.ceil(logoFile.size / 1024)} KB)</span>}
+          </div>
+          <div className="fsc-field fsc-col-3">
+            <label className="fsc-label">Cor da marca</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input type="color" value={BRAND_COLOR_PATTERN.test(brandColor) ? brandColor : "#1B5E36"}
+                onChange={(e) => setBrandColor(e.target.value.toUpperCase())} style={{ width: 48, height: 36 }} />
+              <input className="fsc-input" value={brandColor} maxLength={7} placeholder="#1B5E36"
+                onChange={(e) => setBrandColor(e.target.value.toUpperCase())} />
+            </div>
+          </div>
+          <div className="fsc-field fsc-col-3">
+            <label className="fsc-label">Preview persistido</label>
+            <div style={{ height: 88, border: "1px solid #d7e2d9", borderRadius: 8, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
+              {logoUrl ? <img src={logoUrl} alt="Logo fiscal persistido" style={{ maxWidth: "100%", maxHeight: 72, objectFit: "contain" }} /> : <span className="fsc-field-hint">Nenhum logo configurado</span>}
+            </div>
+          </div>
+          <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}>
+            <button className="fsc-btn fsc-btn-primary" onClick={() => void handleSalvarBranding()} disabled={isSavingBranding}>
+              {isSavingBranding ? "Enviando..." : "Salvar identidade"}
+            </button>
+          </div>
+        </div></div></div>
 
         <div className="fsc-section-banner">
           <span className="fsc-section-banner-pill">Endereço</span>

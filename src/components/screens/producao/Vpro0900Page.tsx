@@ -21,6 +21,11 @@ import {
   getCost,
   scrapReturn,
   type OperationDTO,
+  type MaterialDTO,
+  listMaterials,
+  addMaterial,
+  allocateLots,
+  addScrapDestination,
 } from "@/services/productionOrderService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -44,6 +49,8 @@ export function Vpro0900Page(): JSX.Element {
   const [consumptions, setConsumptions] = useState<ConsumptionDTO[]>([]);
   const [operations, setOperations] = useState<OperationDTO[]>([]);
   const [cost, setCost] = useState<CostDTO | null>(null);
+  const [materials, setMaterials] = useState<MaterialDTO[]>([]);
+  const [matForm, setMatForm] = useState({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true });
   const [newOf, setNewOf] = useState<ProductionOrderDTO>(EMPTY_OF);
   const [app, setApp] = useState<AppointmentDTO>(EMPTY_APP);
   const [cons, setCons] = useState<ConsumptionDTO>(EMPTY_CONS);
@@ -64,6 +71,7 @@ export function Vpro0900Page(): JSX.Element {
     setSelected(of); setAppointments(ap); setConsumptions(co); setOperations(ops);
     setApp({ ...EMPTY_APP, production_order_id: id }); setCons({ ...EMPTY_CONS, production_order_id: id });
     try { setCost(await getCost(id)); } catch { setCost(null); }
+    try { setMaterials(await listMaterials(id)); } catch { setMaterials([]); }
   }, []);
 
   const listar = () => run(async () => { setOrders(await listProductionOrders()); });
@@ -115,6 +123,21 @@ export function Vpro0900Page(): JSX.Element {
     if (!cons.item_code || !cons.consumed_qty) { setFeedback({ type: "error", message: "Use Item/Qtd do bloco de consumo para a sucata." }); return; }
     await scrapReturn(id, { scrap_item_code: cons.item_code, warehouse_id: cons.warehouse_id || 2, quantity: cons.consumed_qty, unit_value: 0, notes: "Retorno de sucata" });
     setFeedback({ type: "success", message: "Sucata retornada como subproduto (IN valorizado)." });
+  }); };
+
+  const incluirMaterial = () => { const id = selected?.id; if (!id) return; void run(async () => {
+    if (!matForm.item_code || !matForm.quantity) { setFeedback({ type: "error", message: "Item e quantidade do material são obrigatórios." }); return; }
+    await addMaterial({ production_order_id: id, kind: "DEMAND", item_code: Number(matForm.item_code), quantity: matForm.quantity, warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined, automatic_issue: matForm.automatic_issue });
+    setMatForm({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true });
+    setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: "Material incluído na OF." });
+  }); };
+  const alocarLotes = (m: MaterialDTO) => { const id = selected?.id; if (!id || !m.id) return; void run(async () => {
+    await allocateLots(m.id!, "REQUISITION", []); // [] = seleção automática por data/código do lote
+    setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: `Lotes alocados automaticamente ao material ${m.id}.` });
+  }); };
+  const destinarSucata = (m: MaterialDTO) => { const id = selected?.id; if (!id) return; void run(async () => {
+    await addScrapDestination({ production_order_id: id, destination_kind: "DEMAND", production_order_material_id: m.id, scrap_item_code: m.item_code, warehouse_id: m.warehouse_id || 2, scrap_quantity: 1, destination_date: new Date().toISOString().slice(0, 10) });
+    setFeedback({ type: "success", message: "Destino de sucata registrado." });
   }); };
 
   const st = selected?.status;
@@ -245,6 +268,34 @@ export function Vpro0900Page(): JSX.Element {
                 <tbody>
                   {consumptions.length === 0 && <tr><td colSpan={4} className="fsc-empty">Sem consumos.</td></tr>}
                   {consumptions.map((c) => <tr key={c.id}><td className="fsc-num">{c.id}</td><td className="fsc-num">{c.item_code}</td><td className="fsc-num">{c.consumed_qty}</td><td className="fsc-num">{c.warehouse_id ?? "—"}</td></tr>)}
+                </tbody>
+              </table>
+            </div></div>
+
+            {/* Materiais da OF (MRP): demanda, alocação de lotes, destino de sucata */}
+            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Materiais da OF ({materials.length})</span><div className="fsc-section-banner-line" /></div>
+            <div className="fsc-card"><div className="fsc-card-body">
+              <div className="fsc-grid">
+                <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Item</label><input className="fsc-input fsc-input-right" type="number" value={matForm.item_code} onChange={(e) => setMatForm((m) => ({ ...m, item_code: e.target.value }))} /></div>
+                <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Quantidade</label><input className="fsc-input fsc-input-right" type="number" value={matForm.quantity} onChange={(e) => setMatForm((m) => ({ ...m, quantity: e.target.value }))} /></div>
+                <div className="fsc-field fsc-col-3"><label className="fsc-label">Depósito</label><input className="fsc-input fsc-input-right" type="number" value={matForm.warehouse_id} onChange={(e) => setMatForm((m) => ({ ...m, warehouse_id: e.target.value }))} /></div>
+                <div className="fsc-field fsc-col-3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={matForm.automatic_issue} onChange={(e) => setMatForm((m) => ({ ...m, automatic_issue: e.target.checked }))} />baixa auto</label>
+                  <button className="fsc-btn fsc-btn-primary" onClick={incluirMaterial} disabled={busy}>Incluir</button>
+                </div>
+              </div>
+            </div></div>
+            <div className="fsc-card"><div className="fsc-results-wrap">
+              <table className="fsc-table">
+                <thead><tr><th className="fsc-num">ID</th><th className="fsc-num">Item</th><th className="fsc-num">Qtd</th><th className="fsc-num">Alocado</th><th className="fsc-num">Depósito</th><th style={{ width: 220 }}>Ações</th></tr></thead>
+                <tbody>
+                  {materials.length === 0 && <tr><td colSpan={6} className="fsc-empty">Sem materiais.</td></tr>}
+                  {materials.map((m) => (
+                    <tr key={m.id}>
+                      <td className="fsc-num">{m.id}</td><td className="fsc-num">{m.item_code}</td><td className="fsc-num">{String(m.quantity)}</td><td className="fsc-num">{m.allocated_qty ?? 0}</td><td className="fsc-num">{m.warehouse_id ?? "—"}</td>
+                      <td><button className="fsc-btn fsc-btn-ghost" onClick={() => alocarLotes(m)} disabled={busy}>Alocar lotes</button> <button className="fsc-btn fsc-btn-ghost" onClick={() => destinarSucata(m)} disabled={busy}>Sucata</button></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div></div>

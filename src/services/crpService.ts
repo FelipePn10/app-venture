@@ -40,14 +40,19 @@ export async function calculateCrp(planCode: number): Promise<CrpSummary> {
   };
 }
 export async function listCrpPlan(planCode: number): Promise<CrpEntry[]> {
-  const { data } = await httpClient.get(`${BASE}/plans/${planCode}`);
+  const { data } = await httpClient.get(`${BASE}/${planCode}`);
   return unwrapArray(data).map(parseEntry);
 }
 export async function listCrpOverload(planCode: number): Promise<CrpEntry[]> {
-  const { data } = await httpClient.get(`${BASE}/plans/${planCode}/overload`);
+  const { data } = await httpClient.get(`${BASE}/${planCode}/overloaded`);
   return unwrapArray(data).map(parseEntry);
 }
-export async function getWorkCenterCapacity(workCenterId: number, from: string, to: string): Promise<CrpEntry[]> {
-  const { data } = await httpClient.get(`${BASE}/work-centers/${workCenterId}`, { params: { from, to } });
-  return unwrapArray(data).map(parseEntry);
+/**
+ * Capacidade de um centro num período. O backend **não** expõe rota dedicada
+ * (`/crp/work-centers/{id}` não existe) — filtramos as entradas do plano por centro
+ * e intervalo de datas no cliente.
+ */
+export async function getWorkCenterCapacity(planCode: number, workCenterId: number, from: string, to: string): Promise<CrpEntry[]> {
+  const all = await listCrpPlan(planCode);
+  return all.filter((e) => e.work_center_id === workCenterId && (!from || e.req_date >= from) && (!to || e.req_date <= to));
 }

@@ -29,6 +29,7 @@ export function capacityUnitLabel(v: string)   { return CAPACITY_UNITS.find(u =>
 export function capacityPeriodLabel(v: string) { return CAPACITY_PERIODS.find(p => p.value === v)?.label ?? v; }
 
 export interface Machine {
+  id: number;
   code: number;
   name: string;
   machine_type_code: number;
@@ -62,6 +63,7 @@ function parse(raw: unknown): Machine | null {
   const name = String(o.name ?? o.Name ?? '');
   if (!code || !name) return null;
   return {
+    id: Number(o.id ?? o.ID ?? 0),
     code,
     name,
     machine_type_code: Number(o.machine_type_code ?? o.MachineTypeCode ?? 0),

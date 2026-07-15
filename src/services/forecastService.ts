@@ -4,8 +4,8 @@ const BASE = '/api/forecast';
 
 /**
  * Previsão Estatística (§7): aplica modelos e retorna o de menor MAPE.
- * ⚠️ A build demo atual espera `period` como int (rejeita string); a doc usa
- * string "YYYY-MM" — mantemos string conforme a doc (contrato de produção).
+ * `period` é rótulo da observação (aceita string "YYYY-MM" ou número); os modelos
+ * operam sobre a série `quantity` na ordem enviada.
  */
 export interface HistoryPoint {
   period: string;

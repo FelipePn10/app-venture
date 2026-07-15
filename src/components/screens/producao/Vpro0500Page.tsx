@@ -38,6 +38,7 @@ export function Vpro0500Page(): JSX.Element {
 
   async function salvarPlano() {
     if (!form.machine_id) { setFeedback({ type: "error", message: "Máquina (ID) é obrigatória." }); return; }
+    if (!form.description?.trim()) { setFeedback({ type: "error", message: "Descrição é obrigatória." }); return; }
     setBusy(true); setFeedback(null);
     try { await createPlan(form); setForm(EMPTY_PLAN); setFeedback({ type: "success", message: "Plano de manutenção criado." }); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
@@ -106,6 +107,7 @@ export function Vpro0500Page(): JSX.Element {
           <div className="fsc-grid">
             <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Máquina (ID)</label><input className="fsc-input fsc-input-right" type="number" value={form.machine_id || ""} onChange={(e) => setF("machine_id", Number(e.target.value))} /></div>
             <div className="fsc-field fsc-col-2"><label className="fsc-label">Centro (ID)</label><input className="fsc-input fsc-input-right" type="number" value={form.work_center_id ?? ""} onChange={(e) => setF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+            <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Descrição</label><input className="fsc-input" value={form.description ?? ""} onChange={(e) => setF("description", e.target.value)} /></div>
             <div className="fsc-field fsc-col-3"><label className="fsc-label">Frequência</label>
               <select className="fsc-select" value={form.frequency} onChange={(e) => setF("frequency", e.target.value as MaintFrequency)}>{FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
             <div className="fsc-field fsc-col-2"><label className="fsc-label">Intervalo (dias)</label><input className="fsc-input fsc-input-right" type="number" value={form.frequency_days ?? ""} onChange={(e) => setF("frequency_days", e.target.value ? Number(e.target.value) : undefined)} /></div>

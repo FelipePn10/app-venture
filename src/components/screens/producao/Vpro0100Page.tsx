@@ -6,8 +6,11 @@ import {
   listRoutes, createRoute, deleteRoute,
   getRouteDetail, addRouteOperation, removeRouteOperation,
   createEdge, deleteEdge, getLeadTime,
+  type RouteOpResourceDTO,
+  listRouteOpResources, addRouteOpResource, setRouteOpResourcePrimary, removeRouteOpResource,
+  listRouteOpTools, addRouteOpTool, removeRouteOpTool,
 } from "@/services/manufacturingRoutingService";
-import { errMessage } from "@/services/fiscalShared";
+import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -40,6 +43,12 @@ export function Vpro0100Page(): JSX.Element {
   const [detail, setDetail] = useState<RouteDetail | null>(null);
   const [roForm, setRoForm] = useState<RouteOperationDTO>(EMPTY_RO);
   const [edgeForm, setEdgeForm] = useState<EdgeDTO>(EMPTY_EDGE);
+  // R5 recursos alternativos + R3 ferramentas por operação
+  const [selOpId, setSelOpId] = useState<number | null>(null);
+  const [resources, setResources] = useState<RouteOpResourceDTO[]>([]);
+  const [resForm, setResForm] = useState({ work_center_id: "", priority: "1", time_factor: "1", is_primary: false });
+  const [opTools, setOpTools] = useState<Obj[]>([]);
+  const [toolIdInput, setToolIdInput] = useState("");
   const [leadTime, setLeadTime] = useState<number | null>(null);
 
   const opName = useCallback((id: number) => ops.find((o) => o.id === id)?.name ?? `Op ${id}`, [ops]);
@@ -133,6 +142,34 @@ export function Vpro0100Page(): JSX.Element {
     try { await removeRouteOperation(rid, opId); await reloadDetail(rid); setFeedback({ type: "success", message: "Operação removida." }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
+
+  // R5 recursos alternativos + R3 ferramentas por operação do roteiro
+  const wrap = async (fn: () => Promise<void>) => { setBusy(true); setFeedback(null); try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); } };
+  const abrirRecursos = (opId?: number) => { const rid = detail?.route?.id; if (!rid || !opId) return; setSelOpId(opId); void wrap(async () => {
+    const [rs, ts] = await Promise.all([listRouteOpResources(rid, opId), listRouteOpTools(rid, opId)]);
+    setResources(rs); setOpTools(ts);
+  }); };
+  const addResource = () => { const rid = detail?.route?.id; if (!rid || !selOpId) return; void wrap(async () => {
+    if (!resForm.work_center_id) { setFeedback({ type: "error", message: "Informe o centro de trabalho." }); return; }
+    await addRouteOpResource(rid, selOpId, { work_center_id: Number(resForm.work_center_id), priority: Number(resForm.priority) || 1, time_factor: Number(resForm.time_factor) || 1, is_primary: resForm.is_primary });
+    setResForm({ work_center_id: "", priority: "1", time_factor: "1", is_primary: false });
+    setResources(await listRouteOpResources(rid, selOpId)); setFeedback({ type: "success", message: "Recurso alternativo adicionado." });
+  }); };
+  const tornarPrimario = (r: RouteOpResourceDTO) => { const rid = detail?.route?.id; if (!rid || !selOpId || !r.id) return; void wrap(async () => {
+    await setRouteOpResourcePrimary(rid, selOpId, r.id!); setResources(await listRouteOpResources(rid, selOpId));
+    setFeedback({ type: "success", message: `Centro ${r.work_center_id} definido como primário (usado por custo/CRP/lead-time).` });
+  }); };
+  const removeResource = (r: RouteOpResourceDTO) => { const rid = detail?.route?.id; if (!rid || !selOpId || !r.id) return; void wrap(async () => {
+    await removeRouteOpResource(rid, selOpId, r.id!); setResources(await listRouteOpResources(rid, selOpId));
+  }); };
+  const addTool = () => { const rid = detail?.route?.id; if (!rid || !selOpId) return; void wrap(async () => {
+    if (!toolIdInput) { setFeedback({ type: "error", message: "Informe o ID da ferramenta." }); return; }
+    await addRouteOpTool(rid, selOpId, Number(toolIdInput)); setToolIdInput("");
+    setOpTools(await listRouteOpTools(rid, selOpId)); setFeedback({ type: "success", message: "Ferramenta vinculada à operação." });
+  }); };
+  const removeTool = (linkId: number) => { const rid = detail?.route?.id; if (!rid || !selOpId) return; void wrap(async () => {
+    await removeRouteOpTool(rid, selOpId, linkId); setOpTools(await listRouteOpTools(rid, selOpId));
+  }); };
 
   // edges
   const setEF = <K extends keyof EdgeDTO>(k: K, v: EdgeDTO[K]) => setEdgeForm((p) => ({ ...p, [k]: v }));
@@ -323,13 +360,56 @@ export function Vpro0100Page(): JSX.Element {
                           <tr key={ro.id ?? `${ro.sequence}-${ro.operation_id}`}>
                             <td style={{ fontWeight: 600 }}>{ro.sequence}</td><td>{opName(ro.operation_id)}</td>
                             <td className="fsc-num">{ro.work_center_id ?? "—"}</td><td className="fsc-num">{ro.standard_time ?? "—"}</td><td className="fsc-num">{ro.setup_time ?? "—"}</td>
-                            <td><button className="fsc-action-btn fsc-delete-btn" onClick={() => ro.id && void removeRO(ro.id)} disabled={!ro.id}>Remover</button></td>
+                            <td><button className="fsc-action-btn" onClick={() => abrirRecursos(ro.id)} disabled={!ro.id}>Rec/Ferr</button> <button className="fsc-action-btn fsc-delete-btn" onClick={() => ro.id && void removeRO(ro.id)} disabled={!ro.id}>Remover</button></td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
+
+                {selOpId && (
+                  <>
+                    <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Recursos &amp; Ferramentas — operação {selOpId}</span><div className="fsc-section-banner-line" />
+                      <button className="fsc-btn fsc-btn-ghost" onClick={() => setSelOpId(null)}>Fechar</button></div>
+                    <div className="fsc-card"><div className="fsc-card-body">
+                      <div className="fsc-grid">
+                        <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Centro (recurso alt.)</label><input className="fsc-input fsc-input-right" type="number" value={resForm.work_center_id} onChange={(e) => setResForm((r) => ({ ...r, work_center_id: e.target.value }))} /></div>
+                        <div className="fsc-field fsc-col-2"><label className="fsc-label">Prioridade</label><input className="fsc-input fsc-input-right" type="number" value={resForm.priority} onChange={(e) => setResForm((r) => ({ ...r, priority: e.target.value }))} /></div>
+                        <div className="fsc-field fsc-col-2"><label className="fsc-label">Fator tempo</label><input className="fsc-input fsc-input-right" type="number" step="0.1" value={resForm.time_factor} onChange={(e) => setResForm((r) => ({ ...r, time_factor: e.target.value }))} /></div>
+                        <div className="fsc-field fsc-col-3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}><label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={resForm.is_primary} onChange={(e) => setResForm((r) => ({ ...r, is_primary: e.target.checked }))} />primário</label><button className="fsc-btn fsc-btn-primary" onClick={addResource} disabled={busy}>+ Recurso</button></div>
+                      </div>
+                      <div className="fsc-results-wrap">
+                        <table className="fsc-table">
+                          <thead><tr><th className="fsc-num">Centro</th><th className="fsc-num">Prioridade</th><th className="fsc-num">Fator</th><th>Primário</th><th style={{ width: 150 }}>Ações</th></tr></thead>
+                          <tbody>
+                            {resources.length === 0 && <tr><td colSpan={5} className="fsc-empty">Sem recursos alternativos (usa o centro da operação).</td></tr>}
+                            {resources.map((r) => (
+                              <tr key={r.id}><td className="fsc-num">{r.work_center_id}</td><td className="fsc-num">{r.priority}</td><td className="fsc-num">{r.time_factor ?? 1}</td><td>{r.is_primary ? "✓" : ""}</td>
+                                <td>{!r.is_primary && <button className="fsc-action-btn" onClick={() => tornarPrimario(r)}>Primário</button>} <button className="fsc-action-btn fsc-delete-btn" onClick={() => removeResource(r)}>Remover</button></td></tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="fsc-grid" style={{ marginTop: 10 }}>
+                        <div className="fsc-field fsc-col-3"><label className="fsc-label">Ferramenta (ID)</label><input className="fsc-input fsc-input-right" type="number" value={toolIdInput} onChange={(e) => setToolIdInput(e.target.value)} /></div>
+                        <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={addTool} disabled={busy}>+ Ferramenta</button></div>
+                      </div>
+                      <div className="fsc-results-wrap">
+                        <table className="fsc-table">
+                          <thead><tr><th className="fsc-num">Vínculo</th><th className="fsc-num">Ferramenta</th><th>Descrição</th><th style={{ width: 90 }}>Ações</th></tr></thead>
+                          <tbody>
+                            {opTools.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma ferramenta vinculada.</td></tr>}
+                            {opTools.map((t, i) => { const lid = Number(t.id ?? t.ID ?? 0); return (
+                              <tr key={i}><td className="fsc-num">{lid || "—"}</td><td className="fsc-num">{String(t.tool_id ?? t.ToolID ?? "—")}</td><td>{String(t.tool_name ?? t.name ?? "—")}</td>
+                                <td>{lid ? <button className="fsc-action-btn fsc-delete-btn" onClick={() => removeTool(lid)}>Remover</button> : "—"}</td></tr>
+                            ); })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div></div>
+                  </>
+                )}
 
                 <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Rede de dependências</span><div className="fsc-section-banner-line" />
                   <span className="fsc-section-banner-hint">overlap só vale em centro automático (requires_operator=false)</span></div>

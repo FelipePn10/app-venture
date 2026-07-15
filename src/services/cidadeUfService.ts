@@ -1,125 +1,69 @@
-import { httpClient } from '@/services/httpClient';
+import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject } from '@/services/fiscalShared';
 
-const BASE = '/api/cidades';
+/**
+ * Localização — UFs e Países (`/api/location`, backend real).
+ * O backend mantém **Países** e **UFs** (com IBGE); **não** há cadastro de municípios/
+ * cidades — por isso esta camada cobre UF e País (a antiga "cidade" não existe no ERP).
+ */
+const UFS = '/api/location/ufs';
+const COUNTRIES = '/api/location/countries';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Obj = Record<string, unknown>;
-
-// ─── Defensive parsers ────────────────────────────────────────────────────────
-
-function pick<T>(obj: Obj, ...keys: string[]): T | undefined {
-  for (const k of keys) {
-    if (obj[k] !== undefined && obj[k] !== null) return obj[k] as T;
-  }
-  return undefined;
+export interface UF {
+  id?: number;
+  sigla: string;
+  name: string;
+  country_sigla: string;
+  ibge_code?: string;
+}
+export interface Country {
+  id?: number;
+  sigla: string;
+  name: string;
 }
 
-function parseStr(obj: Obj, ...keys: string[]): string {
-  const v = pick<unknown>(obj, ...keys);
-  return v != null ? String(v) : '';
-}
-
-function parseBool(obj: Obj, ...keys: string[]): boolean {
-  const v = pick<unknown>(obj, ...keys);
-  if (v === undefined) return false;
-  return v !== false && v !== 0 && v !== 'false' && v !== '';
-}
-
-function unwrapArray(raw: unknown): unknown[] | null {
-  if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === 'object') {
-    const obj = raw as Obj;
-    for (const key of ['data', 'items', 'results', 'list', 'cidades']) {
-      if (Array.isArray(obj[key])) return obj[key] as unknown[];
-    }
-    const msg = pick<string>(obj, 'message', 'error', 'msg');
-    if (msg) throw new Error(msg);
-  }
-  return null;
-}
-
-// ─── Cidade ───────────────────────────────────────────────────────────────────
-
-export type TipoCidade = 'Capital' | 'Interior';
-
-export interface CidadeDTO {
-  codigo: string;
-  cidade: string;
-  ddd: string;
-  tipo: TipoCidade;
-  zf: boolean;
-  gmb: string;
-  ibge: string;
-  cod_tom: string;
-}
-
-export interface CidadeResponse {
-  codigo: string;
-  cidade: string;
-  ddd: string;
-  tipo: string;
-  zf: boolean;
-  gmb: string;
-  ibge: string;
-  cod_tom: string;
-}
-
-function parseCidade(raw: unknown): CidadeResponse | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const obj = raw as Obj;
-  const codigo = parseStr(obj, 'codigo', 'Codigo');
-  if (!codigo) return null;
+function parseUF(raw: unknown): UF {
+  const o = unwrapObject(raw);
   return {
-    codigo,
-    cidade: parseStr(obj, 'cidade', 'Cidade'),
-    ddd: parseStr(obj, 'ddd', 'DDD'),
-    tipo: parseStr(obj, 'tipo', 'Tipo'),
-    zf: parseBool(obj, 'zf', 'ZF'),
-    gmb: parseStr(obj, 'gmb', 'GMB'),
-    ibge: parseStr(obj, 'ibge', 'IBGE'),
-    cod_tom: parseStr(obj, 'cod_tom', 'CodTOM', 'codTOM'),
+    id: parseNum(o, 'id', 'ID') || undefined,
+    sigla: parseStr(o, 'sigla', 'Sigla'),
+    name: parseStr(o, 'name', 'Name'),
+    country_sigla: parseStr(o, 'country_sigla', 'CountrySigla'),
+    ibge_code: parseStr(o, 'ibge_code', 'IBGECode') || undefined,
   };
 }
-
-export async function createCidade(dto: CidadeDTO): Promise<CidadeResponse> {
-  const response = await httpClient.post<CidadeResponse>(`${BASE}/create`, dto);
-  return response.data;
+function parseCountry(raw: unknown): Country {
+  const o = unwrapObject(raw);
+  return { id: parseNum(o, 'id', 'ID') || undefined, sigla: parseStr(o, 'sigla', 'Sigla'), name: parseStr(o, 'name', 'Name') };
 }
 
-export async function listCidades(filters?: Record<string, string>): Promise<CidadeResponse[]> {
-  const params = new URLSearchParams(filters);
-  const qs = params.toString();
-  const response = await httpClient.get<unknown>(`${BASE}/list${qs ? `?${qs}` : ''}`);
-  const arr = unwrapArray(response.data);
-  if (!arr) return [];
-  const result: CidadeResponse[] = [];
-  for (const item of arr) {
-    const c = parseCidade(item);
-    if (c) result.push(c);
-  }
-  return result;
+// ── UFs ──
+export async function listUFs(): Promise<UF[]> {
+  const { data } = await httpClient.get(`${UFS}/`);
+  return unwrapArray(data).map(parseUF);
+}
+export async function getUF(sigla: string): Promise<UF> {
+  const { data } = await httpClient.get(`${UFS}/${sigla}`);
+  return parseUF(data);
+}
+export async function createUF(dto: UF): Promise<UF> {
+  const { data } = await httpClient.post(`${UFS}/`, { sigla: dto.sigla, name: dto.name, country_sigla: dto.country_sigla, ibge_code: dto.ibge_code || null });
+  return parseUF(data);
+}
+export async function updateUF(dto: UF): Promise<UF> {
+  const { data } = await httpClient.put(`${UFS}/`, { id: dto.id, sigla: dto.sigla, name: dto.name, country_sigla: dto.country_sigla, ibge_code: dto.ibge_code || null });
+  return parseUF(data);
 }
 
-export async function getCidade(codigo: string): Promise<CidadeResponse | null> {
-  const response = await httpClient.get<unknown>(`${BASE}/${codigo}`);
-  const direct = parseCidade(response.data);
-  if (direct) return direct;
-  if (response.data && typeof response.data === 'object') {
-    const obj = response.data as Obj;
-    for (const key of ['data', 'cidade', 'result', 'item']) {
-      const inner = parseCidade(obj[key]);
-      if (inner) return inner;
-    }
-  }
-  return null;
+// ── Países ──
+export async function listCountries(): Promise<Country[]> {
+  const { data } = await httpClient.get(`${COUNTRIES}/`);
+  return unwrapArray(data).map(parseCountry);
 }
-
-export async function updateCidade(codigo: string, dto: CidadeDTO): Promise<CidadeResponse> {
-  const response = await httpClient.put<CidadeResponse>(`${BASE}/${codigo}`, dto);
-  return response.data;
+export async function listUFsByCountry(sigla: string): Promise<UF[]> {
+  const { data } = await httpClient.get(`${COUNTRIES}/${sigla}/ufs`);
+  return unwrapArray(data).map(parseUF);
 }
-
-export async function deleteCidade(codigo: string): Promise<void> {
-  await httpClient.delete(`${BASE}/${codigo}`);
+export async function createCountry(dto: Country): Promise<Country> {
+  const { data } = await httpClient.post(`${COUNTRIES}/`, { sigla: dto.sigla, name: dto.name });
+  return parseCountry(data);
 }

@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { httpClient } from '@/services/httpClient';
+import { humanizeApiError } from '@/services/apiError';
 import { useAuthStore } from '@/store/authStore';
 
 /**
@@ -117,20 +117,12 @@ export function unwrapObject(raw: unknown): Obj {
 // ─── Error formatting ───────────────────────────────────────────────────────
 
 /** Extracts a human-readable message from an axios/Error/unknown failure. */
-export function errMessage(e: unknown, fallback = 'Ocorreu um erro inesperado.'): string {
-  if (axios.isAxiosError(e)) {
-    const data = e.response?.data as
-      | { message?: string; error?: string; detail?: string; errors?: unknown }
-      | string
-      | undefined;
-    if (typeof data === 'string' && data.trim()) return data;
-    if (data && typeof data === 'object') {
-      const msg = data.message ?? data.error ?? data.detail;
-      if (msg && typeof msg === 'string') return msg;
-    }
-    if (e.message) return e.message;
-  }
-  if (e instanceof Error && e.message) return e.message;
-  if (typeof e === 'string' && e.trim()) return e;
-  return fallback;
+/**
+ * Extrai uma mensagem de erro legível (pt-BR) de qualquer erro de API.
+ * Delega para {@link humanizeApiError}, que traduz erros crus de Postgres
+ * (SQLSTATE/constraints) e HTTP para linguagem do usuário final. Mantido aqui
+ * pela retrocompatibilidade — dezenas de telas já importam `errMessage`.
+ */
+export function errMessage(e: unknown, fallback = 'Ocorreu um erro inesperado. Tente novamente.'): string {
+  return humanizeApiError(e, fallback);
 }

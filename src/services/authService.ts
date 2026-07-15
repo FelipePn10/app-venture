@@ -2,8 +2,6 @@ import axios from 'axios';
 import { httpClient } from '@/services/httpClient';
 import type { AuthResponse, LoginPayload, SessionProfileResponse } from '@/types/auth';
 
-const SIMULATED_DELAY_MS = 800;
-const USE_MOCK_AUTH = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
 const AUTH_LOGIN_PATH = import.meta.env.VITE_AUTH_LOGIN_PATH ?? '/users/login';
 const AUTH_ME_PATH = import.meta.env.VITE_AUTH_ME_PATH ?? '';
 const AUTH_LOGIN_FIELD = import.meta.env.VITE_AUTH_LOGIN_FIELD ?? 'email';
@@ -123,25 +121,6 @@ function extractAuthResponse(payload: unknown): AuthResponse {
   };
 }
 
-async function simulateLogin(payload: LoginPayload): Promise<AuthResponse> {
-  await new Promise((resolve) => setTimeout(resolve, SIMULATED_DELAY_MS));
-
-  if (!payload.email || !payload.password) {
-    throw new Error('Preencha usuário/e-mail e senha para continuar.');
-  }
-
-  return {
-    token: 'mock-jwt-token',
-    userName: 'Usuário ERP',
-    user: {
-      name: 'Usuário ERP',
-      email: payload.email,
-      role: 'Administrador',
-    },
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
-  };
-}
-
 async function tryLoginWithField(field: string, payload: LoginPayload): Promise<AuthResponse> {
   const identifier = payload.email.trim();
   const response = await httpClient.post(AUTH_LOGIN_PATH, {
@@ -184,13 +163,14 @@ async function loginWithApi(payload: LoginPayload): Promise<AuthResponse> {
 }
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  return USE_MOCK_AUTH ? simulateLogin(payload) : loginWithApi(payload);
+  if (!payload.email.trim() || !payload.password) {
+    throw new Error('Preencha usuário/e-mail e senha para continuar.');
+  }
+  return loginWithApi(payload);
 }
 
 export async function fetchSessionProfile(): Promise<SessionProfileResponse | null> {
   const mePath = AUTH_ME_PATH.trim() || '/users/me';
-
-  if (USE_MOCK_AUTH) return null;
 
   try {
     const response = await httpClient.get<unknown>(mePath);

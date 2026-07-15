@@ -71,8 +71,9 @@ function unwrap(raw: unknown): unknown[] {
   return [];
 }
 
-export async function listItemMachineTimes(): Promise<ItemMachineTime[]> {
-  const res = await httpClient.get<unknown>('/api/machine/time/list');
+/** Lista os tempos de um item — o filtro `?item_code=` é obrigatório (query-string). */
+export async function listItemMachineTimes(itemCode: number): Promise<ItemMachineTime[]> {
+  const res = await httpClient.get<unknown>('/api/machine/time/list', { params: { item_code: itemCode } });
   return unwrap(res.data).map(parseTime).filter(Boolean) as ItemMachineTime[];
 }
 

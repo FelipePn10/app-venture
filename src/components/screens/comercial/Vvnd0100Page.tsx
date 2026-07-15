@@ -1,18 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   type SalesDivisionDTO,
+  DIVISION_ANALYSIS,
   listSalesDivisions, createSalesDivision, updateSalesDivision, deleteSalesDivision,
 } from "@/services/salesDivisionService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const EMPTY: SalesDivisionDTO = { code: 0, description: "", commercial_analysis: "" };
+const EMPTY: SalesDivisionDTO = { code: 0, description: "", commercial_analysis: "FREE", financial_analysis: "FREE", consider_mrp: true };
+const analysisLabel = (v?: string) => DIVISION_ANALYSIS.find((a) => a.value === v)?.label ?? v ?? "—";
 
 export function Vvnd0100Page(): JSX.Element {
   const [list, setList] = useState<SalesDivisionDTO[]>([]);
   const [form, setForm] = useState<SalesDivisionDTO>(EMPTY);
   const [editing, setEditing] = useState(false);
+  const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,65 +27,121 @@ export function Vvnd0100Page(): JSX.Element {
   }, []);
   useEffect(() => { void reload(); }, [reload]);
 
+  const set = <K extends keyof SalesDivisionDTO>(k: K, v: SalesDivisionDTO[K]) => setForm((p) => ({ ...p, [k]: v }));
+
   function novo() { setForm(EMPTY); setEditing(false); setFeedback(null); }
+  function editar(d: SalesDivisionDTO) { setForm({ ...d }); setEditing(true); setFeedback(null); }
+
   async function salvar() {
     if (!form.code) { setFeedback({ type: "error", message: "Código é obrigatório (maior que zero)." }); return; }
     if (!form.description.trim()) { setFeedback({ type: "error", message: "Descrição é obrigatória." }); return; }
     setBusy(true); setFeedback(null);
-    try { if (editing) await updateSalesDivision(form.code, form); else await createSalesDivision(form); setFeedback({ type: "success", message: `Divisão ${form.code} salva.` }); novo(); await reload(); }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+    try {
+      if (editing) await updateSalesDivision(form.code, form); else await createSalesDivision(form);
+      setFeedback({ type: "success", message: `Divisão ${form.code} salva.` }); novo(); await reload();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function remover(code: number) {
     setBusy(true); setFeedback(null);
-    try { await deleteSalesDivision(code); setFeedback({ type: "success", message: `Divisão ${code} excluída.` }); await reload(); }
+    try { await deleteSalesDivision(code); setFeedback({ type: "success", message: `Divisão ${code} excluída.` }); if (form.code === code) novo(); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((d) => String(d.code).includes(q) || d.description.toLowerCase().includes(q));
+  }, [list, search]);
+
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VVND0100 — Divisão de Vendas</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs">
+          <span className="erp-crumb-mut">Comercial &amp; Vendas</span>
+          <span className="erp-crumb-sep">›</span>
+          <span className="erp-crumb-cur">Divisão de Vendas</span>
+          <span className="erp-crumb-code">VVND0100</span>
+        </nav>
+        <div className="erp-titlebar-spacer" />
+        <span className="erp-titlebar-meta">Equipe / região / unidade associável ao pedido</span>
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-new" onClick={novo} disabled={busy}>+ Novo</button>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : editing ? "Atualizar" : "Salvar"}</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
-          <ExportButton title="VVND0100 — Divisão de Vendas" filename="vvnd0100" /></div>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            Nova divisão
+          </button>
+        </div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Registro</span>
+          <button className="erp-btn erp-btn-dark" onClick={() => void salvar()} disabled={busy}>{busy && <span className="erp-spin" />}{editing ? "Atualizar" : "Salvar"}</button>
+          {editing && <button className="erp-btn erp-btn-danger" onClick={() => void remover(form.code)} disabled={busy}>Excluir</button>}
+        </div>
+        <div className="erp-tspacer" />
+        <div className="erp-tgroup"><ExportButton title="VVND0100 — Divisão de Vendas" filename="vvnd0100" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Organização comercial</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">Equipe / região / unidade associável ao pedido de venda.</span></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código</label><input className="fsc-input fsc-input-right" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-6"><label className="fsc-label fsc-label-req">Descrição</label><input className="fsc-input" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-4"><label className="fsc-label">Análise comercial</label><input className="fsc-input" value={form.commercial_analysis ?? ""} placeholder="enum exigido pelo backend" onChange={(e) => setForm((p) => ({ ...p, commercial_analysis: e.target.value }))} /></div>
-        </div></div></div>
+      <div className="erp-content">
+      {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
 
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Código</th><th>Descrição</th><th style={{ width: 130 }}>Ações</th></tr></thead>
-            <tbody>
-              {list.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhuma divisão de vendas.</td></tr>}
-              {list.map((d) => (
-                <tr key={d.code}><td className="fsc-num" style={{ fontWeight: 600 }}>{d.code}</td><td>{d.description}</td>
-                  <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => { setForm({ ...d }); setEditing(true); setFeedback(null); }}>Editar</button>
-                    <button className="fsc-action-btn fsc-delete-btn" onClick={() => void remover(d.code)}>Excluir</button></td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div></div>
+      <div className="erp-main">
+        <aside className="erp-list-panel">
+          <div className="erp-panel-head">
+            <span className="erp-panel-title">Divisões</span>
+            <span className="erp-count">{visible.length}</span>
+            <div className="erp-panel-head-spacer" />
+            <input className="erp-search" placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <div className="erp-list">
+            {visible.length === 0 && <div className="erp-list-empty">Nenhuma divisão cadastrada.</div>}
+            {visible.map((d) => (
+              <div key={d.code} className={`erp-list-row${editing && form.code === d.code ? " sel" : ""}`} onClick={() => editar(d)}>
+                <span className="erp-list-code">#{d.code}</span>
+                <span className="erp-list-sub">{d.description}</span>
+                <div className="erp-list-meta">
+                  <span className="erp-badge draft">{analysisLabel(d.commercial_analysis)}</span>
+                  {d.consider_mrp && <span className="erp-badge ok">MRP</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editando divisão #${form.code}` : "Nova divisão"}</button></div>
+          <div className="erp-detail-body">
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Identificação</div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={form.code || ""} disabled={editing} onChange={(e) => set("code", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c9"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Ex.: Vendas Sudeste" /></div>
+              </div>
+            </div>
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Parâmetros de análise</div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c4"><label className="erp-label">Análise comercial</label>
+                  <select className="erp-input" value={form.commercial_analysis ?? "FREE"} onChange={(e) => set("commercial_analysis", e.target.value as SalesDivisionDTO["commercial_analysis"])}>{DIVISION_ANALYSIS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}</select></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Análise financeira</label>
+                  <select className="erp-input" value={form.financial_analysis ?? "FREE"} onChange={(e) => set("financial_analysis", e.target.value as SalesDivisionDTO["financial_analysis"])}>{DIVISION_ANALYSIS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}</select></div>
+                <div className="erp-field erp-c4">
+                  <label className="erp-label">Planejamento</label>
+                  <label className="erp-check"><input type="checkbox" checked={!!form.consider_mrp} onChange={(e) => set("consider_mrp", e.target.checked)} /><span>Considera MRP</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Divisões: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      </div>
+      <footer className="erp-statusbar">
+        <div className="erp-status-item">Divisões: <strong>{list.length}</strong></div>
+        {editing && <div className="erp-status-item">Editando: <strong>#{form.code}</strong></div>}
+        <div className="erp-status-spacer" />
+        <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   createDemanda,
   listDemandas,
@@ -68,12 +68,7 @@ function decodeJwtSub(token: string | null): string | undefined {
 }
 
 function normalizeError(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const d = error.response?.data as { message?: string; error?: string } | undefined;
-    const msg = d?.message ?? d?.error;
-    if (msg) return msg;
-  }
-  return error instanceof Error ? error.message : fallback;
+  return humanizeApiError(error, fallback);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -287,34 +282,34 @@ export function Vpla0102Page(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .pla-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
 
         /* ── TOPBAR ── */
         .pla-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 110px 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .pla-topbar-left { display: flex; align-items: center; gap: 10px; }
         .pla-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .pla-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .pla-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .pla-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .pla-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
         .pla-topbar-right { display: flex; align-items: center; gap: 8px; }
         .pla-screen-badge {
           font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
-          background: rgba(62,150,84,0.15); color: #7ecb8f;
+          background: rgba(62,150,84,0.15); color: #8fce9f;
           border: 1px solid rgba(62,150,84,0.25); border-radius: 5px;
           padding: 3px 8px;
         }
@@ -333,7 +328,7 @@ export function Vpla0102Page(): JSX.Element {
         .pla-action-group:last-child { border-right: none; }
         .pla-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 4px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
         }
         .pla-btn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -342,11 +337,11 @@ export function Vpla0102Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .pla-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .pla-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .pla-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .pla-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .pla-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pla-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .pla-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
+        .pla-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .pla-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
         .pla-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .pla-btn-new {
           background: #eef9f0; color: #1a6030; border-color: #b4d8b8; font-weight: 600;
@@ -374,12 +369,12 @@ export function Vpla0102Page(): JSX.Element {
         .pla-section-banner:first-child { padding-top: 0; }
         .pla-section-banner-pill {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #5a8068;
+          text-transform: uppercase; color: #6b7d71;
           background: #e0ede0; border: 1px solid #c8dcc8;
           border-radius: 20px; padding: 3px 10px; white-space: nowrap;
         }
         .pla-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .pla-section-banner-hint { font-size: 11px; color: #96b8a0; white-space: nowrap; }
+        .pla-section-banner-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
 
         /* ── CARD ── */
         .pla-card {
@@ -391,7 +386,7 @@ export function Vpla0102Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .pla-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .pla-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .pla-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .pla-card-body { padding: 18px 18px; }
 
         /* ── MODO BADGES ── */
@@ -408,7 +403,7 @@ export function Vpla0102Page(): JSX.Element {
           border: 1px solid #e0c860;
         }
         .pla-modo-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-        .pla-modo-novo .pla-modo-dot { background: #3e9654; }
+        .pla-modo-novo .pla-modo-dot { background: #2f7d47; }
         .pla-modo-edicao .pla-modo-dot { background: #c8a020; }
 
         /* ── GRID ── */
@@ -424,7 +419,7 @@ export function Vpla0102Page(): JSX.Element {
         /* ── FIELDS ── */
         .pla-field { display: flex; flex-direction: column; gap: 5px; }
         .pla-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
           display: flex; align-items: center; gap: 4px;
         }
@@ -433,12 +428,12 @@ export function Vpla0102Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .pla-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .pla-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .pla-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .pla-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .pla-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .pla-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
         .pla-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
         .pla-input[type="date"] { cursor: pointer; }
         .pla-input[type="number"] { -moz-appearance: textfield; }
@@ -467,14 +462,14 @@ export function Vpla0102Page(): JSX.Element {
         .pla-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
         .pla-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
         .pla-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .pla-toggle input:checked ~ .pla-toggle-track { background: #3e9654; }
+        .pla-toggle input:checked ~ .pla-toggle-track { background: #2f7d47; }
         .pla-toggle-thumb {
           position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
           background: #fff; border-radius: 50%; transition: transform 0.2s;
           box-shadow: 0 1px 3px rgba(0,0,0,0.15);
         }
         .pla-toggle input:checked ~ .pla-toggle-thumb { transform: translateX(18px); }
-        .pla-toggle-label { font-size: 13px; color: #3a5a45; font-weight: 500; user-select: none; }
+        .pla-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; user-select: none; }
         .pla-toggle-sub   { font-size: 11px; color: #8aaa94; }
 
         /* ── SECTION DIVIDER ── */
@@ -492,11 +487,11 @@ export function Vpla0102Page(): JSX.Element {
         .pla-filter-input {
           height: 34px; background: #f8fbf6; border: 1.5px solid #d4e8cc;
           border-radius: 7px; padding: 0 10px;
-          font-family: 'Inter', sans-serif; font-size: 13px; color: #1a2e22; outline: none;
+          font-family: 'Inter', sans-serif; font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s;
         }
-        .pla-filter-input:focus { border-color: #3e9654; }
-        .pla-filter-input::placeholder { color: #b0c8b8; font-size: 12px; }
+        .pla-filter-input:focus { border-color: #2f7d47; }
+        .pla-filter-input::placeholder { color: #a9b6ac; font-size: 12px; }
         .pla-filter-input[type="date"] { cursor: pointer; }
 
         /* ── RESULTS TABLE ── */
@@ -505,25 +500,25 @@ export function Vpla0102Page(): JSX.Element {
           display: flex; align-items: center; justify-content: space-between;
           padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
         }
-        .pla-results-label { font-size: 11px; font-weight: 600; color: #4a7060; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pla-results-hint  { font-size: 11px; color: #96b8a0; }
+        .pla-results-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pla-results-hint  { font-size: 11px; color: #94a49a; }
         .pla-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .pla-results-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
         }
-        .pla-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; vertical-align: middle; }
+        .pla-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
         .pla-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
         .pla-results-table tbody tr:hover { background: #eef9f0; }
-        .pla-results-empty { text-align: center; padding: 28px 12px; color: #96b8a0; font-size: 12.5px; }
+        .pla-results-empty { text-align: center; padding: 28px 12px; color: #94a49a; font-size: 12.5px; }
         .pla-tag {
           display: inline-flex; align-items: center;
           font-size: 11px; font-weight: 600; border-radius: 12px; padding: 2px 8px;
         }
         .pla-tag-sim { background: #e8f5e0; color: #2a6018; border: 1px solid #b4d898; }
-        .pla-tag-nao { background: #f4f4f4; color: #6a8a74; border: 1px solid #dde8d8; }
+        .pla-tag-nao { background: #f4f4f4; color: #6b7d71; border: 1px solid #dde8d8; }
 
         /* ── FEEDBACK ── */
         .pla-feedback {
@@ -541,8 +536,8 @@ export function Vpla0102Page(): JSX.Element {
           padding: 8px 20px; display: flex; align-items: center;
           justify-content: space-between; flex-shrink: 0;
         }
-        .pla-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .pla-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .pla-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .pla-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         /* ── MODAL ── */
         .pla-modal-overlay {
@@ -559,13 +554,13 @@ export function Vpla0102Page(): JSX.Element {
           display: flex; align-items: center; justify-content: space-between;
           padding: 16px 20px; border-bottom: 1px solid #edf5e8;
         }
-        .pla-modal-title { font-size: 13.5px; font-weight: 600; color: #162e20; }
+        .pla-modal-title { font-size: 13.5px; font-weight: 600; color: #16281d; }
         .pla-modal-close {
           background: none; border: none; cursor: pointer; color: #8aaa94;
           padding: 4px; border-radius: 6px; display: flex; align-items: center;
           transition: background 0.12s, color 0.12s;
         }
-        .pla-modal-close:hover { background: #f0f4ee; color: #3a5a45; }
+        .pla-modal-close:hover { background: #dfe4e0; color: #46574c; }
         .pla-modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
         .pla-modal-footer {
           padding: 12px 20px; border-top: 1px solid #edf5e8;
@@ -575,13 +570,13 @@ export function Vpla0102Page(): JSX.Element {
         .pla-modal-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .pla-modal-table th {
           background: #f4f9f2; padding: 7px 10px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5;
         }
-        .pla-modal-table td { padding: 8px 10px; border-bottom: 1px solid #f0f6ec; color: #243830; }
+        .pla-modal-table td { padding: 8px 10px; border-bottom: 1px solid #f0f6ec; color: #233029; }
         .pla-modal-table tbody tr:hover { background: #f0faf2; }
-        .pla-modal-empty { text-align: center; padding: 24px; color: #96b8a0; font-size: 12.5px; }
+        .pla-modal-empty { text-align: center; padding: 24px; color: #94a49a; font-size: 12.5px; }
         .pla-modal-usar {
           background: none; border: 1px solid #b4d8b8; border-radius: 5px;
           color: #2a6030; font-size: 11px; font-weight: 600; cursor: pointer;
@@ -604,7 +599,7 @@ export function Vpla0102Page(): JSX.Element {
         }
         .pla-spinner-dark {
           width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: spin 0.65s linear infinite;
         }
         @keyframes plaFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -717,8 +712,8 @@ export function Vpla0102Page(): JSX.Element {
             <div className="pla-card-header">
               <div className="pla-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M10 10l3.5 3.5" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M10 10l3.5 3.5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="pla-card-title">Filtros de Pesquisa</span>
               </div>
@@ -839,8 +834,8 @@ export function Vpla0102Page(): JSX.Element {
             <div className="pla-card-header">
               <div className="pla-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 3h10v10H3z" stroke="#3e9654" strokeWidth="1.3" strokeLinejoin="round" />
-                  <path d="M6 8h4M8 6v4" stroke="#3e9654" strokeWidth="1.3" strokeLinecap="round" />
+                  <path d="M3 3h10v10H3z" stroke="#2f7d47" strokeWidth="1.3" strokeLinejoin="round" />
+                  <path d="M6 8h4M8 6v4" stroke="#2f7d47" strokeWidth="1.3" strokeLinecap="round" />
                 </svg>
                 <span className="pla-card-title">Dados da Demanda</span>
               </div>
@@ -1064,7 +1059,7 @@ export function Vpla0102Page(): JSX.Element {
               </button>
             </div>
             <div className="pla-modal-body">
-              <p style={{ fontSize: 12, color: "#6a8a74", marginBottom: 14, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12, color: "#6b7d71", marginBottom: 14, lineHeight: 1.6 }}>
                 Defina novas configurações para o item configurado. Clique em <strong>Usar</strong> para aplicar a configuração à demanda.
               </p>
 

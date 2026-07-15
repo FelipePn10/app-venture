@@ -2,16 +2,24 @@ import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject } from '@/ser
 
 const BASE = '/api/sales-division';
 
+/**
+ * Análise comercial/financeira (enum `sales_division_analysis_enum`). Opcional —
+ * omitido/vazio assume `FREE` (default da coluna).
+ */
+export type DivisionAnalysis = 'FREE' | 'BLOCK_ALWAYS' | 'ALWAYS_ANALYZE';
+export const DIVISION_ANALYSIS: { value: DivisionAnalysis; label: string }[] = [
+  { value: 'FREE', label: 'Livre (sem análise/bloqueio)' },
+  { value: 'BLOCK_ALWAYS', label: 'Bloqueia sempre' },
+  { value: 'ALWAYS_ANALYZE', label: 'Sempre analisa' },
+];
+
 /** Divisão de Vendas (equipe/região/unidade) associável ao pedido. */
 export interface SalesDivisionDTO {
   code: number;
   description: string;
-  /**
-   * Análise comercial — campo exigido pelo backend mas com enum NÃO documentado
-   * (nenhum valor testado foi aceito). Preencher quando o valor válido for
-   * conhecido; ver lacuna nos docs do projeto.
-   */
-  commercial_analysis?: string;
+  commercial_analysis?: DivisionAnalysis;
+  financial_analysis?: DivisionAnalysis;
+  consider_mrp?: boolean;
 }
 
 function parseDivision(raw: unknown): SalesDivisionDTO {
@@ -19,7 +27,9 @@ function parseDivision(raw: unknown): SalesDivisionDTO {
   return {
     code: parseNum(o, 'code', 'Code'),
     description: parseStr(o, 'description', 'Description'),
-    commercial_analysis: parseStr(o, 'commercial_analysis', 'CommercialAnalysis') || undefined,
+    commercial_analysis: (parseStr(o, 'commercial_analysis', 'CommercialAnalysis') || undefined) as DivisionAnalysis | undefined,
+    financial_analysis: (parseStr(o, 'financial_analysis', 'FinancialAnalysis') || undefined) as DivisionAnalysis | undefined,
+    consider_mrp: o['consider_mrp'] === true || o['ConsiderMrp'] === true,
   };
 }
 

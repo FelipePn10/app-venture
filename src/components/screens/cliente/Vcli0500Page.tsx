@@ -3,7 +3,7 @@ import {
   type CustomerDTO, type SupportRef, type CustomerDocType, type PaymentCondVisibility, type AddressType,
   DOC_TYPES, VISIBILITIES, ADDRESS_TYPES,
   listRefs, listCustomers, getCustomer, createCustomer, updateCustomer, blockCustomer, unblockCustomer,
-  addCustomerAddress, addCustomerContact, listEstablishments,
+  addCustomerAddress, addCustomerContact, listEstablishments, lookupCnpj, exportCustomers,
 } from "@/services/customerService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
@@ -49,6 +49,28 @@ export function Vcli0500Page(): JSX.Element {
 
   const setF = <K extends keyof CustomerDTO>(k: K, v: CustomerDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
   function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setFolder("dados"); setMode("edit"); setFeedback(null); }
+
+  async function buscarCnpj() {
+    if (form.document_type !== "CNPJ") { setFeedback({ type: "error", message: "Auto-fill disponível apenas para CNPJ." }); return; }
+    const digits = (form.document_number ?? "").replace(/\D/g, "");
+    if (digits.length !== 14) { setFeedback({ type: "error", message: "Informe um CNPJ com 14 dígitos." }); return; }
+    setBusy(true); setFeedback(null);
+    try {
+      const c = await lookupCnpj(digits);
+      setForm((p) => ({
+        ...p,
+        name: c.legal_name || p.name,
+        trade_name: c.trade_name || p.trade_name,
+        state_registration: c.state_registration || p.state_registration,
+        website: p.website,
+      }));
+      setFeedback({ type: "success", message: `Dados da Receita carregados (${c.registration_status ?? "OK"}). Confira antes de salvar.` });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+  async function exportar(fmt: "xlsx" | "pdf" | "csv") {
+    setBusy(true); setFeedback(null);
+    try { await exportCustomers(fmt); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
 
   async function abrir(code: number) {
     setBusy(true); setFeedback(null);
@@ -154,6 +176,12 @@ export function Vcli0500Page(): JSX.Element {
           </div>
         )}
         <div className="fsc-action-group">
+          <span className="fsc-action-label">Exportar lista</span>
+          <button className="fsc-btn fsc-btn-ghost" onClick={() => void exportar("xlsx")} disabled={busy}>Excel</button>
+          <button className="fsc-btn fsc-btn-ghost" onClick={() => void exportar("pdf")} disabled={busy}>PDF</button>
+          <button className="fsc-btn fsc-btn-ghost" onClick={() => void exportar("csv")} disabled={busy}>CSV</button>
+        </div>
+        <div className="fsc-action-group">
           <span className="fsc-action-label">Relatório</span>
           <ExportButton title="VCLI0500 — Cadastro de Cliente" filename="vcli0500" />
         </div>
@@ -192,7 +220,11 @@ export function Vcli0500Page(): JSX.Element {
                 <div className="fsc-field fsc-col-6"><label className="fsc-label fsc-label-req">Razão social / Nome</label><input className="fsc-input" value={form.name} onChange={(e) => setF("name", e.target.value)} /></div>
                 <div className="fsc-field fsc-col-4"><label className="fsc-label">Fantasia</label><input className="fsc-input" value={form.trade_name ?? ""} onChange={(e) => setF("trade_name", e.target.value)} /></div>
                 <div className="fsc-field fsc-col-2"><label className="fsc-label">Tipo doc.</label><select className="fsc-select" value={form.document_type} onChange={(e) => setF("document_type", e.target.value as CustomerDocType)}>{DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">CNPJ/CPF</label><input className="fsc-input" value={form.document_number} onChange={(e) => setF("document_number", e.target.value)} />
+                <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">CNPJ/CPF</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input className="fsc-input" value={form.document_number} onChange={(e) => setF("document_number", e.target.value)} />
+                    {form.document_type === "CNPJ" && <button className="fsc-btn fsc-btn-ghost" style={{ whiteSpace: "nowrap" }} onClick={() => void buscarCnpj()} disabled={busy} title="Preencher pela Receita">🔎 CNPJ</button>}
+                  </div>
                   {form.document_number.trim() && (form.document_type === "CNPJ" || form.document_type === "CPF") && (<span className="fsc-field-hint" style={{ color: validateCNPJOrCPF(form.document_number) ? "#1e6030" : "#b91c1c" }}>{validateCNPJOrCPF(form.document_number) ? "✓ válido" : "✗ inválido"}</span>)}</div>
                 <div className="fsc-field fsc-col-2"><label className="fsc-label">Inscr. Estadual</label><input className="fsc-input" value={form.state_registration ?? ""} onChange={(e) => setF("state_registration", e.target.value)} /></div>
                 <div className="fsc-field fsc-col-2"><label className="fsc-label">Insc. Municipal</label><input className="fsc-input" value={form.municipal_registration ?? ""} onChange={(e) => setF("municipal_registration", e.target.value)} /></div>

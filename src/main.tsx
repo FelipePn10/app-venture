@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppRouter } from '@/routes/AppRouter';
 import '@/styles/global.css';
 import '@/styles/fiscal-screens.css';
+import '@/styles/erp-workbench.css';
 
 const queryClient = new QueryClient();
 

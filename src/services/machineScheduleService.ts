@@ -7,9 +7,9 @@ const BASE = '/api/machine/schedule';
  * Consumida pelo CRP/APS. O backend retorna um slot tipo APS
  * (`schedule_date`, `planned_qty`, `produced_qty`, `status`, `sequence`).
  *
- * ⚠️ `GET /list` exige `machine_code` mas rejeita todas as formas testadas
- * (query/body) com "invalid machine_code" — **list quebrado no backend**.
- * `create` funciona, mas ignora datas enviadas como date-only (grava `0001-01-01`).
+ * `GET /list` exige `?machine_code=` e aceita `?date=YYYY-MM-DD` (default hoje).
+ * `create` grava a `schedule_date` real; a entidade é um slot de APS
+ * (planned_qty/sequence/status), não disponibilidade/paradas.
  */
 export interface MachineScheduleDTO {
   code?: number;
@@ -39,8 +39,7 @@ export async function createMachineSchedule(dto: MachineScheduleDTO): Promise<Ma
   return parseSchedule(data);
 }
 
-/** ⚠️ Backend retorna "invalid machine_code" — quebrado até correção no handler. */
-export async function listMachineSchedules(machineCode: number): Promise<MachineScheduleDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/list`, { params: { machine_code: machineCode } });
+export async function listMachineSchedules(machineCode: number, date?: string): Promise<MachineScheduleDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/list`, { params: { machine_code: machineCode, date } });
   return unwrapArray(data).map(parseSchedule);
 }

@@ -1,6 +1,8 @@
 import { httpClient, parseStr, parseNum, unwrapObject, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/fiscal/config';
+const BRANDING_PATH = '/api/fiscal/config/branding';
+const BRANDING_LOGO_PATH = '/api/fiscal/config/logo';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +24,7 @@ export interface FiscalConfig {
   codigo_municipio?: string;
   cep?: string;
   telefone?: string;
+  brand_color?: string;
   icms_interno_aliquota: number;
   icms_diferimento_percentual: number;
   focus_nfe_token?: string;
@@ -31,6 +34,17 @@ export interface FiscalConfig {
   vencimento_icms_dia: number;
   vencimento_ipi_dia: number;
   vencimento_pis_cofins_dia: number;
+}
+
+export const MAX_BRANDING_LOGO_BYTES = 2 * 1024 * 1024;
+export const BRAND_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+
+export async function validateBrandingLogo(file: File): Promise<void> {
+  if (file.size > MAX_BRANDING_LOGO_BYTES) throw new Error('O logo deve ter no máximo 2 MB.');
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const png = bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b);
+  const jpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (!png && !jpeg) throw new Error('O logo deve ser um arquivo PNG ou JPEG válido.');
 }
 
 // ─── Parser ─────────────────────────────────────────────────────────────────
@@ -53,6 +67,7 @@ function parseConfig(raw: unknown): FiscalConfig {
     codigo_municipio: parseStr(o, 'codigo_municipio', 'CodigoMunicipio'),
     cep: parseStr(o, 'cep', 'Cep'),
     telefone: parseStr(o, 'telefone', 'Telefone'),
+    brand_color: parseStr(o, 'brand_color', 'BrandColor'),
     icms_interno_aliquota: parseNum(o, 'icms_interno_aliquota', 'IcmsInternoAliquota'),
     icms_diferimento_percentual: parseNum(o, 'icms_diferimento_percentual', 'IcmsDiferimentoPercentual'),
     focus_nfe_token: parseStr(o, 'focus_nfe_token', 'FocusNfeToken'),
@@ -75,4 +90,29 @@ export async function getFiscalConfig(): Promise<FiscalConfig> {
 export async function updateFiscalConfig(cfg: FiscalConfig): Promise<FiscalConfig> {
   const { data } = await httpClient.put(BASE, cfg);
   return parseConfig(data);
+}
+
+export async function updateFiscalBranding(input: { logo?: File; brandColor?: string }): Promise<void> {
+  const color = input.brandColor?.trim() ?? '';
+  if (!input.logo && !color) throw new Error('Selecione um logo e/ou informe a cor da marca.');
+  if (color && !BRAND_COLOR_PATTERN.test(color)) throw new Error('A cor deve estar no formato hexadecimal #RRGGBB.');
+  if (input.logo) await validateBrandingLogo(input.logo);
+
+  const body = new FormData();
+  if (input.logo) body.append('logo', input.logo, input.logo.name);
+  if (color) body.append('brand_color', color.toUpperCase());
+  await httpClient.post(BRANDING_PATH, body, { headers: { 'Content-Type': 'multipart/form-data' } });
+}
+
+export async function getFiscalBrandingLogo(): Promise<Blob | null> {
+  try {
+    const { data } = await httpClient.get<Blob>(BRANDING_LOGO_PATH, { responseType: 'blob' });
+    return data;
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error !== null && 'response' in error
+      ? (error as { response?: { status?: number } }).response?.status
+      : undefined;
+    if (status === 404) return null;
+    throw error;
+  }
 }

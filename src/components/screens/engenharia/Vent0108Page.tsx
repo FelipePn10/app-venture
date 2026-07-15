@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   getCalendarMonth,
   createCalendarDay,
@@ -78,18 +78,13 @@ function buildCalendarWeeks(year: number, month: number): Array<Array<Date | nul
 }
 
 function normalizeErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; error?: string } | undefined;
-    const msg = data?.message ?? data?.error;
-    if (msg) return msg;
-  }
-  return error instanceof Error ? error.message : fallback;
+  return humanizeApiError(error, fallback);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Vent0108Page(): JSX.Element {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const [anoSelecionado, setAnoSelecionado] = useState(today.getFullYear());
   const [mesSelecionado, setMesSelecionado] = useState(today.getMonth());
 
@@ -110,7 +105,7 @@ export function Vent0108Page(): JSX.Element {
 
   const anos = useMemo(
     () => Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i),
-    [],
+    [today],
   );
 
   const semanas = useMemo(
@@ -292,9 +287,9 @@ export function Vent0108Page(): JSX.Element {
 
         .vc-root {
           min-height: 100vh;
-          background: #f0f4ee;
+          background: #dfe4e0;
           font-family: 'Inter', sans-serif;
-          color: #1a2e22;
+          color: #1c2b22;
           display: flex;
           flex-direction: column;
         }
@@ -302,20 +297,20 @@ export function Vent0108Page(): JSX.Element {
         /* ── TOPBAR ── */
         .vc-topbar {
           height: 52px;
-          background: #162e20;
+          background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .vc-topbar-left { display: flex; align-items: center; gap: 10px; }
         .vc-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .vc-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .vc-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .vc-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .vc-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
@@ -334,13 +329,13 @@ export function Vent0108Page(): JSX.Element {
         .vc-action-group:last-child { border-right: none; }
         .vc-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 6px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 6px; white-space: nowrap;
         }
         .vc-nav-btn {
           width: 30px; height: 30px; border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
           background: transparent; border: 1.5px solid #d4e8d0;
-          cursor: pointer; color: #4a7060;
+          cursor: pointer; color: #46574c;
           transition: background 0.12s, border-color 0.12s;
         }
         .vc-nav-btn:hover:not(:disabled) { background: #edf7ea; border-color: #a0c8a8; }
@@ -352,11 +347,11 @@ export function Vent0108Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .vc-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .vc-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .vc-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .vc-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .vc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .vc-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .vc-btn-ghost:hover { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
+        .vc-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .vc-btn-ghost:hover { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
         .vc-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .vc-btn-danger:hover:not(:disabled) { background: #fff0f0; border-color: #e09090; }
         .vc-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -379,11 +374,11 @@ export function Vent0108Page(): JSX.Element {
         }
         .vc-card-header-left { display: flex; align-items: center; gap: 8px; }
         .vc-card-title {
-          font-size: 12px; font-weight: 600; color: #2a4a35;
+          font-size: 12px; font-weight: 600; color: #253a2d;
           text-transform: uppercase; letter-spacing: 0.6px;
         }
         .vc-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
+          font-size: 10.5px; font-weight: 500; color: #2f7d47;
           background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
         }
         .vc-card-body { padding: 20px 18px; }
@@ -394,21 +389,21 @@ export function Vent0108Page(): JSX.Element {
         }
         .vc-field { display: flex; flex-direction: column; gap: 5px; }
         .vc-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
         }
         .vc-select {
           height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .vc-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .vc-select:disabled { background-color: #f0f4ee; color: #8aaa94; cursor: not-allowed; }
+        .vc-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .vc-select:disabled { background-color: #dfe4e0; color: #8aaa94; cursor: not-allowed; }
         .vc-select-ano { width: 110px; }
         .vc-select-mes { width: 160px; }
 
@@ -438,13 +433,13 @@ export function Vent0108Page(): JSX.Element {
         }
         .vc-cal-head-row th {
           padding: 8px 6px; text-align: center;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 2px solid #dbe8d5;
           background: #f4f9f2;
         }
         .vc-cal-head-row th.vc-th-week {
-          color: #96b8a0; font-weight: 600; font-size: 10px;
+          color: #94a49a; font-weight: 600; font-size: 10px;
           width: 52px; border-right: 1px solid #e8f0e4;
         }
         .vc-cal-head-row th.vc-th-dom,
@@ -454,7 +449,7 @@ export function Vent0108Page(): JSX.Element {
 
         .vc-td-week {
           padding: 4px 8px; text-align: center;
-          font-size: 10px; font-weight: 600; color: #96b8a0;
+          font-size: 10px; font-weight: 600; color: #94a49a;
           background: #fafcf9; border-right: 1px solid #e8f0e4;
           border-bottom: 1px solid #f0f6ec;
           vertical-align: middle; letter-spacing: 0.3px;
@@ -468,7 +463,7 @@ export function Vent0108Page(): JSX.Element {
         .vc-day-cell {
           display: inline-flex; align-items: center; justify-content: center;
           width: 42px; height: 42px; border-radius: 8px;
-          font-size: 14px; font-weight: 500; color: #2a4a35;
+          font-size: 14px; font-weight: 500; color: #253a2d;
           transition: background 0.12s, color 0.12s, transform 0.1s;
           user-select: none;
         }
@@ -476,7 +471,7 @@ export function Vent0108Page(): JSX.Element {
         .vc-day-cell.clickable:hover { transform: scale(1.06); }
         .vc-day-cell.vc-day-empty { background: transparent; cursor: default; }
 
-        .vc-day-cell.vc-day-util { background: #f6fbf4; color: #2a4a35; }
+        .vc-day-cell.vc-day-util { background: #f6fbf4; color: #253a2d; }
         .vc-day-cell.vc-day-util:hover { background: #e4f4e0; }
 
         .vc-day-cell.vc-day-fim-semana { background: #f5f5f0; color: #8a7a6a; }
@@ -488,26 +483,26 @@ export function Vent0108Page(): JSX.Element {
         }
         .vc-day-cell.vc-day-nao-util:hover { background: #ffd8d8; }
 
-        .vc-day-cell.vc-day-hoje { box-shadow: inset 0 0 0 2px #3e9654; }
+        .vc-day-cell.vc-day-hoje { box-shadow: inset 0 0 0 2px #2f7d47; }
         .vc-day-cell.vc-day-hoje.vc-day-util { background: #edfaed; }
         .vc-day-cell.vc-day-hoje.vc-day-nao-util {
-          box-shadow: inset 0 0 0 2px #3e9654, inset 0 0 0 1.5px #f4b8b8;
+          box-shadow: inset 0 0 0 2px #2f7d47, inset 0 0 0 1.5px #f4b8b8;
         }
         .vc-day-cell.vc-day-confirmed {
           background: #1c4a2a;
           color: #a8f0b8;
           font-weight: 700;
-          box-shadow: inset 0 0 0 2px #3e9654;
+          box-shadow: inset 0 0 0 2px #2f7d47;
         }
 
         /* ── LOADING OVERLAY ── */
         .vc-loading-overlay {
           display: flex; align-items: center; justify-content: center;
-          padding: 48px; gap: 10px; color: #5a8068; font-size: 13px;
+          padding: 48px; gap: 10px; color: #6b7d71; font-size: 13px;
         }
         .vc-loading-spinner {
           width: 18px; height: 18px;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: spin 0.65s linear infinite; flex-shrink: 0;
         }
 
@@ -525,10 +520,10 @@ export function Vent0108Page(): JSX.Element {
           width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0;
         }
         .vc-legend-dot.util       { background: #f6fbf4; border: 1.5px solid #c8e8c4; }
-        .vc-legend-dot.confirmed  { background: #1c4a2a; border: 1.5px solid #3e9654; }
+        .vc-legend-dot.confirmed  { background: #1c4a2a; border: 1.5px solid #2f7d47; }
         .vc-legend-dot.fim-semana { background: #f5f5f0; border: 1.5px solid #ddd8d0; }
         .vc-legend-dot.nao-util   { background: #ffebeb; border: 1.5px solid #f4b8b8; }
-        .vc-legend-dot.hoje       { background: #edfaed; box-shadow: inset 0 0 0 2px #3e9654; }
+        .vc-legend-dot.hoje       { background: #edfaed; box-shadow: inset 0 0 0 2px #2f7d47; }
 
         /* ── FEEDBACK ── */
         .vc-feedback {
@@ -547,8 +542,8 @@ export function Vent0108Page(): JSX.Element {
           justify-content: space-between; flex-shrink: 0;
         }
         .vc-footer-left { display: flex; align-items: center; gap: 20px; }
-        .vc-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .vc-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .vc-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .vc-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
         .vc-spinner {
@@ -690,8 +685,8 @@ export function Vent0108Page(): JSX.Element {
             <div className="vc-card-header">
               <div className="vc-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M5 2v2M11 2v2M2 7h12" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M5 2v2M11 2v2M2 7h12" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="vc-card-title">Seleção de Período</span>
               </div>
@@ -761,9 +756,9 @@ export function Vent0108Page(): JSX.Element {
             <div className="vc-card-header">
               <div className="vc-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M5 2v2M11 2v2M2 7h12" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
-                  <path d="M5 10h2M9 10h2M5 12.5h2" stroke="#3e9654" strokeWidth="1.2" strokeLinecap="round" />
+                  <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M5 2v2M11 2v2M2 7h12" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M5 10h2M9 10h2M5 12.5h2" stroke="#2f7d47" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 <span className="vc-card-title">
                   Calendário — {MESES[mesSelecionado]} {anoSelecionado}
@@ -898,7 +893,7 @@ export function Vent0108Page(): JSX.Element {
               Não úteis no mês: <strong>{naoUteisDoMes}</strong>
             </div>
             {isLoadingMonth && (
-              <div className="vc-footer-stat" style={{ color: "#3e9654" }}>
+              <div className="vc-footer-stat" style={{ color: "#2f7d47" }}>
                 <div className="vc-loading-spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />
                 Carregando...
               </div>
