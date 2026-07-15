@@ -83,6 +83,24 @@ export interface ErpScreen {
 export const ERP_SCREENS: ErpScreen[] = [
   // ── Módulos de plataforma / novos (backend recém-exposto)
   {
+    code: "VPCT0100",
+    title: "Tolerâncias de Pedido de Compra",
+    description: "Faixas de tolerância (quantidade/preço/total) por operação e fornecedor, com ação BLOCK/WARN, e avaliação.",
+    module: "suprimento",
+  },
+  {
+    code: "VDES0100",
+    title: "Desenhos Técnicos",
+    description: "Cadastrar desenhos (código/dígito/formato), revisões com vigência/aprovação e características.",
+    module: "engenharia",
+  },
+  {
+    code: "VTPS0100",
+    title: "Serviços de Terceiros",
+    description: "Preços de serviço por item×fornecedor×operação e ordens de serviço (OF→requisição→OC).",
+    module: "suprimento",
+  },
+  {
     code: "VCFG0100",
     title: "Configurador de Produto",
     description: "Conjuntos, variáveis e características do configurador cfg_*; vincular características ao item e gerar a máscara.",

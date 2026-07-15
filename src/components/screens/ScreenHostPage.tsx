@@ -119,6 +119,9 @@ import { Vest0200Page } from "./almoxarifado/Vest0200Page";
 import { Vmaq0101Page } from "./engenharia/Vmaq0101Page";
 import { Vmaq0200Page } from "./engenharia/Vmaq0200Page";
 import { Vexr0100Page } from "./comercial/Vexr0100Page";
+import { Vpct0100Page } from "./suprimento/Vpct0100Page";
+import { Vdes0100Page } from "./engenharia/Vdes0100Page";
+import { Vtps0100Page } from "./suprimento/Vtps0100Page";
 import { Vcfg0100Page } from "./engenharia/Vcfg0100Page";
 import { Vpln0100Page } from "./planejamento/Vpln0100Page";
 import { Vres0100Page } from "./producao/Vres0100Page";
@@ -133,6 +136,9 @@ import { OPERATIONAL_ROUTINES } from "./operationalRoutines";
 const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   ...Object.fromEntries(Object.entries(OPERATIONAL_ROUTINES).map(([code, routine]) => [code, <OperationalRoutinePage key={code} routine={routine} />])),
   // Plataforma / novos
+  VPCT0100: <Vpct0100Page />,
+  VDES0100: <Vdes0100Page />,
+  VTPS0100: <Vtps0100Page />,
   VCFG0100: <Vcfg0100Page />,
   VPLN0100: <Vpln0100Page />,
   VRES0100: <Vres0100Page />,
