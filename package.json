@@ -20,11 +20,15 @@
     "validate:backend-alignment": "node scripts/validate-backend-alignment.mjs && node scripts/validate-no-registered-mocks.mjs",
     "validate:no-mocks": "node scripts/validate-no-registered-mocks.mjs",
     "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing"
+    ,"test:versioning": "node scripts/test-versioning.mjs"
+    ,"version:sync": "node scripts/set-release-version.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "axios": "^1.7.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

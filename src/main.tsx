@@ -5,13 +5,17 @@ import { AppRouter } from '@/routes/AppRouter';
 import '@/styles/global.css';
 import '@/styles/fiscal-screens.css';
 import '@/styles/erp-workbench.css';
+import '@/styles/system-update.css';
+import { SystemUpdateGate } from '@/components/system/SystemUpdateGate';
 
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AppRouter />
+      <SystemUpdateGate>
+        <AppRouter />
+      </SystemUpdateGate>
     </QueryClientProvider>
   </React.StrictMode>
 );
