@@ -495,25 +495,66 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Consultar saldo", method: "GET", path: "/api/stock/balances/get", fields: [{ name: "item_code", label: "Item", type: "number", required: true }, { name: "warehouse_id", label: "Almoxarifado", type: "number", required: true }, { name: "lot", label: "Lote" }], query: ["item_code", "warehouse_id", "lot"] },
     { label: "Saldos do almoxarifado", method: "GET", path: "/api/stock/balances/warehouse/{warehouseId}", fields: [id("warehouseId", "Almoxarifado")] },
   ]),
+  VAVF0204: routine("VAVF0204", "Cálculo e envio de IQF", "Calcula o IQF do fornecedor em um período e permite persistir o resultado apurado.", [
+    create("/api/procurement/supplier-scorecards/compute", '{"supplier_code":10,"period_start":"2026-01-01","period_end":"2026-06-30","commercial_score":100,"service_score":100,"persist":true,"notes":"Apuração semestral"}'),
+  ]),
+  VINS0201: routine("VINS0201", "Manutenção das ordens de inspeção", "Cria ordens de inspeção e registra as medições exigidas pelo roteiro de recebimento.", [
+    create("/api/procurement/receiving-inspection-orders", '{"source":"PURCHASE_ORDER","purchase_order_code":1000,"purchase_order_item_code":1,"supplier_code":10,"item_code":100,"mask":"","warehouse_id":2,"quantity":20}'),
+    { label: "Registrar resultados", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/results", fields: [id(), json('{"step_id":1,"sequence":1,"sample_index":1,"measured_value":10,"min_value":9.9,"max_value":10.1,"is_approved":true}')] },
+  ]),
+  VINS0206: routine("VINS0206", "Tratamento das ordens de inspeção", "Analisa quantidades inspecionadas e efetiva a destinação física aprovada ou rejeitada.", [
+    { label: "Analisar ordem", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/analysis", fields: [id(), json('{"conform_qty":18,"rejected_qty":2,"rework_qty":0,"restricted_qty":0,"treatment":"PARTIAL_APPROVAL","affects_supplier_score":true,"move_stock":true,"destination_warehouse_id":1,"rejection_warehouse_id":3,"notes":"Conferência concluída"}')] },
+    { label: "Destinar estoque", method: "POST", path: "/api/procurement/receiving-inspections/{id}/disposition", fields: [id(), json('{"approved_qty":18,"rejected_qty":2,"destination_warehouse_id":1,"quarantine_warehouse_id":2,"reason":"Avaria"}')] },
+  ]),
+  VINS0313: routine("VINS0313", "Consulta de inspeções de recebimento", "Consulta ordens de inspeção por situação e fornecedor sem alterar o recebimento.", [
+    list("/api/procurement/receiving-inspection-orders", [{ name: "status", label: "Status" }, { name: "supplier_code", label: "Fornecedor", type: "number" }], ["status", "supplier_code"]),
+  ]),
+  VINS0400: routine("VINS0400", "Consulta de ocorrências e ordens de inspeção", "Abre uma ordem específica para auditoria das ocorrências, resultados e tratamento.", [
+    { label: "Abrir ordem", method: "GET", path: "/api/procurement/receiving-inspection-orders/{id}", fields: [id()] },
+  ]),
+  VENG0204: routine("VENG0204", "Regras de variáveis equivalentes", "Mantém e aplica relações entre características de itens pai e filho.", [
+    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")]),
+    create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}'),
+    create("/api/configurator/equivalent-rules/apply", '{"parent_item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}]}'),
+    { label: "Abrir regra", method: "GET", path: "/api/configurator/equivalent-rules/{id}", fields: [id()] },
+    { label: "Alterar regra", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}')] },
+    remove("/api/configurator/equivalent-rules/{id}"),
+  ]),
+  VITE0118: routine("VITE0118", "Regras de itens configurados", "Mantém e avalia regras que preenchem campos do item a partir das respostas do configurador.", [
+    list("/api/configurator/items/{itemCode}/rules", [id("itemCode", "Item")]),
+    create("/api/configurator/item-rules", '{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}'),
+    create("/api/configurator/item-rules/evaluate", '{"item_code":100,"answers":[]}'),
+    { label: "Abrir regra", method: "GET", path: "/api/configurator/item-rules/{id}", fields: [id()] },
+    { label: "Alterar regra", method: "PUT", path: "/api/configurator/item-rules/{id}", fields: [id(), json('{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}')] },
+    remove("/api/configurator/item-rules/{id}"),
+  ]),
+  VITE0313: routine("VITE0313", "Geração de máscaras configuradas", "Gera uma máscara individual pelas respostas informadas e opcionalmente a persiste.", [
+    create("/api/configurator/generate-mask", '{"item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}],"persist":false}'),
+  ]),
+  VPLC0200: routine("VPLC0200", "Montagem e gestão de cargas", "Monta uma carga com romaneios e notas fiscais antes de sua liberação logística.", [
+    list("/api/shipments/loads", [{ name: "status", label: "Situação" }, { name: "carrier_code", label: "Transportadora", type: "number" }], ["status", "carrier_code"]),
+    create("/api/shipments/loads", '{"description":"Carga São Paulo","carrier_code":10,"vehicle_plate":"ABC1D23","driver_name":"Motorista","driver_document":"00000000000","route_code":"SP-01","origin":"Matriz","destination":"São Paulo","dispatch_box_code":"BOX-01","planned_ship_date":"2026-07-15","estimated_delivery":"2026-07-16","notes":"Conferir lacres"}'),
+    { label: "Abrir carga", method: "GET", path: "/api/shipments/loads/{loadCode}", fields: [id("loadCode", "Carga")] },
+    { label: "Adicionar romaneio", method: "POST", path: "/api/shipments/loads/{loadCode}/shipments", fields: [id("loadCode", "Carga"), json('{"shipment_code":1001,"sequence":1}')] },
+    { label: "Remover romaneio", method: "DELETE", path: "/api/shipments/loads/{loadCode}/shipments/{shipmentCode}", fields: [id("loadCode", "Carga"), id("shipmentCode", "Romaneio")] },
+    { label: "Adicionar nota fiscal", method: "POST", path: "/api/shipments/loads/{loadCode}/fiscal-notes", fields: [id("loadCode", "Carga"), json('{"shipment_code":1001,"fiscal_exit_id":50,"nfe_number":12345,"nfe_key":"","sequence":1}')] },
+  ]),
+  VPLC0211: routine("VPLC0211", "Instruções de entrega", "Mantém orientações operacionais vinculadas à carga e ao cliente destinatário.", [
+    list("/api/shipments/delivery-instructions", [{ name: "load_code", label: "Carga", type: "number" }, { name: "active_only", label: "Somente ativas", type: "checkbox", defaultValue: true }], ["load_code", "active_only"]),
+    create("/api/shipments/delivery-instructions", '{"load_code":100,"customer_id":200,"title":"Agendamento obrigatório","instruction":"Entregar somente após confirmação do cliente.","priority":1}'),
+  ]),
+  VVOR0202: routine("VVOR0202", "Fornecedor e qualidade por item", "Consulta vínculos item-fornecedor e mantém os relatórios de qualidade correspondentes.", [
+    { label: "Itens por fornecedor", method: "GET", path: "/api/item-suppliers/supplier/{supplierCode}", fields: [id("supplierCode", "Fornecedor")] },
+    { label: "Consultar relatórios", method: "GET", path: "/api/item-suppliers/{id}/quality-reports", fields: [id("id", "Vínculo item-fornecedor")] },
+    { label: "Anexar relatório", method: "POST", path: "/api/item-suppliers/{id}/quality-reports", fields: [id("id", "Vínculo item-fornecedor"), { name: "registered_on", label: "Data do relatório", type: "date", required: true }, { name: "status", label: "Situação", required: true }, { name: "file_name", label: "Nome do arquivo", required: true }, { name: "content_type", label: "Tipo MIME", required: true }, { name: "content", label: "Arquivo do relatório", type: "file-base64", required: true, accept: ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" }, { name: "notes", label: "Observações", type: "textarea" }] },
+  ]),
+  VIMP0101: routine("VIMP0101", "Status logístico da importação", "Consulta cargas de importação e seus painéis logísticos sem executar transições.", [
+    list("/api/shipments/loads", [{ name: "status", label: "Situação" }, { name: "from", label: "De", type: "date" }, { name: "to", label: "Até", type: "date" }], ["status", "from", "to"]),
+    { label: "Monitor geral", method: "GET", path: "/api/shipments/loads/monitor" },
+    { label: "Painel logístico", method: "GET", path: "/api/shipments/loads/logistic-panel" },
+  ]),
+  VITE0129: routine("VITE0129", "Recarga de descrições configuradas", "Recarrega as linhas persistidas de uma descrição de item configurado.", [
+    { label: "Abrir descrição", method: "GET", path: "/api/configurator/item-descriptions/{id}", fields: [id()] },
+    { label: "Recarregar linhas", method: "POST", path: "/api/configurator/item-descriptions/{id}/reload", fields: [id()] },
+  ]),
 };
-
-// Rotinas legadas que descrevem o mesmo agregado funcional. Mantêm seu código
-// histórico no menu, mas usam o contrato real em vez das antigas telas mockadas.
-const alias = (code: string, title: string, target: string): void => {
-  const base = OPERATIONAL_ROUTINES[target];
-  OPERATIONAL_ROUTINES[code] = { ...base, code, title };
-};
-alias("VIMP0200", "Console de Processos de Importação", "VIMP0300");
-alias("VAVF0204", "Cálculo e Envio de IQF", "VAVF0300");
-alias("VINS0201", "Manutenção das Ordens de Inspeção", "VSUP0600");
-alias("VINS0206", "Exclusão e Tratamento de Ordens de Inspeção", "VSUP0600");
-alias("VINS0313", "Consulta de Inspeções de Recebimento", "VSUP0600");
-alias("VINS0400", "Consulta de Ocorrências e Ordens de Inspeção", "VSUP0600");
-alias("VENG0204", "Regras de Variáveis Equivalentes", "VCFG0600");
-alias("VITE0118", "Regras de Itens Configurados", "VCFG0600");
-alias("VITE0313", "Geração de Máscaras Configuradas", "VCFG0400");
-alias("VPLC0200", "Montagem e Gestão de Cargas", "VEXP0110");
-alias("VPLC0211", "Instruções de Entrega", "VEXP0120");
-alias("VVOR0202", "Fornecedor e Qualidade por Item", "VSUP0670");
-alias("VIMP0101", "Status Logístico da Importação", "VEXP0110");
-alias("VITE0129", "Recarga de Descrições de Itens Configurados", "VCFG0500");

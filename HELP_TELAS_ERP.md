@@ -2055,6 +2055,28 @@ Definir o calendário corporativo mensal, marcando dias úteis, fins de semana, 
 
 #### VENG0204 — Regras Variáveis Equivalentes
 
+##### Finalidade e pré-requisitos
+
+Relaciona uma resposta do item pai a uma característica do item filho. Cadastre primeiro os
+itens, características e variáveis em VCFG0100–VCFG0300. Anote os IDs retornados; descrição
+ou posição visual não substitui o identificador persistido.
+
+##### Operação
+
+1. Em **Listar regras**, informe o código do item pai e execute. Resultado vazio significa que
+   ele ainda não possui equivalências no tenant atual.
+2. Para cadastrar, informe item pai, UM do pai, item filho, característica e operador do pai,
+   característica e operador do filho. Use `formula` somente quando a regra definida exigir
+   cálculo; uma fórmula vazia representa atribuição direta.
+3. Salve e copie o `id` retornado. Use esse ID em **Abrir**, **Alterar** ou **Excluir**.
+4. Em **Aplicar regras**, informe o item pai e as respostas reais (`characteristic_id`,
+   `variable_id` e, quando livre, `value`). Confira o resultado antes de gerar a máscara.
+5. Após alteração, aplique novamente o mesmo conjunto de respostas e compare o item filho.
+
+Não exclua uma regra usada por configurações em andamento. Item/característica inexistente,
+operador incompatível ou vínculo de outra empresa deve ser recusado. A tela não cria itens nem
+características e não inventa respostas quando a lista está vazia.
+
 ##### Objetivo
 
 Estabelecer regras de equivalência entre itens pai e filho baseadas em características com operadores lógicos (=, <>, >, <, >=, <=). Permite definir que um determinado componente é selecionado quando a característica do item pai atende a uma condição.
@@ -2103,6 +2125,21 @@ Estabelecer regras de equivalência entre itens pai e filho baseadas em caracter
 ---
 
 #### VITE0313 — Geração Máscara Itens Configurados
+
+##### Passo a passo
+
+1. Confirme em VCFG0200/VCFG0300 a sequência e as características do item.
+2. Escolha **Gerar máscara**, informe `item_code` e uma resposta para cada característica
+   obrigatória. Para alternativa enumerada use `variable_id`; para resposta livre preencha
+   `value` conforme o tipo configurado.
+3. Mantenha `persist=false` durante a conferência. Execute e valide máscara, composição e erros.
+4. Somente depois repita com `persist=true` quando a combinação deva virar configuração
+   persistida. Persistir pode tornar o código disponível aos processos comerciais e industriais.
+5. Consulte o item/configuração resultante antes de encerrar.
+
+Resposta obrigatória ausente, variável pertencente a outro conjunto, regra impeditiva e máscara
+duplicada devem retornar erro. Não corrija o JSON substituindo IDs por descrições. Esta rotina gera
+uma combinação; a geração em lote permanece na VCFG0400.
 
 ##### Objetivo
 
@@ -2280,6 +2317,22 @@ cadastro do item.
 
 #### VITE0118 — Regras Itens Configurados
 
+##### Fluxo completo
+
+1. Informe o item em **Listar regras**. A grade mostra apenas regras persistidas para esse item.
+2. Para cadastrar, defina `target_table`, `target_field`, conteúdo ou fórmula, descrição,
+   situação e condições. O campo alvo deve existir no contrato permitido pelo backend.
+3. Salve, copie o ID e reabra a regra. Em **Alterar**, envie o contrato completo para não perder
+   condições existentes.
+4. Em **Avaliar regras**, informe o item e as respostas reais. A avaliação é de conferência e não
+   substitui a geração/persistência da máscara.
+5. Compare os campos calculados e só então use a configuração nos cadastros posteriores.
+6. Exclua apenas regra não mais utilizada e reavalie uma combinação conhecida após a exclusão.
+
+Condição incompleta, característica de outro item, fórmula inválida, campo alvo não permitido ou
+ID de outro tenant devem falhar. Situação inativa conserva a regra para histórico, mas ela não deve
+produzir o mesmo efeito de uma regra ativa.
+
 ##### Objetivo
 
 Definir regras que mapeiam características do configurador para tabelas do sistema (Contábil, Comercial, Custos, Planejamento, etc.). Quando um item configurado é gerado, estas regras determinam automaticamente classificações fiscais, preços, centros de custo e outros parâmetros.
@@ -2328,6 +2381,22 @@ Definir regras que mapeiam características do configurador para tabelas do sist
 ---
 
 #### VITE0129 — Replicação Parâmetros
+
+##### Recarga de descrições configuradas
+
+Esta rotina recarrega as linhas de uma descrição de item a partir dos parâmetros atuais do
+configurador; ela não replica cadastros entre empresas.
+
+1. Localize a descrição em VCFG0500 e copie seu ID persistido.
+2. Use **Abrir descrição** para conferir item, tipo e linhas existentes.
+3. Antes da recarga, registre quais linhas foram personalizadas. **Recarregar linhas** recompõe a
+   estrutura e pode substituir a organização anterior.
+4. Informe o ID e execute uma única vez. Reabra a descrição e confira ordem, quebra de linha,
+   exibição de característica, máscara e texto.
+5. Renderize uma combinação conhecida em VCFG0500 para validar o resultado final.
+
+ID inexistente ou pertencente a outro tenant deve ser recusado. Resultado vazio não autoriza criar
+linhas falsas no navegador; revise o tipo de descrição e as características persistidas.
 
 ##### Objetivo
 
@@ -2430,6 +2499,25 @@ Registrar demandas independentes de itens (previsões de venda, ordens de produ�
 
 #### VPLC0200 — Montagem de Carga
 
+##### Pré-requisitos e montagem
+
+Tenha transportadora, romaneios, notas fiscais de saída e caixa de despacho persistidos. Uma carga
+deve ser montada antes das transições logísticas executadas em VEXP0110.
+
+1. Consulte por situação/transportadora para evitar duplicidade.
+2. Cadastre descrição, transportadora, placa, motorista/documento, rota, origem, destino, caixa e
+   datas planejadas. Use somente códigos existentes.
+3. Copie `loadCode` retornado e use **Abrir carga** para validar o cabeçalho.
+4. Em **Adicionar romaneio**, informe carga, romaneio e sequência. Reabra a carga e confira a
+   inclusão. Para retirar, use carga e romaneio exatos; a remoção não exclui o romaneio original.
+5. Em **Adicionar nota fiscal**, informe carga, romaneio relacionado, ID fiscal, número, chave
+   autorizada quando existente e sequência. Confira se a nota pertence ao mesmo destinatário/fluxo.
+6. Quando a composição estiver correta, prossiga para liberação, carregamento e despacho na
+   VEXP0110.
+
+Carga liberada ou despachada pode bloquear alterações. Duplicidade de sequência, vínculo de outra
+empresa, nota cancelada e romaneio inexistente devem falhar. Não use chave fictícia em produção.
+
 ##### Objetivo
 
 Agrupar pedidos de venda em cargas de transporte, categorizando por tipo de frete (10 opções). Exibe tabela hierárquica com cargas (nível pai) e pedidos (nível filho), totalizadores de cargas, pedidos, valor e peso.
@@ -2479,6 +2567,19 @@ Agrupar pedidos de venda em cargas de transporte, categorizando por tipo de fret
 ---
 
 #### VPLC0211 — Orientações Entrega
+
+##### Cadastro e conferência
+
+1. Consulte as instruções pela carga; marque **Somente ativas** para o uso operacional corrente.
+2. Confirme que carga e cliente já existem e pertencem ao mesmo contexto.
+3. Cadastre `load_code`, `customer_id`, título curto, instrução objetiva e prioridade. Não inclua
+   senhas, documentos pessoais desnecessários ou dados sigilosos no texto livre.
+4. Execute, confira o registro retornado e consulte novamente pela carga.
+5. Antes da liberação, verifique com expedição se as instruções de maior prioridade foram atendidas.
+
+Lista vazia significa ausência de orientação persistida. Carga/cliente inexistente, vínculo entre
+tenants e prioridade fora do contrato devem ser recusados. A rotina não despacha a carga e não
+substitui a confirmação de entrega.
 
 ##### Objetivo
 
@@ -3081,6 +3182,19 @@ Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transpo
 
 #### VVOR0202 — Itens por Fornecedor
 
+##### Consulta e evidências de qualidade
+
+1. Informe o código do fornecedor em **Itens por fornecedor** e localize o ID do vínculo desejado.
+2. Use esse ID — não o código do item — em **Consultar relatórios**.
+3. Para anexar, informe data do relatório, situação, nome original, MIME compatível e selecione o
+   arquivo real PDF/PNG/JPEG. O frontend converte o conteúdo para Base64 e o backend o persiste.
+4. Confirme no retorno nome, tipo, data, situação e ID. Consulte novamente para provar persistência.
+5. Registre observação suficiente para auditoria, sem duplicar o conteúdo do laudo.
+
+Arquivo vazio, MIME incompatível, Base64 inválido ou vínculo de outro tenant deve ser rejeitado.
+Esta tela não altera ranking/preferência comercial; faça isso no cadastro próprio do vínculo. Não
+use nome de arquivo como prova de conteúdo: valide o documento selecionado antes do envio.
+
 ##### Objetivo
 
 Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, em um grid editável de 18 colunas. Inclui modal de PDM e modal de Dados de Qualidade por linha, além de classificação ABC por fornecedor.
@@ -3137,6 +3251,20 @@ Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, 
 ## 6. IMPORTAÇÃO
 
 #### VIMP0101 — Status Logístico da Carga
+
+##### Consulta operacional
+
+1. Informe situação e, quando necessário, período inicial/final. Comece com intervalo curto.
+2. Execute **Listar cargas** e abra o contexto logístico pela carga retornada.
+3. Use **Monitor geral** para volumes e estados consolidados; use **Painel logístico** para eventos
+   de transporte e expedição.
+4. Compare carga, transportadora, destino, datas previstas e situação. Divergência deve ser tratada
+   na rotina responsável, não corrigida nesta consulta.
+5. Atualize a consulta depois de qualquer transição feita em VEXP0110.
+
+Esta tela é somente leitura. Lista vazia significa que não há carga persistida para os filtros e o
+tenant autenticado. Data final anterior à inicial deve ser corrigida. Nunca complete o painel com
+dados locais ou simulados.
 
 ##### Objetivo
 
@@ -3222,6 +3350,22 @@ Cadastrar os tipos de Conhecimento de Transporte Eletrônico (CT-e) utilizados e
 ---
 
 #### VIMP0200 — Console Processos Importação
+
+##### Fluxo do processo
+
+1. Consulte por situação e procure a referência externa antes de cadastrar.
+2. No cadastro informe empresa, fornecedor, referência, Incoterm, moeda, câmbio e critério de
+   rateio. Em `items`, use item persistido, máscara, quantidade, peso e preço FOB unitário. Em
+   `expenses`, classifique a despesa, valor e se compõe o custo do item.
+3. Salve, copie o ID e execute **Abrir processo**. Confira totais e custo nacionalizado por item.
+4. Ao mudar câmbio, item ou despesa pelo processo responsável, execute **Recalcular custo** e
+   confira o novo rateio antes de avançar.
+5. Em **Alterar situação**, use somente a transição permitida pelo fluxo atual. Reabra o processo
+   para confirmar a persistência.
+
+Referência duplicada, fornecedor/item inexistente, moeda/Incoterm inválido, valores negativos,
+critério sem base de rateio e transição fora de ordem devem falhar. O console não importa arquivos
+aduaneiros automaticamente e não deve receber valores inventados para completar a grade.
 
 ##### Objetivo
 
@@ -3438,6 +3582,19 @@ Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção 
 
 #### VINS0201 — Manutenção Ordens Inspeção
 
+##### Criar e apontar uma ordem
+
+1. Garanta que o roteiro está vigente e que pedido, item, fornecedor e almoxarifado existem.
+2. Cadastre a ordem com origem `PURCHASE_ORDER`, pedido/item do pedido, fornecedor, item, máscara,
+   almoxarifado e quantidade recebida. Copie o ID retornado.
+3. Para cada etapa/amostra, use **Registrar resultados** com `step_id`, sequência, índice da
+   amostra, limites e medição. Marque aprovação de acordo com o resultado real, não por conveniência.
+4. Repita até preencher todas as amostras obrigatórias e consulte a ordem na VINS0313.
+5. Encaminhe para análise/tratamento na VINS0206.
+
+Etapa fora do roteiro, amostra duplicada, quantidade não positiva, máscara divergente ou referência
+de outro tenant deve falhar. Esta rotina registra medições; ela não libera nem movimenta estoque.
+
 ##### Objetivo
 
 Gerenciar as ordens de inspeção geradas, com filtros, listagem de resultados e ações inline disponíveis: Tp.Rot. (alterar tipo de roteiro), Inspeção (executar inspeção), Aprovar (aprovar ordem) e Análise (registrar análise técnica).
@@ -3487,6 +3644,22 @@ Gerenciar as ordens de inspeção geradas, com filtros, listagem de resultados e
 ---
 
 #### VINS0206 — Exclusão Ordens Inspeção
+
+##### Tratamento — não exclusão física
+
+O backend trabalha com análise e destinação; a rotina não apaga uma inspeção já auditável.
+
+1. Consulte a ordem e confirme que todos os resultados obrigatórios foram registrados.
+2. Em **Analisar ordem**, informe quantidades conforme, rejeitada, retrabalho e restrita. A soma deve
+   ser compatível com a quantidade inspecionada.
+3. Selecione o tratamento permitido, defina se afeta o score do fornecedor e se haverá movimento.
+   Informe almoxarifados de destino/rejeição e uma justificativa rastreável.
+4. Em **Destinar estoque**, informe aprovadas/rejeitadas e os almoxarifados efetivos. Execute uma
+   única vez e consulte saldos/movimentos.
+5. Confira situação final da ordem e impacto no IQF.
+
+Análise duplicada, soma divergente, destino igual à quarentena quando proibido, saldo insuficiente
+ou estado incompatível devem falhar. Não repita a destinação após timeout sem consultar a ordem.
 
 ##### Objetivo
 
@@ -3570,6 +3743,18 @@ Cadastrar os tipos de roteiro de inspeção, com configuração mínima: código
 
 #### VINS0313 — Consulta Inspeções Recebimento
 
+##### Como consultar
+
+1. Informe situação e/ou fornecedor. Sem filtro a consulta pode ser extensa.
+2. Execute e confira ID, origem, pedido, item, quantidade, roteiro, situação e datas.
+3. Abra o registro específico na VINS0400 para resultados e ocorrências.
+4. Compare com o recebimento do pedido e com os movimentos de estoque antes de apontar divergência.
+5. Depois de uma análise/destinação, atualize a lista para confirmar a nova situação.
+
+A tela é somente leitura. Resultado vazio significa ausência de ordens persistidas para o filtro e
+tenant; não significa falha do frontend. Fornecedor inexistente ou situação inválida deve produzir
+erro claro, sem reutilizar dados da consulta anterior.
+
 ##### Objetivo
 
 Consultar inspeções de recebimento realizadas, com 11 filtros disponíveis e opção de exportar resultados para Excel.
@@ -3613,6 +3798,19 @@ Consultar inspeções de recebimento realizadas, com 11 filtros disponíveis e o
 ---
 
 #### VINS0400 — Consulta Ocorrências/Ordens
+
+##### Auditoria de uma ordem
+
+1. Obtenha o ID pela VINS0313 e informe em **Abrir ordem**.
+2. Confira cabeçalho, roteiro/etapas, amostras, medições, limites, aprovação e tratamento.
+3. Valide se as quantidades analisadas fecham com a quantidade da ordem e se os almoxarifados
+   correspondem à destinação registrada.
+4. Relacione pedido, fornecedor e item com os cadastros operacionais.
+5. Para correção, volte à rotina autorizada conforme a situação; esta consulta não altera dados.
+
+ID inexistente ou de outro tenant deve retornar não encontrado/sem autorização. Não confunda
+resultado vazio com uma ordem sem ocorrências e não mantenha na tela dados de uma ordem anterior
+após erro.
 
 ##### Objetivo
 
@@ -3752,6 +3950,20 @@ Cadastrar os tipos de abono (justificativas) para divergências encontradas em i
 ---
 
 #### VAVF0204 — Envio IQF Fornecedores
+
+##### Cálculo e persistência
+
+1. Confirme fornecedor e período; não sobreponha apurações já fechadas sem justificativa.
+2. Informe `supplier_code`, início/fim, notas comercial e de atendimento. Qualidade e entrega são
+   derivadas dos recebimentos/inspeções disponíveis no período.
+3. Use `persist=false` para simular. Confira total de recebimentos, rejeições, atrasos e notas.
+4. Corrija dados de origem nas rotinas responsáveis; não ajuste o IQF para esconder divergências.
+5. Repita com `persist=true` somente após aprovação. Registre observação que identifique a apuração.
+6. Consulte o histórico no VAVF0300 e valide período e nota final antes de comunicar o fornecedor.
+
+Período invertido, fornecedor inexistente, nota fora da faixa ou ausência de permissão deve falhar.
+A tela calcula/persiste; envio externo depende da integração/canal configurado e não deve ser
+considerado concluído apenas porque o cálculo retornou sucesso.
 
 ##### Objetivo
 
