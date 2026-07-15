@@ -128,14 +128,10 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VPME0102ITE: <Vpme0102ItePage />,
   VENT0200: <Vent0200Page />,
   VENT0210: <Vent0210Page />,
-  VENT0115: <Vpro0100Page />,
-  VENT0202: <Vpro0100Page />,
-  VENT0363: <Vpro0200Page />,
   VITE0114: <Vite0114Page />,
   VITE0115: <Vite0115Page />,
   VITE0116: <Vite0116Page />,
   // Comercial
-  VENT0100: <Vvnd0200Page />,
   // Almoxarifado
   VENT0800: <Vent0800Page />,
   // Contabilidade
@@ -240,18 +236,13 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   // Custos
   VCST0202: <Vcst0202Page />,
   // PDV
-  VPDV0200: <Vvnd0200Page />,
-  VPDV0253: <Vvnd0200Page />,
   VPDV0108: <Vpdv0108Page />,
   VPDV0111: <Vpdv0111Page />,
   VVRE0200: <Vvre0200Page />,
   VRE0203: <Vre0203Page />,
   // Manutenção
-  VMAN0202: <Vpro0500Page />,
-  VMAN0401: <Vpro0500Page />,
   // Suprimento
   // Código legado direcionado à implementação real de Pedido de Compra.
-  VPDC0200: <Vsup0200Page />,
   VCON0100: <Vcon0100Page />,
   VCON0200: <Vcon0200Page />,
   VCON0400: <Vcon0400Page />,

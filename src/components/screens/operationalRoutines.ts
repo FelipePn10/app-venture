@@ -8,6 +8,64 @@ const remove = (path: string, fields: RoutineField[] = [id()], adminOnly = false
 const routine = (code: string, title: string, description: string, operations: RoutineOperation[]): OperationalRoutine => ({ code, title, description, guidance: "Selecione uma operação, preencha os dados e confira o retorno antes de avançar no fluxo.", operations });
 
 export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
+  VENT0100: routine("VENT0100", "Consulta de pedidos de venda", "Consulta pedidos e seus itens sem expor comandos de manutenção; use VPDV0200 quando for necessário alterar o pedido.", [
+    list("/api/sales-order/list"),
+    { label: "Abrir pedido", method: "GET", path: "/api/sales-order/{code}", fields: [id("code", "Pedido")] },
+    { label: "Consultar itens", method: "GET", path: "/api/sales-order/{code}/items", fields: [id("code", "Pedido")] },
+    { label: "Consultar por cliente", method: "GET", path: "/api/sales-order/customer/{customerCode}", fields: [id("customerCode", "Cliente")] },
+  ]),
+  VENT0115: routine("VENT0115", "Roteiros padrão", "Mantém modelos reutilizáveis de fabricação; o roteiro padrão não representa uma ordem nem o roteiro efetivo de um item até ser copiado ou vinculado.", [
+    list("/api/routing/routes"),
+    create("/api/routing/routes", '{"item_code":100,"description":"Roteiro padrão da família","alternative":1,"is_standard":true,"created_by":"UUID_DO_USUARIO"}'),
+    { label: "Abrir modelo", method: "GET", path: "/api/routing/routes/{id}", fields: [id()] },
+    { label: "Adicionar operação", method: "POST", path: "/api/routing/route-operations/{routeId}", fields: [id("routeId", "Roteiro"), json('{"operation_id":1,"sequence":10,"standard_time":1,"situation":"APROVADA"}')] },
+    { label: "Calcular lead time", method: "GET", path: "/api/routing/routes/{id}/lead-time", fields: [id()] },
+  ]),
+  VENT0202: routine("VENT0202", "Roteiro de fabricação por item", "Mantém o roteiro efetivo do item, suas operações, tempos, precedências e recursos usados pela OF, CRP e APS.", [
+    list("/api/routing/routes", [id("item_code", "Item")], ["item_code"]),
+    create("/api/routing/routes", '{"item_code":100,"description":"Roteiro do item","alternative":1,"is_standard":true,"created_by":"UUID_DO_USUARIO"}'),
+    { label: "Abrir roteiro completo", method: "GET", path: "/api/routing/routes/{id}", fields: [id()] },
+    { label: "Adicionar operação", method: "POST", path: "/api/routing/route-operations/{routeId}", fields: [id("routeId", "Roteiro"), json('{"operation_id":1,"sequence":10,"standard_time":1,"setup_time":0.25,"situation":"APROVADA"}')] },
+    { label: "Calcular lead time", method: "GET", path: "/api/routing/routes/{id}/lead-time", fields: [id()] },
+  ]),
+  VENT0363: routine("VENT0363", "Relatório de tempos por centro de trabalho", "Consulta operações e lead times persistidos para analisar carga e tempo padrão; não altera roteiros nem ordens.", [
+    list("/api/routing/operations"),
+    { label: "Tempos do roteiro", method: "GET", path: "/api/routing/routes/{id}", fields: [id("id", "Roteiro")] },
+    { label: "Lead time crítico", method: "GET", path: "/api/routing/routes/{id}/lead-time", fields: [id("id", "Roteiro")] },
+    { label: "Carga CRP do plano", method: "GET", path: "/api/crp/{planCode}", fields: [id("planCode", "Plano")] },
+  ]),
+  VPDV0200: routine("VPDV0200", "Cadastro de pedido de venda", "Cria e mantém o pedido comercial, seus itens e as transições autorizadas antes da expedição.", [
+    list("/api/sales-order/list"),
+    create("/api/sales-order/create", '{"enterprise_code":1,"customer_code":1,"emission_date":"2026-07-14","delivery_date":"2026-07-21","status":"R"}'),
+    { label: "Abrir pedido", method: "GET", path: "/api/sales-order/{code}", fields: [id("code", "Pedido")] },
+    { label: "Adicionar item", method: "POST", path: "/api/sales-order/{code}/items", fields: [id("code", "Pedido"), json('{"item_code":100,"quantity":1,"unit_price":100}')] },
+    { label: "Confirmar pedido", method: "POST", path: "/api/sales-order/{code}/confirm", fields: [id("code", "Pedido")] },
+    { label: "Cancelar pedido", method: "DELETE", path: "/api/sales-order/{code}/cancel", fields: [id("code", "Pedido"), { name: "reason", label: "Motivo", required: true }], destructive: true },
+  ]),
+  VPDV0253: routine("VPDV0253", "Console de acompanhamento de pedidos", "Apresenta carteira, posição, itens, promessas e reprogramações para acompanhamento; não substitui o cadastro VPDV0200.", [
+    list("/api/sales-order/list"),
+    { label: "Pedidos faturados", method: "GET", path: "/api/sales-order/invoiced", fields: [] },
+    { label: "Abrir posição", method: "GET", path: "/api/sales-order/{code}", fields: [id("code", "Pedido")] },
+    { label: "Itens e saldos", method: "GET", path: "/api/sales-order/{code}/items", fields: [id("code", "Pedido")] },
+    { label: "Reprogramações", method: "GET", path: "/api/delivery-reschedules/list/{code}", fields: [id("code", "Pedido")] },
+  ]),
+  VMAN0202: routine("VMAN0202", "Apontamento de ordem de manutenção", "Executa o avanço operacional de uma ordem preventiva já gerada e consulta seu contexto; não altera o plano mestre.", [
+    { label: "Abrir ordem", method: "GET", path: "/api/maintenance/orders/{id}", fields: [id()] },
+    { label: "Iniciar ordem", method: "POST", path: "/api/maintenance/orders/advance", fields: [json('{"order_id":1,"status":"IN_PROGRESS"}')] },
+    { label: "Concluir ordem", method: "POST", path: "/api/maintenance/orders/advance", fields: [json('{"order_id":1,"status":"COMPLETED"}')] },
+  ]),
+  VMAN0401: routine("VMAN0401", "Consulta de ordens de manutenção", "Consulta ordens por plano ou centro de trabalho sem permitir apontamento ou alteração de planejamento.", [
+    { label: "Ordens do plano", method: "GET", path: "/api/maintenance/orders/by-plan/{planId}", fields: [id("planId", "Plano")] },
+    { label: "Ordens do centro", method: "GET", path: "/api/maintenance/orders/by-work-center/{wcId}", fields: [id("wcId", "Centro de trabalho")] },
+    { label: "Abrir ordem", method: "GET", path: "/api/maintenance/orders/{id}", fields: [id()] },
+  ]),
+  VPDC0200: routine("VPDC0200", "Manutenção de pedido de compra", "Cria e mantém capa e itens do pedido de compra. Aprovação, autorização e recebimento ficam isolados em VPDC0210.", [
+    list("/api/purchase-order/list"),
+    create("/api/purchase-order/create", '{"enterprise_code":1,"supplier_code":1,"emission_date":"2026-07-14","currency":"BRL"}'),
+    { label: "Abrir pedido", method: "GET", path: "/api/purchase-order/{code}", fields: [id("code", "Pedido")] },
+    { label: "Adicionar item", method: "POST", path: "/api/purchase-order/{code}/items", fields: [id("code", "Pedido"), json('{"item_code":100,"quantity":10,"unit_price":20,"uom":"UN"}')] },
+    { label: "Cancelar pedido", method: "DELETE", path: "/api/purchase-order/{code}/cancel", fields: [id("code", "Pedido")], destructive: true },
+  ]),
   VENT0204: routine("VENT0204", "Cadastro de Grupo PDM", "Consulta, cadastra e altera famílias PDM vinculadas à empresa, usando o cadastro estrutural persistido no backend.", [
     list("/api/pdm/groups"),
     { label: "Abrir grupo", method: "GET", path: "/api/pdm/groups/{code}", fields: [id("code", "Código do grupo")] },

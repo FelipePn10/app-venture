@@ -79,7 +79,7 @@ for (const path of requiredPaths) {
 if (!host.includes('OPERATIONAL_ROUTINES') || !host.includes('OperationalRoutinePage')) {
   failures.push('registro dinâmico das rotinas ausente no ScreenHost');
 }
-if (!host.includes('VPDC0200: <Vsup0200Page />')) failures.push('VPDC0200 ainda não aponta para o pedido de compra real');
+if (!routines.includes('VPDC0200: routine("VPDC0200"') || !routines.includes('/api/purchase-order/create')) failures.push('VPDC0200 ainda não possui rotina própria para o pedido de compra real');
 if (!fiscalConfigService.includes('new FormData()') || !fiscalConfigService.includes("body.append('logo'")) failures.push('branding fiscal não usa multipart/FormData');
 if (!fiscalConfigService.includes('MAX_BRANDING_LOGO_BYTES = 2 * 1024 * 1024')) failures.push('limite de 2 MB do branding ausente');
 if (!fiscalConfigScreen.includes('Preview persistido') || !fiscalConfigScreen.includes('getFiscalBrandingLogo')) failures.push('preview persistido do logo ausente');
