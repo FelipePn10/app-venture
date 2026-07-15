@@ -1045,53 +1045,47 @@ Gerenciar a contabilidade completa da empresa em conformidade com o SPED ECD (Es
 
 ---
 
-#### VUTL0555 — Cadastro UFs e Cidades
+#### VUTL0555 — Cadastro de UFs e Países
 
 ##### Objetivo
 
-Manter a tabela base de Unidades Federativas (UFs) e municípios brasileiros com código IBGE. Esta é a **TABELA BASE UNIVERSAL** — todos os endereços do sistema (clientes, fornecedores, empresas, notas fiscais) utilizam este cadastro como referência. Sem este cadastro, não é possível criar nenhum registro que exija UF e Município.
+Manter a tabela base de **Unidades Federativas (UFs)** — com sigla, nome, país e **código
+IBGE** — e de **Países**. É a referência de localização usada por endereços de clientes,
+fornecedores, empresas e emitente fiscal.
 
-##### Pré-requisitos
-
-- Nenhum. Esta é uma das primeiras telas a ser populada, idealmente logo após VEMP0100 e VLOC0100.
+> **Importante:** o backend **não** mantém cadastro de municípios/cidades — apenas UF (com
+> IBGE) e País. Onde a UF é exigida (ex.: `cUF` na NF-e), esta é a fonte.
 
 ##### Passo a Passo
 
-1. Acesse **Contabilidade > Cadastro UFs e Cidades** (VUTL0555).
-2. Clique em **+ Novo**.
-3. Preencha:
-   - **UF**: sigla da Unidade Federativa com 2 caracteres (ex: `SP`, `RJ`, `MG`).
-   - **Nome UF**: nome por extenso do estado (ex: `São Paulo`, `Rio de Janeiro`).
-   - **Cód. IBGE**: código IBGE do município com 7 dígitos (ex: `3550308` para São Paulo/SP).
-   - **Município**: nome do município por extenso (ex: `São Paulo`).
-4. Clique em **Salvar**.
-5. Repita para cada município que será utilizado nos cadastros do sistema.
+1. Acesse **Contabilidade > Cadastro de UFs e Países** (VUTL0555) e clique em **Carregar**.
+2. Em **Unidade Federativa**, informe **Sigla** (2 caracteres, ex.: `SP`), **Nome**,
+   **País** e, opcionalmente, o **código IBGE**. Clique em **Criar UF**.
+3. Para editar, clique numa UF na lista, ajuste e clique em **Atualizar UF**.
+4. Em **Países**, cadastre a sigla e o nome de um novo país quando necessário.
 
 ##### Campos
 
-| Campo | Tipo | Obrigatório | Opções | Função |
-|-------|------|-------------|--------|--------|
-| UF | texto | Sim | — | Sigla da Unidade Federativa (2 caracteres, ex: `SP`) |
-| Nome UF | texto | Sim | — | Nome por extenso do estado (ex: `São Paulo`) |
-| Cód. IBGE | texto | Não | — | Código IBGE do município com 7 dígitos (ex: `3550308`) |
-| Município | texto | Sim | — | Nome do município (ex: `São Paulo`, `Campinas`) |
+| Campo | Tipo | Obrigatório | Função |
+|-------|------|-------------|--------|
+| Sigla | texto (2) | Sim | Sigla da UF (ex.: `SP`) |
+| Nome | texto | Sim | Nome do estado (ex.: `São Paulo`) |
+| País | select | Sim | País da UF (sigla, ex.: `BR`) |
+| IBGE | texto | Não | Código IBGE da UF |
 
 ##### Observações importantes
 
-- Esta tela é a **referência universal de endereços** do sistema. Qualquer cadastro que contenha campos de UF e Município (clientes, fornecedores, empresas, emitente fiscal, transportadoras) valida os dados contra esta tabela.
-- O código IBGE de 7 dígitos é obrigatório para a correta emissão de NF-e (campo `cMun` no XML da nota fiscal).
-- Recomenda-se popular esta tabela com os municípios de atuação da empresa antes de iniciar os cadastros operacionais.
-- A tela está localizada no módulo Contabilidade, mas seu uso é **transversal a todo o ERP**.
+- A escrita usa `/api/location/ufs` e `/api/location/countries` (backend real).
+- Municípios não têm cadastro próprio; endereços que precisam de cidade a tratam como
+  texto livre no respectivo cadastro.
 
 ##### Telas Relacionadas
 
 | Tela | Por que se conecta |
 |------|--------------------|
-| **VCLI0500 (Cadastro de Cliente)** | Utiliza UFs e Cidades para endereços de cobrança, entrega e faturamento. |
-| **VSUP0500 (Cadastro de Fornecedor)** | Utiliza UFs e Cidades para endereço do fornecedor. |
-| **VEMP0100 (Cadastro Empresa)** | Utiliza UFs e Cidades para endereço da sede e filiais. |
-| **VFIS0100 (Configuração Fiscal)** | Utiliza UFs e Cidades para endereço do emitente fiscal. |
-| **VLOC0100 (Localização Países/UFs)** | Cadastro complementar de países e UFs com códigos internacionais. |
+| **VCLI0500 (Cadastro de Cliente)** | Endereços usam a UF cadastrada. |
+| **VSUP0500 (Cadastro de Fornecedor)** | Endereço do fornecedor usa a UF. |
+| **VFIS0100 (Configuração Fiscal)** | Emitente fiscal usa a UF (NF-e). |
 
 ---
 
@@ -2339,8 +2333,10 @@ Definir regras que mapeiam características do configurador para tabelas do sist
 
 ##### Pré-requisitos
 
-- Grupo PDM, Modificadores e Atributos (VITE0114, VITE0115, VITE0116) configurados.
+- **Características e variáveis** do configurador (cfg_*) cadastradas para o item — são elas
+  que formam as **condições** (característica ∘ operador ∘ variável) da regra.
 - Tabelas de destino parametrizadas (plano de contas, tabelas de preço, etc.).
+- Backend real: `/api/configurator/item-rules` (criar/alterar/excluir/avaliar).
 
 ##### Passo a passo
 
@@ -3250,774 +3246,326 @@ Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, 
 
 ## 6. IMPORTAÇÃO
 
+
+#### VIMP0200 — Console de Processos de Importação
+
+##### Objetivo
+
+Centralizar os **processos de importação** e apurar o **custo nacionalizado (landed)** por
+item. Um processo tem capa (moeda, câmbio, incoterm, base de rateio), **itens** (com FOB,
+quantidade e peso) e **despesas** (frete, seguro, taxas…). As despesas marcadas para
+compor o custo são **rateadas** entre os itens pela base escolhida, formando o custo
+unitário nacionalizado.
+
+##### Passo a passo
+
+1. Acesse **VIMP0200**. Na **Capa**, informe empresa, fornecedor, referência (DI/DUIMP),
+   incoterm, **moeda**, **câmbio** e a **base de rateio** (VALUE / WEIGHT / QUANTITY).
+2. Em **Itens**, adicione item, quantidade, peso e **FOB unitário**.
+3. Em **Despesas**, adicione tipo e valor, marcando **No custo do item** quando a despesa
+   deve ser rateada.
+4. Clique em **Criar processo**. O detalhe mostra o **custo nacionalizado unitário** por
+   item.
+5. Use **Recalcular landed** após ajustes e mude o **status** (OPEN → NATIONALIZED /
+   CANCELLED) — `NATIONALIZED` nacionaliza o custo.
+
+##### Campos (capa)
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| Moeda / Câmbio | Texto/Número | Sim | Moeda estrangeira e taxa de conversão |
+| Incoterm | Texto | Não | Ex.: FOB, CIF |
+| Base de rateio | Select | Sim | VALUE · WEIGHT · QUANTITY |
+| Referência | Texto | Não | Número da DI/DUIMP |
+
+##### Observações importantes
+
+- O custo nacionalizado = FOB convertido pelo câmbio + rateio das despesas ÷ quantidade.
+- Só despesas com **No custo do item** entram no rateio; as demais ficam informativas.
+
+##### Telas relacionadas
+
+| Tela | Relação |
+|------|---------|
+| VIMP0101 | Status Logístico da Carga — acompanhamento do status |
+| VPDC0200 | Pedido de Compra — origem dos itens importados |
+
+---
+
 #### VIMP0101 — Status Logístico da Carga
 
-##### Consulta operacional
-
-1. Informe situação e, quando necessário, período inicial/final. Comece com intervalo curto.
-2. Execute **Listar cargas** e abra o contexto logístico pela carga retornada.
-3. Use **Monitor geral** para volumes e estados consolidados; use **Painel logístico** para eventos
-   de transporte e expedição.
-4. Compare carga, transportadora, destino, datas previstas e situação. Divergência deve ser tratada
-   na rotina responsável, não corrigida nesta consulta.
-5. Atualize a consulta depois de qualquer transição feita em VEXP0110.
-
-Esta tela é somente leitura. Lista vazia significa que não há carga persistida para os filtros e o
-tenant autenticado. Data final anterior à inicial deve ser corrigida. Nunca complete o painel com
-dados locais ou simulados.
-
 ##### Objetivo
 
-Acompanhar o status logístico de cargas de importação, registrando etapas como embarque, trânsito, chegada ao porto, desembaraço e liberação.
-
-##### Pré-requisitos
-
-- Processo de importação iniciado.
-- Cargas de importação registradas.
+Acompanhar o **status logístico** dos processos de importação em um quadro: `OPEN` (em
+trânsito/aberto) → `NATIONALIZED` (nacionalizado) → `CANCELLED`. O cadastro e o custeio
+ficam no **VIMP0200**; esta tela é o painel de acompanhamento e transição rápida.
 
 ##### Passo a passo
 
-1. Acesse **VIMP0101** pelo menu _Importação > Status Logístico da Carga_.
-2. Selecione a **Carga** de importação.
-3. Visualize o status atual e o histórico de etapas.
-4. Para atualizar, registre a nova etapa com data e observações.
-5. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Carga | Select | Sim | Identificador da carga de importação |
-| Status Atual | Read-only | — | Situação logística corrente |
-| Etapa | Select | Sim | Nova etapa registrada |
-| Data | Date | Sim | Data da ocorrência da etapa |
-| Observação | Texto (255) | Não | Detalhes da etapa |
+1. Acesse **VIMP0101** e clique em **Carregar**. Filtre por **Status** se quiser.
+2. Cada linha mostra o processo (#, fornecedor, moeda, referência, status).
+3. Use os botões de ação para **transicionar o status** do processo.
 
 ##### Observações importantes
 
-- As etapas típicas incluem: Embarque Origem, Em Trânsito, Chegada Porto, Desembaraço, Liberação, Entrega.
-- O histórico de etapas é cumulativo e não pode ser alterado retroativamente.
+- É a mesma base de dados do VIMP0200 — a transição de status reflete nas duas telas.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VIMP0200 | Console Processos Importação — visão consolidada do processo |
-| VIMP0102 | Tipos Conhecimentos Transporte — CT-e vinculados à carga |
+| VIMP0200 | Console de Processos de Importação — cadastro e custeio |
 
 ---
 
-### VIMP0102 — Tipos Conhecimentos Transporte
-
-> Integração vigente: esta rotina não utiliza mais a API legada `/api/importacao`.
-> Cadastro, consulta e autorização são executados em `/api/fiscal/cte`, e todos os
-> registros exibidos são conhecimentos persistidos no backend.
+#### VIMP0102 — Conhecimentos de Transporte (CT-e)
 
 ##### Objetivo
 
-Cadastrar os tipos de Conhecimento de Transporte Eletrônico (CT-e) utilizados em processos de importação.
-
-##### Pré-requisitos
-
-- Nenhum.
+Cadastrar, consultar e **autorizar** conhecimentos de transporte eletrônicos (CT-e)
+vinculáveis às entradas fiscais e aos processos de importação. É uma rotina operacional
+(formulário direto sobre a API fiscal de CT-e).
 
 ##### Passo a passo
 
-1. Acesse **VIMP0102** pelo menu _Importação > Tipos Conhecimentos Transporte_.
-2. Clique em **Novo** (F2).
-3. Preencha o **Código** e a **Descrição** do tipo de CT-e.
-4. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Código | Texto (10) | Sim | Código do tipo de CT-e |
-| Descrição | Texto (120) | Sim | Descrição do tipo |
-
-##### Observações importantes
-
-- Tabela de domínio — tipos cadastrados aqui são referenciados nos processos de importação.
-- Tipos típicos: Marítimo, Aéreo, Rodoviário, Ferroviário, Multimodal.
+1. Acesse **VIMP0102**. Escolha a operação: **Consultar**, **Cadastrar** ou **Autorizar**.
+2. Para cadastrar, preencha os dados do CT-e (número, série, emitente, valores, rateio).
+3. Para autorizar, informe o código do CT-e.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VIMP0101 | Status Logístico da Carga — CT-e vinculado à carga |
-| VIMP0200 | Console Processos Importação — CT-e do processo |
-
----
-
-#### VIMP0200 — Console Processos Importação
-
-##### Fluxo do processo
-
-1. Consulte por situação e procure a referência externa antes de cadastrar.
-2. No cadastro informe empresa, fornecedor, referência, Incoterm, moeda, câmbio e critério de
-   rateio. Em `items`, use item persistido, máscara, quantidade, peso e preço FOB unitário. Em
-   `expenses`, classifique a despesa, valor e se compõe o custo do item.
-3. Salve, copie o ID e execute **Abrir processo**. Confira totais e custo nacionalizado por item.
-4. Ao mudar câmbio, item ou despesa pelo processo responsável, execute **Recalcular custo** e
-   confira o novo rateio antes de avançar.
-5. Em **Alterar situação**, use somente a transição permitida pelo fluxo atual. Reabra o processo
-   para confirmar a persistência.
-
-Referência duplicada, fornecedor/item inexistente, moeda/Incoterm inválido, valores negativos,
-critério sem base de rateio e transição fora de ordem devem falhar. O console não importa arquivos
-aduaneiros automaticamente e não deve receber valores inventados para completar a grade.
-
-##### Objetivo
-
-Consultar e manter processos de importação usando a camada operacional `/api/procurement/import-processes`. Todos os itens, despesas, custos e situações exibidos são registros persistidos pelo backend.
-
-##### Pré-requisitos
-
-- Empresa, fornecedor estrangeiro e itens cadastrados.
-- Moeda, câmbio, Incoterm e critério de rateio definidos pelo processo de importação.
-
-##### Passo a passo
-
-1. Em **Consultar**, deixe o status vazio para todos os processos ou informe a situação desejada. Execute e selecione somente IDs retornados pelo backend.
-2. Para criar, informe empresa, fornecedor, referência única, Incoterm, moeda, taxa de câmbio e base de rateio (`VALUE`, `QUANTITY` ou `WEIGHT`).
-3. Adicione os itens reais com código, máscara, quantidade, peso e preço FOB unitário.
-4. Adicione cada despesa efetiva, informando tipo, valor e se compõe o custo do item. Não inclua estimativas como se fossem despesas confirmadas sem a identificação exigida pelo processo.
-5. Execute **Cadastrar** e confira ID, referência e situação retornados.
-6. Em **Abrir processo**, informe o ID para revisar itens, despesas, valores rateados e custo nacionalizado.
-7. Use **Recalcular custo** depois de corrigir câmbio, item ou despesa. Confira o custo individual e o total antes de aprovar.
-8. Use **Alterar situação** somente quando os pré-requisitos da etapa estiverem concluídos. Reabra o processo para confirmar a transição persistida.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Empresa / fornecedor | Número | Sim | Identificadores persistidos do processo |
-| Referência | Texto | Sim | Identificação única da importação |
-| Incoterm / moeda | Texto | Sim | Condição internacional e moeda negociada |
-| Taxa de câmbio | Decimal | Sim | Conversão usada no custo nacionalizado |
-| Base de rateio | Seleção | Sim | Valor, quantidade ou peso |
-| Itens | Grade | Sim | Quantidade, peso e preço FOB dos itens reais |
-| Despesas | Grade | Não | Frete, seguro, impostos e demais valores efetivos |
-
-##### Observações importantes
-
-- A antiga implementação local com pedidos, notas, custos e anexos demonstrativos foi removida. A rotina não possui fallback ou dados mock.
-- Após timeout, abra o processo antes de repetir cadastro, recálculo ou mudança de situação.
-- Fornecedor/item de outro tenant, taxa inválida e transição de situação incompatível são recusados.
-
-##### Telas relacionadas
-
-| Tela | Relação |
-|------|---------|
-| VIMP0101 | Status Logístico da Carga — status por carga |
-| VIMP0102 | Tipos Conhecimentos Transporte — CT-e dos processos |
-| VSUP0500 | Cadastro de Fornecedor — fornecedores estrangeiros |
-| VPDC0200 | Pedido de Compra — pedidos de importação |
-| VINS0200 | Roteiro Inspeção — inspeção no recebimento da importação |
+| VIMP0200 | Console de Processos de Importação |
+| VPDC0200 | Pedido de Compra — entradas vinculadas |
 
 ---
 
 ## 7. INSPEÇÃO
 
-#### VINS0105 — Tipos de Ocorrências
+#### VINS0200 — Cadastro do Roteiro de Inspeção
 
 ##### Objetivo
 
-Configurar os tipos de ocorrências de inspeção com 4 layouts disponíveis (Padrão, Simplificado, Detalhado, Relatório Técnico) e 7 toggles que habilitam/desabilitam seções do formulário de ocorrência.
-
-##### Pré-requisitos
-
-- Nenhum.
+Definir **como** um item (ou uma classificação de suprimentos) é inspecionado no
+recebimento: uma **capa** (base ITEM/CLASSIFICATION, almoxarifado de inspeção, tipos e
+vigência) e uma sequência de **etapas** de inspeção. As ordens de inspeção geradas no
+recebimento seguem esse roteiro.
 
 ##### Passo a passo
 
-1. Acesse **VINS0105** pelo menu _Inspeção > Tipos de Ocorrências_.
-2. Clique em **Novo** (F2).
-3. Preencha a **Descrição** do tipo de ocorrência.
-4. Selecione o **Layout**: _Padrão_, _Simplificado_, _Detalhado_ ou _Relatório Técnico_.
-5. Ative/desative os **7 toggles** de seções conforme a necessidade (ex.: "Exige Foto", "Exige Análise", "Exige Plano de Ação", etc.).
-6. Clique em **Salvar** (F9).
+1. Acesse **VINS0200**. Na **Capa**, escolha a **Base** (por item ou por classificação),
+   informe o item/classificação, o **almoxarifado de inspeção** e a **vigência**.
+2. Em **Etapas de inspeção**, para cada etapa informe o nome, a **espécie** (VALUE /
+   ATTRIBUTE / STRUCTURE), a **forma de apontamento**, o tamanho da **amostra** e, para
+   medições, os valores **nominal / mín / máx**. Clique em **+ etapa**.
+3. Clique em **Criar roteiro**. Consulte um roteiro existente pelo **id**.
 
-##### Campos
+##### Campos (etapa)
 
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Descrição | Texto (120) | Sim | Nome do tipo de ocorrência |
-| Layout | Select | Sim | Padrão / Simplificado / Detalhado / Relatório Técnico |
-| Toggle 1–7 | Toggle (7) | Não | Seções configuráveis do formulário |
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| Espécie | Select | VALUE (medição) · ATTRIBUTE (passa/não passa) · STRUCTURE |
+| Apontamento | Select | ALL_MEASUREMENTS · SINGLE_INTERVAL · MULTIPLE_INTERVAL · STATUS_ONLY |
+| Amostra | Número | Tamanho da amostra a inspecionar |
+| Nominal / Mín / Máx | Número | Faixa de aceitação para etapas de medição |
 
 ##### Observações importantes
 
-- Os **7 toggles** controlam quais campos e seções aparecem ao registrar uma ocorrência daquele tipo (ex.: fotos obrigatórias, análise de causa, ação corretiva).
-- O layout **Relatório Técnico** inclui campos adicionais para laudos e evidências técnicas.
+- Ao receber mercadoria com roteiro ativo, o sistema abre uma **ordem de inspeção**
+  automaticamente e a mercadoria segue para o almoxarifado de inspeção.
+- A busca do roteiro prefere o específico por item/máscara e cai para a classificação.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0106 | Ocorrências — tipo de ocorrência selecionado ao registrar |
-| VINS0400 | Consulta Ocorrências/Ordens — filtro por tipo de ocorrência |
+| VINS0201 | Manutenção das Ordens de Inspeções — executa o roteiro |
+| VAVR0200 | Aviso de Recebimento — origem das ordens |
 
 ---
 
-#### VINS0106 — Ocorrências
+#### VINS0201 — Manutenção das Ordens de Inspeções
 
 ##### Objetivo
 
-Registrar ocorrências de inspeção (não conformidades, divergências, avisos, desvios de qualidade) vinculadas a fornecedor, item e ordem. Suporta abono com justificativa e fechamento com 4 status possíveis.
-
-##### Pré-requisitos
-
-- Tipos de Ocorrências (VINS0105) cadastrados.
-- Fornecedor (VSUP0500), Item (VENT0200) e Ordem de Compra ou Inspeção associados.
+Gerar e **analisar** ordens de inspeção de recebimento. Cada ordem representa uma
+quantidade a inspecionar; a **análise** classifica o resultado (conforme, rejeitada,
+retrabalho, restrita), define o **tratamento** e, opcionalmente, **movimenta o estoque**
+(fechando o ciclo inspeção → destino).
 
 ##### Passo a passo
 
-1. Acesse **VINS0106** pelo menu _Inspeção > Ocorrências_.
-2. Clique em **Novo** (F2).
-3. Selecione o **Fornecedor**.
-4. Selecione o **Tipo**: _NC_ (Não Conformidade), _DI_ (Divergência), _AV_ (Aviso), _DQ_ (Desvio de Qualidade).
-5. Informe o **Item** e a **Ordem** relacionados.
-6. Descreva a ocorrência.
-7. Se a ocorrência for **Abonada**, ative o toggle — o campo **Motivo do Abono** torna-se visível e obrigatório.
-8. No **Fechamento**, selecione: _Aprovado_, _Reprovado_, _Devolvido_ ou _Retrabalho_.
-9. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Fornecedor | Select | Sim | Fornecedor relacionado |
-| Tipo | Select | Sim | NC / DI / AV / DQ |
-| Item | Select | Sim | Item objeto da ocorrência |
-| Ordem | Select | Sim | Ordem de compra/inspeção relacionada |
-| Descrição | Textarea | Sim | Detalhamento da ocorrência |
-| Abonado | Toggle | Não | Indica se a divergência foi aceita |
-| Motivo Abono | Textarea | Condicional | Justificativa (obrigatório se Abonado = Sim) |
-| Fechamento | Select | Sim | Aprovado / Reprovado / Devolvido / Retrabalho |
+1. Acesse **VINS0201** e clique em **Carregar** para listar as ordens.
+2. Em **Gerar ordem de inspeção**, informe a origem, item, almoxarifado e quantidade e
+   clique em **Gerar ordem** (para inspeção manual).
+3. Selecione uma ordem na lista e, em **Análise**, informe as quantidades por resultado, o
+   **tratamento** e se **afeta o IQF**. Marque **Movimentar estoque** para transferir as
+   quantidades da quarentena para os destinos (disponível / rejeição).
+4. Clique em **Registrar análise**.
 
 ##### Observações importantes
 
-- Tipos de ocorrência: **NC** = Não Conformidade crítica, **DI** = Divergência, **AV** = Aviso/observação, **DQ** = Desvio de Qualidade.
-- **Abonado = Sim** significa que a divergência foi aceita (ex.: diferença de quantidade aceita comercialmente).
-- O **Fechamento** define o destino do item: Aprovado segue para estoque; Reprovado/Devolvido retorna ao fornecedor; Retrabalho passa por correção.
+- **Conforme** e **restrita** vão para o almoxarifado disponível; **retrabalho** e
+  **rejeitada** para seus destinos; a soma não pode exceder a quantidade da ordem.
+- Divergências que **afetam o IQF** entram no cálculo do índice do fornecedor.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0105 | Tipos de Ocorrências — layout condicional do formulário |
-| VSUP0500 | Cadastro de Fornecedor — fornecedor |
-| VENT0200 | Cadastro de Itens — item |
-| VINS0200 | Roteiro Inspeção — ordem de inspeção |
-| VINS0400 | Consulta Ocorrências/Ordens — listagem e análise |
-| VAVF0105 | Tipos Abono Divergências — motivos de abono |
+| VINS0200 | Roteiro de Inspeção — define as etapas |
+| VINS0313 | Consulta de Inspeções de Recebimento |
+| VAVF0204 | Envio de IQF — usa os resultados |
 
 ---
 
-#### VINS0200 — Roteiro Inspeção
+#### VINS0206 — Tratamento das Ordens de Inspeção
 
 ##### Objetivo
 
-Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção para itens recebidos, com cabeçalho de 10 campos informativos, sequências dinâmicas de inspeção e modal por sequência com seleção de espécie/tipo (valor, atributo ou estrutura).
-
-##### Pré-requisitos
-
-- Item cadastrado em VENT0200.
-- Fornecedor cadastrado em VSUP0500.
-- Tipos de Roteiro Inspeção (VINS0211) configurados.
+Analisar as quantidades inspecionadas e **efetivar a destinação física** (aprovado,
+rejeitado, retrabalho, restrita), com movimentação de estoque da quarentena para os
+destinos. É uma rotina operacional (formulário direto sobre a análise/disposição da ordem
+de inspeção) — a mesma operação disponível de forma guiada em VINS0201.
 
 ##### Passo a passo
 
-1. Acesse **VINS0200** pelo menu _Inspeção > Roteiro Inspeção_.
-2. Preencha os **10 campos do cabeçalho**: item, fornecedor, tipo de roteiro, ordem de compra, quantidade, lote, data, etc.
-3. Clique em **Nova Sequência** para adicionar uma etapa de inspeção.
-4. No **modal da sequência**, defina:
-   - **Descrição** da etapa.
-   - **Espécie/Tipo** via radio button: _Valor_ (medição numérica), _Atributo_ (aprovação visual/binária) ou _Estrutura_ (inspeção hierárquica).
-   - Conforme a espécie selecionada, campos específicos são exibidos (valor nominal, tolerância, unidade para Valor; critério de aprovação para Atributo).
-5. Repita para cada etapa necessária.
-6. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Local | Tipo | Obrigatório | Descrição |
-|-------|-------|------|-------------|-----------|
-| Item | Cabeçalho | Select | Sim | Item a ser inspecionado |
-| Fornecedor | Cabeçalho | Select | Sim | Fornecedor do item |
-| Tipo Roteiro | Cabeçalho | Select | Sim | Tipo de roteiro (ref. VINS0211) |
-| Ordem de Compra | Cabeçalho | Select | Não | OC de referência |
-| Quantidade | Cabeçalho | Number | Sim | Quantidade do lote a inspecionar |
-| Lote | Cabeçalho | Texto (20) | Não | Número do lote |
-| Data | Cabeçalho | Date | Sim | Data da inspeção |
-| + outros 3 campos | Cabeçalho | Varia | Não | Informações complementares |
-| Sequência | Sequência | Number (auto) | Sim | Ordem da etapa |
-| Descrição | Sequência | Texto (120) | Sim | Descrição da etapa de inspeção |
-| Espécie/Tipo | Sequência (modal) | Select | Sim | Valor / Atributo / Estrutura |
-| Valor Nominal | Modal (Valor) | Condicional | Medida alvo |
-| Tolerância +/- | Modal (Valor) | Condicional | Faixa de aceitação |
-| Unidade | Modal (Valor) | Condicional | Unidade da medida |
-| Critério Aprovação | Modal (Atributo) | Condicional | Condição de aprovação/reprovação |
-
-##### Observações importantes
-
-- Esta é a **tela mais rica** de inspeção — combina cabeçalho, sequências dinâmicas e modais contextuais.
-- **Espécie Valor**: para medições quantitativas (ex.: diâmetro 10mm +/- 0.1mm).
-- **Espécie Atributo**: para verificações qualitativas (ex.: cor conforme, sem arranhões).
-- **Espécie Estrutura**: para inspeção hierárquica de conjuntos e subconjuntos.
-- O resultado da inspeção determina se o item segue para estoque (aprovado) ou é bloqueado (reprovado).
+1. Acesse **VINS0206** e escolha a operação (consultar ordem, analisar, dispor).
+2. Informe o id da ordem e as quantidades por resultado + destinos de estoque.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VENT0200 | Cadastro de Itens — item inspecionado |
-| VSUP0500 | Cadastro de Fornecedor — fornecedor |
-| VINS0211 | Tipos Roteiro Inspeção — tipo de roteiro usado |
-| VINS0201 | Manutenção Ordens Inspeção — ordens geradas a partir do roteiro |
-| VINS0313 | Consulta Inspeções Recebimento — resultados das inspeções |
-| VVOR0202 | Itens por Fornecedor — dados de qualidade do item/fornecedor |
+| VINS0201 | Manutenção das Ordens de Inspeções — mesma análise, guiada |
+| VINS0200 | Roteiro de Inspeção |
 
 ---
 
-#### VINS0201 — Manutenção Ordens Inspeção
-
-##### Criar e apontar uma ordem
-
-1. Garanta que o roteiro está vigente e que pedido, item, fornecedor e almoxarifado existem.
-2. Cadastre a ordem com origem `PURCHASE_ORDER`, pedido/item do pedido, fornecedor, item, máscara,
-   almoxarifado e quantidade recebida. Copie o ID retornado.
-3. Para cada etapa/amostra, use **Registrar resultados** com `step_id`, sequência, índice da
-   amostra, limites e medição. Marque aprovação de acordo com o resultado real, não por conveniência.
-4. Repita até preencher todas as amostras obrigatórias e consulte a ordem na VINS0313.
-5. Encaminhe para análise/tratamento na VINS0206.
-
-Etapa fora do roteiro, amostra duplicada, quantidade não positiva, máscara divergente ou referência
-de outro tenant deve falhar. Esta rotina registra medições; ela não libera nem movimenta estoque.
+#### VINS0313 — Consulta de Inspeções de Recebimento
 
 ##### Objetivo
 
-Gerenciar as ordens de inspeção geradas, com filtros, listagem de resultados e ações inline disponíveis: Tp.Rot. (alterar tipo de roteiro), Inspeção (executar inspeção), Aprovar (aprovar ordem) e Análise (registrar análise técnica).
-
-##### Pré-requisitos
-
-- Ordens de inspeção geradas via VINS0200.
+Consulta somente-leitura das **ordens de inspeção de recebimento**, com filtro por status.
 
 ##### Passo a passo
 
-1. Acesse **VINS0201** pelo menu _Inspeção > Manutenção Ordens Inspeção_.
-2. Utilize os **filtros** para localizar ordens (por status, item, fornecedor, período, etc.).
-3. Na listagem de resultados, utilize as **ações inline** em cada linha:
-   - **Tp.Rot.**: altera o tipo de roteiro aplicado à ordem.
-   - **Inspeção**: abre a tela de execução da inspeção.
-   - **Aprovar**: aprova a ordem (pula etapas pendentes se permitido).
-   - **Análise**: registra análise técnica sobre o resultado.
-4. Clique em **Salvar** (F9) após cada ação.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Filtro Status | Select | Não | Pendente / Em Execução / Aprovada / Reprovada |
-| Filtro Item | Select | Não | Item específico |
-| Filtro Fornecedor | Select | Não | Fornecedor específico |
-| Filtro Período | Date (range) | Não | Período de criação da ordem |
-| Tp.Rot. | Button (inline) | Não | Altera o tipo de roteiro |
-| Inspeção | Button (inline) | Não | Executa a inspeção |
-| Aprovar | Button (inline) | Não | Aprova a ordem |
-| Análise | Button (inline) | Não | Registra análise técnica |
-
-##### Observações importantes
-
-- As **ações inline** são exibidas condicionalmente conforme o status da ordem (ex.: "Aprovar" só aparece para ordens com inspeção concluída).
-- A ação **Tp.Rot.** permite trocar o roteiro de inspeção se necessário (ex.: de normal para rigoroso).
+1. Acesse **VINS0313**, opcionalmente informe um **status** e clique em **Consultar**.
+2. A tabela lista as ordens (#, item, quantidade, origem, fornecedor, status, data).
+3. Exporte se necessário.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0200 | Roteiro Inspeção — origem das ordens |
-| VINS0211 | Tipos Roteiro Inspeção — tipos disponíveis para Tp.Rot. |
-| VINS0206 | Exclusão Ordens Inspeção — ordens podem ser excluídas em lote |
-| VINS0313 | Consulta Inspeções Recebimento — consulta os resultados |
+| VINS0201 | Manutenção das Ordens de Inspeções |
 
 ---
 
-#### VINS0206 — Exclusão Ordens Inspeção
-
-##### Tratamento — não exclusão física
-
-O backend trabalha com análise e destinação; a rotina não apaga uma inspeção já auditável.
-
-1. Consulte a ordem e confirme que todos os resultados obrigatórios foram registrados.
-2. Em **Analisar ordem**, informe quantidades conforme, rejeitada, retrabalho e restrita. A soma deve
-   ser compatível com a quantidade inspecionada.
-3. Selecione o tratamento permitido, defina se afeta o score do fornecedor e se haverá movimento.
-   Informe almoxarifados de destino/rejeição e uma justificativa rastreável.
-4. Em **Destinar estoque**, informe aprovadas/rejeitadas e os almoxarifados efetivos. Execute uma
-   única vez e consulte saldos/movimentos.
-5. Confira situação final da ordem e impacto no IQF.
-
-Análise duplicada, soma divergente, destino igual à quarentena quando proibido, saldo insuficiente
-ou estado incompatível devem falhar. Não repita a destinação após timeout sem consultar a ordem.
+#### VINS0400 — Consulta de Ocorrências / Ordens de Inspeção
 
 ##### Objetivo
 
-Realizar exclusão em lote de ordens de inspeção, com seleção por checkbox em duas abas: Ordens (seleção do que excluir) e Exclusão (confirmação e log da exclusão).
-
-##### Pré-requisitos
-
-- Ordens de inspeção existentes em VINS0201.
+Consulta consolidada, com duas abas: **Ocorrências** (registros operacionais de
+suprimento) e **Ordens de inspeção**.
 
 ##### Passo a passo
 
-1. Acesse **VINS0206** pelo menu _Inspeção > Exclusão Ordens Inspeção_.
-2. Na aba **Ordens**, filtre as ordens desejadas (por período, status, item, etc.).
-3. Marque os **checkboxes** das ordens que deseja excluir.
-4. Navegue para a aba **Exclusão**.
-5. Confira a lista de ordens selecionadas para exclusão.
-6. Clique em **Excluir** e confirme a operação.
-
-##### Campos
-
-| Campo | Aba | Tipo | Obrigatório | Descrição |
-|-------|-----|------|-------------|-----------|
-| Checkbox | Ordens | Checkbox | Não | Seleciona ordem para exclusão |
-| Ordem | Ordens | Read-only | — | Número da ordem |
-| Item | Ordens | Read-only | — | Item da ordem |
-| Status | Ordens | Read-only | — | Status atual |
-| Lista Exclusão | Exclusão | Read-only | — | Ordens selecionadas para exclusão |
-
-##### Observações importantes
-
-- A exclusão é uma operação **em lote** e irreversível — utilize com cautela.
-- Apenas ordens em status Pendente podem ser excluídas (ordens em execução ou concluídas são protegidas).
-- O **log de exclusão** registra data, usuário e ordens excluídas para auditoria.
+1. Acesse **VINS0400** e escolha a aba **Ocorrências** ou **Ordens de inspeção**.
+2. Para ocorrências, filtre por **Tipo**; clique em **Consultar**.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0201 | Manutenção Ordens Inspeção — origem das ordens |
-| VINS0200 | Roteiro Inspeção — geração de novas ordens |
+| VINS0106 | Cadastro de Ocorrências |
+| VINS0201 | Manutenção das Ordens de Inspeções |
 
 ---
 
-#### VINS0211 — Tipos Roteiro Inspeção
+#### VINS0106 — Cadastro de Ocorrências
 
 ##### Objetivo
 
-Cadastrar os tipos de roteiro de inspeção, com configuração mínima: código (auto-gerado) e descrição.
-
-##### Pré-requisitos
-
-- Nenhum.
+Registrar **ocorrências operacionais** de suprimento (registros genéricos por tipo:
+checklist de recebimento, avaliação de fornecedor, etc.), com status e vínculo opcional a
+fornecedor/item.
 
 ##### Passo a passo
 
-1. Acesse **VINS0211** pelo menu _Inspeção > Tipos Roteiro Inspeção_.
-2. O **código é auto-gerado** sequencialmente.
-3. Preencha a **Descrição** do tipo de roteiro (ex.: "Inspeção Normal", "Inspeção Rigorosa", "Inspeção Simplificada").
-4. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Código | Number (auto) | Sim | Código sequencial automático |
-| Descrição | Texto (120) | Sim | Nome do tipo de roteiro |
-
-##### Observações importantes
-
-- Tipos de roteiro são usados para classificar e agrupar roteiros de inspeção com critérios semelhantes.
-- Exemplos: Normal (NBR 5426), Rigorosa, Simplificada, Inspeção Visual, Inspeção Dimensional.
+1. Acesse **VINS0106**. Escolha o **Tipo** e clique em **Carregar** para listar.
+2. Em **Nova ocorrência**, informe tipo, status, fornecedor/item, quantidade e referência,
+   e clique em **Registrar ocorrência**.
+3. Use **Encerrar** na lista para mudar o status para CLOSED.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0200 | Roteiro Inspeção — campo Tipo Roteiro |
-| VINS0201 | Manutenção Ordens Inspeção — ação Tp.Rot. para alterar tipo |
+| VINS0400 | Consulta de Ocorrências / Ordens |
+| VAVF0204 | Envio de IQF — ocorrências alimentam a avaliação |
 
 ---
 
-#### VINS0313 — Consulta Inspeções Recebimento
-
-##### Como consultar
-
-1. Informe situação e/ou fornecedor. Sem filtro a consulta pode ser extensa.
-2. Execute e confira ID, origem, pedido, item, quantidade, roteiro, situação e datas.
-3. Abra o registro específico na VINS0400 para resultados e ocorrências.
-4. Compare com o recebimento do pedido e com os movimentos de estoque antes de apontar divergência.
-5. Depois de uma análise/destinação, atualize a lista para confirmar a nova situação.
-
-A tela é somente leitura. Resultado vazio significa ausência de ordens persistidas para o filtro e
-tenant; não significa falha do frontend. Fornecedor inexistente ou situação inválida deve produzir
-erro claro, sem reutilizar dados da consulta anterior.
+#### VAVF0101 — Cadastro de Parâmetros de Avaliação de Fornecedores
 
 ##### Objetivo
 
-Consultar inspeções de recebimento realizadas, com 11 filtros disponíveis e opção de exportar resultados para Excel.
-
-##### Pré-requisitos
-
-- Inspeções realizadas via VINS0200/VINS0201.
+Manter os **parâmetros** que regem a avaliação de fornecedores (domínio
+`SUPPLIER_EVALUATION`) e demais domínios de suprimentos, como pares chave/valor tipados
+por empresa.
 
 ##### Passo a passo
 
-1. Acesse **VINS0313** pelo menu _Inspeção > Consulta Inspeções Recebimento_.
-2. Preencha os **filtros** desejados (até 11 opções).
-3. Clique em **Pesquisar** (F8).
-4. Analise os resultados na listagem.
-5. Para exportar, clique em **Exportar Excel**.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Período | Date (range) | Não | Período da inspeção |
-| Item | Select | Não | Item inspecionado |
-| Fornecedor | Select | Não | Fornecedor |
-| Status | Select | Não | Aprovado / Reprovado / Pendente |
-| Tipo Roteiro | Select | Não | Tipo de roteiro aplicado |
-| + outros 6 filtros | Varia | Não | Filtros complementares |
+1. Acesse **VAVF0101**, escolha o **Domínio** (padrão SUPPLIER_EVALUATION) e a **Empresa**,
+   e clique em **Carregar**.
+2. Em **Novo / editar parâmetro**, informe **chave**, **valor**, **tipo** (STRING/NUMBER/
+   BOOL/DATE) e descrição; clique em **Salvar parâmetro** (upsert por chave).
+3. Clique numa linha da lista para carregar seus valores no formulário.
 
 ##### Observações importantes
 
-- Tela de consulta **read-only** — não permite alterações nos resultados das inspeções.
-- A exportação para Excel inclui todas as colunas visíveis na listagem.
+- Os parâmetros são isolados por empresa e domínio; a escrita é restrita a ADMIN.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0200 | Roteiro Inspeção — origem das inspeções |
-| VINS0201 | Manutenção Ordens Inspeção — execução das inspeções |
-| VINS0400 | Consulta Ocorrências/Ordens — visão complementar com ocorrências |
+| VAVF0204 | Envio de IQF — usa os pesos/parâmetros |
 
 ---
 
-#### VINS0400 — Consulta Ocorrências/Ordens
-
-##### Auditoria de uma ordem
-
-1. Obtenha o ID pela VINS0313 e informe em **Abrir ordem**.
-2. Confira cabeçalho, roteiro/etapas, amostras, medições, limites, aprovação e tratamento.
-3. Valide se as quantidades analisadas fecham com a quantidade da ordem e se os almoxarifados
-   correspondem à destinação registrada.
-4. Relacione pedido, fornecedor e item com os cadastros operacionais.
-5. Para correção, volte à rotina autorizada conforme a situação; esta consulta não altera dados.
-
-ID inexistente ou de outro tenant deve retornar não encontrado/sem autorização. Não confunda
-resultado vazio com uma ordem sem ocorrências e não mantenha na tela dados de uma ordem anterior
-após erro.
+#### VAVF0204 — Envio de IQF aos Fornecedores
 
 ##### Objetivo
 
-Consultar ocorrências e ordens de inspeção em duas abas independentes, cada uma com seus próprios filtros. Fornece visão consolidada do histórico de qualidade.
-
-##### Pré-requisitos
-
-- Ocorrências registradas em VINS0106 e/ou ordens de inspeção em VINS0201.
+Calcular e **enviar o IQF** (Índice de Qualificação de Fornecedores) a partir do histórico
+real de inspeções e entregas: **qualidade 40% + entrega 30% + comercial 20% +
+atendimento 10%**. Comercial e atendimento são notas manuais (padrão 100).
 
 ##### Passo a passo
 
-1. Acesse **VINS0400** pelo menu _Inspeção > Consulta Ocorrências/Ordens_.
-2. Na aba **Ocorrências**:
-   - Preencha os filtros de ocorrência (tipo, fornecedor, item, período, fechamento).
-   - Visualize os resultados.
-3. Na aba **Ordens**:
-   - Preencha os filtros de ordem (status, item, fornecedor, período, tipo de roteiro).
-   - Visualize os resultados.
-4. As abas são **independentes** — filtros de uma não afetam a outra.
-5. Clique em um registro para ver detalhes.
-
-##### Campos
-
-| Aba | Campo (Filtro) | Tipo | Obrigatório | Descrição |
-|-----|----------------|------|-------------|-----------|
-| Ocorrências | Tipo | Select | Não | NC / DI / AV / DQ |
-| Ocorrências | Fornecedor | Select | Não | Fornecedor |
-| Ocorrências | Item | Select | Não | Item |
-| Ocorrências | Período | Date (range) | Não | Data da ocorrência |
-| Ocorrências | Fechamento | Select | Não | Aprovado / Reprovado / Devolvido / Retrabalho |
-| Ordens | Status | Select | Não | Status da ordem |
-| Ordens | Item | Select | Não | Item |
-| Ordens | Fornecedor | Select | Não | Fornecedor |
-| Ordens | Período | Date (range) | Não | Período de criação |
-| Ordens | Tipo Roteiro | Select | Não | Tipo de roteiro |
+1. Acesse **VAVF0204**, informe o **fornecedor** e clique em **Histórico** para ver os
+   scorecards anteriores.
+2. Informe o **período** e as notas manuais (comercial/atendimento).
+3. Clique em **Calcular (prévia)** para ver o resultado sem gravar, ou **Enviar IQF
+   (persistir)** para gravar o snapshot.
 
 ##### Observações importantes
 
-- As **abas independentes** permitem comparar visões de ocorrências e ordens sem perder os filtros.
-- Ideal para analisar correlações: um fornecedor com muitas ocorrências tende a ter mais ordens reprovadas.
+- Qualidade = (inspecionada − rejeitada) / inspecionada; entrega = (recebimentos −
+  atrasados) / recebimentos — ambas derivadas de dados reais do período.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VINS0106 | Ocorrências — origem dos dados da aba Ocorrências |
-| VINS0201 | Manutenção Ordens Inspeção — origem dos dados da aba Ordens |
-| VINS0313 | Consulta Inspeções Recebimento — consulta complementar focada em recebimento |
+| VAVF0101 | Parâmetros de Avaliação de Fornecedores |
+| VINS0201 | Manutenção das Ordens de Inspeções — origem da nota de qualidade |
 
 ---
 
-#### VAVF0101 — Parâmetros Avaliação Fornecedores
-
-##### Objetivo
-
-Configurar os parâmetros para avaliação de fornecedores (IQF — Índice de Qualidade do Fornecedor) com 3 sub-tabelas: Dimensões (com peso), Critérios (com peso e tipo: MAIOR_MELHOR, MENOR_MELHOR, NOMINAL_MELHOR) e Intervalos (7 colunas, conceito de 0 a 10).
-
-##### Pré-requisitos
-
-- Fornecedores cadastrados em VSUP0500.
-
-##### Passo a passo
-
-1. Acesse **VAVF0101** pelo menu _Inspeção > Parâmetros Avaliação Fornecedores_.
-2. Na sub-tabela **Dimensões**, cadastre as dimensões de avaliação (ex.: Qualidade, Entrega, Preço, Atendimento) com seus respectivos **pesos** (a soma deve ser 100%).
-3. Na sub-tabela **Critérios**, para cada dimensão, cadastre os critérios de avaliação com:
-   - **Peso** do critério dentro da dimensão.
-   - **Tipo**: _MAIOR_MELHOR_ (ex.: nota de qualidade), _MENOR_MELHOR_ (ex.: preço), _NOMINAL_MELHOR_ (ex.: prazo exato).
-4. Na sub-tabela **Intervalos**, defina as 7 faixas de pontuação com **conceito de 0 a 10** para cada intervalo.
-5. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Sub-Tabela | Campo | Tipo | Obrigatório | Descrição |
-|------------|-------|------|-------------|-----------|
-| Dimensões | Descrição | Texto (120) | Sim | Nome da dimensão (Qualidade, Entrega, etc.) |
-| Dimensões | Peso | Number | Sim | Peso da dimensão na nota final (%) |
-| Critérios | Dimensão | Select | Sim | Dimensão à qual o critério pertence |
-| Critérios | Descrição | Texto (120) | Sim | Nome do critério |
-| Critérios | Peso | Number | Sim | Peso do critério (%) |
-| Critérios | Tipo | Select | Sim | MAIOR_MELHOR / MENOR_MELHOR / NOMINAL_MELHOR |
-| Intervalos | Valor Mínimo | Number | Sim | Limite inferior do intervalo |
-| Intervalos | Valor Máximo | Number | Sim | Limite superior do intervalo |
-| Intervalos | Conceito | Number (0–10) | Sim | Nota atribuída ao intervalo |
-| Intervalos | + outras 4 colunas | Varia | Não | Colunas complementares de parametrização |
-
-##### Observações importantes
-
-- **MAIOR_MELHOR**: quanto maior o valor real, melhor (ex.: nota de qualidade).
-- **MENOR_MELHOR**: quanto menor o valor real, melhor (ex.: preço, prazo de entrega).
-- **NOMINAL_MELHOR**: o valor ideal é um alvo específico (ex.: quantidade exata entregue).
-- Os **intervalos** mapeiam valores reais para uma escala de 0 a 10, que é usada no cálculo do IQF.
-
-##### Telas relacionadas
-
-| Tela | Relação |
-|------|---------|
-| VAVF0204 | Envio IQF Fornecedores — cálculo do IQF usando estes parâmetros |
-| VSUP0500 | Cadastro de Fornecedor — fornecedores avaliados |
-
----
-
-#### VAVF0105 — Tipos Abono Divergências
-
-##### Objetivo
-
-Cadastrar os tipos de abono (justificativas) para divergências encontradas em inspeções. Tela ultra-simples com apenas o campo descrição.
-
-##### Pré-requisitos
-
-- Nenhum.
-
-##### Passo a passo
-
-1. Acesse **VAVF0105** pelo menu _Inspeção > Tipos Abono Divergências_.
-2. Clique em **Novo** (F2).
-3. Preencha a **Descrição** do tipo de abono (ex.: "Divergência Comercial", "Aceite Técnico", "Urgência de Produção").
-4. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Descrição | Texto (120) | Sim | Nome do tipo de abono |
-
-##### Observações importantes
-
-- Os tipos de abono aparecem no campo Motivo Abono em VINS0106 quando a ocorrência é abonada.
-- Exemplos: Divergência Comercial, Aceite Técnico, Divergência Menor, Urgência, Acordo Contratual.
-
-##### Telas relacionadas
-
-| Tela | Relação |
-|------|---------|
-| VINS0106 | Ocorrências — motivo do abono selecionado aqui |
-
----
-
-#### VAVF0204 — Envio IQF Fornecedores
-
-##### Cálculo e persistência
-
-1. Confirme fornecedor e período; não sobreponha apurações já fechadas sem justificativa.
-2. Informe `supplier_code`, início/fim, notas comercial e de atendimento. Qualidade e entrega são
-   derivadas dos recebimentos/inspeções disponíveis no período.
-3. Use `persist=false` para simular. Confira total de recebimentos, rejeições, atrasos e notas.
-4. Corrija dados de origem nas rotinas responsáveis; não ajuste o IQF para esconder divergências.
-5. Repita com `persist=true` somente após aprovação. Registre observação que identifique a apuração.
-6. Consulte o histórico no VAVF0300 e valide período e nota final antes de comunicar o fornecedor.
-
-Período invertido, fornecedor inexistente, nota fora da faixa ou ausência de permissão deve falhar.
-A tela calcula/persiste; envio externo depende da integração/canal configurado e não deve ser
-considerado concluído apenas porque o cálculo retornou sucesso.
-
-##### Objetivo
-
-Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tabela com bar chart colorido (verde maior ou igual a 70, amarelo 50–69, vermelho abaixo de 50) e enviar o resultado por e-mail ao fornecedor.
-
-##### Pré-requisitos
-
-- Parâmetros de Avaliação (VAVF0101) configurados.
-- Fornecedores (VSUP0500) com histórico de inspeções (VINS0200/VINS0106).
-- E-mails dos fornecedores cadastrados.
-
-##### Passo a passo
-
-1. Acesse **VAVF0204** pelo menu _Inspeção > Envio IQF Fornecedores_.
-2. Defina o **período de avaliação** (data inicial e final).
-3. Selecione os **fornecedores** a avaliar (ou todos).
-4. Clique em **Calcular IQF**.
-5. A tabela exibe, para cada fornecedor:
-   - **Nota IQF** (0 a 100).
-   - **Barra colorida**: verde se IQF maior ou igual a 70, amarelo se 50–69, vermelho se abaixo de 50.
-   - **Detalhamento** por dimensão.
-6. Para enviar o resultado, clique em **Enviar E-mail** — o sistema usa o e-mail cadastrado do fornecedor.
-7. Confirme o envio.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Período Início | Date | Sim | Início do período de avaliação |
-| Período Fim | Date | Sim | Fim do período de avaliação |
-| Fornecedores | Multi-Select | Não | Fornecedores a avaliar (vazio = todos) |
-| Nota IQF | Number (calculado) | — | Índice de 0 a 100 |
-| Bar Chart | (visual) | — | Barra colorida por faixa de desempenho |
-| Enviar E-mail | Button | Não | Dispara e-mail com o relatório IQF |
-
-##### Observações importantes
-
-- O **IQF** é calculado com base nos parâmetros de VAVF0101 e no histórico real de entregas e ocorrências do período.
-- **Verde (maior ou igual a 70)**: fornecedor aprovado — desempenho satisfatório.
-- **Amarelo (50–69)**: fornecedor em observação — requer atenção.
-- **Vermelho (abaixo de 50)**: fornecedor crítico — pode ser bloqueado para novos pedidos.
-- O e-mail enviado contém o relatório completo com notas por dimensão e critério.
-
-##### Telas relacionadas
-
-| Tela | Relação |
-|------|---------|
-| VAVF0101 | Parâmetros Avaliação Fornecedores — parâmetros de cálculo do IQF |
-| VSUP0500 | Cadastro de Fornecedor — fornecedores avaliados |
-| VINS0106 | Ocorrências — dados de não conformidades usados no cálculo |
-| VINS0200 | Roteiro Inspeção — resultados de inspeção usados no cálculo |
-| VINS0400 | Consulta Ocorrências/Ordens — visão histórica consolidada |
-
----
 
 ## 8. ASSISTÊNCIA
 
@@ -4260,10 +3808,10 @@ Gerar pedidos de devolução a partir de chamados de assistência em garantia, t
 | Manutenção | 2 | VMAN0202, VMAN0401 |
 | Suprimento | 7 | VAVR0200, VCON0100, VCON0200, VCON0202, VCON0400, VPDC0200, VVOR0202 |
 | Importação | 3 | VIMP0101, VIMP0102, VIMP0200 |
-| Inspeção | 11 | VINS0105, VINS0106, VINS0200, VINS0201, VINS0206, VINS0211, VINS0313, VINS0400, VAVF0101, VAVF0105, VAVF0204 |
+| Inspeção | 8 | VINS0106, VINS0200, VINS0201, VINS0206, VINS0313, VINS0400, VAVF0101, VAVF0204 |
 | Assistência | 5 | VASS0201, VASS0402, VATC0280, VATC0380, VATC0480 |
 | Garantia | 1 | VGAR0211 |
-| **Total** | **54** | |
+| **Total** | **51** | |
 
 ---
 
@@ -4321,9 +3869,8 @@ Cliente reporta defeito
 ```
 Fornecedor Estrangeiro (VSUP0500)
    └── Pedido Compra Importação (VPDC0200)
-        └── Status Logístico (VIMP0101)
-             ├── CT-e (VIMP0102)
-             └── Console (VIMP0200)
+        └── Console de Importação (VIMP0200) — custo nacionalizado
+             └── Status Logístico (VIMP0101)
                   └── Inspeção Recebimento (VINS0200)
 ```
 

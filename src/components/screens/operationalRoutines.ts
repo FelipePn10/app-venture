@@ -49,15 +49,14 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Itens e saldos", method: "GET", path: "/api/sales-order/{code}/items", fields: [id("code", "Pedido")] },
     { label: "Reprogramações", method: "GET", path: "/api/delivery-reschedules/list/{code}", fields: [id("code", "Pedido")] },
   ]),
-  VMAN0202: routine("VMAN0202", "Apontamento de ordem de manutenção", "Executa o avanço operacional de uma ordem preventiva já gerada e consulta seu contexto; não altera o plano mestre.", [
-    { label: "Abrir ordem", method: "GET", path: "/api/maintenance/orders/{id}", fields: [id()] },
+  VMAN0202: routine("VMAN0202", "Apontamento de ordem de manutenção", "Executa o avanço operacional de uma ordem preventiva já gerada (IN_PROGRESS → DONE); não altera o plano mestre.", [
+    { label: "Ordens do plano", method: "GET", path: "/api/maintenance/orders/by-plan/{planId}", fields: [id("planId", "Plano")] },
     { label: "Iniciar ordem", method: "POST", path: "/api/maintenance/orders/advance", fields: [json('{"order_id":1,"status":"IN_PROGRESS"}')] },
-    { label: "Concluir ordem", method: "POST", path: "/api/maintenance/orders/advance", fields: [json('{"order_id":1,"status":"COMPLETED"}')] },
+    { label: "Concluir ordem", method: "POST", path: "/api/maintenance/orders/advance", fields: [json('{"order_id":1,"status":"DONE","actual_hours":1.5}')] },
   ]),
   VMAN0401: routine("VMAN0401", "Consulta de ordens de manutenção", "Consulta ordens por plano ou centro de trabalho sem permitir apontamento ou alteração de planejamento.", [
     { label: "Ordens do plano", method: "GET", path: "/api/maintenance/orders/by-plan/{planId}", fields: [id("planId", "Plano")] },
     { label: "Ordens do centro", method: "GET", path: "/api/maintenance/orders/by-work-center/{wcId}", fields: [id("wcId", "Centro de trabalho")] },
-    { label: "Abrir ordem", method: "GET", path: "/api/maintenance/orders/{id}", fields: [id()] },
   ]),
   VPDC0200: routine("VPDC0200", "Manutenção de pedido de compra", "Cria e mantém capa e itens do pedido de compra. Aprovação, autorização e recebimento ficam isolados em VPDC0210.", [
     list("/api/purchase-order/list"),

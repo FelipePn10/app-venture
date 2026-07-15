@@ -602,8 +602,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Contabilidade / Utilitários
   {
     code: "VUTL0555",
-    title: "Cadastro de UFs e Cidades",
-    description: "Cadastrar os Municípios e suas respectivas Unidades Federativas.",
+    title: "Cadastro de UFs e Países",
+    description: "Cadastrar Unidades Federativas (com código IBGE) e Países. Municípios não têm cadastro próprio no backend.",
     module: "contabilidade",
   },
 
@@ -616,14 +616,14 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
   {
     code: "VIMP0102",
-    title: "Tipos de Conhecimentos de Transporte",
-    description: "Cadastrar e gerenciar os tipos de conhecimento de transporte para processos de importação.",
+    title: "Conhecimentos de Transporte (CT-e)",
+    description: "Cadastrar, consultar e autorizar conhecimentos de transporte (CT-e) vinculáveis às entradas e processos de importação.",
     module: "importacao",
   },
   {
     code: "VIMP0101",
     title: "Status Logístico da Carga",
-    description: "Cadastrar e gerenciar os status logísticos da carga de importação.",
+    description: "Acompanhar o status logístico dos processos de importação (OPEN → NATIONALIZED → CANCELLED).",
     module: "importacao",
   },
 
@@ -638,12 +638,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VINS0400",
     title: "Consulta de Ocorrências / Ordens de Inspeção",
     description: "Consultar ocorrências cadastradas e ordens de inspeção detalhadas.",
-    module: "inspecao",
-  },
-  {
-    code: "VINS0105",
-    title: "Cadastro de Tipos de Ocorrências",
-    description: "Cadastrar os tipos de ocorrências para inspeção.",
     module: "inspecao",
   },
   {
@@ -666,24 +660,12 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
   {
     code: "VINS0206",
-    title: "Exclusão de Ordens de Inspeção",
-    description: "Excluir ordens de inspeção geradas.",
-    module: "inspecao",
-  },
-  {
-    code: "VINS0211",
-    title: "Cadastro de Tipos de Roteiro de Inspeção",
-    description: "Cadastrar os tipos de roteiros de inspeção.",
+    title: "Tratamento das Ordens de Inspeção",
+    description: "Analisar quantidades inspecionadas e efetivar a destinação física (aprovado/rejeitado/retrabalho).",
     module: "inspecao",
   },
 
   // ── Avaliação de Fornecedores
-  {
-    code: "VAVF0105",
-    title: "Cadastro de Tipos de Abono para Divergências",
-    description: "Justificar e abonar divergências para fornecedores na geração do IQF.",
-    module: "inspecao",
-  },
   {
     code: "VAVF0101",
     title: "Cadastro de Parâmetros de Avaliação de Fornecedores",

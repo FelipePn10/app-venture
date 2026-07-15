@@ -750,6 +750,14 @@ async function journeyCompras() {
   await call('GET', '/api/procurement/receiving-notices', undefined, { journey: J, label: 'Avisos de recebimento (VAVR0200)', expect: [200, 400] });
   await call('GET', '/api/procurement/records', undefined, { journey: J, label: 'Registros operacionais de suprimento', expect: [200, 400] });
   await call('GET', '/api/procurement/purchase-movements', undefined, { journey: J, label: 'Histórico consolidado de movimentações', expect: [200, 400] });
+  // Superfície procurement completa (leituras)
+  await call('GET', '/api/procurement/receiving-inspection-orders', undefined, { journey: J, label: 'Ordens de inspeção de recebimento', expect: [200, 400] });
+  await call('GET', '/api/procurement/approval-limits', undefined, { journey: J, label: 'Alçada de valores (FALC)', expect: [200, 400] });
+  await call('GET', '/api/procurement/edi-messages', undefined, { journey: J, label: 'Mensagens EDI (FEDS)', expect: [200, 400] });
+  await call('GET', '/api/procurement/import-processes', undefined, { journey: J, label: 'Processos de importação (FIMP)', expect: [200, 400] });
+  await call('GET', '/api/procurement/parameters', undefined, { journey: J, label: 'Parâmetros de suprimentos', expect: [200, 400] });
+  await call('GET', '/api/procurement/suppliers/1/scorecards', undefined, { journey: J, label: 'Scorecards (IQF) do fornecedor 1', expect: [200, 400, 404] });
+  await call('GET', '/api/procurement/suppliers/1/homologations', undefined, { journey: J, label: 'Homologações do fornecedor 1', expect: [200, 400, 404] });
   if (!RUN_WRITES) return;
 
   // §11 Conversão UM: upsert → convert
@@ -800,6 +808,14 @@ async function journeyCompras() {
     const dvid = codeOf(dv.json);
     if (dvid) await call('PATCH', `/api/procurement/receiving-divergences/${dvid}/resolution`, { resolution: 'PARTIAL_RETURN' }, { journey: J, label: 'Resolver divergência (devolução parcial)', expect: [200, 201, 422] });
   }
+  // Inspeção estruturada (VINS0200): roteiro por item com 1 etapa
+  await call('POST', '/api/procurement/receiving-inspection-routes', { enterprise_code: 1, basis: 'ITEM', item_code: 10050, mask: '', inspection_warehouse_id: 1, valid_from: '2026-01-01', steps: [{ sequence: 10, inspection_name: 'Dimensional', kind: 'VALUE', appointment_mode: 'ALL_MEASUREMENTS', is_required: true, sample_qty: 5, acceptance_qty: 0, rejection_qty: 1, nominal_value: 10, min_value: 9.8, max_value: 10.2, attributes: [] }], created_by: UID }, { journey: J, label: 'Criar roteiro de inspeção (VINS0200)', expect: [200, 201, 409, 422] });
+  // IQF: computar scorecard a partir de dados reais + registro operacional + alçada + parâmetro + importação
+  await call('POST', '/api/procurement/supplier-scorecards/compute', { supplier_code: 1, period_start: '2026-01-01', period_end: '2026-06-30', commercial_score: 100, service_score: 100, persist: false, created_by: UID }, { journey: J, label: 'Computar IQF do fornecedor (VAVF0204)', expect: [200, 201, 400, 422] });
+  await call('POST', '/api/procurement/records', { record_type: 'RECEIVING_CHECKLIST', status: 'OPEN', supplier_code: 1, mask: '', quantity: 0, payload: {} }, { journey: J, label: 'Criar registro operacional', expect: [200, 201, 422] });
+  await call('POST', '/api/procurement/approval-limits', { enterprise_code: 1, scope: 'GLOBAL', currency: 'BRL', auto_approve_max: 10000, valid_from: '2026-01-01', created_by: UID }, { journey: J, label: 'Criar regra de alçada (FALC)', expect: [200, 201, 409, 422] });
+  await call('PUT', '/api/procurement/parameters', { enterprise_code: 1, domain: 'RECEIVING_NOTICE', param_key: 'auto_block', param_value: 'true', value_type: 'BOOL' }, { journey: J, label: 'Upsert parâmetro de suprimentos', expect: [200, 201, 422] });
+  await call('POST', '/api/procurement/import-processes', { enterprise_code: 1, currency: 'USD', exchange_rate: 5, apportion_basis: 'VALUE', items: [{ item_code: 10050, mask: '', quantity: 10, weight: 1, fob_unit_price: 20 }], expenses: [{ expense_type: 'FREIGHT', amount: 400, in_item_cost: true }], created_by: UID }, { journey: J, label: 'Criar processo de importação (FIMP)', expect: [200, 201, 422] });
 }
 
 async function journeyPDM() {

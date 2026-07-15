@@ -38,12 +38,15 @@ import { Vcon0200Page } from "./suprimento/Vcon0200Page";
 import { Vcon0400Page } from "./suprimento/Vcon0400Page";
 import { Vcon0202Page } from "./suprimento/Vcon0202Page";
 import { Vavr0200Page } from "./suprimento/Vavr0200Page";
-import { Vins0105Page } from "./inspecao/Vins0105Page";
 import { Vins0106Page } from "./inspecao/Vins0106Page";
 import { Vins0200Page } from "./inspecao/Vins0200Page";
-import { Vins0211Page } from "./inspecao/Vins0211Page";
-import { Vavf0105Page } from "./inspecao/Vavf0105Page";
+import { Vins0201Page } from "./inspecao/Vins0201Page";
+import { Vins0313Page } from "./inspecao/Vins0313Page";
+import { Vins0400Page } from "./inspecao/Vins0400Page";
 import { Vavf0101Page } from "./inspecao/Vavf0101Page";
+import { Vavf0204Page } from "./inspecao/Vavf0204Page";
+import { Vimp0101Page } from "./importacao/Vimp0101Page";
+import { Vimp0200Page } from "./importacao/Vimp0200Page";
 import { Vfin0100Page } from "./financeiro/Vfin0100Page";
 import { Vfin0110Page } from "./financeiro/Vfin0110Page";
 import { Vfin0120Page } from "./financeiro/Vfin0120Page";
@@ -249,12 +252,15 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VCON0202: <Vcon0202Page />,
   VAVR0200: <Vavr0200Page />,
   // Inspeção
-  VINS0105: <Vins0105Page />,
   VINS0106: <Vins0106Page />,
   VINS0200: <Vins0200Page />,
-  VINS0211: <Vins0211Page />,
-  VAVF0105: <Vavf0105Page />,
+  VINS0201: <Vins0201Page />,
+  VINS0313: <Vins0313Page />,
+  VINS0400: <Vins0400Page />,
   VAVF0101: <Vavf0101Page />,
+  VAVF0204: <Vavf0204Page />,
+  VIMP0101: <Vimp0101Page />,
+  VIMP0200: <Vimp0200Page />,
 };
 
 export function ScreenHostPage(): JSX.Element {
