@@ -594,6 +594,37 @@ export function LoginPage(): JSX.Element {
           margin-top: 28px;
         }
 
+        @media (max-width: 800px) {
+          .lp-root {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: 38px minmax(0, 1fr);
+            grid-template-areas: "titlebar" "form";
+            min-height: 100vh;
+            height: auto;
+          }
+
+          .lp-sidebar {
+            display: none;
+          }
+
+          .lp-form-panel {
+            min-width: 0;
+            padding: 32px 20px;
+            align-items: flex-start;
+            overflow-y: auto;
+          }
+
+          .lp-form-card {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+          }
+
+          .lp-form-title {
+            font-size: 27px;
+          }
+        }
+
         .lp-footer-badge {
           display: flex;
           align-items: center;

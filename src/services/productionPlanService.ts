@@ -60,3 +60,30 @@ export async function updateProductionPlan(dto: ProductionPlanDTO): Promise<Prod
 export async function deleteProductionPlan(code: number): Promise<void> {
   await httpClient.delete(`${BASE}/${code}`);
 }
+
+/**
+ * Empresas inter-fábrica de um plano. Cada associação informa a empresa de origem
+ * cujas ordens `INTER_FACTORY` serão carregadas como demanda DIF, e `auto_release`
+ * (se as sugestões OIF/OCI derivadas seguem para liberação automática).
+ * `PUT` substitui a lista inteira (lista vazia remove todas); empresa inexistente,
+ * repetida ou igual à do plano é rejeitada. Isolado pelo tenant do JWT.
+ */
+export interface InterFactoryDTO {
+  source_enterprise_code: number;
+  auto_release: boolean;
+}
+function parseInterFactory(raw: unknown): InterFactoryDTO {
+  const o = unwrapObject(raw);
+  return {
+    source_enterprise_code: parseNum(o, 'source_enterprise_code', 'SourceEnterpriseCode', 'enterprise_code'),
+    auto_release: parseBool(o, 'auto_release', 'AutoRelease'),
+  };
+}
+export async function getInterFactories(planCode: number): Promise<InterFactoryDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/${planCode}/inter-factories`);
+  return unwrapArray(data).map(parseInterFactory);
+}
+export async function setInterFactories(planCode: number, list: InterFactoryDTO[]): Promise<InterFactoryDTO[]> {
+  const { data } = await httpClient.put(`${BASE}/${planCode}/inter-factories`, { enterprises: list });
+  return unwrapArray(data).map(parseInterFactory);
+}

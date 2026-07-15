@@ -58,7 +58,10 @@ function parseFrete(raw: unknown): FreteClienteResponse {
 
 function unwrapArray(raw: unknown): unknown[] {
   if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === 'object' && Array.isArray((raw as any).data)) return (raw as any).data;
+  if (raw && typeof raw === 'object') {
+    const data = (raw as Record<string, unknown>).data;
+    if (Array.isArray(data)) return data;
+  }
   return [];
 }
 

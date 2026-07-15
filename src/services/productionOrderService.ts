@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/production-order';
 
@@ -255,4 +255,135 @@ export async function getCost(id: number): Promise<CostDTO> {
 export async function scrapReturn(id: number, dto: ScrapReturnDTO): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/${id}/scrap-return`, dto);
   return unwrapObject(data);
+}
+
+// ─── Controle de materiais da OF (MRP) ───────────────────────────────────────
+// Quantidades decimais são enviadas como string (ex.: "10.500000"), como no backend.
+
+export type MaterialKind = 'DEMAND' | 'BACKFLUSH' | 'MANUAL';
+export type MovementKind = 'REQUISITION' | 'RETURN';
+
+export interface MaterialDTO {
+  id?: number;
+  production_order_id?: number;
+  kind?: MaterialKind;
+  item_code: number;
+  quantity: number | string;
+  warehouse_id?: number;
+  automatic_issue?: boolean;
+  allocated_qty?: number;
+  balance?: number;
+}
+
+export interface LotAllocation {
+  warehouse_id: number;
+  lot: string;
+  address?: string;
+  quantity: number | string;
+}
+
+export interface ScrapDestinationDTO {
+  id?: number;
+  production_order_id: number;
+  destination_kind?: 'DEMAND' | 'FREE';
+  production_order_material_id?: number;
+  scrap_item_code: number;
+  warehouse_id: number;
+  lot?: string;
+  address?: string;
+  return_quantity?: number | string;
+  scrap_quantity?: number | string;
+  source_uom?: string;
+  scrap_uom?: string;
+  destination_date?: string;
+}
+
+function parseMaterial(raw: unknown): MaterialDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: parseNum(o, 'id', 'ID'),
+    production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID'),
+    kind: (parseStr(o, 'kind', 'Kind') || undefined) as MaterialKind | undefined,
+    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    quantity: parseNum(o, 'quantity', 'Quantity'),
+    warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
+    automatic_issue: parseBool(o, 'automatic_issue', 'AutomaticIssue'),
+    allocated_qty: parseNum(o, 'allocated_qty', 'AllocatedQty'),
+    balance: parseNum(o, 'balance', 'Balance'),
+  };
+}
+
+export async function listMaterials(id: number): Promise<MaterialDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/${id}/materials`);
+  return unwrapArray(data).map(parseMaterial);
+}
+export async function addMaterial(dto: MaterialDTO): Promise<MaterialDTO> {
+  const { data } = await httpClient.post(`${BASE}/materials`, { kind: 'DEMAND', ...dto, created_by: currentUserId() });
+  return parseMaterial(data);
+}
+export async function replaceMaterial(materialId: number, replacements: Array<{ item_code: number; quantity: number | string; warehouse_id?: number }>): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/materials/replace`, { material_id: materialId, replacements, created_by: currentUserId() });
+  return unwrapObject(data);
+}
+export async function deleteMaterial(materialId: number): Promise<void> {
+  await httpClient.delete(`${BASE}/materials/${materialId}`);
+}
+/** Aloca lotes a um material. `allocations` vazio → seleção automática por data/código. */
+export async function allocateLots(materialId: number, movementKind: MovementKind, allocations: LotAllocation[] = [], confirmPartial = false): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/materials/lots`, {
+    material_id: materialId, movement_kind: movementKind, confirm_partial: confirmPartial, allocations, created_by: currentUserId(),
+  });
+  return unwrapObject(data);
+}
+export async function allocateLotsBatch(materialIds: number[], movementKind: MovementKind, lots: LotAllocation[]): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/materials/lots/batch`, {
+    material_ids: materialIds, movement_kind: movementKind, lots, created_by: currentUserId(),
+  });
+  return unwrapObject(data);
+}
+
+// ─── Destinos de sucata / retorno de componentes ──────────────────────────────
+
+export async function addScrapDestination(dto: ScrapDestinationDTO): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/scrap-destinations`, { ...dto, created_by: currentUserId() });
+  return unwrapObject(data);
+}
+export async function updateScrapDestination(destinationId: number, dto: ScrapDestinationDTO): Promise<Obj> {
+  const { data } = await httpClient.put(`${BASE}/scrap-destinations/${destinationId}`, { ...dto, created_by: currentUserId() });
+  return unwrapObject(data);
+}
+export async function deleteScrapDestination(destinationId: number): Promise<void> {
+  await httpClient.delete(`${BASE}/scrap-destinations/${destinationId}`);
+}
+
+// ─── Configurações e manutenção operacional da OF ─────────────────────────────
+
+export async function configureWMS(warehouseId: number, isWms: boolean, intermediateOutWarehouseId?: number): Promise<Obj> {
+  const { data } = await httpClient.put(`${BASE}/wms-settings`, {
+    warehouse_id: warehouseId, is_wms: isWms, intermediate_out_warehouse_id: intermediateOutWarehouseId,
+  });
+  return unwrapObject(data);
+}
+export async function configureTemporaryLot(productionOrderId: number, lot: string, manufacturedOn?: string, expiresOn?: string): Promise<Obj> {
+  const { data } = await httpClient.put(`${BASE}/temporary-lot`, {
+    production_order_id: productionOrderId, lot, manufactured_on: manufacturedOn, expires_on: expiresOn,
+  });
+  return unwrapObject(data);
+}
+/** Manutenção da OF (enquanto sem movimentação): qtd/datas/prioridade/notas. */
+export async function maintainProductionOrder(id: number, patch: Partial<Pick<ProductionOrderDTO, 'planned_qty' | 'start_date' | 'end_date' | 'priority' | 'notes'>>): Promise<ProductionOrderDTO> {
+  const { data } = await httpClient.put(`${BASE}/${id}`, patch);
+  return parseOrder(data);
+}
+export async function listMaintenance(id?: number): Promise<ProductionOrderDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/maintenance`, { params: id ? { id } : undefined });
+  return unwrapArray(data).map(parseOrder);
+}
+export async function getOperationalConsultation(id: number): Promise<Obj> {
+  const { data } = await httpClient.get(`${BASE}/${id}/operational`);
+  return unwrapObject(data);
+}
+export async function listDeliveryCandidates(params: Obj = {}): Promise<Obj[]> {
+  const { data } = await httpClient.get(`${BASE}/delivery-candidates`, { params });
+  return unwrapArray(data).map(unwrapObject);
 }

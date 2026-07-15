@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { humanizeApiError } from '@/services/apiError';
 import {
   createRoteiroInspecao,
   type RoteiroInspecaoDTO,
@@ -54,11 +55,7 @@ const FORM_INICIAL: FormRoteiro = {
 };
 
 function normalizeError(error: unknown, fallback: string): string {
-  if (error && typeof error === "object" && "response" in error) {
-    const resp = (error as any).response;
-    if (resp?.data?.message) return String(resp.data.message);
-  }
-  return error instanceof Error ? error.message : fallback;
+  return humanizeApiError(error, fallback);
 }
 
 export function Vins0200Page(): JSX.Element {
@@ -144,25 +141,25 @@ export function Vins0200Page(): JSX.Element {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .ins5-r{min-height:100vh;background:#f0f4ee;font-family:'Inter',sans-serif;color:#1a2e22;display:flex;flex-direction:column}
+        .ins5-r{min-height:100vh;background:#dfe4e0;font-family:'Inter',sans-serif;color:#1c2b22;display:flex;flex-direction:column}
 
-        .ins5-tb{height:52px;background:#162e20;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;border-bottom:1px solid rgba(62,150,84,0.15)}
+        .ins5-tb{height:52px;background:#16281d;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;border-bottom:1px solid rgba(62,150,84,0.15)}
         .ins5-tbl{display:flex;align-items:center;gap:10px}
-        .ins5-lg{width:28px;height:28px;background:#3e9654;border-radius:6px;display:flex;align-items:center;justify-content:center}
+        .ins5-lg{width:28px;height:28px;background:#2f7d47;border-radius:6px;display:flex;align-items:center;justify-content:center}
         .ins5-an{font-size:13px;font-weight:600;color:#e0f0e3;line-height:1.1}
-        .ins5-asb{display:block;font-size:9px;font-weight:400;color:#3d6b4d}
-        .ins5-st{font-size:12.5px;font-weight:500;color:#5a9a6a;padding-left:14px;margin-left:14px;border-left:1px solid rgba(255,255,255,0.08)}
+        .ins5-asb{display:block;font-size:9px;font-weight:400;color:#54655a}
+        .ins5-st{font-size:12.5px;font-weight:500;color:#3f8a58;padding-left:14px;margin-left:14px;border-left:1px solid rgba(255,255,255,0.08)}
 
         .ins5-ab{background:#fff;border-bottom:1px solid #dbe8d5;padding:0 20px;display:flex;align-items:center;gap:4px;height:46px;flex-shrink:0}
         .ins5-ag{display:flex;align-items:center;gap:4px;padding-right:12px;margin-right:8px;border-right:1px solid #e8f0e4}
         .ins5-ag:last-child{border-right:none}
-        .ins5-al{font-size:9.5px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:#96b8a0;margin-right:4px;white-space:nowrap}
+        .ins5-al{font-size:9.5px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:#94a49a;margin-right:4px;white-space:nowrap}
         .ins5-bt{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1.5px solid transparent;border-radius:7px;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background 0.13s,border-color 0.13s,color 0.13s}
-        .ins5-bt-p{background:#162e20;color:#dff0e2;border-color:#162e20}
-        .ins5-bt-p:hover:not(:disabled){background:#1e3a2a}
+        .ins5-bt-p{background:#16281d;color:#dff0e2;border-color:#16281d}
+        .ins5-bt-p:hover:not(:disabled){background:#1e3728}
         .ins5-bt-p:disabled{opacity:0.5;cursor:not-allowed}
-        .ins5-bt-g{background:transparent;color:#4a7060;border-color:#d4e8d0}
-        .ins5-bt-g:hover:not(:disabled){background:#f0f8ec;border-color:#b0d4b8;color:#1a3828}
+        .ins5-bt-g{background:transparent;color:#46574c;border-color:#d4e8d0}
+        .ins5-bt-g:hover:not(:disabled){background:#f0f8ec;border-color:#a9b6ac;color:#1c2b22}
         .ins5-bt-g:disabled{opacity:0.5;cursor:not-allowed}
         .ins5-bt-d{background:transparent;color:#b94040;border-color:#f0c8c8}
         .ins5-bt-d:hover:not(:disabled){background:#fff0f0;border-color:#e09090}
@@ -175,15 +172,15 @@ export function Vins0200Page(): JSX.Element {
 
         .ins5-sb{display:flex;align-items:center;gap:10px;padding:14px 0 8px}
         .ins5-sb:first-child{padding-top:0}
-        .ins5-sb-p{font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#5a8068;background:#e0ede0;border:1px solid #c8dcc8;border-radius:20px;padding:3px 10px;white-space:nowrap}
+        .ins5-sb-p{font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#6b7d71;background:#e0ede0;border:1px solid #c8dcc8;border-radius:20px;padding:3px 10px;white-space:nowrap}
         .ins5-sb-l{flex:1;height:1px;background:#dbe8d5}
-        .ins5-sb-h{font-size:11px;color:#96b8a0;white-space:nowrap}
+        .ins5-sb-h{font-size:11px;color:#94a49a;white-space:nowrap}
 
         .ins5-c{background:#fff;border:1px solid #dbe8d5;border-radius:12px;overflow:hidden;margin-bottom:14px}
         .ins5-ch{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #edf5e8;background:#fafcf9}
         .ins5-chl{display:flex;align-items:center;gap:8px}
-        .ins5-ct{font-size:12px;font-weight:600;color:#2a4a35;text-transform:uppercase;letter-spacing:0.6px}
-        .ins5-cbg{font-size:10.5px;font-weight:500;color:#3e9654;background:#eef5ea;border:1px solid #c4dfc8;border-radius:12px;padding:2px 8px}
+        .ins5-ct{font-size:12px;font-weight:600;color:#253a2d;text-transform:uppercase;letter-spacing:0.6px}
+        .ins5-cbg{font-size:10.5px;font-weight:500;color:#2f7d47;background:#eef5ea;border:1px solid #c4dfc8;border-radius:12px;padding:2px 8px}
         .ins5-cb{padding:18px 18px}
 
         .ins5-g{display:grid;grid-template-columns:repeat(12,1fr);gap:16px 14px;align-items:start}
@@ -193,14 +190,14 @@ export function Vins0200Page(): JSX.Element {
         .ins5-g12{grid-column:span 12}
 
         .ins5-f{display:flex;flex-direction:column;gap:5px}
-        .ins5-l{font-size:10.5px;font-weight:600;color:#5a8068;text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:4px}
+        .ins5-l{font-size:10.5px;font-weight:600;color:#6b7d71;text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:4px}
         .ins5-lr{color:#c84040;font-size:12px;line-height:1}
-        .ins5-in{width:100%;height:36px;background:#f8fbf6;border:1.5px solid #d4e8cc;border-radius:7px;padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;color:#1a2e22;outline:none;transition:border-color 0.13s,box-shadow 0.13s}
-        .ins5-in:focus{border-color:#3e9654;box-shadow:0 0 0 2px rgba(62,150,84,0.1)}
-        .ins5-in::placeholder{color:#b0c8b8;font-size:12px}
+        .ins5-in{width:100%;height:36px;background:#f8fbf6;border:1.5px solid #d4e8cc;border-radius:7px;padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;color:#1c2b22;outline:none;transition:border-color 0.13s,box-shadow 0.13s}
+        .ins5-in:focus{border-color:#2f7d47;box-shadow:0 0 0 2px rgba(62,150,84,0.1)}
+        .ins5-in::placeholder{color:#a9b6ac;font-size:12px}
         .ins5-in[type="date"]{cursor:pointer}
-        .ins5-se{width:100%;height:36px;background:#f8fbf6;border:1.5px solid #d4e8cc;border-radius:7px;padding:0 28px 0 10px;font-family:'Inter',sans-serif;font-size:13px;color:#1a2e22;outline:none;appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color 0.13s}
-        .ins5-se:focus{border-color:#3e9654;box-shadow:0 0 0 2px rgba(62,150,84,0.1)}
+        .ins5-se{width:100%;height:36px;background:#f8fbf6;border:1.5px solid #d4e8cc;border-radius:7px;padding:0 28px 0 10px;font-family:'Inter',sans-serif;font-size:13px;color:#1c2b22;outline:none;appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color 0.13s}
+        .ins5-se:focus{border-color:#2f7d47;box-shadow:0 0 0 2px rgba(62,150,84,0.1)}
         .ins5-fe{font-size:11px;color:#c84040;margin-top:2px;display:flex;align-items:center;gap:4px}
         .ins5-fh{font-size:11px;color:#7a9c84;margin-top:2px;line-height:1.45}
 
@@ -208,10 +205,10 @@ export function Vins0200Page(): JSX.Element {
         .ins5-toggle{position:relative;width:38px;height:20px;flex-shrink:0;cursor:pointer}
         .ins5-toggle input{opacity:0;width:0;height:0;position:absolute}
         .ins5-toggle-track{position:absolute;inset:0;background:#d4e0d0;border-radius:20px;transition:background 0.2s}
-        .ins5-toggle input:checked~.ins5-toggle-track{background:#3e9654}
+        .ins5-toggle input:checked~.ins5-toggle-track{background:#2f7d47}
         .ins5-toggle-thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
         .ins5-toggle input:checked~.ins5-toggle-thumb{transform:translateX(18px)}
-        .ins5-toggle-label{font-size:12px;color:#3a5a45;font-weight:500}
+        .ins5-toggle-label{font-size:12px;color:#46574c;font-weight:500}
 
         .ins5-fb{display:flex;align-items:center;gap:9px;padding:11px 15px;border-radius:9px;font-size:13px;animation:ins5FdIn 0.2s ease;margin-bottom:14px}
         .ins5-fb.s{background:#f0faf2;border:1px solid #b4dec0;color:#1e6030}
@@ -221,17 +218,17 @@ export function Vins0200Page(): JSX.Element {
         .ins5-rw{border-top:1px solid #edf5e8;overflow-x:auto}
         .ins5-rb{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:#f4f9f2;border-bottom:1px solid #e8f0e4}
         .ins5-rbl{display:flex;align-items:center;gap:8px}
-        .ins5-rbl-l{font-size:11px;font-weight:600;color:#4a7060;text-transform:uppercase;letter-spacing:0.5px}
+        .ins5-rbl-l{font-size:11px;font-weight:600;color:#46574c;text-transform:uppercase;letter-spacing:0.5px}
         .ins5-rt{width:100%;border-collapse:collapse;font-size:13px}
-        .ins5-rt th{background:#f4f9f2;padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;color:#5a8068;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1.5px solid #dbe8d5;white-space:nowrap}
-        .ins5-rt td{padding:9px 12px;border-bottom:1px solid #f0f6ec;color:#243830;vertical-align:middle}
+        .ins5-rt th{background:#f4f9f2;padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;color:#6b7d71;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1.5px solid #dbe8d5;white-space:nowrap}
+        .ins5-rt td{padding:9px 12px;border-bottom:1px solid #f0f6ec;color:#233029;vertical-align:middle}
         .ins5-rt tbody tr:hover{background:#eef9f0}
-        .ins5-rem{text-align:center;padding:28px 12px;color:#96b8a0;font-size:12.5px}
+        .ins5-rem{text-align:center;padding:28px 12px;color:#94a49a;font-size:12.5px}
 
         .ins5-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:1000}
         .ins5-modal{background:#fff;border-radius:12px;width:720px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
         .ins5-modal-h{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #dbe8d5;background:#fafcf9}
-        .ins5-modal-ht{font-size:13px;font-weight:600;color:#1a2e22}
+        .ins5-modal-ht{font-size:13px;font-weight:600;color:#1c2b22}
         .ins5-modal-b{padding:20px}
         .ins5-modal-f{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #edf5e8}
 
@@ -241,12 +238,12 @@ export function Vins0200Page(): JSX.Element {
 
         .ins5-ft{background:#fff;border-top:1px solid #dbe8d5;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
         .ins5-ftl{display:flex;align-items:center;gap:20px}
-        .ins5-fts{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6a8a74}
-        .ins5-fts strong{color:#1a2e22;font-weight:600}
+        .ins5-fts{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6b7d71}
+        .ins5-fts strong{color:#1c2b22;font-weight:600}
 
         @keyframes ins5Spin{to{transform:rotate(360deg)}}
         .ins5-sp{width:14px;height:14px;flex-shrink:0;border:2px solid rgba(223,240,226,0.3);border-top-color:#dff0e2;border-radius:50%;animation:ins5Spin 0.65s linear infinite}
-        .ins5-spd{width:14px;height:14px;flex-shrink:0;border:2px solid #d4e8cc;border-top-color:#3e9654;border-radius:50%;animation:ins5Spin 0.65s linear infinite}
+        .ins5-spd{width:14px;height:14px;flex-shrink:0;border:2px solid #d4e8cc;border-top-color:#2f7d47;border-radius:50%;animation:ins5Spin 0.65s linear infinite}
         @keyframes ins5FdIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
 
@@ -314,7 +311,7 @@ export function Vins0200Page(): JSX.Element {
           <div className="ins5-c">
             <div className="ins5-ch">
               <div className="ins5-chl">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" /><path d="M5 2v4h6V2M5 9h6" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" /></svg>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" /><path d="M5 2v4h6V2M5 9h6" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" /></svg>
                 <span className="ins5-ct">Roteiro de Inspeção</span>
               </div>
             </div>
@@ -419,9 +416,9 @@ export function Vins0200Page(): JSX.Element {
                       <tr key={s.sequencia}>
                         <td style={{fontWeight:600,color:"#1a4a2a"}}>{s.sequencia}</td>
                         <td>{s.inspecao}</td><td>{s.especie}</td>
-                        <td>{s.apontamento ? <span style={{color:"#2a8040",fontWeight:600}}>Sim</span> : <span style={{color:"#96b8a0"}}>Não</span>}</td>
+                        <td>{s.apontamento ? <span style={{color:"#2a8040",fontWeight:600}}>Sim</span> : <span style={{color:"#94a49a"}}>Não</span>}</td>
                         <td>{s.forma_apontamento}</td>
-                        <td>{s.emite_etiqueta ? <span style={{color:"#2a8040",fontWeight:600}}>Sim</span> : <span style={{color:"#96b8a0"}}>Não</span>}</td>
+                        <td>{s.emite_etiqueta ? <span style={{color:"#2a8040",fontWeight:600}}>Sim</span> : <span style={{color:"#94a49a"}}>Não</span>}</td>
                         <td>
                           <div style={{display:"flex",gap:4}}>
                             <button className="ins5-bt ins5-bt-g" style={{height:26,padding:"0 8px",fontSize:11}} onClick={() => openDetalhes(s)}>Detalhes</button>
@@ -479,8 +476,8 @@ export function Vins0200Page(): JSX.Element {
                   <div className="ins5-f ins5-g12">
                     <div style={{display:"flex",gap:16}}>
                       {(["valor","atributo","estrutura"] as const).map(t => (
-                        <label key={t} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13,fontWeight:500,color:"#243830"}}>
-                          <input type="radio" name="especie" checked={seqEdit.especie_tipo === t} onChange={() => setSeqEdit({...seqEdit, especie_tipo: t})} style={{accentColor:"#3e9654"}} />
+                        <label key={t} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13,fontWeight:500,color:"#233029"}}>
+                          <input type="radio" name="especie" checked={seqEdit.especie_tipo === t} onChange={() => setSeqEdit({...seqEdit, especie_tipo: t})} style={{accentColor:"#2f7d47"}} />
                           {t === "valor" ? "Valor" : t === "atributo" ? "Atributo" : "Estrutura"}
                         </label>
                       ))}
@@ -603,7 +600,7 @@ export function Vins0200Page(): JSX.Element {
             <div className="ins5-fts">Sequências: <strong>{sequencias.length}</strong></div>
             <div className="ins5-fts">Módulo: <strong>Inspeção</strong></div>
           </div>
-          <div className="ins5-fts" style={{gap:8}}><span style={{color:"#b0c8b8",fontSize:11}}>GRUPO VENTURE LTDA</span></div>
+          <div className="ins5-fts" style={{gap:8}}><span style={{color:"#a9b6ac",fontSize:11}}>GRUPO VENTURE LTDA</span></div>
         </footer>
       </div>
     </>

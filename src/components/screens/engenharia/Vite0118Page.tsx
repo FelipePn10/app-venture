@@ -1,13 +1,8 @@
 import { useState, useCallback } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   criarRegraItemConfig,
   listarRegrasItemConfig,
-  MOCK_ITENS,
-  MOCK_TABELAS,
-  MOCK_CARACTERISTICAS_DISPONIVEIS,
-  MOCK_OPERADORES,
-  MOCK_VARIAVEIS,
   type RegraItemConfigDTO,
   type RegraItemConfigResponse,
   type RegraCaracteristicaDTO,
@@ -37,26 +32,10 @@ const FORM_INICIAL: FormRegraItem = {
   situacao: "Ativo",
 };
 
-const MOCK_CAMPOS_POR_TABELA: Record<string, Array<{ value: string; label: string }>> = {
-  Contábil: [{ value: 'CONTA_CONTABIL', label: 'Conta Contábil' }, { value: 'CENTRO_CUSTO', label: 'Centro de Custo' }, { value: 'NATUREZA', label: 'Natureza' }],
-  Comercial: [{ value: 'PRECO_VENDA', label: 'Preço de Venda' }, { value: 'COMISSAO', label: 'Comissão (%)' }, { value: 'GRUPO_FISCAL', label: 'Grupo Fiscal' }],
-  Custos: [{ value: 'CUSTO_PADRAO', label: 'Custo Padrão' }, { value: 'CUSTO_MEDIO', label: 'Custo Médio' }, { value: 'CRITERIO_RATEIO', label: 'Critério de Rateio' }],
-  Planejamento: [{ value: 'LEAD_TIME', label: 'Lead Time (dias)' }, { value: 'LOTE_MINIMO', label: 'Lote Mínimo' }, { value: 'ESTOQUE_SEG', label: 'Estoque Segurança' }],
-  Planejadores: [{ value: 'PLANEJADOR', label: 'Planejador' }, { value: 'CALENDARIO', label: 'Calendário' }],
-  Engenharia: [{ value: 'DESENHO_TECNICO', label: 'Desenho Técnico' }, { value: 'PESO_LIQUIDO', label: 'Peso Líquido' }, { value: 'REVISAO', label: 'Revisão' }],
-  Estoque: [{ value: 'ARMAZEM', label: 'Armazém' }, { value: 'ENDERECO', label: 'Endereço' }, { value: 'TIPO_MOV', label: 'Tipo de Movimento' }],
-  Suprimentos: [{ value: 'FORNECEDOR', label: 'Fornecedor' }, { value: 'PRAZO_ENTREGA', label: 'Prazo de Entrega' }, { value: 'COND_PAGAMENTO', label: 'Cond. Pagamento' }],
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeError(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; error?: string } | undefined;
-    const msg = data?.message ?? data?.error;
-    if (msg) return msg;
-  }
-  return error instanceof Error ? error.message : fallback;
+  return humanizeApiError(error, fallback);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -101,7 +80,7 @@ export function Vite0118Page(): JSX.Element {
   function validate(): boolean {
     const e: Partial<Record<keyof FormRegraItem, string>> = {};
     if (!form.item) e.item = "Item obrigatório.";
-    if (!form.tabela) (e as any).tabela = "Tabela obrigatória.";
+    if (!form.tabela) e.tabela = "Tabela obrigatória.";
     if (!form.descricao.trim()) e.descricao = "Descrição obrigatória.";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -164,8 +143,6 @@ export function Vite0118Page(): JSX.Element {
     setFiltroItem("");
   }
 
-  const camposDisponiveis = form.tabela ? (MOCK_CAMPOS_POR_TABELA[form.tabela] ?? []) : [];
-
   return (
     <>
       <style>{`
@@ -173,25 +150,25 @@ export function Vite0118Page(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .ite-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
         .ite-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .ite-topbar-left { display: flex; align-items: center; gap: 10px; }
         .ite-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .ite-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .ite-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .ite-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .ite-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
@@ -208,7 +185,7 @@ export function Vite0118Page(): JSX.Element {
         .ite-action-group:last-child { border-right: none; }
         .ite-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 4px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
         }
         .ite-btn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -217,11 +194,11 @@ export function Vite0118Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .ite-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .ite-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .ite-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .ite-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .ite-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ite-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .ite-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
+        .ite-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .ite-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
         .ite-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .ite-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .ite-btn-danger:hover:not(:disabled) { background: #fff0f0; border-color: #e09090; }
@@ -252,12 +229,12 @@ export function Vite0118Page(): JSX.Element {
         .ite-section-banner:first-child { padding-top: 0; }
         .ite-section-pill {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #5a8068;
+          text-transform: uppercase; color: #6b7d71;
           background: #e0ede0; border: 1px solid #c8dcc8;
           border-radius: 20px; padding: 3px 10px; white-space: nowrap;
         }
         .ite-section-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .ite-section-hint { font-size: 11px; color: #96b8a0; white-space: nowrap; }
+        .ite-section-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
 
         .ite-card {
           background: #fff; border: 1px solid #dbe8d5;
@@ -268,9 +245,9 @@ export function Vite0118Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .ite-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .ite-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .ite-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .ite-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
+          font-size: 10.5px; font-weight: 500; color: #2f7d47;
           background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
         }
         .ite-card-body { padding: 18px 18px; }
@@ -286,7 +263,7 @@ export function Vite0118Page(): JSX.Element {
 
         .ite-field { display: flex; flex-direction: column; gap: 5px; }
         .ite-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
           display: flex; align-items: center; gap: 4px;
         }
@@ -295,25 +272,25 @@ export function Vite0118Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .ite-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .ite-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .ite-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .ite-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .ite-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .ite-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
         .ite-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
 
         .ite-select {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s;
         }
-        .ite-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .ite-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
 
         .ite-field-error { font-size: 11px; color: #c84040; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
         .ite-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
@@ -334,29 +311,29 @@ export function Vite0118Page(): JSX.Element {
           padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
         }
         .ite-results-bar-left { display: flex; align-items: center; gap: 8px; }
-        .ite-results-bar-label { font-size: 11px; font-weight: 600; color: #4a7060; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ite-results-hint { font-size: 11px; color: #96b8a0; }
+        .ite-results-bar-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ite-results-hint { font-size: 11px; color: #94a49a; }
         .ite-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .ite-results-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
         }
-        .ite-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; vertical-align: middle; }
+        .ite-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
         .ite-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
         .ite-results-table tbody tr:hover { background: #eef9f0; }
-        .ite-results-empty { text-align: center; padding: 28px 12px; color: #96b8a0; font-size: 12.5px; }
+        .ite-results-empty { text-align: center; padding: 28px 12px; color: #94a49a; font-size: 12.5px; }
 
         .ite-carac-inline { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
         .ite-carac-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
         .ite-carac-table th {
           background: #f4f9f2; padding: 6px 10px; text-align: left;
-          font-size: 10px; font-weight: 700; color: #5a8068;
+          font-size: 10px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1px solid #dbe8d5;
         }
-        .ite-carac-table td { padding: 7px 10px; border-bottom: 1px solid #f0f6ec; color: #243830; }
+        .ite-carac-table td { padding: 7px 10px; border-bottom: 1px solid #f0f6ec; color: #233029; }
         .ite-remove-btn {
           background: transparent; border: none; cursor: pointer; color: #c89090;
           padding: 3px 6px; border-radius: 5px; font-size: 12px; font-family: 'Inter', sans-serif;
@@ -381,7 +358,7 @@ export function Vite0118Page(): JSX.Element {
         }
         .ite-spinner-dark {
           width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: spin 0.65s linear infinite;
         }
         @keyframes iteFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -460,7 +437,7 @@ export function Vite0118Page(): JSX.Element {
           <div className="ite-card">
             <div className="ite-card-header">
               <div className="ite-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="#3e9654" strokeWidth="1.4" /><path d="M10 10l3.5 3.5" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" /></svg>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="#2f7d47" strokeWidth="1.4" /><path d="M10 10l3.5 3.5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" /></svg>
                 <span className="ite-card-title">Pesquisa de Regras de Itens Configurados</span>
               </div>
             </div>
@@ -469,10 +446,7 @@ export function Vite0118Page(): JSX.Element {
               <div className="ite-filter-row">
                 <div className="ite-field" style={{ flex: "0 0 280px" }}>
                   <label className="ite-label">Item</label>
-                  <select className="ite-select" value={filtroItem} onChange={e => setFiltroItem(e.target.value)}>
-                    <option value="">Todos</option>
-                    {MOCK_ITENS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
-                  </select>
+                  <input className="ite-input" value={filtroItem} onChange={e => setFiltroItem(e.target.value)} placeholder="Código do item; vazio consulta todos" />
                 </div>
                 <div style={{ alignSelf: "flex-end" }}>
                   <button className="ite-btn ite-btn-ghost" onClick={() => void handlePesquisar()} disabled={isSearching}>
@@ -486,7 +460,7 @@ export function Vite0118Page(): JSX.Element {
               <div className="ite-results-wrap">
                 <div className="ite-results-bar">
                   <div className="ite-results-bar-left">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="#5a8068" strokeWidth="1.4" strokeLinecap="round" /></svg>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="#6b7d71" strokeWidth="1.4" strokeLinecap="round" /></svg>
                     <span className="ite-results-bar-label">Resultados</span>
                     <span className="ite-card-badge">{resultados.length} registro(s)</span>
                   </div>
@@ -547,7 +521,7 @@ export function Vite0118Page(): JSX.Element {
           <div className="ite-card">
             <div className="ite-card-header">
               <div className="ite-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" /><path d="M5 2v4h6V2M5 9h6" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" /></svg>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" /><path d="M5 2v4h6V2M5 9h6" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" /></svg>
                 <span className="ite-card-title">Regra de Item Configurado</span>
               </div>
               {codigoEdit
@@ -561,10 +535,7 @@ export function Vite0118Page(): JSX.Element {
               <div className="ite-grid">
                 <div className="ite-field ite-col-4">
                   <label className="ite-label">Item <span className="ite-label-req">*</span></label>
-                  <select className="ite-select" value={form.item} onChange={e => setField("item", e.target.value)}>
-                    <option value="">Selecione...</option>
-                    {MOCK_ITENS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
-                  </select>
+                  <input className="ite-input" value={form.item} onChange={e => setField("item", e.target.value)} placeholder="Código do item cadastrado" />
                   {errors.item && <span className="ite-field-error">{errors.item}</span>}
                 </div>
               </div>
@@ -576,23 +547,15 @@ export function Vite0118Page(): JSX.Element {
               <div className="ite-carac-inline">
                 <div className="ite-field" style={{ flex: "1 1 200px" }}>
                   <label className="ite-label">Característica</label>
-                  <select className="ite-select" value={novaCarc.caracteristica} onChange={e => setNovaCarc(p => ({ ...p, caracteristica: e.target.value }))}>
-                    <option value="">Selecione...</option>
-                    {MOCK_CARACTERISTICAS_DISPONIVEIS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
+                  <input className="ite-input" value={novaCarc.caracteristica} onChange={e => setNovaCarc(p => ({ ...p, caracteristica: e.target.value }))} placeholder="Código da característica" />
                 </div>
                 <div className="ite-field" style={{ flex: "0 0 180px" }}>
                   <label className="ite-label">Operador</label>
-                  <select className="ite-select" value={novaCarc.operador} onChange={e => setNovaCarc(p => ({ ...p, operador: e.target.value }))}>
-                    {MOCK_OPERADORES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <input className="ite-input" value={novaCarc.operador} onChange={e => setNovaCarc(p => ({ ...p, operador: e.target.value }))} placeholder="Operador aceito pela API" />
                 </div>
                 <div className="ite-field" style={{ flex: "1 1 200px" }}>
                   <label className="ite-label">Variável</label>
-                  <select className="ite-select" value={novaCarc.variavel} onChange={e => setNovaCarc(p => ({ ...p, variavel: e.target.value }))}>
-                    <option value="">Selecione...</option>
-                    {MOCK_VARIAVEIS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
-                  </select>
+                  <input className="ite-input" value={novaCarc.variavel} onChange={e => setNovaCarc(p => ({ ...p, variavel: e.target.value }))} placeholder="Código/valor da variável" />
                 </div>
                 <div style={{ alignSelf: "flex-end" }}>
                   <button className="ite-btn ite-btn-ghost" onClick={addCaracteristica}>
@@ -633,18 +596,12 @@ export function Vite0118Page(): JSX.Element {
               <div className="ite-grid">
                 <div className="ite-field ite-col-4">
                   <label className="ite-label">Tabela <span className="ite-label-req">*</span></label>
-                  <select className="ite-select" value={form.tabela} onChange={e => setField("tabela", e.target.value)}>
-                    <option value="">Selecione...</option>
-                    {MOCK_TABELAS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  {(errors as any).tabela && <span className="ite-field-error">{(errors as any).tabela}</span>}
+                  <input className="ite-input" value={form.tabela} onChange={e => setField("tabela", e.target.value)} placeholder="Tabela de destino aceita pela API" />
+                  {errors.tabela && <span className="ite-field-error">{errors.tabela}</span>}
                 </div>
                 <div className="ite-field ite-col-4">
                   <label className="ite-label">Campo</label>
-                  <select className="ite-select" value={form.campo} onChange={e => setField("campo", e.target.value)} disabled={!form.tabela}>
-                    <option value="">Selecione...</option>
-                    {camposDisponiveis.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
+                  <input className="ite-input" value={form.campo} onChange={e => setField("campo", e.target.value)} disabled={!form.tabela} placeholder="Campo de destino aceito pela API" />
                 </div>
                 <div className="ite-field ite-col-4">
                   <label className="ite-label">Conteúdo</label>

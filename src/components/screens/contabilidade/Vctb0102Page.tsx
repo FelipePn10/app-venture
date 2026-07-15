@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   createCostCenter,
   listCostCenters,
@@ -108,14 +108,7 @@ function decodeJwtSub(token: string | null): string | undefined {
 }
 
 function normalizeErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as
-      | { message?: string; error?: string }
-      | undefined;
-    const msg = data?.message ?? data?.error;
-    if (msg) return msg;
-  }
-  return error instanceof Error ? error.message : fallback;
+  return humanizeApiError(error, fallback);
 }
 
 function applyResponseToForm(r: CostCenterResponse): FormCC {
@@ -333,27 +326,27 @@ export function Vctb0102Page(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .ctb-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
 
         /* ── TOPBAR ── */
         .ctb-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .ctb-topbar-left { display: flex; align-items: center; gap: 10px; }
         .ctb-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .ctb-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .ctb-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .ctb-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .ctb-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
@@ -372,7 +365,7 @@ export function Vctb0102Page(): JSX.Element {
         .ctb-action-group:last-child { border-right: none; }
         .ctb-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 4px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
         }
         .ctb-btn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -381,11 +374,11 @@ export function Vctb0102Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .ctb-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .ctb-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .ctb-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .ctb-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .ctb-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ctb-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .ctb-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
+        .ctb-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .ctb-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
         .ctb-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .ctb-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .ctb-btn-danger:hover:not(:disabled) { background: #fff0f0; border-color: #e09090; }
@@ -411,12 +404,12 @@ export function Vctb0102Page(): JSX.Element {
         .ctb-section-banner:first-child { padding-top: 0; }
         .ctb-section-banner-pill {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #5a8068;
+          text-transform: uppercase; color: #6b7d71;
           background: #e0ede0; border: 1px solid #c8dcc8;
           border-radius: 20px; padding: 3px 10px; white-space: nowrap;
         }
         .ctb-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .ctb-section-banner-hint { font-size: 11px; color: #96b8a0; white-space: nowrap; }
+        .ctb-section-banner-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
 
         /* ── CARD ── */
         .ctb-card {
@@ -428,9 +421,9 @@ export function Vctb0102Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .ctb-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .ctb-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .ctb-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .ctb-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
+          font-size: 10.5px; font-weight: 500; color: #2f7d47;
           background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
         }
         .ctb-card-body { padding: 18px 18px; }
@@ -451,7 +444,7 @@ export function Vctb0102Page(): JSX.Element {
         .ctb-modo-dot {
           width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
         }
-        .ctb-modo-novo  .ctb-modo-dot { background: #3e9654; }
+        .ctb-modo-novo  .ctb-modo-dot { background: #2f7d47; }
         .ctb-modo-edicao .ctb-modo-dot { background: #c8a020; }
 
         /* ── FILTER ROW ── */
@@ -472,7 +465,7 @@ export function Vctb0102Page(): JSX.Element {
         /* ── FIELDS ── */
         .ctb-field { display: flex; flex-direction: column; gap: 5px; }
         .ctb-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
           display: flex; align-items: center; gap: 4px;
         }
@@ -481,12 +474,12 @@ export function Vctb0102Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .ctb-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .ctb-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .ctb-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .ctb-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .ctb-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .ctb-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
         .ctb-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
         .ctb-input[type="date"] { cursor: pointer; }
 
@@ -494,13 +487,13 @@ export function Vctb0102Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s;
         }
-        .ctb-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .ctb-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
 
         .ctb-input-wrap { position: relative; display: flex; }
         .ctb-input-btn {
@@ -522,7 +515,7 @@ export function Vctb0102Page(): JSX.Element {
         .ctb-info-box {
           margin-top: 6px; padding: 8px 12px;
           background: #f4f9f2; border: 1px solid #d4e8cc;
-          border-radius: 7px; font-size: 12px; color: #3a5a45; line-height: 1.55;
+          border-radius: 7px; font-size: 12px; color: #46574c; line-height: 1.55;
         }
         .ctb-info-box.produtivo { background: #f0f8ea; border-color: #b4d8a8; color: #2a4820; }
 
@@ -531,7 +524,7 @@ export function Vctb0102Page(): JSX.Element {
         .ctb-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
         .ctb-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
         .ctb-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .ctb-toggle input:checked ~ .ctb-toggle-track { background: #3e9654; }
+        .ctb-toggle input:checked ~ .ctb-toggle-track { background: #2f7d47; }
         .ctb-toggle-thumb {
           position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
           background: #fff; border-radius: 50%; transition: transform 0.2s;
@@ -539,7 +532,7 @@ export function Vctb0102Page(): JSX.Element {
         }
         .ctb-toggle input:checked ~ .ctb-toggle-thumb { transform: translateX(18px); }
         .ctb-toggle.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
-        .ctb-toggle-label { font-size: 13px; color: #3a5a45; font-weight: 500; }
+        .ctb-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; }
         .ctb-toggle-sub   { font-size: 11.5px; color: #7a9c84; }
 
         /* ── SECTION DIVIDER ── */
@@ -558,13 +551,13 @@ export function Vctb0102Page(): JSX.Element {
         }
         .ctb-tab {
           padding: 10px 20px; font-size: 12.5px; font-weight: 500;
-          color: #6a8a74; cursor: pointer; border: none; background: transparent;
+          color: #6b7d71; cursor: pointer; border: none; background: transparent;
           border-bottom: 2px solid transparent; margin-bottom: -2px;
           transition: color 0.13s, border-color 0.13s; white-space: nowrap;
           font-family: 'Inter', sans-serif;
         }
-        .ctb-tab:hover { color: #2a4a35; }
-        .ctb-tab.active { color: #162e20; border-bottom-color: #3e9654; font-weight: 600; }
+        .ctb-tab:hover { color: #253a2d; }
+        .ctb-tab.active { color: #16281d; border-bottom-color: #2f7d47; font-weight: 600; }
         .ctb-tab-body { padding: 20px 18px; }
 
         /* ── RESULTS TABLE ── */
@@ -574,19 +567,19 @@ export function Vctb0102Page(): JSX.Element {
           padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
         }
         .ctb-results-bar-left { display: flex; align-items: center; gap: 8px; }
-        .ctb-results-bar-label { font-size: 11px; font-weight: 600; color: #4a7060; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ctb-results-hint { font-size: 11px; color: #96b8a0; }
+        .ctb-results-bar-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ctb-results-hint { font-size: 11px; color: #94a49a; }
         .ctb-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .ctb-results-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
         }
-        .ctb-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; vertical-align: middle; }
+        .ctb-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
         .ctb-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
         .ctb-results-table tbody tr:hover { background: #eef9f0; }
-        .ctb-results-empty { text-align: center; padding: 28px 12px; color: #96b8a0; font-size: 12.5px; }
+        .ctb-results-empty { text-align: center; padding: 28px 12px; color: #94a49a; font-size: 12.5px; }
 
         .ctb-tipo-badge {
           display: inline-flex; align-items: center;
@@ -599,18 +592,18 @@ export function Vctb0102Page(): JSX.Element {
 
         /* ── VINCULOS TABLE ── */
         .ctb-vinculos-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-        .ctb-vinculos-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ctb-vinculos-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.5px; }
         .ctb-vinculos-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .ctb-vinculos-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .ctb-vinculos-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5;
         }
-        .ctb-vinculos-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; }
+        .ctb-vinculos-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; }
         .ctb-vinculos-table tbody tr:hover { background: #f4fbf2; }
-        .ctb-vinculos-empty { text-align: center; padding: 32px 12px; color: #96b8a0; font-size: 12.5px; }
+        .ctb-vinculos-empty { text-align: center; padding: 32px 12px; color: #94a49a; font-size: 12.5px; }
         .ctb-remove-btn {
           background: transparent; border: none; cursor: pointer; color: #c89090;
           padding: 3px 6px; border-radius: 5px; font-size: 12px; font-family: 'Inter', sans-serif;
@@ -643,8 +636,8 @@ export function Vctb0102Page(): JSX.Element {
           justify-content: space-between; flex-shrink: 0;
         }
         .ctb-footer-left { display: flex; align-items: center; gap: 20px; }
-        .ctb-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .ctb-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .ctb-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .ctb-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
         .ctb-spinner {
@@ -654,7 +647,7 @@ export function Vctb0102Page(): JSX.Element {
         }
         .ctb-spinner-dark {
           width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: spin 0.65s linear infinite;
         }
         @keyframes ctbFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -769,8 +762,8 @@ export function Vctb0102Page(): JSX.Element {
             <div className="ctb-card-header">
               <div className="ctb-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M10 10l3.5 3.5" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M10 10l3.5 3.5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="ctb-card-title">Pesquisa de Centros de Custo</span>
               </div>
@@ -825,7 +818,7 @@ export function Vctb0102Page(): JSX.Element {
                 <div className="ctb-results-bar">
                   <div className="ctb-results-bar-left">
                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 4h12M2 8h12M2 12h8" stroke="#5a8068" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M2 4h12M2 8h12M2 12h8" stroke="#6b7d71" strokeWidth="1.4" strokeLinecap="round" />
                     </svg>
                     <span className="ctb-results-bar-label">Resultados</span>
                     <span className="ctb-card-badge">{resultados.length} registro(s)</span>
@@ -867,7 +860,7 @@ export function Vctb0102Page(): JSX.Element {
                         return (
                           <tr key={cc.code} onClick={() => handleSelectFromList(cc)}>
                             <td style={{ fontWeight: 600, color: "#1a4a2a" }}>{cc.code}</td>
-                            <td style={{ color: cc.parent_code ? "#243830" : "#96b8a0" }}>
+                            <td style={{ color: cc.parent_code ? "#233029" : "#94a49a" }}>
                               {cc.parent_code ?? "—"}
                             </td>
                             <td>{cc.description}</td>
@@ -879,11 +872,11 @@ export function Vctb0102Page(): JSX.Element {
                             <td style={{ textAlign: "center" }}>
                               {cc.is_ratio
                                 ? <span style={{ color: "#2a8040", fontWeight: 600, fontSize: 12 }}>Sim</span>
-                                : <span style={{ color: "#96b8a0", fontSize: 12 }}>Não</span>
+                                : <span style={{ color: "#94a49a", fontSize: 12 }}>Não</span>
                               }
                             </td>
                             <td style={{ fontSize: 12 }}>{formatDateBR(cc.start_date)}</td>
-                            <td style={{ fontSize: 12, color: cc.end_date ? "#243830" : "#96b8a0" }}>
+                            <td style={{ fontSize: 12, color: cc.end_date ? "#233029" : "#94a49a" }}>
                               {cc.end_date ? formatDateBR(cc.end_date) : "Em aberto"}
                             </td>
                           </tr>
@@ -915,8 +908,8 @@ export function Vctb0102Page(): JSX.Element {
             <div className="ctb-card-header">
               <div className="ctb-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5 2v4h6V2M5 9h6" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d="M5 2v4h6V2M5 9h6" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="ctb-card-title">Centro de Custo</span>
               </div>
@@ -1218,9 +1211,9 @@ export function Vctb0102Page(): JSX.Element {
                     <tbody>
                       {empresas.map((e, i) => (
                         <tr key={i}>
-                          <td style={{ color: "#96b8a0", fontSize: 12 }}>{i + 1}</td>
+                          <td style={{ color: "#94a49a", fontSize: 12 }}>{i + 1}</td>
                           <td style={{ fontWeight: 600, color: "#1a4a2a" }}>{e.empresa}</td>
-                          <td style={{ color: e.unidade ? "#243830" : "#96b8a0" }}>
+                          <td style={{ color: e.unidade ? "#233029" : "#94a49a" }}>
                             {e.unidade || "—"}
                           </td>
                           <td>
@@ -1267,7 +1260,7 @@ export function Vctb0102Page(): JSX.Element {
               ? <span className="ctb-modo-novo" style={{ fontSize: 11 }}><span className="ctb-modo-dot" />Novo Cadastro</span>
               : <span className="ctb-modo-edicao" style={{ fontSize: 11 }}><span className="ctb-modo-dot" />Editando #{codigoEdit}</span>
             }
-            <span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
+            <span style={{ color: "#a9b6ac", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
           </div>
         </footer>
 

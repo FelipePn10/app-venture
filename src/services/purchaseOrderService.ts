@@ -49,6 +49,26 @@ export interface SuggestionDTO {
   order_type?: string;
 }
 
+export interface PurchaseOrderConsultationFilter {
+  order_from?: number; order_to?: number; supplier_from?: number; supplier_to?: number;
+  request_type?: string; item_from?: number; item_to?: number; buyer?: string;
+  import_from?: string; import_to?: string; base_date?: string; emission_from?: string;
+  emission_to?: string; delivery_from?: string; delivery_to?: string; all_items?: boolean;
+  convert?: boolean; only_kanban?: boolean; position?: string; target_currency?: string;
+  type?: string; limit?: number; offset?: number;
+}
+
+export interface PurchaseReceiptItemDTO {
+  purchase_order_item_code: number;
+  quantity: number;
+  warehouse_id: number;
+  lot?: string;
+  serial_number?: string;
+  batch?: string;
+  expiration_date?: string;
+  notes?: string;
+}
+
 function parseItem(raw: unknown): PurchaseOrderItemDTO {
   const o = unwrapObject(raw);
   return {
@@ -109,6 +129,10 @@ export async function createOrder(dto: PurchaseOrderDTO): Promise<PurchaseOrderD
   const { data } = await httpClient.post(`${BASE}/create`, dto);
   return parseOrder(data);
 }
+export async function updateOrder(code: number, dto: PurchaseOrderDTO): Promise<PurchaseOrderDTO> {
+  const { data } = await httpClient.put(`${BASE}/${code}`, dto);
+  return parseOrder(data);
+}
 export async function cancelOrder(code: number): Promise<void> {
   await httpClient.delete(`${BASE}/${code}/cancel`);
 }
@@ -119,6 +143,31 @@ export async function addOrderItem(code: number, item: PurchaseOrderItemDTO): Pr
 export async function listOrdersBySupplier(supplierCode: number): Promise<PurchaseOrderDTO[]> {
   const { data } = await httpClient.get(`${BASE}/supplier/${supplierCode}`);
   return unwrapArray(data).map(parseOrder);
+}
+export async function listOrdersByStatus(status: string): Promise<PurchaseOrderDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/status/${encodeURIComponent(status)}`);
+  return unwrapArray(data).map(parseOrder);
+}
+export async function downloadOrderAttachment(code: number, attachmentID: number): Promise<Blob> {
+  const { data } = await httpClient.get(`${BASE}/${code}/attachments/${attachmentID}/download`, { responseType: 'blob' });
+  return data as Blob;
+}
+
+export async function consultOrders(filter: PurchaseOrderConsultationFilter = {}): Promise<Obj[]> {
+  const { data } = await httpClient.get(`${BASE}/consultation`, { params: filter });
+  return unwrapArray(data).map((row) => unwrapObject(row));
+}
+export async function approveOrder(code: number): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/${code}/approve`);
+  return unwrapObject(data);
+}
+export async function authorizeOrder(code: number): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/${code}/authorize`);
+  return unwrapObject(data);
+}
+export async function receiveOrder(code: number, items: PurchaseReceiptItemDTO[], notes?: string): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/${code}/receipts`, { items, notes });
+  return unwrapObject(data);
 }
 
 // ── Sugestões de compra (MRP) ──

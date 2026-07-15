@@ -364,7 +364,7 @@ export async function listOcorrencias(filtros?: OcorrenciaFilter): Promise<Ocorr
     exibir_dados_relatorio: safeBoolean(r.exibir_dados_relatorio),
     abonado: safeBoolean(r.abonado),
     fechamento: safeString(r.fechamento),
-    motivo_abono: safeString((r as any).motivo_abono),
+    motivo_abono: safeString(r.motivo_abono),
   }));
 }
 
@@ -382,7 +382,7 @@ export async function getOcorrencia(numero: string): Promise<OcorrenciaResponse 
       exibir_dados_relatorio: safeBoolean(data.exibir_dados_relatorio),
       abonado: safeBoolean(data.abonado),
       fechamento: safeString(data.fechamento),
-      motivo_abono: safeString((data as any).motivo_abono),
+      motivo_abono: safeString(data.motivo_abono),
     };
   } catch (error: unknown) {
     if (axios.isAxiosError(error) && error.response?.status === 404) return null;
@@ -604,11 +604,11 @@ export async function listEnvioIQF(filtros?: EnvioIQF_DTO): Promise<EnvioIQF_Res
     tipo: safeString(r.tipo),
     periodo_inicio: safeString(r.periodo_inicio),
     periodo_fim: safeString(r.periodo_fim),
-    empresa: safeString((r as any).empresa),
-    iqf: safeNumber((r as any).iqf),
-    parecer: safeString((r as any).parecer),
-    classificacao: safeString((r as any).classificacao),
-    layout: safeString((r as any).layout),
+    empresa: safeString(r.empresa),
+    iqf: safeNumber(r.iqf),
+    parecer: safeString(r.parecer),
+    classificacao: safeString(r.classificacao),
+    layout: safeString(r.layout),
   }));
 }
 

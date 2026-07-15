@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:demo": "vite --mode demo",
     "build": "tsc --noEmit && vite build",
+    "build:production": "tsc --noEmit && vite build --mode production",
     "build:demo": "tsc --noEmit && vite build --mode demo",
     "preview": "vite preview",
     "preview:demo": "vite preview --mode demo",
@@ -15,7 +16,10 @@
     "tauri:dev:demo": "tauri dev --config src-tauri/tauri.demo.conf.json",
     "tauri:build": "tauri build",
     "tauri:build:demo": "tauri build --config src-tauri/tauri.demo.conf.json",
-    "doctor:package": "node scripts/verify-package-json.mjs"
+    "doctor:package": "node scripts/verify-package-json.mjs",
+    "validate:backend-alignment": "node scripts/validate-backend-alignment.mjs && node scripts/validate-no-registered-mocks.mjs",
+    "validate:no-mocks": "node scripts/validate-no-registered-mocks.mjs",
+    "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",

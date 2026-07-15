@@ -98,8 +98,8 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
     return (
       <div className="fe-detail-empty">
         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" style={{ opacity: 0.3 }}>
-          <circle cx="18" cy="18" r="14" stroke="#3e9654" strokeWidth="1.8"/>
-          <path d="M18 12v7M18 23h.01" stroke="#3e9654" strokeWidth="1.8" strokeLinecap="round"/>
+          <circle cx="18" cy="18" r="14" stroke="#2f7d47" strokeWidth="1.8"/>
+          <path d="M18 12v7M18 23h.01" stroke="#2f7d47" strokeWidth="1.8" strokeLinecap="round"/>
         </svg>
         <span className="fe-detail-empty-title">Nenhum item selecionado</span>
         <span className="fe-detail-empty-sub">Clique em um item da grade.</span>
@@ -187,7 +187,7 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
         <input className="fe-d-input" value={row.parentMask ?? ''}
           onChange={(e) => onUpdate({ parentMask: e.target.value || null })}
           placeholder="Opcional"/>
-        <span style={{ fontSize: 10.5, color: '#96b8a0', marginTop: 2 }}>
+        <span style={{ fontSize: 10.5, color: '#94a49a', marginTop: 2 }}>
           Validada ao salvar — deve pertencer ao item pai.
         </span>
       </div>
@@ -207,7 +207,7 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
       {row.createdAt && (
         <>
           <div className="fe-d-sep"/>
-          <div style={{ fontSize: 10.5, color: '#96b8a0', lineHeight: 1.7 }}>
+          <div style={{ fontSize: 10.5, color: '#94a49a', lineHeight: 1.7 }}>
             <div>Criado: {new Date(row.createdAt).toLocaleString('pt-BR')}</div>
             {row.updatedAt && <div>Atualizado: {new Date(row.updatedAt).toLocaleString('pt-BR')}</div>}
             {row.level > 0 && <div>Nível na árvore: {row.level}</div>}
@@ -449,27 +449,27 @@ export function Vent0210Page(): JSX.Element {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .fe-root { min-height: 100vh; background: #f0f4ee; font-family: 'Inter', sans-serif; color: #1a2e22; display: flex; flex-direction: column; }
+        .fe-root { min-height: 100vh; background: #dfe4e0; font-family: 'Inter', sans-serif; color: #1c2b22; display: flex; flex-direction: column; }
 
-        .fe-topbar { height: 52px; background: #162e20; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; border-bottom: 1px solid rgba(62,150,84,0.15); }
+        .fe-topbar { height: 52px; background: #16281d; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; border-bottom: 1px solid rgba(62,150,84,0.15); }
         .fe-topbar-left { display: flex; align-items: center; gap: 10px; }
-        .fe-logo-mark { width: 28px; height: 28px; background: #3e9654; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+        .fe-logo-mark { width: 28px; height: 28px; background: #2f7d47; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
         .fe-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .fe-app-sub { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
-        .fe-screen-title { font-size: 12.5px; font-weight: 500; color: #5a9a6a; padding-left: 14px; margin-left: 14px; border-left: 1px solid rgba(255,255,255,0.08); }
+        .fe-app-sub { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
+        .fe-screen-title { font-size: 12.5px; font-weight: 500; color: #3f8a58; padding-left: 14px; margin-left: 14px; border-left: 1px solid rgba(255,255,255,0.08); }
 
         .fe-actionbar { background: #fff; border-bottom: 1px solid #dbe8d5; padding: 0 20px; display: flex; align-items: center; gap: 4px; height: 46px; flex-shrink: 0; }
         .fe-action-group { display: flex; align-items: center; gap: 2px; padding-right: 10px; margin-right: 6px; border-right: 1px solid #e8f0e4; }
         .fe-action-group:last-child { border-right: none; }
-        .fe-action-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: #96b8a0; margin-right: 6px; white-space: nowrap; }
-        .fe-nav-btn { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: transparent; border: 1.5px solid #d4e8d0; cursor: pointer; color: #4a7060; transition: background 0.12s; }
+        .fe-action-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: #94a49a; margin-right: 6px; white-space: nowrap; }
+        .fe-nav-btn { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: transparent; border: 1.5px solid #d4e8d0; cursor: pointer; color: #46574c; transition: background 0.12s; }
         .fe-nav-btn:hover { background: #edf7ea; border-color: #a0c8a8; }
         .fe-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1.5px solid transparent; border-radius: 7px; font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.13s, border-color 0.13s; }
-        .fe-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .fe-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .fe-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .fe-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .fe-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .fe-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .fe-btn-ghost:hover { background: #f0f8ec; border-color: #b0d4b8; }
+        .fe-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .fe-btn-ghost:hover { background: #f0f8ec; border-color: #a9b6ac; }
         .fe-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .fe-btn-danger:hover { background: #fff0f0; border-color: #e09090; }
         .fe-btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
@@ -478,24 +478,24 @@ export function Vent0210Page(): JSX.Element {
 
         .fe-header-card { background: #fff; border: 1px solid #dbe8d5; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
         .fe-header-card-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9; }
-        .fe-header-card-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
-        .fe-header-card-badge { font-size: 10.5px; font-weight: 500; color: #3e9654; background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px; }
+        .fe-header-card-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
+        .fe-header-card-badge { font-size: 10.5px; font-weight: 500; color: #2f7d47; background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px; }
         .fe-header-card-meta { display: flex; align-items: center; gap: 12px; }
         .fe-meta-chip { font-size: 10.5px; color: #7a9a84; background: #eef5ea; border: 1px solid #c8e0c0; border-radius: 8px; padding: 2px 8px; font-weight: 500; }
         .fe-header-card-body { padding: 12px 18px; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 
         .fe-h-field { display: flex; flex-direction: column; gap: 4px; }
-        .fe-h-label { font-size: 9.5px; font-weight: 600; color: #5a8068; text-transform: uppercase; letter-spacing: 0.4px; }
-        .fe-h-input { height: 34px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 10px; font-family: 'Inter', sans-serif; font-size: 13px; color: #1a2e22; outline: none; transition: border-color 0.12s; }
-        .fe-h-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .fe-h-label { font-size: 9.5px; font-weight: 600; color: #6b7d71; text-transform: uppercase; letter-spacing: 0.4px; }
+        .fe-h-input { height: 34px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 10px; font-family: 'Inter', sans-serif; font-size: 13px; color: #1c2b22; outline: none; transition: border-color 0.12s; }
+        .fe-h-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
         .fe-h-input.err { border-color: #e05252; }
-        .fe-h-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .fe-h-input:disabled { background: #f0f4ee; color: #8aaa94; border-color: #e0ead8; cursor: default; }
+        .fe-h-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .fe-h-input:disabled { background: #dfe4e0; color: #8aaa94; border-color: #e0ead8; cursor: default; }
         .fe-h-input-wrap { display: flex; }
         .fe-h-input-btn { height: 34px; width: 32px; flex-shrink: 0; background: #edf5ea; border: 1.5px solid #d4e8cc; border-left: none; border-radius: 0 7px 7px 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #4a8060; transition: background 0.12s; }
         .fe-h-input-btn:hover:not(:disabled) { background: #ddf0e0; }
         .fe-h-input-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .fe-h-hint { font-size: 10.5px; color: #96b8a0; margin-top: 3px; }
+        .fe-h-hint { font-size: 10.5px; color: #94a49a; margin-top: 3px; }
         .fe-h-err  { font-size: 10.5px; color: #c84040; margin-top: 3px; }
 
         .fe-split { display: flex; gap: 12px; flex: 1; min-height: 0; }
@@ -504,22 +504,22 @@ export function Vent0210Page(): JSX.Element {
 
         .fe-grid-card { background: #fff; border: 1px solid #dbe8d5; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
         .fe-grid-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #edf5e8; background: #fafcf9; flex-shrink: 0; gap: 8px; }
-        .fe-grid-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; flex: 1; flex-wrap: wrap; }
+        .fe-grid-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; flex: 1; flex-wrap: wrap; }
         .fe-grid-count { font-size: 11px; color: #7a9a84; background: #eef5ea; border: 1px solid #c8e0c0; border-radius: 10px; padding: 2px 8px; font-weight: 500; }
         .fe-dirty-badge { font-size: 10.5px; font-weight: 600; color: #8a5800; background: #fff4e0; border: 1px solid #f0d090; border-radius: 10px; padding: 2px 8px; }
 
         .fe-breadcrumb { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-        .fe-bc-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: #3e9654; font-family: 'Inter', sans-serif; font-weight: 500; padding: 0; }
+        .fe-bc-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: #2f7d47; font-family: 'Inter', sans-serif; font-weight: 500; padding: 0; }
         .fe-bc-btn:hover { text-decoration: underline; }
-        .fe-bc-sep { color: #b0c8b8; font-size: 12px; }
-        .fe-bc-cur { font-size: 12px; color: #1a2e22; font-weight: 600; }
+        .fe-bc-sep { color: #a9b6ac; font-size: 12px; }
+        .fe-bc-cur { font-size: 12px; color: #1c2b22; font-weight: 600; }
 
         .fe-table-wrap { overflow: auto; flex: 1; }
         .fe-table-wrap::-webkit-scrollbar { height: 4px; width: 4px; }
         .fe-table-wrap::-webkit-scrollbar-thumb { background: #cce0c8; border-radius: 4px; }
         .fe-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 860px; }
         .fe-table thead { position: sticky; top: 0; z-index: 2; }
-        .fe-table th { background: #f4f9f2; padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; color: #5a8068; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #dbe8d5; white-space: nowrap; }
+        .fe-table th { background: #f4f9f2; padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; color: #6b7d71; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #dbe8d5; white-space: nowrap; }
         .fe-table td { padding: 0; border-bottom: 1px solid #f0f6ec; vertical-align: middle; }
         .fe-table tbody tr { cursor: pointer; }
         .fe-table tbody tr:hover td { background: #f4fbf2; }
@@ -527,48 +527,48 @@ export function Vent0210Page(): JSX.Element {
         .fe-table tbody tr.inact { opacity: 0.45; }
 
         .fe-td { padding: 5px 10px; display: flex; align-items: center; gap: 6px; min-height: 34px; }
-        .fe-ci { width: 100%; background: transparent; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 12px; color: #1a2e22; padding: 0; min-width: 0; }
-        .fe-ci:focus { background: #fff; border-radius: 4px; padding: 2px 4px; box-shadow: 0 0 0 1.5px #3e9654; }
-        .fe-cs { width: 100%; background: transparent; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 12px; color: #1a2e22; padding: 0; cursor: pointer; appearance: none; }
-        .fe-cs:focus { background: #fff; border-radius: 4px; padding: 2px 4px; box-shadow: 0 0 0 1.5px #3e9654; }
-        .fe-ck { width: 14px; height: 14px; flex-shrink: 0; border: 1.5px solid #b0d0b8; border-radius: 3px; appearance: none; cursor: pointer; background: #f8fbf6; position: relative; transition: background 0.1s; }
-        .fe-ck:checked { background: #3e9654; border-color: #3e9654; }
+        .fe-ci { width: 100%; background: transparent; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 12px; color: #1c2b22; padding: 0; min-width: 0; }
+        .fe-ci:focus { background: #fff; border-radius: 4px; padding: 2px 4px; box-shadow: 0 0 0 1.5px #2f7d47; }
+        .fe-cs { width: 100%; background: transparent; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 12px; color: #1c2b22; padding: 0; cursor: pointer; appearance: none; }
+        .fe-cs:focus { background: #fff; border-radius: 4px; padding: 2px 4px; box-shadow: 0 0 0 1.5px #2f7d47; }
+        .fe-ck { width: 14px; height: 14px; flex-shrink: 0; border: 1.5px solid #a9b6ac; border-radius: 3px; appearance: none; cursor: pointer; background: #f8fbf6; position: relative; transition: background 0.1s; }
+        .fe-ck:checked { background: #2f7d47; border-color: #2f7d47; }
         .fe-ck:checked::after { content: ''; position: absolute; left: 3px; top: 1px; width: 4px; height: 7px; border: 1.5px solid #fff; border-top: none; border-left: none; transform: rotate(45deg); }
 
         .fe-pos { font-size: 11px; font-weight: 700; color: #2a5a3a; background: #eef5ea; border: 1px solid #c8e0c0; border-radius: 5px; padding: 2px 6px; font-variant-numeric: tabular-nums; min-width: 26px; text-align: center; flex-shrink: 0; }
-        .fe-drill { font-size: 10px; color: #a0c0a8; flex-shrink: 0; }
+        .fe-drill { font-size: 10px; color: #a9b6ac; flex-shrink: 0; }
         .fe-dot { color: #c8900a; font-size: 14px; flex-shrink: 0; }
 
         .fe-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; gap: 10px; }
-        .fe-empty-title { font-size: 13.5px; font-weight: 500; color: #6a8a74; }
-        .fe-empty-sub { font-size: 12px; color: #96b8a0; text-align: center; line-height: 1.6; }
-        .fe-loading { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 10px; color: #6a8a74; font-size: 13px; }
+        .fe-empty-title { font-size: 13.5px; font-weight: 500; color: #6b7d71; }
+        .fe-empty-sub { font-size: 12px; color: #94a49a; text-align: center; line-height: 1.6; }
+        .fe-loading { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 10px; color: #6b7d71; font-size: 13px; }
 
         .fe-detail-card { background: #fff; border: 1px solid #dbe8d5; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        .fe-detail-header { padding: 10px 16px; border-bottom: 1px solid #edf5e8; background: #fafcf9; flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fe-detail-header { padding: 10px 16px; border-bottom: 1px solid #edf5e8; background: #fafcf9; flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.5px; }
         .fe-detail-body { padding: 14px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; flex: 1; }
         .fe-detail-body::-webkit-scrollbar { width: 4px; }
         .fe-detail-body::-webkit-scrollbar-thumb { background: #cce0c8; border-radius: 4px; }
         .fe-detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 8px; }
-        .fe-detail-empty-title { font-size: 12.5px; font-weight: 500; color: #6a8a74; }
-        .fe-detail-empty-sub { font-size: 11.5px; color: #96b8a0; }
+        .fe-detail-empty-title { font-size: 12.5px; font-weight: 500; color: #6b7d71; }
+        .fe-detail-empty-sub { font-size: 11.5px; color: #94a49a; }
 
         .fe-d-field { display: flex; flex-direction: column; gap: 4px; }
         .fe-d-label { font-size: 9.5px; font-weight: 600; color: #6a8068; text-transform: uppercase; letter-spacing: 0.4px; }
-        .fe-d-input { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1a2e22; outline: none; transition: border-color 0.12s; }
-        .fe-d-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .fe-d-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .fe-d-select { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 24px 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1a2e22; outline: none; appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg width='9' height='5' viewBox='0 0 9 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3.5 3 3.5-3' stroke='%23789a84' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; transition: border-color 0.12s; }
-        .fe-d-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .fe-d-input { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1c2b22; outline: none; transition: border-color 0.12s; }
+        .fe-d-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .fe-d-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .fe-d-select { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 24px 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1c2b22; outline: none; appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg width='9' height='5' viewBox='0 0 9 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3.5 3 3.5-3' stroke='%23789a84' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; transition: border-color 0.12s; }
+        .fe-d-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
         .fe-d-row { display: flex; gap: 8px; }
         .fe-d-row > * { flex: 1; min-width: 0; }
         .fe-d-sep { height: 1px; background: #edf5e8; }
         .fe-d-sec { font-size: 9px; font-weight: 700; letter-spacing: 0.9px; text-transform: uppercase; color: #a0b8a8; display: flex; align-items: center; gap: 6px; }
         .fe-d-sec::after { content: ''; flex: 1; height: 1px; background: #e8f0e4; }
         .fe-d-checks { display: flex; flex-direction: column; gap: 6px; }
-        .fe-d-check-label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 12.5px; color: #3a5a45; user-select: none; }
-        .fe-d-checkbox { width: 14px; height: 14px; flex-shrink: 0; border: 1.5px solid #b0d0b8; border-radius: 4px; appearance: none; cursor: pointer; background: #f8fbf6; position: relative; transition: background 0.12s; }
-        .fe-d-checkbox:checked { background: #3e9654; border-color: #3e9654; }
+        .fe-d-check-label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 12.5px; color: #46574c; user-select: none; }
+        .fe-d-checkbox { width: 14px; height: 14px; flex-shrink: 0; border: 1.5px solid #a9b6ac; border-radius: 4px; appearance: none; cursor: pointer; background: #f8fbf6; position: relative; transition: background 0.12s; }
+        .fe-d-checkbox:checked { background: #2f7d47; border-color: #2f7d47; }
         .fe-d-checkbox:checked::after { content: ''; position: absolute; left: 3px; top: 1px; width: 4px; height: 7px; border: 1.5px solid #fff; border-top: none; border-left: none; transform: rotate(45deg); }
 
         .fe-feedback { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 9px; font-size: 13px; flex-shrink: 0; }
@@ -582,13 +582,13 @@ export function Vent0210Page(): JSX.Element {
         .fe-ib:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .fe-footer { background: #fff; border-top: 1px solid #dbe8d5; padding: 7px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .fe-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .fe-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .fe-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .fe-footer-stat strong { color: #1c2b22; font-weight: 600; }
         .fe-footer-group { display: flex; align-items: center; gap: 20px; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
         .fe-spinner { width: 14px; height: 14px; border: 2px solid rgba(223,240,226,0.3); border-top-color: #dff0e2; border-radius: 50%; animation: spin 0.65s linear infinite; flex-shrink: 0; }
-        .fe-spinner-g { width: 16px; height: 16px; border: 2px solid #d4e8cc; border-top-color: #3e9654; border-radius: 50%; animation: spin 0.65s linear infinite; }
+        .fe-spinner-g { width: 16px; height: 16px; border: 2px solid #d4e8cc; border-top-color: #2f7d47; border-radius: 50%; animation: spin 0.65s linear infinite; }
       `}</style>
 
       <div className="fe-root">
@@ -667,8 +667,8 @@ export function Vent0210Page(): JSX.Element {
             <div className="fe-header-card-top">
               <div className="fe-header-card-title">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="1" width="14" height="14" rx="2" stroke="#3e9654" strokeWidth="1.4"/>
-                  <path d="M5 8l2.5 2.5L11 5" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  <rect x="1" y="1" width="14" height="14" rx="2" stroke="#2f7d47" strokeWidth="1.4"/>
+                  <path d="M5 8l2.5 2.5L11 5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 Item Pai
               </div>
@@ -775,9 +775,9 @@ export function Vent0210Page(): JSX.Element {
                   ) : rows.length === 0 ? (
                     <div className="fe-empty">
                       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.3 }}>
-                        <rect x="4" y="10" width="32" height="24" rx="3" stroke="#3e9654" strokeWidth="1.8"/>
-                        <path d="M4 16h32M14 10V6M26 10V6" stroke="#3e9654" strokeWidth="1.8" strokeLinecap="round"/>
-                        <path d="M20 22v6M17 25h6" stroke="#3e9654" strokeWidth="1.8" strokeLinecap="round"/>
+                        <rect x="4" y="10" width="32" height="24" rx="3" stroke="#2f7d47" strokeWidth="1.8"/>
+                        <path d="M4 16h32M14 10V6M26 10V6" stroke="#2f7d47" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path d="M20 22v6M17 25h6" stroke="#2f7d47" strokeWidth="1.8" strokeLinecap="round"/>
                       </svg>
                       <span className="fe-empty-title">{hasRoot ? 'Sem componentes neste nível' : 'Informe o código do item pai'}</span>
                       <span className="fe-empty-sub">{hasRoot ? 'Clique em Incluir para adicionar.\nItens com ↩ têm filhos — duplo clique para navegar.' : 'Digite o código e pressione Enter ou clique na lupa.'}</span>

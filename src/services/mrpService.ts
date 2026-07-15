@@ -6,15 +6,17 @@ import { httpClient, parseStr, parseNum, parseBool, currentUserId, unwrapArray, 
  * ordens, perfil por item, exceções e a ponte sugestão → Ordem Planejada (firmar).
  * Bases: `/api/mrp-calculation/*` e `/api/planned-order/*`.
  *
- * ⚠️ Quirks/bugs confirmados na demo (localhost:5072):
- *  - `POST /run` exige `plan_code` que referencie um plano existente (FK
- *    `mrp_calculation_logs_plan_code_fkey`); a demo não tem planos semeados → 500.
- *  - **BUG: `POST /api/planned-order/create`** não lê `demand_type` do corpo (sempre
- *    vazio → `invalid input value for enum demand_type_enum`). Criação manual de ordem
- *    planejada quebrada; o caminho correto é firmar uma sugestão do MRP.
+ * Notas do backend (doc MRP 2026-07):
+ *  - `POST /run` exige `plan_code` de um plano existente (FK `mrp_calculation_logs_plan_code_fkey`)
+ *    — crie o plano em `/api/production-plan/create` antes. `initial_order_number` é
+ *    **obrigatório** e positivo; `generate_llc=true` persiste o LLC em `items.planning_llc`.
+ *    Só um cálculo pode ficar `RUNNING` (índice único) — 2ª chamada retorna 409.
+ *  - `POST /api/planned-order/create`: `demand_type` **omitido assume `INDEPENDENT`**
+ *    (bug corrigido). Caminho recomendado continua sendo firmar uma sugestão do MRP.
  */
-export type OrderType = 'PRODUCTION' | 'PURCHASE';
-export type DemandType = 'INDEPENDENT' | 'DEPENDENT';
+export type OrderType = 'PRODUCTION' | 'PURCHASE' | 'OUTSOURCING';
+export type DemandType = 'SALES_ORDER' | 'FORECAST' | 'INDEPENDENT' | 'SAFETY_STOCK' | 'REPLENISHMENT';
+export type PlannedTarget = 'PLANNED' | 'RELEASED' | 'FIRM';
 export type RuleType = 'EQUAL' | 'DIFFERENT' | 'RANGE';
 export const RULE_TYPES: RuleType[] = ['EQUAL', 'DIFFERENT', 'RANGE'];
 
@@ -147,8 +149,8 @@ function parsePlanned(raw: unknown): PlannedOrder {
 }
 
 // ── Execução ──
-export async function runMrp(planCode: number): Promise<MrpRunResult> {
-  const { data } = await httpClient.post('/api/mrp-calculation/run', { plan_code: planCode });
+export async function runMrp(planCode: number, initialOrderNumber = 10000, generateLlc = true): Promise<MrpRunResult> {
+  const { data } = await httpClient.post('/api/mrp-calculation/run', { plan_code: planCode, initial_order_number: initialOrderNumber, generate_llc: generateLlc });
   const o = unwrapObject(data);
   return {
     plan_code: parseNum(o, 'plan_code', 'PlanCode'),
@@ -162,6 +164,11 @@ export async function runMrp(planCode: number): Promise<MrpRunResult> {
 export async function getMrpProfile(itemCode: number, planCode: number): Promise<MrpProfileRow[]> {
   const { data } = await httpClient.get(`/api/mrp-calculation/profile/${itemCode}/${planCode}`);
   return unwrapArray(data).map(parseProfile);
+}
+/** Perfil operacional filtrável: `position` CALCULATION (foto do MRP) | CURRENT (+ saldo atual). */
+export async function getMrpProfileOperational(itemCode: number, planCode: number, opts: { position?: 'CALCULATION' | 'CURRENT'; from?: string; to?: string } = {}): Promise<Obj> {
+  const { data } = await httpClient.get(`/api/mrp-calculation/profile/${itemCode}/${planCode}/operational`, { params: opts });
+  return unwrapObject(data);
 }
 export async function getExceptions(planCode: number): Promise<MrpException[]> {
   const { data } = await httpClient.get(`/api/mrp-calculation/exceptions/${planCode}`);
@@ -200,5 +207,16 @@ export async function createPlannedOrder(dto: PlannedOrder): Promise<PlannedOrde
 /** Firma uma Ordem Planejada existente (GET por contrato do backend). */
 export async function firmPlannedOrder(code: number): Promise<Obj> {
   const { data } = await httpClient.get(`/api/planned-order/${code}/firm`);
+  return unwrapObject(data);
+}
+/**
+ * Transiciona uma ou várias ordens planejadas. `target` RELEASED mantém is_firm=false;
+ * FIRM grava status=RELEASED,is_firm=true e **não** aceita datas. Liberada só volta a
+ * PLANNED sem apontamentos/consumos. O lote é validado antes da 1ª alteração.
+ */
+export async function transitionPlannedOrders(orderCodes: number[], target: PlannedTarget, startDate?: string, endDate?: string): Promise<Obj> {
+  const body: Obj = { order_codes: orderCodes, target };
+  if (target !== 'FIRM') { if (startDate) body.start_date = startDate; if (endDate) body.end_date = endDate; }
+  const { data } = await httpClient.post('/api/planned-order/transition', body);
   return unwrapObject(data);
 }

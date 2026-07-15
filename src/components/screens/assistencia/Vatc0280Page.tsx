@@ -1,1178 +1,371 @@
-import { useState, useCallback } from "react";
-import axios from "axios";
+import { useState, useCallback, useEffect } from "react";
+import {
+  type TACallDTO, type TACallItemDTO, type DefectGroupDTO, type DefectReasonDTO, type WarrantyResponsibleDTO,
+  listCalls, getCall, createCall, addCallItem, addReturnNote, generateOrders, updateCallStatus,
+  listDefectGroups, createDefectGroup, listDefectReasons, createDefectReason,
+  listWarrantyResponsibles, createWarrantyResponsible,
+} from "@/services/technicalAssistanceService";
+import { errMessage } from "@/services/fiscalShared";
+import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadCustomers, loadEstablishments } from "@/services/lookups";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+type Feedback = { type: "success" | "error" | "info"; message: string } | null;
+type View = "calls" | "aux";
+const today = () => new Date().toISOString().slice(0, 10);
 
-interface ChamadoForm {
-  chamado: string;
-  data_emissao: string;
-  consumidor: string;
-  tipo_chamado: string;
-  ligacao: string;
-  garantia: boolean;
-  motivo: string;
-  responsavel: string;
-  posicao: string;
-  situacao: string;
-  data_solicitacao: string;
-  data_retirada: string;
-}
-
-type ModoForm  = "novo" | "edicao";
-
-type FeedbackState = {
-  type: "success" | "error" | "info";
-  message: string;
-} | null;
-
-interface ChamadoRow {
-  chamado: string;
-  data_emissao: string;
-  consumidor: string;
-  consumidorNome: string;
-  tipo_chamado: string;
-  situacao: string;
-  posicao: string;
-  responsavelNome: string;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const TIPOS_CHAMADO = [
-  "Garantia",
-  "Fora de Garantia",
-  "Troca",
-  "Conserto",
-  "Revisão",
-  "Recall",
-];
-
-const LIGACOES = [
-  "Telefone",
-  "E-mail",
-  "Presencial",
-  "Site",
-  "WhatsApp",
-  "Outros",
-];
-
-const MOTIVOS = [
-  "Defeito de Fabricação",
-  "Mau Uso",
-  "Desgaste Natural",
-  "Instalação Incorreta",
-  "Transporte",
-  "Outros",
-];
-
-const RESPONSAVEIS = [
-  "Técnico A",
-  "Técnico B",
-  "Técnico C",
-  "Supervisor D",
-  "Analista E",
-];
-
-const POSICOES = ["Pendente", "Agendamento", "Resolvido"];
-
-const SITUACOES = [
-  "Pendente",
-  "Em Análise",
-  "Agendado",
-  "Em Atendimento",
-  "Vistoria",
-  "Concluído",
-  "Cancelado",
-];
-
-const FORM_INICIAL: ChamadoForm = {
-  chamado: "",
-  data_emissao: new Date().toISOString().slice(0, 10),
-  consumidor: "",
-  tipo_chamado: "",
-  ligacao: "",
-  garantia: false,
-  motivo: "",
-  responsavel: "",
-  posicao: "",
-  situacao: "",
-  data_solicitacao: "",
-  data_retirada: "",
+const STATUS_META: Record<string, { label: string; badge: string }> = {
+  PENDING: { label: "Pendente", badge: "draft" },
+  IN_ANALYSIS: { label: "Em análise", badge: "info" },
+  WAITING_RETURN: { label: "Aguard. devolução", badge: "warn" },
+  WAITING_ORDER: { label: "Aguard. pedido/ordem", badge: "warn" },
+  ATTENDED: { label: "Atendido", badge: "ok" },
+  CLOSED: { label: "Encerrado", badge: "ok" },
+  CANCELLED: { label: "Cancelado", badge: "err" },
 };
+const badge = (s?: string) => { const m = STATUS_META[s ?? ""]; return <span className={`erp-badge ${m?.badge ?? "info"}`}>{m?.label ?? s ?? "—"}</span>; };
 
-const MOCK_CHAMADOS: ChamadoRow[] = [
-  {
-    chamado: "000415", data_emissao: "15/05/2026", consumidor: "001",
-    consumidorNome: "SOHOME LTDA", tipo_chamado: "Garantia", situacao: "Pendente",
-    posicao: "Pendente", responsavelNome: "Técnico A",
-  },
-  {
-    chamado: "000416", data_emissao: "12/05/2026", consumidor: "002",
-    consumidorNome: "ALFA S.A.", tipo_chamado: "Troca", situacao: "Concluído",
-    posicao: "Resolvido", responsavelNome: "Técnico B",
-  },
-  {
-    chamado: "000417", data_emissao: "10/05/2026", consumidor: "003",
-    consumidorNome: "BETA LTDA", tipo_chamado: "Conserto", situacao: "Em Atendimento",
-    posicao: "Agendamento", responsavelNome: "Técnico A",
-  },
-  {
-    chamado: "000418", data_emissao: "08/05/2026", consumidor: "004",
-    consumidorNome: "GAMA ME", tipo_chamado: "Garantia", situacao: "Vistoria",
-    posicao: "Pendente", responsavelNome: "Técnico C",
-  },
-  {
-    chamado: "000419", data_emissao: "05/05/2026", consumidor: "005",
-    consumidorNome: "DELTA EIRELI", tipo_chamado: "Revisão", situacao: "Agendado",
-    posicao: "Agendamento", responsavelNome: "Técnico B",
-  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function normalizeErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as
-      | { message?: string; error?: string }
-      | undefined;
-    const msg = data?.message ?? data?.error;
-    if (msg) return msg;
-  }
-  return error instanceof Error ? error.message : fallback;
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
+const EMPTY_CALL: TACallDTO = { enterprise_code: 0, customer_code: 0, subject: "", priority: "NORMAL", opened_at: today(), promised_date: today() };
+const EMPTY_ITEM: TACallItemDTO = { sequence: 1, item_code: 0, quantity: 1, warranty_days: 0, purchase_invoice_date: today(), requested_action: "REPAIR" };
 
 export function Vatc0280Page(): JSX.Element {
-  // ── Form state
-  const [form, setForm]               = useState<ChamadoForm>(FORM_INICIAL);
-  const [modoForm, setModoForm]       = useState<ModoForm>("novo");
-  const [chamadoEdit, setChamadoEdit] = useState<string | null>(null);
-  const [errors, setErrors]           = useState<Partial<Record<keyof ChamadoForm, string>>>({});
+  const [view, setView] = useState<View>("calls");
+  const [calls, setCalls] = useState<TACallDTO[]>([]);
+  const [selected, setSelected] = useState<TACallDTO | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState<TACallDTO>(EMPTY_CALL);
+  const [pendingItems, setPendingItems] = useState<TACallItemDTO[]>([]);
+  const [itemForm, setItemForm] = useState<TACallItemDTO>(EMPTY_ITEM);
 
-  // ── Search state
-  const [filtroChamado, setFiltroChamado]       = useState("");
-  const [filtroDataEmissao, setFiltroDataEmissao] = useState("");
-  const [filtroConsumidor, setFiltroConsumidor]   = useState("");
-  const [resultados, setResultados]              = useState<ChamadoRow[]>([]);
-  const [mostrarResultados, setMostrarResultados] = useState(false);
+  // status change
+  const [newStatus, setNewStatus] = useState("IN_ANALYSIS");
+  const [diagnosis, setDiagnosis] = useState("");
+  const [solution, setSolution] = useState("");
 
-  // ── Loading / feedback
-  const [isSaving,    setIsSaving]    = useState(false);
-  const [isLoading,   setIsLoading]   = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [feedback,    setFeedback]    = useState<FeedbackState>(null);
+  // aux
+  const [groups, setGroups] = useState<DefectGroupDTO[]>([]);
+  const [reasons, setReasons] = useState<DefectReasonDTO[]>([]);
+  const [responsibles, setResponsibles] = useState<WarrantyResponsibleDTO[]>([]);
+  const [groupDesc, setGroupDesc] = useState("");
+  const [reasonForm, setReasonForm] = useState<DefectReasonDTO>({ group_code: 0, description: "" });
+  const [respForm, setRespForm] = useState<WarrantyResponsibleDTO>({ name: "" });
 
-  // ── Field setter
-  const setField = useCallback(
-    <K extends keyof ChamadoForm>(key: K, value: ChamadoForm[K]) => {
-      setForm((prev) => ({ ...prev, [key]: value }));
-      setErrors((prev) => ({ ...prev, [key]: undefined }));
-      setFeedback(null);
-    },
-    [],
+  const [feedback, setFeedback] = useState<Feedback>(null);
+  const [busy, setBusy] = useState(false);
+
+  const run = useCallback(async (fn: () => Promise<void>) => {
+    setBusy(true); setFeedback(null);
+    try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }, []);
+
+  const carregarChamados = useCallback(() => run(async () => { setCalls(await listCalls()); }), [run]);
+  const carregarAux = useCallback(() => run(async () => {
+    const [g, r, w] = await Promise.all([listDefectGroups(), listDefectReasons(), listWarrantyResponsibles()]);
+    setGroups(g); setReasons(r); setResponsibles(w);
+  }), [run]);
+
+  useEffect(() => { void carregarChamados(); void carregarAux(); }, [carregarChamados, carregarAux]);
+
+  const abrirDetalhe = (code?: number) => { if (!code) return; void run(async () => {
+    const c = await getCall(code); setSelected(c); setCreating(false);
+    setNewStatus(c.status && STATUS_META[c.status] ? c.status : "IN_ANALYSIS");
+    setDiagnosis(c.diagnosis ?? ""); setSolution(c.solution ?? "");
+  }); };
+
+  const novoChamado = () => { setCreating(true); setSelected(null); setForm(EMPTY_CALL); setPendingItems([]); setItemForm(EMPTY_ITEM); };
+
+  const addPendingItem = () => {
+    if (!itemForm.item_code) { setFeedback({ type: "error", message: "Selecione o item." }); return; }
+    setPendingItems((p) => [...p, { ...itemForm, sequence: p.length + 1 }]);
+    setItemForm({ ...EMPTY_ITEM });
+  };
+  const removePendingItem = (i: number) => setPendingItems((p) => p.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, sequence: idx + 1 })));
+
+  const gravarChamado = () => run(async () => {
+    if (!form.enterprise_code) { setFeedback({ type: "error", message: "Informe a empresa." }); return; }
+    if (!form.customer_code) { setFeedback({ type: "error", message: "Informe o cliente." }); return; }
+    if (!form.subject.trim()) { setFeedback({ type: "error", message: "Informe o assunto." }); return; }
+    if (pendingItems.length === 0) { setFeedback({ type: "error", message: "Inclua ao menos um item no chamado." }); return; }
+    const created = await createCall({ ...form, items: pendingItems });
+    setFeedback({ type: "success", message: `Chamado ${created.call_number ?? created.code} aberto.` });
+    setCreating(false); await carregarChamados();
+    if (created.code) abrirDetalhe(created.code);
+  });
+
+  const incluirItem = () => run(async () => {
+    if (!selected?.code) return;
+    if (!itemForm.item_code) { setFeedback({ type: "error", message: "Selecione o item." }); return; }
+    await addCallItem(selected.code, { ...itemForm, sequence: (selected.items?.length ?? 0) + 1 });
+    setItemForm({ ...EMPTY_ITEM });
+    setFeedback({ type: "success", message: "Item incluído no chamado." });
+    abrirDetalhe(selected.code);
+  });
+
+  const alterarStatus = () => run(async () => {
+    if (!selected?.code) return;
+    await updateCallStatus(selected.code, { status: newStatus, diagnosis: diagnosis || undefined, solution: solution || undefined });
+    setFeedback({ type: "success", message: `Status alterado para ${STATUS_META[newStatus]?.label ?? newStatus}.` });
+    abrirDetalhe(selected.code);
+  });
+
+  const gerarOrdens = () => run(async () => {
+    if (!selected?.code) return;
+    await generateOrders(selected.code, {});
+    setFeedback({ type: "success", message: "Pedido/ordem de assistência gerado e vinculado ao chamado." });
+    abrirDetalhe(selected.code);
+  });
+
+  const anexarNota = () => run(async () => {
+    if (!selected?.code) return;
+    await addReturnNote(selected.code, { note_number: `DEV-${Date.now() % 100000}`, emission_date: today(), operation_type: "RETURN", total_value: 0 });
+    setFeedback({ type: "success", message: "Nota de devolução/remessa vinculada (ajuste número/série na integração fiscal)." });
+    abrirDetalhe(selected.code);
+  });
+
+  const criarGrupo = () => run(async () => {
+    if (!groupDesc.trim()) { setFeedback({ type: "error", message: "Informe a descrição do grupo." }); return; }
+    await createDefectGroup({ description: groupDesc }); setGroupDesc("");
+    setFeedback({ type: "success", message: "Grupo de defeito criado." }); await carregarAux();
+  });
+  const criarMotivo = () => run(async () => {
+    if (!reasonForm.group_code) { setFeedback({ type: "error", message: "Selecione o grupo." }); return; }
+    if (!reasonForm.description.trim()) { setFeedback({ type: "error", message: "Informe a descrição do motivo." }); return; }
+    await createDefectReason(reasonForm); setReasonForm({ group_code: 0, description: "" });
+    setFeedback({ type: "success", message: "Motivo de defeito criado." }); await carregarAux();
+  });
+  const criarResponsavel = () => run(async () => {
+    if (!respForm.name.trim()) { setFeedback({ type: "error", message: "Informe o nome." }); return; }
+    await createWarrantyResponsible(respForm); setRespForm({ name: "" });
+    setFeedback({ type: "success", message: "Responsável pela garantia criado." }); await carregarAux();
+  });
+
+  const itemRows = (items: TACallItemDTO[], removable: boolean) => (
+    <div className="erp-grid-wrap">
+      <table className="erp-grid">
+        <thead><tr><th className="num">#</th><th className="num">Item</th><th>Série</th><th className="num">Qtd</th><th className="num">Motivo</th><th className="num">Garantia (dias)</th><th>Ação</th><th>Situação</th>{removable && <th style={{ width: 70 }}></th>}</tr></thead>
+        <tbody>
+          {items.length === 0 && <tr><td colSpan={removable ? 9 : 8} className="erp-grid-empty">Nenhum item.</td></tr>}
+          {items.map((it, i) => (
+            <tr key={i}>
+              <td className="num">{it.sequence}</td><td className="num">{it.item_code}</td><td>{it.serial_number || "—"}</td>
+              <td className="num">{it.quantity}</td><td className="num">{it.defect_reason_code ?? "—"}</td><td className="num">{it.warranty_days ?? 0}</td>
+              <td>{it.requested_action || "—"}</td><td>{it.in_warranty ? <span className="erp-badge ok">Em garantia</span> : (it.warranty_until ? <span className="erp-badge warn">Fora</span> : "—")}</td>
+              {removable && <td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removePendingItem(i)} disabled={busy}>Remover</button></td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 
-  // ── Validation
-  function validate(): boolean {
-    const e: Partial<Record<keyof ChamadoForm, string>> = {};
-    if (!form.consumidor.trim()) e.consumidor = "Consumidor obrigatório.";
-    if (!form.tipo_chamado) e.tipo_chamado = "Tipo de chamado obrigatório.";
-    if (!form.motivo) e.motivo = "Motivo obrigatório.";
-    if (!form.situacao) e.situacao = "Situação obrigatória.";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  const isVistoria = form.situacao === "Vistoria";
-
-  // ── Load by chamado number
-  async function handleCarregar() {
-    if (!form.chamado.trim()) {
-      setFeedback({ type: "info", message: "Informe o número do chamado." });
-      return;
-    }
-    setIsLoading(true);
-    setFeedback(null);
-    try {
-      await new Promise((r) => setTimeout(r, 600));
-      const found = MOCK_CHAMADOS.find((c) => c.chamado === form.chamado.trim());
-      if (found) {
-        setForm({
-          chamado: found.chamado,
-          data_emissao: found.data_emissao.split("/").reverse().join("-"),
-          consumidor: found.consumidor,
-          tipo_chamado: found.tipo_chamado,
-          ligacao: "Telefone",
-          garantia: found.tipo_chamado === "Garantia",
-          motivo: "Defeito de Fabricação",
-          responsavel: found.responsavelNome,
-          posicao: found.posicao,
-          situacao: found.situacao,
-          data_solicitacao: found.situacao === "Vistoria" ? "2026-05-10" : "",
-          data_retirada: found.situacao === "Vistoria" ? "2026-05-20" : "",
-        });
-        setErrors({});
-        setModoForm("edicao");
-        setChamadoEdit(found.chamado);
-        setFeedback({ type: "info", message: `Chamado ${found.chamado} — ${found.consumidorNome} carregado para edição.` });
-      } else {
-        setFeedback({ type: "info", message: `Chamado ${form.chamado.trim()} não encontrado.` });
-      }
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: normalizeErrorMessage(error, "Erro ao carregar chamado."),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // ── Search
-  async function handlePesquisar() {
-    setIsSearching(true);
-    setFeedback(null);
-    try {
-      await new Promise((r) => setTimeout(r, 500));
-      let filtered = [...MOCK_CHAMADOS];
-      if (filtroChamado.trim())
-        filtered = filtered.filter((c) => c.chamado.includes(filtroChamado.trim()));
-      if (filtroDataEmissao) {
-        const fDate = filtroDataEmissao.split("-").reverse().join("/");
-        filtered = filtered.filter((c) => c.data_emissao === fDate);
-      }
-      if (filtroConsumidor.trim())
-        filtered = filtered.filter(
-          (c) =>
-            c.consumidor.includes(filtroConsumidor.trim()) ||
-            c.consumidorNome.toUpperCase().includes(filtroConsumidor.trim().toUpperCase()),
-        );
-      setResultados(filtered);
-      setMostrarResultados(true);
-      if (filtered.length === 0) {
-        setFeedback({ type: "info", message: "Nenhum chamado encontrado para os filtros informados." });
-      }
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: normalizeErrorMessage(error, "Erro ao pesquisar chamados."),
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  }
-
-  // ── Select from list → load into form
-  function handleSelectFromList(row: ChamadoRow) {
-    setForm({
-      chamado: row.chamado,
-      data_emissao: row.data_emissao.split("/").reverse().join("-"),
-      consumidor: row.consumidor,
-      tipo_chamado: row.tipo_chamado,
-      ligacao: "Telefone",
-      garantia: row.tipo_chamado === "Garantia",
-      motivo: "Defeito de Fabricação",
-      responsavel: row.responsavelNome,
-      posicao: row.posicao,
-      situacao: row.situacao,
-      data_solicitacao: row.situacao === "Vistoria" ? "2026-05-10" : "",
-      data_retirada: row.situacao === "Vistoria" ? "2026-05-20" : "",
-    });
-    setFeedback(null);
-    setErrors({});
-    setModoForm("edicao");
-    setChamadoEdit(row.chamado);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  }
-
-  // ── Save
-  async function handleSalvar() {
-    if (!validate()) return;
-    setIsSaving(true);
-    setFeedback(null);
-    try {
-      await new Promise((r) => setTimeout(r, 800));
-      const newChamado = form.chamado || String(Math.floor(Math.random() * 90000) + 10000);
-      if (!form.chamado) {
-        setField("chamado", newChamado);
-        setChamadoEdit(newChamado);
-        setModoForm("edicao");
-      }
-      setFeedback({
-        type: "success",
-        message: `Chamado ${newChamado} salvo com sucesso.`,
-      });
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: normalizeErrorMessage(error, "Erro ao salvar chamado."),
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  // ── Novo Chamado
-  function handleNovo() {
-    setForm(FORM_INICIAL);
-    setErrors({});
-    setFeedback(null);
-    setModoForm("novo");
-    setChamadoEdit(null);
-  }
-
-  // ── Limpar
-  function handleLimpar() {
-    handleNovo();
-    setMostrarResultados(false);
-  }
-
-  // ─── JSX ──────────────────────────────────────────────────────────────────
+  const itemFormFields = (onAdd: () => void) => (
+    <div className="erp-fieldset">
+      <div className="erp-fieldset-head">Incluir item</div>
+      <div className="erp-fieldset-body">
+        <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setItemForm((p) => ({ ...p, item_code: c ?? 0 }))} /></div>
+        <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={itemForm.quantity || ""} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
+        <div className="erp-field erp-c3"><label className="erp-label">Nº série</label><input className="erp-input" value={itemForm.serial_number ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, serial_number: e.target.value }))} /></div>
+        <div className="erp-field erp-c3"><label className="erp-label">Motivo de defeito</label>
+          <select className="erp-tselect" value={itemForm.defect_reason_code ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, defect_reason_code: e.target.value ? Number(e.target.value) : null }))}>
+            <option value="">—</option>{reasons.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.description}</option>)}
+          </select>
+        </div>
+        <div className="erp-field erp-c4"><label className="erp-label">Complemento do defeito</label><input className="erp-input" value={itemForm.defect_complement ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, defect_complement: e.target.value }))} /></div>
+        <div className="erp-field erp-c3"><label className="erp-label">NF compra</label><input className="erp-input" value={itemForm.purchase_invoice_number ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, purchase_invoice_number: e.target.value }))} /></div>
+        <div className="erp-field erp-c3"><label className="erp-label">Data NF compra</label><input className="erp-input" type="date" value={itemForm.purchase_invoice_date ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, purchase_invoice_date: e.target.value }))} /></div>
+        <div className="erp-field erp-c2"><label className="erp-label">Garantia (dias)</label><input className="erp-input num" type="number" value={itemForm.warranty_days ?? 0} onChange={(e) => setItemForm((p) => ({ ...p, warranty_days: Number(e.target.value) }))} /></div>
+        <div className="erp-field erp-c3"><label className="erp-label">Ação solicitada</label>
+          <select className="erp-tselect" value={itemForm.requested_action ?? "REPAIR"} onChange={(e) => setItemForm((p) => ({ ...p, requested_action: e.target.value }))}>
+            <option value="REPAIR">Reparo</option><option value="REPLACE">Troca</option><option value="ANALYSIS">Análise</option><option value="CREDIT">Crédito</option>
+          </select>
+        </div>
+        <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn" onClick={onAdd} disabled={busy}>Adicionar item</button></div>
+      </div>
+    </div>
+  );
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs">
+          <span className="erp-crumb-mut">Comercial &amp; Vendas</span>
+          <span className="erp-crumb-sep">›</span>
+          <span className="erp-crumb-cur">Cadastro de Chamados de Assistência Técnica</span>
+          <span className="erp-crumb-code">VATC0280</span>
+        </nav>
+        <div className="erp-titlebar-spacer" />
+        <span className="erp-titlebar-meta">Chamados · itens · notas · geração de pedido/ordem · cadastros de apoio</span>
+      </header>
 
-        .atc-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
-          display: flex; flex-direction: column;
-        }
-
-        /* ── TOPBAR ── */
-        .atc-topbar {
-          height: 52px; background: #162e20;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 20px; flex-shrink: 0;
-          border-bottom: 1px solid rgba(62,150,84,0.15);
-        }
-        .atc-topbar-left { display: flex; align-items: center; gap: 10px; }
-        .atc-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
-          border-radius: 6px; display: flex; align-items: center; justify-content: center;
-        }
-        .atc-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .atc-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
-        .atc-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
-          padding-left: 14px; margin-left: 14px;
-          border-left: 1px solid rgba(255,255,255,0.08);
-        }
-
-        /* ── ACTION BAR ── */
-        .atc-actionbar {
-          background: #fff; border-bottom: 1px solid #dbe8d5;
-          padding: 0 20px; display: flex; align-items: center;
-          gap: 4px; height: 46px; flex-shrink: 0;
-        }
-        .atc-action-group {
-          display: flex; align-items: center; gap: 4px;
-          padding-right: 12px; margin-right: 8px;
-          border-right: 1px solid #e8f0e4;
-        }
-        .atc-action-group:last-child { border-right: none; }
-        .atc-action-label {
-          font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 4px; white-space: nowrap;
-        }
-        .atc-btn {
-          display: inline-flex; align-items: center; gap: 6px;
-          height: 32px; padding: 0 12px; border: 1.5px solid transparent;
-          border-radius: 7px; font-family: 'Inter', sans-serif;
-          font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
-          transition: background 0.13s, border-color 0.13s, color 0.13s;
-        }
-        .atc-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .atc-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
-        .atc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .atc-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .atc-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
-        .atc-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-        .atc-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
-        .atc-btn-danger:hover:not(:disabled) { background: #fff0f0; border-color: #e09090; }
-        .atc-btn-sm { height: 28px; padding: 0 9px; font-size: 12px; }
-        .atc-btn-new {
-          background: #eef9f0; color: #1a6030; border-color: #b4d8b8; font-weight: 600;
-        }
-        .atc-btn-new:hover:not(:disabled) { background: #dff5e4; border-color: #88c898; }
-
-        /* ── BODY ── */
-        .atc-body {
-          flex: 1; padding: 16px 20px; display: flex;
-          flex-direction: column; gap: 0; overflow-y: auto;
-        }
-        .atc-body::-webkit-scrollbar { width: 5px; }
-        .atc-body::-webkit-scrollbar-thumb { background: #cce0c8; border-radius: 4px; }
-
-        /* ── SECTION BANNER ── */
-        .atc-section-banner {
-          display: flex; align-items: center; gap: 10px;
-          padding: 14px 0 8px;
-        }
-        .atc-section-banner:first-child { padding-top: 0; }
-        .atc-section-banner-pill {
-          font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #5a8068;
-          background: #e0ede0; border: 1px solid #c8dcc8;
-          border-radius: 20px; padding: 3px 10px; white-space: nowrap;
-        }
-        .atc-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .atc-section-banner-hint { font-size: 11px; color: #96b8a0; white-space: nowrap; }
-
-        /* ── CARD ── */
-        .atc-card {
-          background: #fff; border: 1px solid #dbe8d5;
-          border-radius: 12px; overflow: hidden; margin-bottom: 14px;
-        }
-        .atc-card-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
-        }
-        .atc-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .atc-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
-        .atc-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
-          background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
-        }
-        .atc-card-body { padding: 18px; }
-
-        /* ── MODO BADGES ── */
-        .atc-modo-novo {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px;
-          border-radius: 20px; background: #e8f5e0; color: #1e5818;
-          border: 1px solid #a8d898;
-        }
-        .atc-modo-edicao {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px;
-          border-radius: 20px; background: #fff8e0; color: #7a5200;
-          border: 1px solid #e0c860;
-        }
-        .atc-modo-dot {
-          width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-        }
-        .atc-modo-novo  .atc-modo-dot { background: #3e9654; }
-        .atc-modo-edicao .atc-modo-dot { background: #c8a020; }
-
-        /* ── FILTER ROW ── */
-        .atc-filter-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-
-        /* ── GRID ── */
-        .atc-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px 14px; align-items: start; }
-        .atc-col-2  { grid-column: span 2; }
-        .atc-col-3  { grid-column: span 3; }
-        .atc-col-4  { grid-column: span 4; }
-        .atc-col-5  { grid-column: span 5; }
-        .atc-col-6  { grid-column: span 6; }
-        .atc-col-8  { grid-column: span 8; }
-        .atc-col-10 { grid-column: span 10; }
-        .atc-col-12 { grid-column: span 12; }
-
-        /* ── FIELDS ── */
-        .atc-field { display: flex; flex-direction: column; gap: 5px; }
-        .atc-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
-          text-transform: uppercase; letter-spacing: 0.4px;
-          display: flex; align-items: center; gap: 4px;
-        }
-        .atc-label-req { color: #c84040; font-size: 12px; line-height: 1; }
-        .atc-input {
-          width: 100%; height: 36px; background: #f8fbf6;
-          border: 1.5px solid #d4e8cc; border-radius: 7px;
-          padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
-          transition: border-color 0.13s, box-shadow 0.13s;
-        }
-        .atc-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .atc-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .atc-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
-        .atc-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
-        .atc-input[type="date"] { cursor: pointer; }
-
-        .atc-select {
-          width: 100%; height: 36px; background: #f8fbf6;
-          border: 1.5px solid #d4e8cc; border-radius: 7px;
-          padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
-          appearance: none; cursor: pointer;
-          background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 10px center;
-          transition: border-color 0.13s;
-        }
-        .atc-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-
-        .atc-input-wrap { position: relative; display: flex; }
-        .atc-input-btn {
-          height: 36px; padding: 0 10px; flex-shrink: 0;
-          background: #edf5ea; border: 1.5px solid #d4e8cc; border-left: none;
-          border-radius: 0 7px 7px 0; display: flex; align-items: center;
-          justify-content: center; gap: 5px;
-          cursor: pointer; color: #3a6048;
-          font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 500;
-          transition: background 0.12s; white-space: nowrap;
-        }
-        .atc-input-btn:hover { background: #ddf0e0; }
-        .atc-input-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        .atc-field-error { font-size: 11px; color: #c84040; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
-        .atc-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
-
-        /* ── TOGGLE ── */
-        .atc-toggle-row { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
-        .atc-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
-        .atc-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .atc-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .atc-toggle input:checked ~ .atc-toggle-track { background: #3e9654; }
-        .atc-toggle-thumb {
-          position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
-          background: #fff; border-radius: 50%; transition: transform 0.2s;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-        }
-        .atc-toggle input:checked ~ .atc-toggle-thumb { transform: translateX(18px); }
-        .atc-toggle-label { font-size: 13px; color: #3a5a45; font-weight: 500; }
-
-        /* ── SECTION DIVIDER ── */
-        .atc-section-sep   { height: 1px; background: #edf5e8; margin: 20px 0; }
-        .atc-section-label {
-          font-size: 10px; font-weight: 700; letter-spacing: 1px;
-          text-transform: uppercase; color: #a0b8a8; margin-bottom: 14px;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .atc-section-label::after { content: ''; flex: 1; height: 1px; background: #e8f0e4; }
-
-        /* ── RESULTS TABLE ── */
-        .atc-results-wrap { border-top: 1px solid #edf5e8; overflow-x: auto; }
-        .atc-results-bar {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
-        }
-        .atc-results-bar-left { display: flex; align-items: center; gap: 8px; }
-        .atc-results-bar-label { font-size: 11px; font-weight: 600; color: #4a7060; text-transform: uppercase; letter-spacing: 0.5px; }
-        .atc-results-hint { font-size: 11px; color: #96b8a0; }
-        .atc-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .atc-results-table th {
-          background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
-          text-transform: uppercase; letter-spacing: 0.5px;
-          border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
-        }
-        .atc-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; vertical-align: middle; }
-        .atc-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
-        .atc-results-table tbody tr:hover { background: #eef9f0; }
-        .atc-results-empty { text-align: center; padding: 28px 12px; color: #96b8a0; font-size: 12.5px; }
-
-        .atc-tipo-badge {
-          display: inline-flex; align-items: center;
-          font-size: 11px; font-weight: 600; border-radius: 12px; padding: 2px 8px;
-        }
-        .atc-tipo-badge.garantia    { background: #e8f5e0; color: #2a6018; border: 1px solid #b4d898; }
-        .atc-tipo-badge.troca       { background: #fdf0e8; color: #603000; border: 1px solid #e0b890; }
-        .atc-tipo-badge.conserto    { background: #e8f0fc; color: #1a4080; border: 1px solid #a8c0e8; }
-        .atc-tipo-badge.revisao     { background: #fdf8e8; color: #604800; border: 1px solid #e0d090; }
-        .atc-tipo-badge.recall      { background: #fde8e8; color: #801a1a; border: 1px solid #e0a8a8; }
-        .atc-tipo-badge.outros      { background: #f3f0fc; color: #402080; border: 1px solid #c0b0e0; }
-
-        /* ── SITUACAO BADGE ── */
-        .atc-sit-badge {
-          display: inline-flex; align-items: center;
-          font-size: 11px; font-weight: 600; border-radius: 12px; padding: 2px 8px;
-        }
-        .atc-sit-badge.pendente       { background: #fff0f0; color: #b91c1c; border: 1px solid #f0c0c0; }
-        .atc-sit-badge.andamento      { background: #fff8f0; color: #b96c1c; border: 1px solid #f0d0a0; }
-        .atc-sit-badge.concluido      { background: #f0faf2; color: #1e6030; border: 1px solid #b4dec0; }
-        .atc-sit-badge.vistoria       { background: #f0f0ff; color: #1c2cb9; border: 1px solid #b0b0f0; }
-        .atc-sit-badge.outros-status  { background: #f4f4f4; color: #505050; border: 1px solid #d0d0d0; }
-
-        /* ── FEEDBACK ── */
-        .atc-feedback {
-          display: flex; align-items: center; gap: 9px; padding: 11px 15px;
-          border-radius: 9px; font-size: 13px; animation: atcFadeIn 0.2s ease;
-          margin-bottom: 14px;
-        }
-        .atc-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
-        .atc-feedback.error   { background: #fff5f5; border: 1px solid #f8c0c0; border-left: 3px solid #e05252; color: #b91c1c; }
-        .atc-feedback.info    { background: #f0f8ff; border: 1px solid #c7def8; border-left: 3px solid #4a90d9; color: #1a4070; }
-
-        /* ── FOOTER ── */
-        .atc-footer {
-          background: #fff; border-top: 1px solid #dbe8d5;
-          padding: 8px 20px; display: flex; align-items: center;
-          justify-content: space-between; flex-shrink: 0;
-        }
-        .atc-footer-left { display: flex; align-items: center; gap: 20px; }
-        .atc-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .atc-footer-stat strong { color: #1a2e22; font-weight: 600; }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .atc-spinner {
-          width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid rgba(223,240,226,0.3); border-top-color: #dff0e2;
-          border-radius: 50%; animation: spin 0.65s linear infinite;
-        }
-        .atc-spinner-dark {
-          width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
-          border-radius: 50%; animation: spin 0.65s linear infinite;
-        }
-        @keyframes atcFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
-
-      <div className="atc-root">
-
-        {/* ── TOPBAR ── */}
-        <header className="atc-topbar">
-          <div className="atc-topbar-left">
-            <div className="atc-logo-mark">
-              <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-                <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-                <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-                <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-                <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-              </svg>
-            </div>
-            <span className="atc-app-name">
-              Venture<span className="atc-app-sub">ERP &amp; Soluções</span>
-            </span>
-            <span className="atc-screen-title">VATC0280 — Cadastro de Chamados</span>
-          </div>
-        </header>
-
-        {/* ── ACTION BAR ── */}
-        <div className="atc-actionbar">
-          <div className="atc-action-group">
-            <span className="atc-action-label">Cadastro</span>
-            <button
-              className="atc-btn atc-btn-new"
-              onClick={handleNovo}
-              disabled={isSaving || isLoading}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-              Novo Chamado
-            </button>
-          </div>
-
-          <div className="atc-action-group">
-            <span className="atc-action-label">Ações</span>
-            <button
-              className="atc-btn atc-btn-primary"
-              onClick={() => void handleSalvar()}
-              disabled={isSaving || isLoading}
-            >
-              {isSaving
-                ? <><div className="atc-spinner" />Salvando...</>
-                : <>
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                      <path d="M5 2v4h6V2M5 9h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    Salvar
-                  </>
-              }
-            </button>
-            <button
-              className="atc-btn atc-btn-danger"
-              onClick={handleLimpar}
-              disabled={isSaving || isLoading}
-            >
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              Limpar
-            </button>
-          </div>
-
-          <div className="atc-action-group">
-            <button className="atc-btn atc-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M8 7v4M8 5.5h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              Ajuda
-            </button>
-          </div>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <button className={`erp-btn${view === "calls" ? " erp-btn-dark" : ""}`} onClick={() => setView("calls")} disabled={busy}>Chamados</button>
+          <button className={`erp-btn${view === "aux" ? " erp-btn-dark" : ""}`} onClick={() => setView("aux")} disabled={busy}>Grupos · Motivos · Responsáveis</button>
         </div>
+        {view === "calls" && <><span style={{ color: "var(--v-text-3)" }}>|</span><div className="erp-tgroup"><button className="erp-btn erp-btn-primary" onClick={novoChamado} disabled={busy}>Novo chamado</button><button className="erp-btn" onClick={() => carregarChamados()} disabled={busy}>Atualizar</button></div></>}
+        <div className="erp-tspacer" />
+        <div className="erp-tgroup"><ExportButton title="VATC0280 — Chamados de Assistência" filename="vatc0280" /></div>
+      </div>
 
-        {/* ── BODY ── */}
-        <div className="atc-body">
+      <div className="erp-content">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
 
-          {/* Feedback */}
-          {feedback && (
-            <div className={`atc-feedback ${feedback.type}`}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                {feedback.type === "success"
-                  ? <path d="M3 8l3.5 3.5L13 5" stroke="#1e6030" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  : feedback.type === "error"
-                    ? <><circle cx="8" cy="8" r="6" stroke="#e05252" strokeWidth="1.4" /><path d="M8 5v3.5M8 10.5h.01" stroke="#e05252" strokeWidth="1.4" strokeLinecap="round" /></>
-                    : <><circle cx="8" cy="8" r="6" stroke="#4a90d9" strokeWidth="1.4" /><path d="M8 7v4M8 5.5h.01" stroke="#4a90d9" strokeWidth="1.4" strokeLinecap="round" /></>
-                }
-              </svg>
-              {feedback.message}
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* SEÇÃO 1 — PESQUISA                                         */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-
-          <div className="atc-section-banner">
-            <span className="atc-section-banner-pill">1 — Pesquisar</span>
-            <div className="atc-section-banner-line" />
-            <span className="atc-section-banner-hint">Filtre a lista e clique em um registro para carregá-lo no formulário abaixo</span>
-          </div>
-
-          <div className="atc-card">
-            <div className="atc-card-header">
-              <div className="atc-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M10 10l3.5 3.5" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-                <span className="atc-card-title">Pesquisa de Chamados</span>
-              </div>
-            </div>
-
-            <div className="atc-card-body" style={{ paddingBottom: 14 }}>
-              <div className="atc-filter-row">
-                <div className="atc-field" style={{ flex: "0 0 140px" }}>
-                  <label className="atc-label">Chamado</label>
-                  <input
-                    className="atc-input"
-                    placeholder="Nº chamado"
-                    value={filtroChamado}
-                    onChange={(e) => setFiltroChamado(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && void handlePesquisar()}
-                  />
-                </div>
-                <div className="atc-field" style={{ flex: "0 0 165px" }}>
-                  <label className="atc-label">Data Emissão</label>
-                  <input
-                    type="date"
-                    className="atc-input"
-                    value={filtroDataEmissao}
-                    onChange={(e) => setFiltroDataEmissao(e.target.value)}
-                  />
-                </div>
-                <div className="atc-field" style={{ flex: "0 0 220px" }}>
-                  <label className="atc-label">Consumidor</label>
-                  <input
-                    className="atc-input"
-                    placeholder="Código ou nome"
-                    value={filtroConsumidor}
-                    onChange={(e) => setFiltroConsumidor(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && void handlePesquisar()}
-                  />
-                </div>
-                <div style={{ alignSelf: "flex-end" }}>
-                  <button
-                    className="atc-btn atc-btn-ghost"
-                    onClick={() => void handlePesquisar()}
-                    disabled={isSearching}
-                  >
-                    {isSearching
-                      ? <><div className="atc-spinner-dark" />Buscando...</>
-                      : <>
-                          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                            <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                            <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                          </svg>
-                          Pesquisar
-                        </>
-                    }
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Results */}
-            {mostrarResultados && (
-              <div className="atc-results-wrap">
-                <div className="atc-results-bar">
-                  <div className="atc-results-bar-left">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 4h12M2 8h12M2 12h8" stroke="#5a8068" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    <span className="atc-results-bar-label">Resultados</span>
-                    <span className="atc-card-badge">{resultados.length} registro(s)</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span className="atc-results-hint">↓ Clique em um registro para carregar no formulário</span>
-                    <button
-                      className="atc-btn atc-btn-ghost atc-btn-sm"
-                      onClick={() => setMostrarResultados(false)}
-                    >
-                      Fechar
-                    </button>
-                  </div>
-                </div>
-
-                {resultados.length === 0 ? (
-                  <div className="atc-results-empty">Nenhum chamado encontrado para os filtros informados.</div>
-                ) : (
-                  <table className="atc-results-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 90 }}>Chamado</th>
-                        <th style={{ width: 110 }}>Data Emissão</th>
-                        <th>Consumidor</th>
-                        <th style={{ width: 130 }}>Tipo</th>
-                        <th style={{ width: 110 }}>Situação</th>
-                        <th style={{ width: 110 }}>Posição</th>
-                        <th>Responsável</th>
+        {view === "calls" && (
+          <div className="erp-main">
+            <div className="erp-list-panel">
+              <div className="erp-grid-wrap">
+                <table className="erp-grid">
+                  <thead><tr><th className="num">Nº</th><th className="num">Cliente</th><th>Assunto</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {calls.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum chamado.</td></tr>}
+                    {calls.map((c) => (
+                      <tr key={c.code} onClick={() => abrirDetalhe(c.code)} className={selected?.code === c.code ? "erp-row-sel" : ""} style={{ cursor: "pointer" }}>
+                        <td className="num">{c.call_number ?? c.code}</td><td className="num">{c.customer_code}</td><td>{c.subject}</td><td>{badge(c.status)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {resultados.map((r) => {
-                        const tipoClass =
-                          r.tipo_chamado === "Garantia" ? "garantia"
-                          : r.tipo_chamado === "Troca" ? "troca"
-                          : r.tipo_chamado === "Conserto" ? "conserto"
-                          : r.tipo_chamado === "Revisão" ? "revisao"
-                          : r.tipo_chamado === "Recall" ? "recall"
-                          : "outros";
-                        const sitClass =
-                          r.situacao === "Pendente" ? "pendente"
-                          : r.situacao === "Vistoria" ? "vistoria"
-                          : r.situacao === "Concluído" || r.situacao === "Cancelado" ? "concluido"
-                          : "andamento";
-                        return (
-                          <tr key={r.chamado} onClick={() => handleSelectFromList(r)}>
-                            <td style={{ fontWeight: 600, color: "#1a4a2a" }}>{r.chamado}</td>
-                            <td style={{ fontSize: 12 }}>{r.data_emissao}</td>
-                            <td>{r.consumidorNome}</td>
-                            <td>
-                              <span className={`atc-tipo-badge ${tipoClass}`}>{r.tipo_chamado}</span>
-                            </td>
-                            <td>
-                              <span className={`atc-sit-badge ${sitClass}`}>{r.situacao}</span>
-                            </td>
-                            <td>{r.posicao}</td>
-                            <td>{r.responsavelNome}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
-
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* SEÇÃO 2 — CRIAR / EDITAR                                   */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-
-          <div className="atc-section-banner">
-            <span className="atc-section-banner-pill">2 — Criar / Editar</span>
-            <div className="atc-section-banner-line" />
-            <span className="atc-section-banner-hint">
-              {modoForm === "novo"
-                ? "Preencha os campos e clique em Salvar para criar um novo chamado"
-                : `Editando Chamado #${chamadoEdit ?? "?"} — clique em Novo Chamado para cancelar`}
-            </span>
-          </div>
-
-          {/* ── MAIN FORM CARD ── */}
-          <div className="atc-card">
-            <div className="atc-card-header">
-              <div className="atc-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5 2v4h6V2M5 9h6" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-                <span className="atc-card-title">Chamado</span>
-              </div>
-              {modoForm === "novo"
-                ? <span className="atc-modo-novo"><span className="atc-modo-dot" />Novo Cadastro</span>
-                : <span className="atc-modo-edicao"><span className="atc-modo-dot" />Editando Chamado #{chamadoEdit}</span>
-              }
             </div>
 
-            <div className="atc-card-body">
-              <div className="atc-section-label">Dados do Chamado</div>
-              <div className="atc-grid">
-
-                {/* Chamado */}
-                <div className="atc-field atc-col-2">
-                  <label className="atc-label">Chamado</label>
-                  <div className="atc-input-wrap">
-                    <input
-                      className="atc-input"
-                      style={{ borderRadius: "7px 0 0 7px" }}
-                      placeholder="Nº chamado"
-                      value={form.chamado}
-                      onChange={(e) => setField("chamado", e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && void handleCarregar()}
-                    />
-                    <button
-                      className="atc-input-btn"
-                      title="Carregar Chamado"
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => void handleCarregar()}
-                    >
-                      {isLoading
-                        ? <div className="atc-spinner-dark" style={{ width: 12, height: 12 }} />
-                        : <>
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                              <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                            </svg>
-                            Carregar
-                          </>
-                      }
-                    </button>
+            <div className="erp-detail-panel">
+              {creating ? (
+                <>
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Novo chamado</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Empresa</label><LookupField value={form.enterprise_code || undefined} loader={loadEstablishments} entityLabel="empresa" onChange={(c) => setForm((p) => ({ ...p, enterprise_code: c ?? 0 }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Cliente</label><LookupField value={form.customer_code || undefined} loader={loadCustomers} entityLabel="cliente" onChange={(c) => setForm((p) => ({ ...p, customer_code: c ?? 0 }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Responsável garantia</label>
+                        <select className="erp-tselect" value={form.warranty_responsible_code ?? ""} onChange={(e) => setForm((p) => ({ ...p, warranty_responsible_code: e.target.value ? Number(e.target.value) : null }))}>
+                          <option value="">—</option>{responsibles.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="erp-field erp-c6"><label className="erp-label erp-req">Assunto</label><input className="erp-input" value={form.subject} onChange={(e) => setForm((p) => ({ ...p, subject: e.target.value }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Prioridade</label>
+                        <select className="erp-tselect" value={form.priority ?? "NORMAL"} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))}>
+                          <option value="LOW">Baixa</option><option value="NORMAL">Normal</option><option value="HIGH">Alta</option><option value="URGENT">Urgente</option>
+                        </select>
+                      </div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Prometido p/</label><input className="erp-input" type="date" value={form.promised_date ?? ""} onChange={(e) => setForm((p) => ({ ...p, promised_date: e.target.value }))} /></div>
+                      <div className="erp-field erp-c6"><label className="erp-label">Consumidor (nome)</label><input className="erp-input" value={form.consumer_name ?? ""} onChange={(e) => setForm((p) => ({ ...p, consumer_name: e.target.value }))} /></div>
+                      <div className="erp-field erp-c6"><label className="erp-label">Descrição</label><input className="erp-input" value={form.description ?? ""} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} /></div>
+                    </div>
                   </div>
-                  <span className="atc-field-hint">Enter ou "Carregar" para buscar chamado existente.</span>
-                </div>
-
-                {/* Data Emissão */}
-                <div className="atc-field atc-col-2">
-                  <label className="atc-label">Data Emissão</label>
-                  <input
-                    type="date"
-                    className="atc-input"
-                    value={form.data_emissao}
-                    onChange={(e) => setField("data_emissao", e.target.value)}
-                  />
-                </div>
-
-                {/* Consumidor */}
-                <div className="atc-field atc-col-4">
-                  <label className="atc-label">Consumidor <span className="atc-label-req">*</span></label>
-                  <input
-                    className={`atc-input${errors.consumidor ? " has-error" : ""}`}
-                    placeholder="Código ou nome do consumidor"
-                    value={form.consumidor}
-                    onChange={(e) => setField("consumidor", e.target.value)}
-                  />
-                  {errors.consumidor && (
-                    <span className="atc-field-error">
-                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                        <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                        <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                      </svg>
-                      {errors.consumidor}
-                    </span>
-                  )}
-                </div>
-
-                {/* Tipo Chamado */}
-                <div className="atc-field atc-col-2">
-                  <label className="atc-label">Tipo Chamado <span className="atc-label-req">*</span></label>
-                  <select
-                    className={`atc-select${errors.tipo_chamado ? " has-error" : ""}`}
-                    value={form.tipo_chamado}
-                    onChange={(e) => setField("tipo_chamado", e.target.value)}
-                  >
-                    <option value="">— Selecione —</option>
-                    {TIPOS_CHAMADO.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  {errors.tipo_chamado && (
-                    <span className="atc-field-error">
-                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                        <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                        <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                      </svg>
-                      {errors.tipo_chamado}
-                    </span>
-                  )}
-                </div>
-
-                {/* Ligação */}
-                <div className="atc-field atc-col-2">
-                  <label className="atc-label">Ligação</label>
-                  <select
-                    className="atc-select"
-                    value={form.ligacao}
-                    onChange={(e) => setField("ligacao", e.target.value)}
-                  >
-                    <option value="">— Selecione —</option>
-                    {LIGACOES.map((l) => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="atc-section-sep" />
-
-              <div className="atc-grid">
-                {/* Garantia */}
-                <div className="atc-field atc-col-3">
-                  <label className="atc-label">Garantia</label>
-                  <div style={{ paddingTop: 6 }}>
-                    <div className="atc-toggle-row">
-                      <label className="atc-toggle">
-                        <input
-                          type="checkbox"
-                          checked={form.garantia}
-                          onChange={(e) => setField("garantia", e.target.checked)}
-                        />
-                        <div className="atc-toggle-track" />
-                        <div className="atc-toggle-thumb" />
-                      </label>
-                      <div>
-                        <span className="atc-toggle-label">
-                          {form.garantia ? "Em Garantia" : "Fora de Garantia"}
-                        </span>
+                  {itemFormFields(addPendingItem)}
+                  {itemRows(pendingItems, true)}
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button className="erp-btn erp-btn-primary" onClick={gravarChamado} disabled={busy}>{busy && <span className="erp-spin" />}Abrir chamado</button>
+                    <button className="erp-btn" onClick={() => setCreating(false)} disabled={busy}>Cancelar</button>
+                  </div>
+                </>
+              ) : selected ? (
+                <>
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Chamado {selected.call_number ?? selected.code} — {badge(selected.status)}</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c3"><label className="erp-label">Empresa</label><input className="erp-input" readOnly value={selected.enterprise_code} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><input className="erp-input" readOnly value={selected.customer_code} /></div>
+                      <div className="erp-field erp-c6"><label className="erp-label">Assunto</label><input className="erp-input" readOnly value={selected.subject} /></div>
+                      <div className="erp-field erp-c6"><label className="erp-label">Consumidor</label><input className="erp-input" readOnly value={selected.consumer_name ?? "—"} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Prioridade</label><input className="erp-input" readOnly value={selected.priority ?? "—"} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Prometido</label><input className="erp-input" readOnly value={selected.promised_date?.slice(0, 10) ?? "—"} /></div>
+                    </div>
+                  </div>
+                  {itemRows(selected.items ?? [], false)}
+                  {itemFormFields(incluirItem)}
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Andamento — status, diagnóstico e solução</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c3"><label className="erp-label">Status</label>
+                        <select className="erp-tselect" value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>{Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+                      </div>
+                      <div className="erp-field erp-c9" />
+                      <div className="erp-field erp-c6"><label className="erp-label">Diagnóstico</label><input className="erp-input" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} /></div>
+                      <div className="erp-field erp-c6"><label className="erp-label">Solução</label><input className="erp-input" value={solution} onChange={(e) => setSolution(e.target.value)} /></div>
+                      <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8 }}>
+                        <button className="erp-btn erp-btn-primary" onClick={alterarStatus} disabled={busy}>Alterar status</button>
+                        <button className="erp-btn" onClick={anexarNota} disabled={busy}>Vincular nota de devolução</button>
+                        <button className="erp-btn" onClick={gerarOrdens} disabled={busy}>Gerar pedido/ordem</button>
                       </div>
                     </div>
                   </div>
-                </div>
+                </>
+              ) : (
+                <div className="erp-fieldset"><div className="erp-fieldset-body"><p style={{ padding: 12, color: "var(--v-text-3)" }}>Selecione um chamado na lista ou clique em <strong>Novo chamado</strong>.</p></div></div>
+              )}
+            </div>
+          </div>
+        )}
 
-                {/* Motivo */}
-                <div className="atc-field atc-col-3">
-                  <label className="atc-label">Motivo <span className="atc-label-req">*</span></label>
-                  <select
-                    className={`atc-select${errors.motivo ? " has-error" : ""}`}
-                    value={form.motivo}
-                    onChange={(e) => setField("motivo", e.target.value)}
-                  >
-                    <option value="">— Selecione —</option>
-                    {MOTIVOS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                  {errors.motivo && (
-                    <span className="atc-field-error">
-                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                        <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                        <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                      </svg>
-                      {errors.motivo}
-                    </span>
-                  )}
-                </div>
-
-                {/* Responsável */}
-                <div className="atc-field atc-col-3">
-                  <label className="atc-label">Responsável</label>
-                  <select
-                    className="atc-select"
-                    value={form.responsavel}
-                    onChange={(e) => setField("responsavel", e.target.value)}
-                  >
-                    <option value="">— Selecione —</option>
-                    {RESPONSAVEIS.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Posição */}
-                <div className="atc-field atc-col-3">
-                  <label className="atc-label">Posição</label>
-                  <select
-                    className="atc-select"
-                    value={form.posicao}
-                    onChange={(e) => setField("posicao", e.target.value)}
-                  >
-                    <option value="">— Selecione —</option>
-                    {POSICOES.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="atc-section-sep" />
-
-              <div className="atc-grid">
-                {/* Situação */}
-                <div className="atc-field atc-col-3">
-                  <label className="atc-label">Situação <span className="atc-label-req">*</span></label>
-                  <select
-                    className={`atc-select${errors.situacao ? " has-error" : ""}`}
-                    value={form.situacao}
-                    onChange={(e) => setField("situacao", e.target.value)}
-                  >
-                    <option value="">— Selecione —</option>
-                    {SITUACOES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                  {errors.situacao && (
-                    <span className="atc-field-error">
-                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                        <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                        <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                      </svg>
-                      {errors.situacao}
-                    </span>
-                  )}
-                </div>
-
-                {/* Data Solicitação - enabled only when Situação === Vistoria */}
-                <div className="atc-field atc-col-2">
-                  <label className="atc-label">Data Solicitação</label>
-                  <input
-                    type="date"
-                    className="atc-input"
-                    value={form.data_solicitacao}
-                    onChange={(e) => setField("data_solicitacao", e.target.value)}
-                    disabled={!isVistoria}
-                  />
-                  {!isVistoria && (
-                    <span className="atc-field-hint">Disponível apenas para Situação "Vistoria".</span>
-                  )}
-                </div>
-
-                {/* Data Retirada - enabled only when Situação === Vistoria */}
-                <div className="atc-field atc-col-2">
-                  <label className="atc-label">Data Retirada</label>
-                  <input
-                    type="date"
-                    className="atc-input"
-                    value={form.data_retirada}
-                    onChange={(e) => setField("data_retirada", e.target.value)}
-                    disabled={!isVistoria}
-                  />
-                  {!isVistoria && (
-                    <span className="atc-field-hint">Disponível apenas para Situação "Vistoria".</span>
-                  )}
+        {view === "aux" && (
+          <>
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Grupos de defeito</div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c8"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={groupDesc} onChange={(e) => setGroupDesc(e.target.value)} /></div>
+                <div className="erp-field erp-c4" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criarGrupo} disabled={busy}>Criar grupo</button></div>
+                <div className="erp-field erp-c12">
+                  <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th className="num">Código</th><th>Descrição</th></tr></thead>
+                    <tbody>{groups.length === 0 ? <tr><td colSpan={2} className="erp-grid-empty">Nenhum grupo.</td></tr> : groups.map((g) => <tr key={g.code}><td className="num">{g.code}</td><td>{g.description}</td></tr>)}</tbody>
+                  </table></div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* ── FOOTER ── */}
-        <footer className="atc-footer">
-          <div className="atc-footer-left">
-            <div className="atc-footer-stat">
-              Chamado: <strong>{form.chamado || "—"}</strong>
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Motivos de defeito</div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Grupo</label>
+                  <select className="erp-tselect" value={reasonForm.group_code || ""} onChange={(e) => setReasonForm((p) => ({ ...p, group_code: Number(e.target.value) }))}>
+                    <option value="">—</option>{groups.map((g) => <option key={g.code} value={g.code}>{g.code} · {g.description}</option>)}
+                  </select>
+                </div>
+                <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={reasonForm.description} onChange={(e) => setReasonForm((p) => ({ ...p, description: e.target.value }))} /></div>
+                <div className="erp-field erp-c4" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criarMotivo} disabled={busy}>Criar motivo</button></div>
+                {([
+                  ["allows_complement", "Exige complemento"], ["requires_return_note", "Exige nota devolução"],
+                  ["generates_sales_order", "Gera pedido de venda"], ["generates_production_order", "Gera ordem de produção"],
+                  ["generates_revenue", "Gera receita"], ["is_replacement", "É reposição"], ["is_service", "É serviço"], ["available_web", "Disponível web"],
+                ] as [keyof DefectReasonDTO, string][]).map(([k, label]) => (
+                  <div key={k} className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <input id={`rf-${k}`} className="erp-check" type="checkbox" checked={!!reasonForm[k]} onChange={(e) => setReasonForm((p) => ({ ...p, [k]: e.target.checked }))} />
+                    <label htmlFor={`rf-${k}`} className="erp-label" style={{ margin: 0 }}>{label}</label>
+                  </div>
+                ))}
+                <div className="erp-field erp-c12">
+                  <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th className="num">Código</th><th className="num">Grupo</th><th>Descrição</th><th>Regras</th></tr></thead>
+                    <tbody>{reasons.length === 0 ? <tr><td colSpan={4} className="erp-grid-empty">Nenhum motivo.</td></tr> : reasons.map((r) => <tr key={r.code}><td className="num">{r.code}</td><td className="num">{r.group_code}</td><td>{r.description}</td>
+                      <td>{[r.allows_complement && "complemento", r.requires_return_note && "nota", r.generates_sales_order && "pedido", r.generates_production_order && "ordem"].filter(Boolean).join(", ") || "—"}</td></tr>)}</tbody>
+                  </table></div>
+                </div>
+              </div>
             </div>
-            <div className="atc-footer-stat">
-              Tipo: <strong>{form.tipo_chamado || "—"}</strong>
-            </div>
-            <div className="atc-footer-stat">
-              Garantia: <strong>{form.garantia ? "Sim" : "Não"}</strong>
-            </div>
-            <div className="atc-footer-stat">
-              Situação: <strong>{form.situacao || "—"}</strong>
-            </div>
-            <div className="atc-footer-stat">
-              Posição: <strong>{form.posicao || "—"}</strong>
-            </div>
-          </div>
-          <div className="atc-footer-stat" style={{ gap: 8 }}>
-            {modoForm === "novo"
-              ? <span className="atc-modo-novo" style={{ fontSize: 11 }}><span className="atc-modo-dot" />Novo Cadastro</span>
-              : <span className="atc-modo-edicao" style={{ fontSize: 11 }}><span className="atc-modo-dot" />Editando #{chamadoEdit}</span>
-            }
-            <span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
-          </div>
-        </footer>
 
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Responsáveis pela garantia</div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c4"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={respForm.name} onChange={(e) => setRespForm((p) => ({ ...p, name: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label">E-mail</label><input className="erp-input" value={respForm.email ?? ""} onChange={(e) => setRespForm((p) => ({ ...p, email: e.target.value }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Telefone</label><input className="erp-input" value={respForm.phone ?? ""} onChange={(e) => setRespForm((p) => ({ ...p, phone: e.target.value }))} /></div>
+                <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criarResponsavel} disabled={busy}>Criar</button></div>
+                <div className="erp-field erp-c12">
+                  <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th className="num">Código</th><th>Nome</th><th>E-mail</th><th>Telefone</th></tr></thead>
+                    <tbody>{responsibles.length === 0 ? <tr><td colSpan={4} className="erp-grid-empty">Nenhum responsável.</td></tr> : responsibles.map((r) => <tr key={r.code}><td className="num">{r.code}</td><td>{r.name}</td><td>{r.email || "—"}</td><td>{r.phone || "—"}</td></tr>)}</tbody>
+                  </table></div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
-    </>
+
+      <footer className="erp-statusbar">
+        <div className="erp-status-item">Chamados: <strong>{calls.length}</strong>{selected && <> · Selecionado: <strong>{selected.call_number ?? selected.code}</strong></>}</div>
+        <div className="erp-status-spacer" />
+        <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
+      </footer>
+    </div>
   );
 }

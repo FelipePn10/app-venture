@@ -31,7 +31,6 @@ base:
 |-------------------------|-------------------------|
 | `VITE_API_URL`          | *(vazio)*               |
 | `VITE_API_PROXY_TARGET` | `http://localhost:5072` |
-| `VITE_USE_MOCK_AUTH`    | `false` (auth real)     |
 | `VITE_AUTH_LOGIN_PATH`  | `/users/login`          |
 
 `VITE_API_URL` fica **vazio** de propósito: o front usa URLs relativas e o

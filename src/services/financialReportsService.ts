@@ -2,6 +2,18 @@ import { httpClient } from '@/services/fiscalShared';
 
 const BASE = '/api/financial/relatorios';
 
+/** Segmentos de relatórios que a tela VFIN0500 oferece ao usuário. */
+export const FINANCIAL_REPORT_ENDPOINTS = [
+  '/api/financial/relatorios/livro-entradas', '/api/financial/relatorios/livro-saidas',
+  '/api/financial/relatorios/impostos-saidas', '/api/financial/relatorios/impostos-entradas',
+  '/api/financial/relatorios/dre', '/api/financial/relatorios/aging-receber',
+  '/api/financial/relatorios/aging-pagar', '/api/financial/relatorios/extrato-fornecedor/{}',
+  '/api/financial/relatorios/extrato-cliente/{}', '/api/financial/relatorios/produtos-vendidos',
+  '/api/financial/relatorios/produtos-produzidos', '/api/financial/relatorios/historico-custos',
+  '/api/financial/relatorios/ficha-tecnica/{}', '/api/financial/relatorios/curva-abc-clientes',
+  '/api/financial/relatorios/curva-abc-produtos', '/api/financial/relatorios/compras-periodo',
+] as const;
+
 /** A single row of a tabular report — arbitrary backend-defined columns. */
 export type ReportRow = Record<string, unknown>;
 

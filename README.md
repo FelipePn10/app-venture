@@ -215,7 +215,7 @@ npm run
 
 > Se aparecer `npm error could not determine executable to run`, significa que o Tauri CLI não está disponível no projeto. Esta base já inclui `@tauri-apps/cli` em `devDependencies`; rode `npm install` novamente e use `npm run tauri:dev`.
 
-> Para integração com backend Go REST/JSON em desenvolvimento web sem usar prefixo `/api`, deixe `VITE_API_URL=` vazio, configure `VITE_API_PROXY_TARGET=http://localhost:5070` e mantenha `VITE_USE_MOCK_AUTH=false`. Assim o frontend chama `/users/login` e o Vite repassa para `http://localhost:5070/users/login` sem preflight de CORS no browser.
+> O projeto separa os ambientes pelo modo do Vite. Na branch `develop`, `npm run dev` carrega `.env.development`: o frontend usa URLs relativas e o proxy encaminha para `https://dev-api.venturerp.com`. A branch `main` é a linha de produção; `npm run build` ou `npm run build:production` carrega `.env.production` e grava `https://api.venturerp.com` no artefato. A autenticação é sempre realizada pelo backend.
 
 ### Integração real com backend e sessão
 
@@ -223,9 +223,8 @@ O frontend agora está preparado para operar com sessão real e rotas reais do b
 
 ```bash
 VITE_API_URL=
-VITE_API_PROXY_TARGET=http://localhost:5070
+VITE_API_PROXY_TARGET=https://dev-api.venturerp.com
 VITE_API_TIMEOUT_MS=15000
-VITE_USE_MOCK_AUTH=false
 VITE_AUTH_LOGIN_PATH=/users/login
 VITE_AUTH_ME_PATH=
 VITE_AUTH_LOGIN_FIELD=email
@@ -242,7 +241,7 @@ VITE_ESTABLISHMENT_LOOKUP_PATH=/estabelecimentos
 - `POST /almoxarifados`: persiste o cadastro da `VENT0800`.
 - `GET /clientes/:codigo`, `GET /fornecedores/:codigo`, `GET /estabelecimentos/:codigo`: validam vínculos reais informados na tela.
 
-O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. Em desenvolvimento web, o recomendado é deixar `VITE_API_URL=` vazio e usar `VITE_API_PROXY_TARGET=http://localhost:5070`, para que o frontend faça chamadas relativas como `/users/login`, `/almoxarifados/...` e `/clientes/...`, enquanto o Vite repassa tudo ao backend sem gerar `OPTIONS` de CORS para `/users/login`. O login usa `email` como campo principal e aceita respostas com `token`, `accessToken`, `access_token` ou `data.token`.
+O cliente HTTP adiciona automaticamente o header `Authorization: Bearer <token>` após o login e limpa a sessão local se a API responder `401`. Em desenvolvimento web, `.env.development` mantém `VITE_API_URL=` vazio e usa `VITE_API_PROXY_TARGET=https://dev-api.venturerp.com`; o Vite repassa chamadas relativas ao backend development sem preflight de CORS. Em produção, `.env.production` define `VITE_API_URL=https://api.venturerp.com`, sem depender do proxy de desenvolvimento. O login usa `email` como campo principal e aceita respostas com `token`, `accessToken`, `access_token` ou `data.token`.
 
 ---
 

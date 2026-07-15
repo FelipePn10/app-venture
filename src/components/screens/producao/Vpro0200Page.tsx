@@ -37,8 +37,8 @@ export function Vpro0200Page(): JSX.Element {
       if (t === "todos") setRows(await listCrpPlan(p));
       else if (t === "overload") setRows(await listCrpOverload(p));
       else {
-        if (!wcId || !from || !to) { setFeedback({ type: "error", message: "Informe centro, de e até." }); setBusy(false); return; }
-        setRows(await getWorkCenterCapacity(Number(wcId), from, to));
+        if (!p || !wcId) { setFeedback({ type: "error", message: "Informe o plano e o centro." }); setBusy(false); return; }
+        setRows(await getWorkCenterCapacity(p, Number(wcId), from, to));
       }
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }

@@ -1,9 +1,9 @@
 # HELP - Telas do ERP Venture
 
 > Documentação completa de todas as telas do sistema ERP Venture Desktop.
-> Total de telas documentadas: **136**
+> Total de telas documentadas: **199**
 > Estilo: Processos de negócio com fluxos, pré-requisitos e passo a passo.
-> Última atualização: Junho 2026
+> Última atualização: Julho 2026
 
 ---
 
@@ -11,12 +11,12 @@
 
 | Processo | Telas |
 |----------|-------|
-| [Financeiro, Contábil e Cadastros](#processo-financeiro-contabil-e-cadastros) | 18 |
-| [Industrial e Produção](#processo-industrial-e-producao) | 54 |
-| [Comercial, Vendas e PDV](#processo-comercial-vendas-e-pdv) | 18 |
-| [Fiscal](#processo-fiscal) | 20 |
+| [Financeiro, Contábil e Cadastros](#processo-financeiro-contabil-e-cadastros) | 23 |
+| [Industrial e Produção](#processo-industrial-e-producao) | 56 |
+| [Comercial, Vendas e PDV](#processo-comercial-vendas-e-pdv) | 19 |
+| [Fiscal](#processo-fiscal) | 25 |
 | [PCP, Chão de Fábrica, Estoque e Custos](#processo-pcp-chao-de-fabrica-estoque-e-custos) | 18 |
-| [Suprimento e Compras](#processo-suprimento-e-compras) | 8 |
+| [Suprimento e Compras](#processo-suprimento-e-compras) | 11 |
 
 > **Novo neste ciclo (PCP & Chão de Fábrica):** este processo reúne as rotinas que
 > transformam a demanda em produto acabado e o entregam ao cliente — **Pedido de
@@ -522,7 +522,7 @@ Gerenciar o ciclo de vida completo dos títulos a pagar: criação, aprovação/
    - **Vencimento**: data de vencimento do título (padrão: data atual).
    - **Valor Bruto**: valor total do título em reais.
 5. Preencha opcionalmente:
-   - **Fornecedor (ID)**: ID do fornecedor vinculado (do cadastro VAVR0200).
+   - **Fornecedor (ID)**: ID do fornecedor vinculado (do cadastro VSUP0500).
    - **NF Entrada (ID)**: ID da nota fiscal de entrada vinculada (do VFIS0210).
    - **Desconto**: valor de desconto a ser abatido.
    - **Parc. nº / Parc. tot.**: número da parcela atual e total de parcelas.
@@ -569,7 +569,7 @@ Gerenciar o ciclo de vida completo dos títulos a pagar: criação, aprovação/
 |-------|------|-------------|--------|--------|
 | Nº Documento | texto | Sim | — | Número do documento de referência (ex: `NF-5500`) |
 | Tipo Doc. | texto | Não | — | Tipo do documento (padrão: `NF-e`) |
-| Fornecedor (ID) | número | Não | — | ID do fornecedor no cadastro VAVR0200 |
+| Fornecedor (ID) | número | Não | — | ID do fornecedor no cadastro VSUP0500 |
 | NF Entrada (ID) | número | Não | — | ID da NF-e de entrada (VFIS0210) vinculada |
 | Forma Pagamento | texto | Não | — | Meio de pagamento (padrão: `transferencia`) |
 | Emissão | data | Sim | — | Data de emissão do título (padrão: hoje) |
@@ -1088,7 +1088,7 @@ Manter a tabela base de Unidades Federativas (UFs) e municípios brasileiros com
 | Tela | Por que se conecta |
 |------|--------------------|
 | **VCLI0500 (Cadastro de Cliente)** | Utiliza UFs e Cidades para endereços de cobrança, entrega e faturamento. |
-| **VAVR0200 (Cadastro de Fornecedor)** | Utiliza UFs e Cidades para endereço do fornecedor. |
+| **VSUP0500 (Cadastro de Fornecedor)** | Utiliza UFs e Cidades para endereço do fornecedor. |
 | **VEMP0100 (Cadastro Empresa)** | Utiliza UFs e Cidades para endereço da sede e filiais. |
 | **VFIS0100 (Configuração Fiscal)** | Utiliza UFs e Cidades para endereço do emitente fiscal. |
 | **VLOC0100 (Localização Países/UFs)** | Cadastro complementar de países e UFs com códigos internacionais. |
@@ -1293,7 +1293,7 @@ Manter a base geográfica universal do sistema: países (com códigos DDI, BACEN
 |------|--------------------|
 | **VUTL0555 (Cadastro UFs e Cidades)** | Complementa com o cadastro de municípios dentro de cada UF. |
 | **VCLI0500 (Cadastro de Cliente)** | Utiliza países e UFs para endereços de clientes. |
-| **VAVR0200 (Cadastro de Fornecedor)** | Utiliza países e UFs para endereços de fornecedores. |
+| **VSUP0500 (Cadastro de Fornecedor)** | Utiliza países e UFs para endereços de fornecedores. |
 | **VEMP0100 (Cadastro Empresa)** | Utiliza UF para endereço da sede. |
 | **VFIS0100 (Configuração Fiscal)** | Utiliza UF do emitente. |
 
@@ -1556,7 +1556,7 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 - Empresa cadastrada no sistema.
 - Para itens do tipo Fabricado: Estrutura de Produtos (VENT0210) e Roteiro de Fabricação (VENT0202) devem existir.
 - Para itens configurados: Grupo PDM (VENT0204), Modificadores (VITE0115) e Atributos (VITE0116) devem estar parametrizados.
-- Para itens de suprimentos: Fornecedores (VAVR0200) e Contratos (VCON0200) cadastrados.
+- Para itens de suprimentos: Fornecedores (VSUP0500) e Contratos (VCON0200) cadastrados.
 
 ##### Passo a passo
 
@@ -1722,23 +1722,26 @@ Cadastrar os grupos (famílias) PDM que agrupam itens configurados com caracter�
 
 1. Acesse **VENT0204** pelo menu _Engenharia > Grupos PDM_.
 2. Clique em **Novo** (F2).
-3. Informe o **Código** do grupo (alfanumérico, até 10 caracteres).
-4. Selecione a **Empresa** à qual o grupo pertence.
-5. Preencha a **Descrição** do grupo (ex.: "Família Bombas Centrífugas").
-6. Clique em **Salvar** (F9).
+3. Na barra de operações, escolha **Cadastrar**.
+4. No corpo JSON, informe `code` com um número inteiro ainda não utilizado, `description` com o nome da família e `enterprise_id` com o código numérico da empresa proprietária.
+5. Clique em **Executar** e somente considere o cadastro concluído quando a resposta do backend for exibida sem erro.
+6. Escolha **Consultar**, execute e confirme que o novo grupo aparece na grade persistida.
+7. Para revisar um registro, escolha **Abrir grupo**, informe o código numérico e execute.
+8. Para alterar, escolha **Alterar grupo**, informe o mesmo código no campo próprio e, no JSON, envie a nova `description` e o `enterprise_id`; execute e consulte novamente para confirmar a persistência.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Código | Texto (10) | Sim | Identificador único do grupo PDM |
-| Empresa | Select | Sim | Empresa proprietária do grupo |
-| Descrição | Texto (120) | Sim | Nome descritivo do grupo PDM |
+| Código (`code`) | Número inteiro | Sim | Identificador único do grupo PDM; é usado também nas consultas e alterações |
+| Empresa (`enterprise_id`) | Número inteiro | Sim | Código da empresa proprietária do grupo |
+| Descrição (`description`) | Texto | Sim | Nome descritivo da família PDM |
 
 ##### Observações importantes
 
 - O grupo PDM é a entidade raiz do configurador. Sem ele, não é possível criar modificadores nem atributos.
 - Um mesmo grupo pode ser usado por múltiplos itens configurados da mesma família.
+- O backend não disponibiliza exclusão de grupos PDM; corrija descrição ou empresa pela operação **Alterar grupo**.
 
 ##### Telas relacionadas
 
@@ -1968,7 +1971,7 @@ Configurar os parâmetros globais do módulo de Promessa de Entrega, controlando
 
 ##### Objetivo
 
-Definir, para cada item, os dias úteis e não úteis para promessa de entrega em um calendário mensal. Utiliza 5 estados visuais (cores) para identificar a situação de cada dia e permite transferência de saldo entre dias para movimentações de tanque.
+Definir, para cada item, os dias úteis e não úteis para promessa de entrega em um calendário mensal, herdando os bloqueios do calendário industrial persistido.
 
 ##### Pré-requisitos
 
@@ -1979,26 +1982,24 @@ Definir, para cada item, os dias úteis e não úteis para promessa de entrega e
 
 1. Acesse **VPME0102ITE** pelo menu _Engenharia > Promessa de Entrega > Calendário por Item_.
 2. Selecione o **Item** desejado.
-3. O calendário mensal é exibido com 5 cores representando estados.
+3. O calendário mensal exibe dias úteis, dias confirmados, fins de semana, bloqueios industriais, dias não úteis do item e a data atual.
 4. Clique em um dia para alternar entre os estados:
    - **1 clique**: marca como _útil confirmado_.
    - **2 cliques**: marca como _não útil_.
-   - **3 cliques**: volta ao estado padrão.
-5. Para transferir saldo entre dias (tanque), utilize o **modal de transferência**.
-6. As alterações são salvas automaticamente ao trocar de mês ou item.
+5. Clique em **Salvar** e aguarde a confirmação do backend antes de trocar de mês ou item.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Item | Select | Sim | Item para o qual se define o calendário |
+| Item | Código | Sim | Item persistido para o qual se define o calendário |
 | Mês/Ano | Date | Sim | Mês de referência do calendário |
 | Dia | Click | Não | Estado do dia: útil confirmado / não útil / padrão |
 
 ##### Observações importantes
 
-- Os 5 estados de cor representam: útil confirmado, útil previsto, não útil, feriado, bloqueado.
-- O modal de **transferência** é específico para itens líquidos/granéis controlados por tanque.
+- A tela não infere movimentações de tanque. Transferências operacionais só devem ser feitas por uma rotina respaldada por endpoint próprio.
+- Dias bloqueados pelo calendário industrial não podem ser alterados pelo calendário do item.
 
 ##### Telas relacionadas
 
@@ -2148,144 +2149,132 @@ Gerar máscaras (códigos configurados) para itens configuráveis a partir da se
 
 ---
 
-#### VITE0114 — Grupos PDM (Tema Azul)
+> **PDM — como a descrição técnica do item nasce.** No VentureERP a descrição de um
+> item configurável é **composta** por **Grupo + Modificador + Atributos**, exatamente
+> como na indústria (ex.: Grupo `CHAPAS` · Modificador `Chapa Aço Carbono` · Atributos
+> `{Liga: 1020, Espessura: 6,35mm}`). O backend mantém dois cadastros mínimos — **Grupo**
+> e **Modificador** — e os **atributos** são pares `nome:valor` gravados **no próprio
+> item** (não têm cadastro separado). As três telas abaixo cobrem esse fluxo.
+
+#### VITE0114 — Cadastro de Grupos (PDM)
 
 ##### Objetivo
 
-Cadastro alternativo de Grupos PDM com tema visual azul, oferecendo modal de vínculo com empresa e item base. Permite pesquisa rápida por código ou descrição.
-
-##### Pré-requisitos
-
-- Empresa cadastrada.
-- (Opcional) Item base cadastrado em VENT0200.
+Cadastrar os **Grupos** do PDM — a primeira dimensão da descrição técnica (ex.: CHAPAS,
+PARAFUSOS, CABOS). O grupo é um cadastro simples: **código** (informado pelo usuário) +
+**descrição**, isolado por empresa.
 
 ##### Passo a passo
 
-1. Acesse **VITE0114** pelo menu _Engenharia > Configurador > Grupos PDM (Azul)_.
-2. Pesquise por **Código** ou **Descrição** para localizar grupos existentes.
-3. Para criar, clique em **Novo** (F2).
-4. Preencha **Código**, **Descrição** e **Abreviatura**.
-5. Clique no **modal de vínculo** para associar uma **Empresa** e um **Item Base** ao grupo.
-6. Clique em **Salvar** (F9).
+1. Acesse **VITE0114**. Clique em **Listar** para ver os grupos cadastrados (filtre por
+   código ou descrição no campo **Filtrar**).
+2. Para criar, clique em **Novo**, informe **Código**, **Descrição** e a **Empresa**
+   (padrão 1) e clique em **Criar**.
+3. Para editar, clique em **Editar** na linha do grupo — o **código não muda** (é a
+   chave); ajuste a descrição e clique em **Atualizar**.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Código | Texto (10) | Sim | Código do grupo PDM |
-| Descrição | Texto (120) | Sim | Nome descritivo |
-| Abreviatura | Texto (10) | Não | Abreviatura para relatórios |
-| Empresa | Select (modal) | Sim | Empresa vinculada ao grupo |
-| Item Base | Select (modal) | Não | Item de referência do grupo |
+| Código | Número | Sim | Código do grupo (informado; imutável após criar) |
+| Descrição | Texto | Sim | Nome do grupo (ex.: "Chapas de Aço") |
+| Empresa | Número | Não | Empresa dona do cadastro (padrão 1) |
 
 ##### Observações importantes
 
-- O **Item Base** serve como template para os itens configurados gerados a partir deste grupo.
-- A versão "tema azul" é cosmeticamente diferente de VENT0204, mas os dados são compartilhados.
+- O backend **não** tem exclusão de grupo — apenas criação, edição e consulta.
+- Não existem "abreviatura", "item base" nem "tema azul": são conceitos legados; o cadastro
+  real é só código + descrição por empresa.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VENT0204 | Cadastro de Grupo PDM — mesmo domínio, outra interface |
-| VENT0200 | Cadastro de Itens — item base vinculado |
-| VITE0115 | Modificadores PDM — modificadores do grupo |
-| VITE0116 | Atributos PDM — atributos dos modificadores |
+| VITE0115 | Modificadores — segunda dimensão da descrição |
+| VITE0116 | Atributos — montador do objeto PDM do item |
+| VENT0200 | Cadastro de Itens — onde o PDM (grupo+modificador+atributos) é aplicado |
 
 ---
 
-#### VITE0115 — Modificadores PDM
+#### VITE0115 — Cadastro de Modificadores (PDM)
 
 ##### Objetivo
 
-Gerenciar os modificadores dentro de cada grupo PDM. O modificador representa uma dimensão de variação do produto (ex.: Cor, Tensão, Material) e contém os atributos que definem os valores possíveis.
-
-##### Pré-requisitos
-
-- Grupo PDM cadastrado em VENT0204 ou VITE0114.
+Cadastrar os **Modificadores** — a segunda dimensão da descrição técnica (ex.: "Chapa Aço
+Carbono", "Frete Expresso"). O modificador é **global** (não pertence a um grupo) e tem
+apenas uma **descrição**; o **id** é gerado automaticamente.
 
 ##### Passo a passo
 
-1. Acesse **VITE0115** pelo menu _Engenharia > Configurador > Modificadores PDM_.
-2. Pesquise pelo **Grupo PDM** desejado.
-3. A lista de modificadores do grupo é exibida.
-4. Para criar, clique em **Novo** (F2).
-5. Preencha os campos do modal de vínculo (código, descrição, grupo).
-6. Clique em **Salvar** (F9).
+1. Acesse **VITE0115** e clique em **Listar**.
+2. Para criar, clique em **Novo**, informe a **Descrição** e clique em **Criar** — o id é
+   atribuído pelo sistema.
+3. Para editar, clique em **Editar** na linha, ajuste a descrição e clique em **Atualizar**.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Grupo PDM | Select | Sim | Grupo ao qual o modificador pertence |
-| Código | Texto (10) | Sim | Código do modificador |
-| Descrição | Texto (120) | Sim | Nome do modificador (ex.: "Cor", "Tensão") |
-| Ordem | Number | Não | Ordem de exibição no configurador |
+| Id | Número | — | Gerado pelo sistema (somente leitura) |
+| Descrição | Texto | Sim | Nome do modificador |
 
 ##### Observações importantes
 
-- Um grupo PDM pode ter múltiplos modificadores (ex.: Cor, Tensão, Material, Dimensão).
-- O modal de vínculo é o mesmo usado em VITE0114 para associar empresa e item base.
+- O modificador é **global** — o mesmo modificador pode ser usado com qualquer grupo ao
+  compor a descrição de um item.
+- Sem exclusão no backend (apenas criar/editar/consultar).
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VITE0114 | Grupos PDM — grupo pai do modificador |
-| VITE0116 | Atributos PDM — atributos que pertencem a este modificador |
-| VITE0118 | Regras Itens Configurados — regras baseadas nos atributos |
+| VITE0114 | Grupos — primeira dimensão |
+| VITE0116 | Atributos — usa grupos e modificadores para montar o PDM do item |
 
 ---
 
-#### VITE0116 — Atributos PDM
+#### VITE0116 — Atributos (PDM) — montador do item
 
 ##### Objetivo
 
-Gerenciar os atributos (valores possíveis) de cada modificador PDM. Apresenta pesquisa hierárquica em 3 níveis (Grupo → Modificador → Atributo) e oferece funcionalidade de Copiar/Colar atributos entre modificadores.
-
-##### Pré-requisitos
-
-- Grupo PDM (VITE0114) e Modificador PDM (VITE0115) cadastrados.
+Montar o objeto **PDM do item** — a combinação **Grupo + Modificador + Atributos** que
+gera a descrição técnica. Como os **atributos não têm cadastro próprio** (são gravados no
+item), esta tela é um **montador/pré-visualizador**: você escolhe grupo e modificador
+reais, adiciona os pares **nome:valor** e copia o objeto `pdm` pronto para colar no
+cadastro do item.
 
 ##### Passo a passo
 
-1. Acesse **VITE0116** pelo menu _Engenharia > Configurador > Atributos PDM_.
-2. No primeiro nível, selecione o **Grupo PDM**.
-3. No segundo nível, selecione o **Modificador**.
-4. No terceiro nível, a lista de **atributos** é exibida.
-5. Para criar, clique em **Novo** (F2) e preencha:
-   - **Código** e **Descrição** do atributo.
-   - **TAM** (tamanho do campo).
-   - **E/C**: _Essencial_ ou _Complementar_.
-6. Para copiar atributos de um modificador para outro, use **Copiar** no modificador de origem e **Colar** no modificador de destino.
-7. Clique em **Salvar** (F9).
+1. Acesse **VITE0116** e clique em **Carregar grupos/modificadores**.
+2. Selecione o **Grupo** e o **Modificador** nas listas.
+3. Em **Atributos do item**, informe **Nome** (ex.: COR) e **Valor** (ex.: PRETO) e clique
+   em **Adicionar**. Repita para cada atributo.
+4. Confira a **Descrição técnica composta** e o **Objeto pdm (item)** na pré-visualização.
+5. Clique em **Copiar pdm** e cole o objeto no campo PDM do cadastro do item (VENT0200).
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Grupo PDM | Select (nível 1) | Sim | Grupo PDM pai |
-| Modificador | Select (nível 2) | Sim | Modificador dentro do grupo |
-| Código | Texto (10) | Sim | Código do atributo |
-| Descrição | Texto (120) | Sim | Valor do atributo (ex.: "Azul", "220V") |
-| TAM | Number | Não | Tamanho do campo na máscara |
-| E/C | Select | Sim | Essencial / Complementar |
-| Copiar / Colar | Button | Não | Copia atributos entre modificadores |
+| Grupo | Select | Sim | Grupo cadastrado (VITE0114) |
+| Modificador | Select | Sim | Modificador cadastrado (VITE0115) |
+| Nome | Texto | Sim | Nome do atributo (gravado em maiúsculas) |
+| Valor | Texto | Sim | Valor do atributo |
 
 ##### Observações importantes
 
-- Atributos **Essenciais** são obrigatórios na configuração; **Complementares** são opcionais.
-- O campo **TAM** define quantos caracteres o valor ocupa na máscara gerada.
-- A funcionalidade **Copiar/Colar** é útil quando dois modificadores compartilham os mesmos valores (ex.: "Cor" para pintura e "Cor" para acabamento).
+- Atributos **não** têm cadastro separado no ERP — eles vivem no objeto `pdm` do item
+  (`group_code`, `modifier_code`, `attributes: [{name, value}]`, `description_technique`).
+- Esta tela não persiste nada sozinha: a gravação acontece no **cadastro do item**.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VITE0115 | Modificadores PDM — modificador pai do atributo |
-| VITE0118 | Regras Itens Configurados — atributos usados nas condições das regras |
-| VITE0313 | Geração Máscara — atributos apresentados como características |
-| VENG0204 | Regras Variáveis Equivalentes — atributos nas condições |
+| VITE0114 | Grupos — origem do `group_code` |
+| VITE0115 | Modificadores — origem do `modifier_code` |
+| VENT0200 | Cadastro de Itens — onde o objeto `pdm` é efetivamente gravado |
 
 ---
 
@@ -2303,27 +2292,27 @@ Definir regras que mapeiam características do configurador para tabelas do sist
 ##### Passo a passo
 
 1. Acesse **VITE0118** pelo menu _Engenharia > Configurador > Regras Itens Configurados_.
-2. Selecione o **Grupo PDM**.
-3. As **características** (atributos) do grupo são exibidas inline.
+2. Informe o código do **Item** persistido ou deixe o filtro vazio para consultar todas as regras.
+3. Informe os códigos reais de característica, operador e variável aceitos pelo configurador.
 4. Clique em **Nova Regra**.
 5. Defina a **condição**: combinação de características com operadores.
-6. Selecione a **Tabela de Destino** (Contábil, Comercial, Custos, Planejamento, etc.).
-7. O **campo dinâmico** muda conforme a tabela selecionada — preencha o valor alvo.
+6. Informe a tabela e o campo de destino conforme o contrato do backend; a tela não oferece listas demonstrativas.
+7. Preencha o conteúdo que será aplicado pela regra.
 8. Clique em **Salvar** (F9).
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Grupo PDM | Select | Sim | Grupo de itens configurados |
-| Características | Inline | Sim | Atributos usados na condição |
-| Tabela Destino | Select | Sim | Contábil / Comercial / Custos / Planejamento / ... |
-| Campo Dinâmico | Varia | Sim | Campo da tabela de destino (contextual) |
+| Item | Código | Sim | Item configurado persistido |
+| Características | Códigos | Sim | Característica, operador e variável usados na condição |
+| Tabela Destino | Texto | Sim | Nome técnico aceito pela API |
+| Campo | Texto | Sim | Campo técnico aceito pela API |
 | Valor | Varia | Sim | Valor a ser atribuído quando a condição for atendida |
 
 ##### Observações importantes
 
-- O **campo dinâmico** é o diferencial desta tela — ele se adapta ao domínio da tabela selecionada, mostrando selects ou inputs apropriados.
+- Confirme tabela, campo, característica e variável nos respectivos cadastros antes de salvar; não existe fallback local.
 - As regras são avaliadas sequencialmente; a primeira que satisfizer a condição é aplicada.
 - Tabelas de destino típicas: Classificação Fiscal (Contábil), Tabela de Preço (Comercial), Centro de Custo (Custos), Tipo de Planejamento (Planejamento).
 
@@ -2531,241 +2520,193 @@ Registrar orientações para a entrega de cargas, incluindo CEP com auto-preench
 
 ## 3. PREVISÃO
 
-#### VPRE0101 — Tabela Apropriação
+> **Backend:** todas as telas de Previsão gravam em `/api/sales-forecast`. A previsão alimenta o MRP/MPS como demanda independente do tipo previsão.
+
+#### VPRE0101 — Tabela de Apropriação
 
 ##### Objetivo
 
-Definir a distribuição percentual das vendas previstas nos dias da semana (Segunda a Sexta). A soma dos percentuais deve totalizar 100% e a validação ocorre em tempo real.
-
-##### Pré-requisitos
-
-- Nenhum.
+Definir a distribuição percentual da previsão nos sete dias da semana (Segunda a Domingo). A soma dos percentuais deve totalizar 100% (validação em tempo real). Uma tabela pode ser marcada como **padrão**, usada por VPRE0201/VPRE0251 na distribuição mensal.
 
 ##### Passo a passo
 
-1. Acesse **VPRE0101** pelo menu _Previsão > Tabela Apropriação_.
-2. Para cada dia da semana, informe o **percentual** de distribuição:
-3. O sistema exibe em **tempo real** o total acumulado.
-4. Certifique-se de que a **soma = 100%** — caso contrário, o sistema não permite salvar.
-5. Clique em **Salvar** (F9).
+1. Acesse **VPRE0101** pelo menu _Previsão > Tabela de Apropriação_.
+2. Informe a **Descrição** e o **percentual** de cada dia (Seg…Dom).
+3. O sistema exibe o **total** em tempo real, em vermelho se diferente de 100%.
+4. Opcional: marque **Definir como padrão**.
+5. Clique em **Gravar tabela**. Use **Tornar padrão** na lista para alternar a tabela padrão sem recadastrar.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Segunda | Number | Sim | Percentual de vendas na segunda (%) |
-| Terça | Number | Sim | Percentual de vendas na terça (%) |
-| Quarta | Number | Sim | Percentual de vendas na quarta (%) |
-| Quinta | Number | Sim | Percentual de vendas na quinta (%) |
-| Sexta | Number | Sim | Percentual de vendas na sexta (%) |
-| Total | Number (read-only) | — | Soma dos percentuais (deve ser 100%) |
+| Descrição | Texto | Sim | Nome da tabela |
+| Seg…Dom | Number | Sim | Percentual de cada dia (soma = 100%) |
+| Definir como padrão | Checkbox | Não | Marca a tabela como padrão do sistema |
+| Soma | Number (read-only) | — | Total dos sete dias (deve ser 100%) |
 
 ##### Observações importantes
 
-- A **validação em tempo real** atualiza o total a cada campo alterado, destacando em vermelho se diferente de 100%.
-- Esta tabela é usada pelo módulo de **previsão de vendas** (VPRE0201) para distribuir previsões mensais em semanas e dias.
+- Ao contrário do padrão antigo (Seg–Sex), o backend controla os **sete dias**; sábado/domingo podem ficar em 0%.
+- **Tornar padrão** chama `/appropriation/set-default` e reflete imediatamente na lista.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VPRE0201 | Cadastro Previsão Vendas — usa esta tabela para distribuição diária |
-| VPRE0251 | Geração Previsão — usa na projeção de dados históricos |
+| VPRE0201 | Cadastro da Previsão — usa a tabela padrão na distribuição mensal |
+| VPRE0251 | Geração de Previsão — usa na distribuição das previsões geradas |
 
 ---
 
-#### VPRE0102 — Bloqueio Previsão
+#### VPRE0102 — Bloqueio de Previsão de Vendas
 
 ##### Objetivo
 
-Definir intervalos de semanas em que a previsão de vendas fica bloqueada para alterações. Útil para períodos de fechamento ou auditoria.
-
-##### Pré-requisitos
-
-- Nenhum.
+Registrar **períodos por data** (início/fim) em que a gravação de previsão fica bloqueada. Antes de gravar uma previsão semanal, o backend recusa a semana cuja **segunda-feira ISO** caia dentro de um período bloqueado.
 
 ##### Passo a passo
 
-1. Acesse **VPRE0102** pelo menu _Previsão > Bloqueio Previsão_.
-2. Informe a **Semana Inicial** e o **Ano Inicial** do bloqueio.
-3. Informe a **Semana Final** e o **Ano Final** do bloqueio.
-4. O sistema valida: `AnoFinal * 100 + SemanaFinal >= AnoInicial * 100 + SemanaInicial`.
-5. Clique em **Salvar** (F9).
+1. Acesse **VPRE0102** pelo menu _Previsão > Bloqueio de Previsão_.
+2. Informe **Início** e **Fim** do período (datas) e, opcionalmente, o **Motivo**.
+3. Clique em **Bloquear período**. Use **Atualizar lista** para revisar os bloqueios vigentes.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Semana Inicial | Number | Sim | Número da semana inicial (1–53) |
-| Ano Inicial | Number | Sim | Ano da semana inicial |
-| Semana Final | Number | Sim | Número da semana final (1–53) |
-| Ano Final | Number | Sim | Ano da semana final |
+| Início | Data | Sim | Data inicial do bloqueio |
+| Fim | Data | Sim | Data final (não pode ser anterior ao início) |
+| Motivo | Texto | Não | Justificativa do bloqueio |
 
 ##### Observações importantes
 
-- A validação `ano * 100 + semana` garante que o intervalo final não seja anterior ao inicial, considerando viradas de ano.
-- Durante o período bloqueado, a previsão não pode ser alterada em VPRE0201.
+- O bloqueio agora é por **intervalo de datas** (não mais semana/ano), coerente com `/blocks`.
+- A regra vale na gravação semanal (VPRE0201) e na distribuição mensal/geração.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VPRE0201 | Cadastro Previsão Vendas — bloqueio impede edição |
-| VPRE0251 | Geração Previsão — bloqueio impede geração no período |
+| VPRE0201 | Cadastro da Previsão — semanas em período bloqueado são recusadas |
+| VPRE0251 | Geração de Previsão — respeita os bloqueios ao gravar |
 
 ---
 
-#### VPRE0201 — Cadastro Previsão Vendas
+#### VPRE0201 — Cadastro da Previsão de Vendas
 
 ##### Objetivo
 
-Cadastrar e ajustar previsões de vendas por item, com visão mensal e semanal. Oferece distribuição fracionada (valores iguais por semana) ou inteira (piso com resto concentrado nas primeiras semanas), além de modal de ajuste semanal com redistribuição automática.
+Cadastrar previsão por item e dar manutenção. Três abas: **Semanal** (grava direto numa semana ISO), **Mensal** (informa a quantidade do mês e o backend rateia em semanas pelos dias úteis do calendário industrial) e **Consultar** (lista por ano ou por item).
 
 ##### Pré-requisitos
 
-- Tabela de Apropriação (VPRE0101) configurada.
-- Calendário financeiro/industrial (VENT0108) com dias úteis.
-- Itens cadastrados em VENT0200.
+- Itens cadastrados; tabela de apropriação padrão (VPRE0101) recomendada para o rateio mensal.
 
 ##### Passo a passo
 
-1. Acesse **VPRE0201** pelo menu _Previsão > Cadastro Previsão Vendas_.
-2. Selecione a aba **Mensal** ou **Semanal** conforme a necessidade.
-3. Na aba Mensal:
-   - Informe o **Item**, **Ano/Mês** e **Quantidade Prevista**.
-   - Escolha o tipo de distribuição: **Fracionado** (divide igualmente) ou **Inteiro** (piso + resto nas primeiras semanas).
-4. Na aba Semanal:
-   - Visualize a distribuição por semana.
-   - Use o **modal de ajuste semanal** para alterar valores de semanas específicas.
-   - A **redistribuição automática** ajusta as demais semanas para manter o total mensal.
-5. Clique em **Salvar** (F9).
+1. Acesse **VPRE0201** pelo menu _Previsão > Cadastro da Previsão_.
+2. **Semanal:** informe Item, Máscara (opcional), Semana (1–53), Ano (> 2000) e Quantidade (> 0) → **Gravar previsão semanal**.
+3. **Mensal:** informe Item, Ano, Mês e Quantidade mensal; marque **Aceita fração** e/ou **Atualizar existente** → **Distribuir em semanas**. Sem fração, as semanas são arredondadas para baixo e o saldo fica na última semana do mês.
+4. **Consultar:** informe o Ano (ou selecione um Item, que prevalece) → **Consultar**.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Item | Select | Sim | Item da previsão |
-| Ano/Mês | Date | Sim | Período de referência |
-| Quantidade Prevista | Number | Sim | Quantidade total prevista para o mês |
-| Distribuição | Select | Sim | Fracionado / Inteiro |
-| Semana 1–5 | Number (modal) | Não | Quantidade ajustada por semana |
-| Total Semanal | Number (read-only) | — | Soma das semanas (deve igualar o total mensal) |
+| Item | Lookup | Sim | Item da previsão |
+| Máscara | Texto | Não | Configuração/variação do item |
+| Semana | Number (1–53) | Sim (semanal) | Semana ISO |
+| Ano | Number (> 2000) | Sim | Ano de referência |
+| Mês | Select | Sim (mensal) | Mês a distribuir |
+| Quantidade | Number (> 0) | Sim | Quantidade prevista |
+| Aceita fração | Checkbox | Não | Permite semanas com valor fracionado |
+| Atualizar existente | Checkbox | Não | Sobrescreve previsões já gravadas |
 
 ##### Observações importantes
 
-- Na distribuição **Fracionada**, se a quantidade for 10 e houver 4 semanas, cada semana recebe 2,5 (valores decimais).
-- Na distribuição **Inteira**, se a quantidade for 10 e houver 4 semanas: semanas 1 e 2 recebem 3, semanas 3 e 4 recebem 2 (piso = 2, resto = 2 concentrado no início).
-- O **modal de ajuste semanal** recalcula automaticamente para manter o total.
+- Se o mês não estiver no calendário industrial, o backend aplica fallback de segunda a sexta.
+- Não há edição/exclusão dedicada: a manutenção é feita regravando a mesma chave ou usando **Atualizar existente** no mensal/geração.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VPRE0101 | Tabela Apropriação — distribuição diária dentro da semana |
-| VPRE0102 | Bloqueio Previsão — impede edição em períodos bloqueados |
-| VPRE0251 | Geração Previsão — pode alimentar ou ser alimentado por esta tela |
-| VPRE0301 | Previsto X Realizado — compara o previsto aqui com o real |
-| VENT0200 | Cadastro de Itens — item da previsão |
-| VENT0108 | Calendário Financeiro/Industrial — dias úteis por semana |
+| VPRE0101 | Tabela de Apropriação — distribuição dentro da semana |
+| VPRE0102 | Bloqueio de Previsão — impede gravação em períodos bloqueados |
+| VPRE0251 | Geração de Previsão — grava no mesmo cadastro |
+| VPRE0301 | Previsto × Realizado — consolida o previsto |
 
 ---
 
-#### VPRE0251 — Geração Previsão
+#### VPRE0251 — Geração de Previsão de Vendas
 
 ##### Objetivo
 
-Gerar previsões de vendas a partir de dados históricos (pedidos ou faturamento), aplicando índice de projeção percentual sobre a média histórica. Permite selecionar quais itens incluir na geração via checkboxes.
+Gerar previsão a partir do histórico do ERP: o backend calcula a **média** do período selecionado (pedidos e/ou faturamento), aplica o **índice de projeção** e grava no cadastro de previsão.
 
 ##### Pré-requisitos
 
-- Histórico de pedidos de venda ou faturamento no sistema.
-- Tabela de Apropriação (VPRE0101) configurada.
+- Histórico de pedidos liberados (sem bloqueio) e/ou notas de saída autorizadas no período.
 
 ##### Passo a passo
 
-1. Acesse **VPRE0251** pelo menu _Previsão > Geração Previsão_.
-2. Selecione a **fonte do histórico**: _Pedidos_ ou _Faturamento_.
-3. Defina o **período histórico** (data inicial e final).
-4. Defina as **semanas alvo** (semanas futuras para as quais gerar previsão).
-5. Informe o **índice de projeção** (% — ex.: 110 para crescimento de 10%).
-6. A tabela exibe: checkbox por item, **média histórica** (calculada) e **projeção calculada** (média x índice%).
-7. Marque/desmarque os checkboxes dos itens que deseja incluir.
-8. Clique em **Gerar Previsão**.
-9. Confirme a operação.
+1. Acesse **VPRE0251** pelo menu _Previsão > Geração de Previsão_.
+2. Selecione **Item** e a **Fonte do histórico**: `ORDERS` (pedidos liberados), `INVOICING` (faturamento autorizado) ou `BOTH`.
+3. Defina o período do histórico (**Histórico de/até**).
+4. Defina o período gerado (**Semana/Ano inicial** e **Semana/Ano final**).
+5. Informe a **Projeção (%)** (ex.: +10 aumenta, -5 reduz), marque **Aceita fração** e **Atualizar existente** conforme necessário.
+6. Clique em **Gerar previsão**. O resultado retornado pelo backend é exibido em tabela.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Histórico | Select | Sim | Pedidos / Faturamento |
-| Período Início | Date | Sim | Início do período histórico |
-| Período Fim | Date | Sim | Fim do período histórico |
-| Semanas Alvo | Number (range) | Sim | Semanas futuras a prever |
-| Índice Projeção | Number | Sim | Percentual de projeção (ex.: 110 = +10%) |
-| Checkbox | Checkbox | Não | Seleciona item para inclusão |
-| Média Histórica | Number (read-only) | — | Média calculada do histórico |
-| Projeção Calculada | Number (read-only) | — | Média x Índice (%) |
+| Item | Lookup | Sim | Item a gerar |
+| Fonte do histórico | Select | Sim | ORDERS / INVOICING / BOTH |
+| Histórico de/até | Data | Sim | Período usado para calcular a média |
+| Semana/Ano inicial | Number | Sim | Início do período gerado |
+| Semana/Ano final | Number | Não | Fim do período gerado |
+| Projeção (%) | Number | Não | Crescimento/redução sobre a média |
+| Aceita fração | Checkbox | Não | Controla o arredondamento semanal |
+| Atualizar existente | Checkbox | Não | Sobrescreve previsões já gravadas |
 
 ##### Observações importantes
 
-- O **índice de projeção** de 100% replica exatamente a média histórica; acima de 100% projeta crescimento; abaixo de 100% projeta retração.
-- Itens sem histórico suficiente podem apresentar projeção zerada.
+- Pedidos usados como histórico precisam estar **liberados e sem bloqueio**; cancelados/bloqueados são ignorados.
+- Projeção 0% replica a média; positiva projeta crescimento; negativa, retração.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VPRE0201 | Cadastro Previsão Vendas — destino das previsões geradas |
-| VPRE0101 | Tabela Apropriação — distribuição das previsões geradas |
-| VPRE0301 | Previsto X Realizado — compara o gerado com o realizado |
-| VPDV0200 | Pedido de Venda — fonte de histórico (pedidos) |
+| VPRE0201 | Cadastro da Previsão — destino das previsões geradas |
+| VPRE0301 | Previsto × Realizado — consolida o gerado |
 
 ---
 
-#### VPRE0301 — Previsto X Realizado
+#### VPRE0301 — Vendas Previsto × Realizado
 
 ##### Objetivo
 
-Comparar visualmente a previsão de vendas com o efetivamente realizado, exibindo 4 cards de KPI no topo e uma tabela com barras de progresso. Permite ordenação por qualquer coluna.
-
-##### Pré-requisitos
-
-- Previsões cadastradas em VPRE0201 ou VPRE0251.
-- Dados de realização (pedidos/faturamento) no período.
+Consolidar a previsão do ano por item (soma das semanas), como visão gerencial do **previsto**.
 
 ##### Passo a passo
 
-1. Acesse **VPRE0301** pelo menu _Previsão > Previsto X Realizado_.
-2. Visualize os **4 cards KPI** no topo (ex.: Total Previsto, Total Realizado, Aderência %, Itens Acima da Meta).
-3. A tabela abaixo exibe por item: **Previsto**, **Realizado**, **Diferença** e **Barra de Progresso**.
-4. Clique no cabeçalho de qualquer coluna para **ordenar** (ascendente/descendente).
-5. Use filtros de período e item para refinar a consulta.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Período | Date | Sim | Período de análise |
-| Item | Select | Não | Filtro por item |
-| Card KPI 1–4 | (read-only) | — | Total Previsto / Realizado / Aderência % / Acima Meta |
-| Previsto | Number (read-only) | — | Quantidade prevista |
-| Realizado | Number (read-only) | — | Quantidade efetivamente realizada |
-| Diferença | Number (read-only) | — | Realizado - Previsto |
-| Barra Progresso | (visual) | — | Barra horizontal colorida (verde = atingido, vermelho = abaixo) |
+1. Acesse **VPRE0301** pelo menu _Previsão > Previsto × Realizado_.
+2. Informe o **Ano** e clique em **Consultar**.
+3. A grade lista por item: nº de semanas, total previsto do ano e o total geral no rodapé.
 
 ##### Observações importantes
 
-- A barra de progresso é **colorida**: verde quando realizado maior ou igual a previsto, vermelho quando abaixo.
-- A ordenação por coluna permite identificar rapidamente itens com maior desvio ou melhor aderência.
-- Os 4 cards KPI fornecem uma visão gerencial rápida.
+- **Limitação atual:** a API `/api/sales-forecast` expõe apenas o previsto (`/list/{year}`). O **realizado** (pedidos/faturamento) não tem endpoint neste módulo, então a coluna aparece como **n/d** (pendente de integração). Os cards de KPI e barras de progresso do padrão antigo foram removidos por não haver dado real de realização.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VPRE0201 | Cadastro Previsão Vendas — origem do previsto |
-| VPRE0251 | Geração Previsão — origem do previsto (gerado) |
-| VPDV0200 | Pedido de Venda — origem do realizado |
+| VPRE0201 | Cadastro da Previsão — origem do previsto |
+| VPRE0251 | Geração de Previsão — origem do previsto (gerado) |
 
 ---
 
@@ -2865,246 +2806,219 @@ Consultar e listar Ordens de Serviço de manutenção com múltiplos filtros. Pe
 
 ## 5. SUPRIMENTO
 
-#### VAVR0200 — Cadastro Aviso de Recebimento (Fornecedores/Transportadoras)
+#### VAVR0200 — Aviso de Recebimento
 
 ##### Objetivo
 
-Cadastrar fornecedores e transportadoras no sistema, com 5 abas de informações. Suporta Pessoa Jurídica e Pessoa Física condicionalmente. Inclui sub-tabelas para Telefones, E-mails e Transporte.
+Registrar o **Aviso de Recebimento** — a agenda de doca e a conferência da mercadoria
+**antes da NF**. O aviso guarda fornecedor, pedido de compra, transportadora, doca, data
+agendada e os **itens esperados**, e evolui por um ciclo de status. Divergências
+encontradas na conferência (falta, sobra, avaria, preço…) são registradas e alimentam o
+**IQF do fornecedor**.
 
 ##### Pré-requisitos
 
-- Nenhum (cadastro básico).
+- **Fornecedor** e/ou **Pedido de compra** cadastrados.
+- **Itens** cadastrados para as linhas esperadas.
 
 ##### Passo a passo
 
-1. Acesse **VAVR0200** pelo menu _Suprimento > Cadastro Fornecedores/Transportadoras_.
-2. Clique em **Novo** (F2).
-3. Na aba principal, selecione o **Tipo**: _Fornecedor_, _Transportadora_, _Transp. Redesp._ ou _Redespacho_.
-4. Selecione **Pessoa Jurídica** ou **Pessoa Física** — o formulário se adapta condicionalmente (CNPJ vs. CPF).
-5. Preencha os dados cadastrais (razão social/nome, endereço, contato).
-6. Na sub-tabela **Telefones**, adicione os números de contato (comercial, celular, fax).
-7. Na sub-tabela **E-mails**, adicione endereços eletrônicos (comercial, financeiro, expedição).
-8. Na sub-tabela **Transporte**, configure dados específicos para transportadoras (placa, veículo, ANTT).
-9. Navegue pelas demais abas para preencher informações complementares.
-10. Clique em **Salvar** (F9).
+1. Acesse **VAVR0200**. Em **Novo aviso**, informe **Fornecedor** e/ou **Pedido de
+   compra**, **Doca**, **Nº NF**, **Agendado para** e observações.
+2. Em cada linha, informe **Item**, **Qtd esperada** e (opcional) **Máscara**/**UM**, e
+   clique em **+ item**.
+3. Clique em **Criar aviso** — nasce no status **SCHEDULED**.
+4. Clique em **Listar** e **Abrir** um aviso para ver o detalhe.
+5. **Avance o status** (SCHEDULED → ARRIVED → IN_CONFERENCE → RELEASED / BLOCKED /
+   CANCELLED) pelo seletor **Avançar**. `BLOCKED` marca o aviso como bloqueado.
+6. Em **Divergências**, registre item, **tipo** (SHORTAGE/EXCESS/DAMAGE/WRONG_ITEM/
+   PRICE/DOCUMENT/LATE/OTHER), quantidades esperada/real e se **afeta o IQF**; depois
+   escolha a **resolução** (ACCEPTED / PARTIAL_RETURN / FULL_RETURN / WAIVED /
+   SUPPLIER_DEBIT).
 
-##### Campos
+##### Campos (capa do aviso)
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Tipo | Select | Sim | Fornecedor / Transportadora / Transp. Redesp. / Redespacho |
-| Pessoa | Select | Sim | Jurídica / Física (condicional) |
-| CNPJ / CPF | Texto (18/14) | Sim | Documento conforme tipo de pessoa |
-| Razão Social / Nome | Texto (120) | Sim | Nome oficial ou fantasia |
-| Endereço | Texto (120) | Não | Logradouro |
-| Telefones | Sub-tabela | Não | Lista de contatos telefônicos |
-| E-mails | Sub-tabela | Não | Lista de e-mails |
-| Transporte | Sub-tabela | Não | Dados de veículo/ANTT (transportadoras) |
+| Fornecedor / Pedido de compra | Número | um dos dois | Origem da mercadoria |
+| Transportadora | Número | Não | Quem entrega |
+| Doca | Texto | Não | Doca/portaria agendada |
+| Nº NF | Texto | Não | Número da nota fiscal |
+| Agendado para | Data/hora | Não | Janela de recebimento |
+| Item / Qtd esperada | Número | Sim (linha) | Item e quantidade prevista |
 
 ##### Observações importantes
 
-- O campo **CNPJ/CPF** é condicional: se Pessoa Jurídica, espera CNPJ (14 dígitos); se Física, CPF (11 dígitos).
-- As **sub-tabelas** (Telefones, E-mails, Transporte) permitem múltiplos registros inline.
-- O **Tipo** define como o cadastro pode ser usado: Fornecedor em pedidos de compra, Transportadora em fretes e cargas.
+- Este é o **fechamento de recebimento (FAVR)** — precede a entrada fiscal/física da NF.
+- As **divergências** com "afeta IQF" entram no cálculo do Índice de Qualificação de
+  Fornecedores (scorecards).
+- Não confundir com o **cadastro de fornecedores** (esse fica no Cadastro de Fornecedor).
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VPDC0200 | Pedido de Compra — fornecedor do pedido |
-| VCON0200 | Contratos Fornecedores — fornecedor do contrato |
-| VVOR0202 | Itens por Fornecedor — fornecedor com itens vinculados |
-| VPLC0200 | Montagem de Carga — transportadora da carga |
-| VINS0106 | Ocorrências — fornecedor da ocorrência |
-| VAVF0204 | Envio IQF Fornecedores — fornecedor avaliado |
+| VPDC0200 | Pedido de Compra — origem do recebimento |
+| VCON0200 | Contratos de Fornecedores |
+| VVOR0202 | Itens por Fornecedor |
 
 ---
+
+> **Contratos de fornecedores — o modelo real.** Um contrato tem uma **capa**
+> (fornecedor, número, status, moeda, vigência, índice de reajuste) e **linhas** (item,
+> quantidade contratada, preço, pedido mínimo). Conforme os pedidos de compra vão
+> consumindo, a linha acumula **quantidade consumida** e expõe o **saldo** restante
+> (`contratada − consumida`). O **status** governa o ciclo: `DRAFT` → `ACTIVE` →
+> (`SUSPENDED`) → `CLOSED` / `CANCELLED`. Não existe "tipo de contrato" nem "cancelamento
+> de item" avulso — o encerramento é uma mudança de status e a baixa de item é o consumo
+> de saldo.
 
 #### VCON0100 — Tipos de Contratos
 
 ##### Objetivo
 
-Cadastrar os tipos de contrato (tabela de domínio) utilizados na gestão de contratos com fornecedores.
-
-##### Pré-requisitos
-
-- Nenhum.
-
-##### Passo a passo
-
-1. Acesse **VCON0100** pelo menu _Suprimento > Tipos de Contratos_.
-2. Clique em **Novo** (F2).
-3. Preencha a **Descrição** do tipo de contrato.
-4. Defina se é **Tempo Determinado**: _Sim_ ou _Não_.
-5. Marque **Ativo** para disponibilizar o tipo para uso.
-6. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Descrição | Texto (120) | Sim | Nome do tipo de contrato |
-| Tempo Determinado | Select | Sim | Sim / Não — contrato com prazo definido |
-| Ativo | Checkbox | Sim | Indica se o tipo está disponível para uso |
+Tela **informativa**. O ERP **não** mantém "tipo de contrato" como cadastro separado: o
+contrato de fornecedor descreve tudo na própria capa (status, vigência, moeda, índice de
+reajuste). Esta tela orienta onde cadastrar e consultar contratos.
 
 ##### Observações importantes
 
-- É uma **tabela de domínio** — os tipos aqui cadastrados aparecem no select de VCON0200.
-- Tipos inativos não aparecem para seleção em novos contratos.
+- Onde atuar: **VCON0200** cadastra o contrato (capa + linhas); **VCON0400** consulta e
+  muda status; **VCON0202** faz a baixa de saldo e o cancelamento.
+- Se no futuro o backend expor tipos de contrato, esta tela receberá o cadastro.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VCON0200 | Contratos Fornecedores — campo Tipo de Contrato |
-| VCON0400 | Consulta Contratos — filtro por tipo |
+| VCON0200 | Cadastro de Contratos de Fornecedores |
+| VCON0400 | Consulta de contratos + mudança de status |
+| VCON0202 | Baixa de saldo (consumo) e cancelamento |
 
 ---
 
-#### VCON0200 — Contratos Fornecedores
+#### VCON0200 — Cadastro de Contratos de Fornecedores
 
 ##### Objetivo
 
-Cadastrar e gerenciar contratos com fornecedores em modo dual (pesquisa + cadastro). Suporta datas condicionais, moeda com data de referência condicional e condições de pagamento.
+Cadastrar um contrato de fornecedor com **capa** e **linhas** (itens contratados), em um
+único passo. O contrato passa a ser a base de saldo que os pedidos de compra consomem.
 
 ##### Pré-requisitos
 
-- Fornecedor cadastrado em VAVR0200.
-- Tipo de Contrato cadastrado em VCON0100.
+- **Fornecedor** cadastrado (Cadastro de Fornecedor).
+- **Itens** cadastrados (VENT0200) para as linhas.
 
 ##### Passo a passo
 
-1. Acesse **VCON0200** pelo menu _Suprimento > Contratos Fornecedores_.
-2. O layout **dual mode** exibe pesquisa à esquerda e cadastro à direita.
-3. Para criar, clique em **Novo** (F2) no painel direito.
-4. Preencha os dados do contrato:
-   - **Fornecedor**, **Tipo de Contrato**, **Número**.
-   - **Datas** (vigência) — campos condicionais conforme o tipo.
-   - **Moeda** e **Data Moeda** — a Data Moeda pode ser: _Data Atual_, _Data Abertura_, _Data Informada_ ou _Valor Fixo_.
-   - **Condições de Pagamento**.
-5. Clique em **Salvar** (F9).
+1. Acesse **VCON0200**. Na **capa**, informe **Empresa**, **Fornecedor**, **Número do
+   contrato**, **Status** (normalmente DRAFT ou ACTIVE), **Moeda**, **Vigência de/até** e,
+   opcionalmente, **Descrição**, **Índice de reajuste** e **Observações**.
+2. Em **Linhas do contrato**, informe **Item**, **Qtd contratada**, **Preço unit.** e
+   (opcional) **Máscara**, **UM** e **Pedido mín.**, e clique em **+** para adicionar.
+   Repita para cada item.
+3. Clique em **Criar contrato**. O sistema retorna o **nº interno** e o total de linhas.
 
-##### Campos
+##### Campos (capa)
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Fornecedor | Select | Sim | Fornecedor do contrato (ref. VAVR0200) |
-| Tipo de Contrato | Select | Sim | Tipo (ref. VCON0100) |
-| Número | Texto (20) | Sim | Identificador do contrato |
-| Data Início | Date | Condicional | Início da vigência |
-| Data Fim | Date | Condicional | Fim da vigência (se Tempo Determinado) |
-| Moeda | Select | Sim | Moeda do contrato |
-| Data Moeda | Select | Sim | Data Atual / Abertura / Informado / Valor Fixo |
-| Data Moeda Valor | Date/Text | Condicional | Valor da data conforme opção selecionada |
-| Pagamento | Texto (255) | Não | Condições de pagamento negociadas |
+| Empresa | Número | Não | Empresa do contrato (padrão 1) |
+| Fornecedor | Número | Sim | Código do fornecedor |
+| Número do contrato | Texto | Sim | Identificador do contrato |
+| Status | Select | Sim | DRAFT · ACTIVE · SUSPENDED · CLOSED · CANCELLED |
+| Moeda | Texto | Sim | Ex.: BRL, USD |
+| Vigência de / até | Date | de: Sim | Janela de validade do contrato |
+| Índice de reajuste | Texto | Não | Índice de correção (ex.: IPCA) |
+
+##### Campos (linha)
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| Item | Número | Sim | Código do item contratado |
+| Qtd contratada | Número | Sim | Quantidade total contratada |
+| Preço unit. | Número | Não | Preço unitário negociado |
+| Máscara / UM / Pedido mín. | Texto/Núm | Não | Máscara do item, unidade e pedido mínimo |
 
 ##### Observações importantes
 
-- **Datas condicionais**: se o tipo for Tempo Determinado = Sim, Data Fim é obrigatória; se Não, é ocultada.
-- **Data Moeda condicional**: _Data Atual_ usa a data do sistema; _Abertura_ usa a data de criação do contrato; _Informado_ exibe campo de data; _Valor Fixo_ exibe campo de texto.
-- O modo dual permite pesquisar contratos existentes enquanto edita um novo.
+- Só linhas **ACTIVE** podem ter saldo consumido (ver VCON0202).
+- A quantidade consumida e o saldo são calculados pelo sistema conforme os pedidos.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedor do contrato |
-| VCON0100 | Tipos de Contratos — tipo do contrato |
-| VCON0202 | Cancelamento Itens Contrato — itens vinculados a este contrato |
-| VCON0400 | Consulta Contratos — listagem e filtros |
-| VPDC0200 | Pedido de Compra — pode referenciar contrato |
+| VCON0400 | Consulta de contratos + mudança de status |
+| VCON0202 | Baixa de saldo / cancelamento |
+| VPDC0200 | Pedido de Compra — pode referenciar o contrato e consumir saldo |
 
 ---
 
-#### VCON0202 — Cancelamento Itens Contrato
+#### VCON0202 — Baixa de Saldo / Cancelamento do Contrato
 
 ##### Objetivo
 
-Permitir o cancelamento ou descancelamento de itens individuais de um contrato, com 6 motivos de cancelamento disponíveis e histórico de alterações por item.
-
-##### Pré-requisitos
-
-- Contrato cadastrado em VCON0200 com itens vinculados.
+Dar **baixa no saldo** de uma linha do contrato (consumo) e **cancelar** o contrato. O
+backend não tem "cancelamento de item" avulso: a baixa é o **consumo de saldo** (só em
+contrato `ACTIVE`, sem exceder o saldo) e o encerramento é a mudança de **status**.
 
 ##### Passo a passo
 
-1. Acesse **VCON0202** pelo menu _Suprimento > Cancelamento Itens Contrato_.
-2. Selecione o **Contrato**.
-3. O sistema carrega automaticamente os **itens** do contrato.
-4. Para cada item, utilize o **toggle Cancelar/Descancelar**.
-5. Ao cancelar, selecione um dos **6 motivos** disponíveis.
-6. O **histórico** de cada item exibe as alterações anteriores.
-7. Clique em **Salvar** (F9).
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Contrato | Select | Sim | Contrato de referência |
-| Item | (automático) | — | Itens carregados do contrato |
-| Cancelar/Descancelar | Toggle | Não | Ação sobre o item |
-| Motivo | Select (6 opções) | Condicional | Motivo do cancelamento |
-| Histórico | (read-only) | — | Log de alterações do item |
+1. Acesse **VCON0202**, informe o **nº interno** do contrato e clique em **Abrir**.
+2. A tabela mostra as linhas com **contratada**, **consumida** e **saldo**.
+3. Clique em **Selecionar** na linha desejada, informe a **Quantidade a baixar** e clique
+   em **Baixar saldo** — a consumida aumenta e o saldo diminui.
+4. Para encerrar o contrato, clique em **Cancelar contrato** (status → CANCELLED).
 
 ##### Observações importantes
 
-- O **histórico por item** registra data, usuário e motivo de cada alteração de status.
-- Itens cancelados não geram obrigações de compra, mas permanecem visíveis para auditoria.
-- O descancelamento reverte o status, registrando novo evento no histórico.
+- O consumo é rejeitado se exceder o saldo ou se o contrato não estiver `ACTIVE`.
+- O cancelamento é irreversível pela tela (muda o status para CANCELLED).
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VCON0200 | Contratos Fornecedores — contrato de origem |
-| VCON0400 | Consulta Contratos — visão consolidada com status dos itens |
-| VPDC0200 | Pedido de Compra — itens cancelados não podem ser pedidos |
+| VCON0200 | Cadastro do contrato |
+| VCON0400 | Consulta e mudança de status |
 
 ---
 
-#### VCON0400 — Consulta Contratos
+#### VCON0400 — Consulta de Contratos de Fornecedores
 
 ##### Objetivo
 
-Consultar contratos com 13 filtros opcionais. Tela exclusivamente de consulta (read-only), permitindo análises gerenciais sobre a carteira de contratos.
-
-##### Pré-requisitos
-
-- Contratos cadastrados em VCON0200.
+Consultar a carteira de contratos, abrir o detalhe (linhas com saldo) e **mudar o status**
+de um contrato.
 
 ##### Passo a passo
 
-1. Acesse **VCON0400** pelo menu _Suprimento > Consulta Contratos_.
-2. Preencha os filtros desejados (até 13 opções).
-3. Clique em **Pesquisar** (F8).
-4. A listagem exibe os contratos que atendem aos critérios.
-5. Para visualizar detalhes, clique no contrato desejado (abre em modo leitura).
-6. Opcionalmente, exporte os resultados.
+1. Acesse **VCON0400** e clique em **Listar**. Filtre por **Status** se quiser.
+2. Clique em **Abrir** para ver o detalhe do contrato — linhas com **contratada**,
+   **consumida** e **saldo**.
+3. No detalhe, escolha um **Novo status** e clique em **Aplicar** para transicionar o
+   contrato (ex.: DRAFT → ACTIVE, ACTIVE → CLOSED).
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Fornecedor | Select | Não | Filtro por fornecedor |
-| Tipo de Contrato | Select | Não | Filtro por tipo |
-| Status | Select | Não | Ativo / Encerrado / Cancelado |
-| Período Vigência | Date (range) | Não | Data inicial e final de vigência |
-| Item | Select | Não | Filtro por item do contrato |
-| Moeda | Select | Não | Filtro por moeda |
-| + outros 7 filtros | Varia | Não | Filtros complementares |
+| Status | Select | Não | Filtro por status da lista |
+| Novo status | Select | Não | Destino da transição no detalhe |
 
 ##### Observações importantes
 
-- Tela **100% read-only** — não permite edições, apenas consulta e exportação.
-- Os 13 filtros permitem granularidade fina na pesquisa.
+- A consulta é isolada pela empresa autenticada.
+- A mudança de status aqui é a mesma operação usada pelo encerramento/ativação do contrato.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VCON0200 | Contratos Fornecedores — origem dos contratos |
-| VCON0202 | Cancelamento Itens Contrato — reflete os cancelamentos |
-| VPDC0200 | Pedido de Compra — contratos podem ser origem de PC |
+| VCON0200 | Cadastro dos contratos |
+| VCON0202 | Baixa de saldo / cancelamento |
+| VPDC0200 | Pedido de Compra — consome o saldo contratado |
 
 ---
 
@@ -3116,7 +3030,7 @@ Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transpo
 
 ##### Pré-requisitos
 
-- Fornecedor cadastrado em VAVR0200.
+- Fornecedor cadastrado em VSUP0500.
 - Itens comprados cadastrados em VENT0200.
 - (Opcional) Contrato vigente em VCON0200.
 
@@ -3158,7 +3072,7 @@ Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transpo
 | Tela | Relação |
 |------|---------|
 | VENT0200 | Cadastro de Itens — itens disponíveis para compra |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedor do pedido |
+| VSUP0500 | Cadastro de Fornecedor — fornecedor do pedido |
 | VCON0200 | Contratos Fornecedores — contrato de referência |
 | VINS0200 | Roteiro Inspeção — inspeção dos itens no recebimento |
 | VVOR0202 | Itens por Fornecedor — fornecedores habilitados por item |
@@ -3173,7 +3087,7 @@ Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, 
 
 ##### Pré-requisitos
 
-- Fornecedor cadastrado em VAVR0200.
+- Fornecedor cadastrado em VSUP0500.
 - Itens cadastrados em VENT0200.
 
 ##### Passo a passo
@@ -3213,7 +3127,7 @@ Gerenciar a relação de itens que cada fornecedor está habilitado a fornecer, 
 
 | Tela | Relação |
 |------|---------|
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedor |
+| VSUP0500 | Cadastro de Fornecedor — fornecedor |
 | VENT0200 | Cadastro de Itens — itens vinculados |
 | VINS0200 | Roteiro Inspeção — dados de qualidade usados na inspeção |
 | VPDC0200 | Pedido de Compra — sugestão de fornecedor por item |
@@ -3265,7 +3179,11 @@ Acompanhar o status logístico de cargas de importação, registrando etapas com
 
 ---
 
-#### VIMP0102 — Tipos Conhecimentos Transporte
+### VIMP0102 — Tipos Conhecimentos Transporte
+
+> Integração vigente: esta rotina não utiliza mais a API legada `/api/importacao`.
+> Cadastro, consulta e autorização são executados em `/api/fiscal/cte`, e todos os
+> registros exibidos são conhecimentos persistidos no backend.
 
 ##### Objetivo
 
@@ -3307,36 +3225,41 @@ Cadastrar os tipos de Conhecimento de Transporte Eletrônico (CT-e) utilizados e
 
 ##### Objetivo
 
-Central de acompanhamento de todos os processos de importação, consolidando informações de status logístico, documentação, custos e prazos em uma única interface.
+Consultar e manter processos de importação usando a camada operacional `/api/procurement/import-processes`. Todos os itens, despesas, custos e situações exibidos são registros persistidos pelo backend.
 
 ##### Pré-requisitos
 
-- Processos de importação registrados no sistema.
-- Cargas (VIMP0101) e CT-e (VIMP0102) vinculados.
+- Empresa, fornecedor estrangeiro e itens cadastrados.
+- Moeda, câmbio, Incoterm e critério de rateio definidos pelo processo de importação.
 
 ##### Passo a passo
 
-1. Acesse **VIMP0200** pelo menu _Importação > Console Processos Importação_.
-2. Visualize o dashboard central com todos os processos ativos.
-3. Filtre por status, período, fornecedor ou carga.
-4. Clique em um processo para expandir os detalhes.
-5. Acompanhe: status logístico, documentos pendentes, custos acumulados, prazos.
-6. Utilize as ações disponíveis conforme o status do processo.
+1. Em **Consultar**, deixe o status vazio para todos os processos ou informe a situação desejada. Execute e selecione somente IDs retornados pelo backend.
+2. Para criar, informe empresa, fornecedor, referência única, Incoterm, moeda, taxa de câmbio e base de rateio (`VALUE`, `QUANTITY` ou `WEIGHT`).
+3. Adicione os itens reais com código, máscara, quantidade, peso e preço FOB unitário.
+4. Adicione cada despesa efetiva, informando tipo, valor e se compõe o custo do item. Não inclua estimativas como se fossem despesas confirmadas sem a identificação exigida pelo processo.
+5. Execute **Cadastrar** e confira ID, referência e situação retornados.
+6. Em **Abrir processo**, informe o ID para revisar itens, despesas, valores rateados e custo nacionalizado.
+7. Use **Recalcular custo** depois de corrigir câmbio, item ou despesa. Confira o custo individual e o total antes de aprovar.
+8. Use **Alterar situação** somente quando os pré-requisitos da etapa estiverem concluídos. Reabra o processo para confirmar a transição persistida.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Processo | (listagem) | — | Processos de importação ativos |
-| Status Logístico | (indicador) | — | Etapa atual da carga |
-| Documentos | (indicador) | — | Status da documentação |
-| Custos | (totalizador) | — | Custos acumulados do processo |
-| Prazo | (indicador) | — | Dias restantes até a data prevista |
+| Empresa / fornecedor | Número | Sim | Identificadores persistidos do processo |
+| Referência | Texto | Sim | Identificação única da importação |
+| Incoterm / moeda | Texto | Sim | Condição internacional e moeda negociada |
+| Taxa de câmbio | Decimal | Sim | Conversão usada no custo nacionalizado |
+| Base de rateio | Seleção | Sim | Valor, quantidade ou peso |
+| Itens | Grade | Sim | Quantidade, peso e preço FOB dos itens reais |
+| Despesas | Grade | Não | Frete, seguro, impostos e demais valores efetivos |
 
 ##### Observações importantes
 
-- O console é a **visão 360 graus** do processo de importação — integra informações de múltiplas telas.
-- Indicadores visuais (cores) destacam processos com atraso ou pendências críticas.
+- A antiga implementação local com pedidos, notas, custos e anexos demonstrativos foi removida. A rotina não possui fallback ou dados mock.
+- Após timeout, abra o processo antes de repetir cadastro, recálculo ou mudança de situação.
+- Fornecedor/item de outro tenant, taxa inválida e transição de situação incompatível são recusados.
 
 ##### Telas relacionadas
 
@@ -3344,7 +3267,7 @@ Central de acompanhamento de todos os processos de importação, consolidando in
 |------|---------|
 | VIMP0101 | Status Logístico da Carga — status por carga |
 | VIMP0102 | Tipos Conhecimentos Transporte — CT-e dos processos |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedores estrangeiros |
+| VSUP0500 | Cadastro de Fornecedor — fornecedores estrangeiros |
 | VPDC0200 | Pedido de Compra — pedidos de importação |
 | VINS0200 | Roteiro Inspeção — inspeção no recebimento da importação |
 
@@ -3402,7 +3325,7 @@ Registrar ocorrências de inspeção (não conformidades, divergências, avisos,
 ##### Pré-requisitos
 
 - Tipos de Ocorrências (VINS0105) cadastrados.
-- Fornecedor (VAVR0200), Item (VENT0200) e Ordem de Compra ou Inspeção associados.
+- Fornecedor (VSUP0500), Item (VENT0200) e Ordem de Compra ou Inspeção associados.
 
 ##### Passo a passo
 
@@ -3440,7 +3363,7 @@ Registrar ocorrências de inspeção (não conformidades, divergências, avisos,
 | Tela | Relação |
 |------|---------|
 | VINS0105 | Tipos de Ocorrências — layout condicional do formulário |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedor |
+| VSUP0500 | Cadastro de Fornecedor — fornecedor |
 | VENT0200 | Cadastro de Itens — item |
 | VINS0200 | Roteiro Inspeção — ordem de inspeção |
 | VINS0400 | Consulta Ocorrências/Ordens — listagem e análise |
@@ -3457,7 +3380,7 @@ Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção 
 ##### Pré-requisitos
 
 - Item cadastrado em VENT0200.
-- Fornecedor cadastrado em VAVR0200.
+- Fornecedor cadastrado em VSUP0500.
 - Tipos de Roteiro Inspeção (VINS0211) configurados.
 
 ##### Passo a passo
@@ -3505,7 +3428,7 @@ Tela mais rica do módulo de inspeção. Define o roteiro (plano) de inspeção 
 | Tela | Relação |
 |------|---------|
 | VENT0200 | Cadastro de Itens — item inspecionado |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedor |
+| VSUP0500 | Cadastro de Fornecedor — fornecedor |
 | VINS0211 | Tipos Roteiro Inspeção — tipo de roteiro usado |
 | VINS0201 | Manutenção Ordens Inspeção — ordens geradas a partir do roteiro |
 | VINS0313 | Consulta Inspeções Recebimento — resultados das inspeções |
@@ -3749,7 +3672,7 @@ Configurar os parâmetros para avaliação de fornecedores (IQF — Índice de Q
 
 ##### Pré-requisitos
 
-- Fornecedores cadastrados em VAVR0200.
+- Fornecedores cadastrados em VSUP0500.
 
 ##### Passo a passo
 
@@ -3788,7 +3711,7 @@ Configurar os parâmetros para avaliação de fornecedores (IQF — Índice de Q
 | Tela | Relação |
 |------|---------|
 | VAVF0204 | Envio IQF Fornecedores — cálculo do IQF usando estes parâmetros |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedores avaliados |
+| VSUP0500 | Cadastro de Fornecedor — fornecedores avaliados |
 
 ---
 
@@ -3837,7 +3760,7 @@ Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tab
 ##### Pré-requisitos
 
 - Parâmetros de Avaliação (VAVF0101) configurados.
-- Fornecedores (VAVR0200) com histórico de inspeções (VINS0200/VINS0106).
+- Fornecedores (VSUP0500) com histórico de inspeções (VINS0200/VINS0106).
 - E-mails dos fornecedores cadastrados.
 
 ##### Passo a passo
@@ -3877,7 +3800,7 @@ Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tab
 | Tela | Relação |
 |------|---------|
 | VAVF0101 | Parâmetros Avaliação Fornecedores — parâmetros de cálculo do IQF |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedores avaliados |
+| VSUP0500 | Cadastro de Fornecedor — fornecedores avaliados |
 | VINS0106 | Ocorrências — dados de não conformidades usados no cálculo |
 | VINS0200 | Roteiro Inspeção — resultados de inspeção usados no cálculo |
 | VINS0400 | Consulta Ocorrências/Ordens — visão histórica consolidada |
@@ -3886,266 +3809,186 @@ Calcular o Índice de Qualidade do Fornecedor (IQF), exibir os resultados em tab
 
 ## 8. ASSISTÊNCIA
 
-#### VASS0201 — Cadastro Chamado Assistência
+> **Backend:** todas as telas de Assistência usam `/api/technical-assistance` (migration 000193). Status do chamado: **PENDING → IN_ANALYSIS → WAITING_RETURN / WAITING_ORDER → ATTENDED → CLOSED**; **CANCELLED**. O chamado numera por empresa (`call_number`). Cada item calcula automaticamente `warranty_until`/`in_warranty` a partir da data da NF de compra + dias de garantia.
+
+#### VASS0201 — Cadastro de Chamado de Assistência Técnica
 
 ##### Objetivo
 
-Cadastrar e gerenciar chamados de assistência técnica, com 6 tipos (Garantia, Fora Garantia, Troca, Conserto, Revisão, Recall), workflow de status e vínculo de itens via modal com nota fiscal, lote e número de série.
+Abertura **rápida** de um chamado de assistência com seus itens, em tela única. A manutenção completa (status, notas, geração de pedido/ordem, cadastros de apoio) fica em VATC0280.
 
 ##### Pré-requisitos
 
-- Consumidor/cliente cadastrado.
-- Itens cadastrados em VENT0200.
-- Nota fiscal de venda do item (se aplicável).
+- Empresa e cliente cadastrados; itens cadastrados; motivos de defeito (VATC0280) opcionais.
 
 ##### Passo a passo
 
-1. Acesse **VASS0201** pelo menu _Assistência > Cadastro Chamado_.
-2. Clique em **Novo** (F2).
-3. Selecione o **Tipo**: _Garantia_, _Fora Garantia_, _Troca_, _Conserto_, _Revisão_ ou _Recall_.
-4. Informe o **Consumidor** (cliente).
-5. Descreva o **problema relatado**.
-6. Para vincular itens, clique em **Adicionar Item** (abre modal):
-   - Selecione o **Item**.
-   - Informe a **Nota Fiscal** de venda.
-   - Informe o **Lote** e/ou **Número de Série** se aplicável.
-7. O **Status** do chamado segue o workflow (Aberto, Em Análise, Em Execução, Aguardando Peças, Concluído, Fechado).
-8. Clique em **Salvar** (F9).
+1. Acesse **VASS0201** pelo menu _Assistência > Cadastro de Chamado_.
+2. Informe **Empresa**, **Cliente**, **Assunto** e, opcionalmente, consumidor, prioridade, data prometida e descrição.
+3. Em **Itens do chamado**, para cada item informe Item, Qtd, nº de série, motivo de defeito, complemento, dias de garantia e NF de compra; clique em **Adicionar**.
+4. Clique em **Abrir chamado**. O número gerado é exibido; acompanhe em VATC0280 / VATC0480.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Tipo | Select | Sim | Garantia / Fora Garantia / Troca / Conserto / Revisão / Recall |
-| Consumidor | Select | Sim | Cliente que abriu o chamado |
-| Problema Relatado | Textarea | Sim | Descrição do defeito/reclamação |
-| Item | Modal | Sim | Item objeto do chamado |
-| Nota Fiscal | Modal | Não | NF de venda do item |
-| Lote | Modal | Não | Lote do item |
-| Número de Série | Modal | Não | Número de série do item |
-| Status | Select (workflow) | Sim | Aberto / Em Análise / Em Execução / Aguard. Peças / Concluído / Fechado |
+| Empresa | Lookup | Sim | Empresa que numera o chamado |
+| Cliente | Lookup | Sim | Cliente do chamado |
+| Assunto | Texto | Sim | Resumo do chamado |
+| Consumidor (nome) | Texto | Não | Consumidor final, quando diferente do cliente |
+| Prioridade | Select | Não | Baixa / Normal / Alta / Urgente |
+| Prometido p/ | Data | Não | Data prometida de atendimento |
+| Item / Qtd | Lookup / Number | Sim (item) | Item e quantidade |
+| Motivo de defeito | Select | Não | Do cadastro de motivos (VATC0280) |
+| Dias de garantia | Number | Não | Base do cálculo de `warranty_until` |
 
 ##### Observações importantes
 
-- Chamados tipo **Recall** indicam campanha de recall — podem gerar múltiplos chamados para o mesmo defeito de fabricação.
-- O **modal de itens** permite vincular mais de um item ao mesmo chamado (ex.: kit de componentes).
-- O **workflow de status** controla a progressão do atendimento — cada transição pode gerar notificações.
+- Se o motivo escolhido exigir complemento (`allows_complement`), informe o **Complemento do defeito** no item.
+- É o mesmo backend de VATC0280 — os chamados abertos aqui aparecem lá para andamento.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VENT0200 | Cadastro de Itens — itens do chamado |
-| VASS0402 | Consulta Assistência — listagem e filtros |
-| VATC0280 | Cadastro Chamados (alternativo) — cadastro alternativo de chamados |
-| VATC0380 | Relatório Chamados — relatórios gerenciais |
-| VGAR0211 | Gerar Pedido Devolução — chamados de garantia geram pedidos de devolução |
+| VATC0280 | Cadastro de Chamados — manutenção completa (status, notas, pedido/ordem) |
+| VATC0480 | Consulta de Chamados — listagem com filtros |
+| VASS0402 | Consulta de Assistência — consulta detalhada por código |
 
 ---
 
-#### VASS0402 — Consulta Assistência
+#### VASS0402 — Consulta de Assistência Técnica
 
 ##### Objetivo
 
-Consultar chamados de assistência com 14 filtros disponíveis. Os resultados exibem status como pills coloridas para rápida identificação visual.
-
-##### Pré-requisitos
-
-- Chamados cadastrados em VASS0201.
+Consultar em detalhe **um** chamado pelo seu código/número: cabeçalho, diagnóstico/solução e itens com situação de garantia. Somente leitura.
 
 ##### Passo a passo
 
-1. Acesse **VASS0402** pelo menu _Assistência > Consulta Assistência_.
-2. Preencha os **filtros** desejados (até 14 opções).
-3. Clique em **Pesquisar** (F8).
-4. Os resultados exibem os chamados com **status pills** coloridas (verde para Concluído, azul para Em Execução, vermelho para Aberto atrasado).
-5. Clique em um chamado para visualizar detalhes completos.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Tipo | Select | Não | Garantia / Fora Garantia / Troca / Conserto / Revisão / Recall |
-| Status | Select | Não | Status do workflow |
-| Consumidor | Select | Não | Cliente |
-| Item | Select | Não | Item do chamado |
-| Período Abertura | Date (range) | Não | Data de abertura |
-| Período Fechamento | Date (range) | Não | Data de fechamento |
-| + outros 8 filtros | Varia | Não | Filtros complementares |
+1. Acesse **VASS0402** pelo menu _Assistência > Consulta de Assistência_.
+2. Digite o **código do chamado** e clique em **Consultar** (ou Enter).
+3. Visualize o cabeçalho (empresa, cliente, prioridade, prometido, assunto, consumidor, diagnóstico, solução) e a grade de itens.
 
 ##### Observações importantes
 
-- As **status pills** usam cores semânticas: verde (concluído/fechado), azul (em andamento), amarelo (aguardando), vermelho (atrasado).
-- A consulta é **read-only** — para editar um chamado, acesse VASS0201.
+- A situação de garantia por item (**Em garantia / Fora**) vem do backend (`in_warranty`/`warranty_until`).
+- Para a listagem ampla com filtros, use VATC0480.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VASS0201 | Cadastro Chamado Assistência — origem dos chamados |
-| VATC0280 | Cadastro Chamados (alternativo) — chamados alternativos |
-| VATC0480 | Consulta Chamados — consulta complementar com filtro client-side |
+| VATC0480 | Consulta de Chamados — listagem com filtros |
+| VATC0280 | Cadastro de Chamados — manutenção do chamado |
 
 ---
 
-#### VATC0280 — Cadastro Chamados (Alternativo)
+#### VATC0280 — Cadastro de Chamados de Assistência Técnica
 
 ##### Objetivo
 
-Cadastro alternativo de chamados de assistência com foco no consumidor, garantia toggle e vistoria workflow com campos condicionais que aparecem/desaparecem conforme o andamento.
+Tela **principal** (master-detail) de chamados de assistência. Abre chamados com itens, dá andamento (status/diagnóstico/solução), vincula nota de devolução, gera pedido/ordem de assistência e mantém os **cadastros de apoio** (grupos e motivos de defeito, responsáveis pela garantia).
 
 ##### Pré-requisitos
 
-- Consumidor cadastrado.
-- Itens cadastrados em VENT0200.
+- Empresa, cliente e itens cadastrados.
 
 ##### Passo a passo
 
-1. Acesse **VATC0280** pelo menu _Assistência > Cadastro Chamados (Alt)_.
-2. Clique em **Novo** (F2).
-3. Selecione o **Consumidor**.
-4. Ative o **toggle de Garantia** se o chamado estiver coberto.
-5. Preencha os dados do chamado (item, defeito, data).
-6. Avance no **workflow de vistoria** — campos adicionais são exibidos conforme o status atual:
-   - _Aguardando Vistoria_: exibe campo de data agendada.
-   - _Em Vistoria_: exibe campos de diagnóstico.
-   - _Vistoria Concluída_: exibe laudo e ações recomendadas.
-7. Clique em **Salvar** (F9).
+1. Acesse **VATC0280** pelo menu _Assistência > Cadastro de Chamados_.
+2. Aba **Chamados**: a lista à esquerda mostra os chamados; clique para ver o detalhe. **Novo chamado** abre o formulário com itens; **Abrir chamado** grava.
+3. No detalhe, use **Incluir item** para adicionar itens; em **Andamento**, escolha o Status e informe diagnóstico/solução → **Alterar status**.
+4. **Vincular nota de devolução** e **Gerar pedido/ordem** disparam as automações do backend (origem `ASSISTANCE`, vínculo em `technical_assistance_order_links`).
+5. Aba **Grupos · Motivos · Responsáveis**: cadastre grupos de defeito, motivos (com regras: exige complemento, exige nota, gera pedido, gera ordem…) e responsáveis pela garantia.
 
-##### Campos
+##### Campos (chamado)
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Consumidor | Select | Sim | Cliente do chamado |
-| Garantia | Toggle | Não | Indica se o chamado está em garantia |
-| Item | Select | Sim | Item objeto do chamado |
-| Defeito | Textarea | Sim | Descrição do defeito |
-| Data Abertura | Date | Sim | Data de abertura do chamado |
-| Status Vistoria | Select (workflow) | Sim | Aguardando / Em Vistoria / Concluída |
-| Data Agendada | Date | Condicional | Data agendada (se Aguardando Vistoria) |
-| Diagnóstico | Textarea | Condicional | Diagnóstico técnico (se Em Vistoria) |
-| Laudo | Textarea | Condicional | Laudo final (se Vistoria Concluída) |
+| Empresa / Cliente | Lookup | Sim | Empresa (numera) e cliente |
+| Assunto | Texto | Sim | Resumo do chamado |
+| Responsável garantia | Select | Não | Do cadastro de responsáveis |
+| Prioridade / Prometido | Select / Data | Não | Prioridade e data prometida |
+| Item / Qtd / Série | Lookup / Number / Texto | Sim (item) | Dados do item |
+| Motivo / Complemento | Select / Texto | Condicional | Motivo obriga complemento quando `allows_complement` |
+| Garantia (dias) / NF compra | Number / Texto+Data | Não | Base de `warranty_until`/`in_warranty` |
+| Status | Select | — | PENDING…CLOSED / CANCELLED |
 
 ##### Observações importantes
 
-- O **workflow de vistoria** controla quais campos são exibidos — campos condicionais reduzem a poluição visual.
-- A versão "alternativa" possui uma interface mais enxuta que VASS0201, focada no fluxo de vistoria técnica.
-- Ambos os cadastros (VASS0201 e VATC0280) compartilham a mesma base de dados de chamados.
+- **Bloqueios de fechamento** (regra do backend): motivo que exige nota de devolução trava o atendimento até a nota ser vinculada; motivo que exige pedido/ordem trava até a geração ser feita.
+- Substitui o antigo "cadastro alternativo com vistoria": não há mais toggle de garantia nem workflow de vistoria — o modelo real é status + itens + notas + geração.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VENT0200 | Cadastro de Itens — itens do chamado |
-| VASS0201 | Cadastro Chamado Assistência — cadastro principal de chamados |
-| VATC0380 | Relatório Chamados — relatórios destes chamados |
-| VATC0480 | Consulta Chamados — consulta com filtros |
+| VASS0201 | Abertura rápida de chamado — mesmo backend |
+| VATC0380 | Relatório de Chamados — indicadores |
+| VATC0480 | Consulta de Chamados — listagem com filtros |
 
 ---
 
-#### VATC0380 — Relatório Chamados
+#### VATC0380 — Relatório de Chamados
 
 ##### Objetivo
 
-Emitir relatórios gerenciais de chamados de assistência com 16 filtros disponíveis e configuração de saída (Análise, Quebra, Opções) para personalizar o formato do relatório.
-
-##### Pré-requisitos
-
-- Chamados cadastrados em VASS0201 ou VATC0280.
+Emitir os **indicadores de chamados** (`/calls/report`) em grade, com filtro livre sobre todas as colunas. As colunas são montadas dinamicamente a partir do retorno do backend.
 
 ##### Passo a passo
 
-1. Acesse **VATC0380** pelo menu _Assistência > Relatório Chamados_.
-2. Preencha os **16 filtros** desejados (período, tipo, status, consumidor, item, etc.).
-3. Configure a **Saída**:
-   - **Análise**: define agrupamentos e totalizadores.
-   - **Quebra**: define campos de quebra de página.
-   - **Opções**: define formato, ordenação e visualização.
-4. Clique em **Processar** (F8).
-5. O relatório é gerado conforme as configurações de saída.
-6. Opcionalmente, exporte para PDF ou Excel.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Período Abertura | Date (range) | Não | Período de abertura dos chamados |
-| Período Fechamento | Date (range) | Não | Período de fechamento dos chamados |
-| Tipo | Select | Não | Tipo de chamado |
-| Status | Select | Não | Status do chamado |
-| Consumidor | Select | Não | Cliente |
-| Item | Select | Não | Item |
-| + outros 10 filtros | Varia | Não | Filtros complementares |
-| Análise | Config | Sim | Agrupamentos e totalizadores |
-| Quebra | Config | Não | Campos de quebra de página |
-| Opções | Config | Sim | Formato, ordenação e visualização |
+1. Acesse **VATC0380** pelo menu _Assistência > Relatório de Chamados_.
+2. Clique em **Gerar relatório**.
+3. Use o campo **Filtrar em todas as colunas** para refinar client-side (por data, UF, cidade, consumidor, responsável, tipo, grupo, motivo, posição, situação — conforme o backend retornar).
+4. Exporte pela ação de exportação da barra.
 
 ##### Observações importantes
 
-- As **configurações de saída** (Análise/Quebra/Opções) permitem alta customização do relatório.
-- A **Análise** permite agrupar por consumidor, item, tipo ou período.
-- A **Quebra** insere quebras de página a cada mudança do campo selecionado.
+- As colunas exibidas dependem do payload do endpoint de relatório; a tela se adapta sem precisar mapear cada campo.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VASS0201 | Cadastro Chamado Assistência — origem dos dados |
-| VATC0280 | Cadastro Chamados (alternativo) — origem dos dados |
-| VATC0480 | Consulta Chamados — visão prévia dos dados |
+| VATC0280 | Cadastro de Chamados — origem dos dados |
+| VATC0480 | Consulta de Chamados — visão detalhada |
 
 ---
 
-#### VATC0480 — Consulta Chamados
+#### VATC0480 — Consulta de Chamados
 
 ##### Objetivo
 
-Consultar chamados de assistência com 12 filtros e filtro client-side adicional. Exibe colunas de vistoria para acompanhamento do processo técnico.
-
-##### Pré-requisitos
-
-- Chamados cadastrados em VASS0201 ou VATC0280.
+Listar chamados (somente leitura) com **filtros client-side** por status, cliente e texto (assunto/consumidor/número), e abrir o detalhe com itens e situação de garantia.
 
 ##### Passo a passo
 
-1. Acesse **VATC0480** pelo menu _Assistência > Consulta Chamados_.
-2. Preencha os **12 filtros** desejados.
-3. Clique em **Pesquisar** (F8).
-4. Nos resultados, utilize o **filtro client-side** para refinar ainda mais os dados já carregados.
-5. As **colunas de vistoria** (data agendada, diagnóstico, laudo) são exibidas conforme disponíveis.
-6. Clique em um chamado para detalhes.
-
-##### Campos
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| Tipo | Select | Não | Tipo de chamado |
-| Status | Select | Não | Status do workflow |
-| Consumidor | Select | Não | Cliente |
-| Item | Select | Não | Item do chamado |
-| Período | Date (range) | Não | Período de abertura |
-| Status Vistoria | Select | Não | Status da vistoria |
-| + outros 6 filtros | Varia | Não | Filtros complementares |
-| Filtro Client-Side | Texto | Não | Filtro adicional sobre resultados carregados |
+1. Acesse **VATC0480** pelo menu _Assistência > Consulta de Chamados_.
+2. Ajuste os filtros na barra (Status, Cliente, texto) e clique em **Atualizar** para recarregar do servidor.
+3. Selecione um chamado na lista para ver o cabeçalho e os itens no painel de detalhe.
 
 ##### Observações importantes
 
-- O **filtro client-side** opera sobre os dados já carregados no navegador, sem nova consulta ao servidor — ideal para refinar rapidamente.
-- As **colunas de vistoria** incluem: Data Agendada, Técnico, Diagnóstico, Laudo, Data Conclusão.
+- Os filtros operam sobre os dados já carregados (client-side); **Atualizar** refaz a consulta ao backend.
+- Para consulta pontual por código, VASS0402 é mais direta.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VASS0201 | Cadastro Chamado Assistência — origem dos dados |
-| VATC0280 | Cadastro Chamados (alternativo) — origem dos dados com vistoria |
-| VATC0380 | Relatório Chamados — relatórios a partir destes dados |
+| VATC0280 | Cadastro de Chamados — manutenção |
+| VATC0380 | Relatório de Chamados — indicadores |
+| VASS0402 | Consulta de Assistência — detalhe por código |
 
 ---
 
 ## 9. GARANTIA
 
-#### VGAR0211 — Gerar Pedido Devolução
+### VGAR0211 — Devoluções de Atendimento e Garantia
+
+> Integração vigente: a devolução é registrada como retorno do chamado em
+> `/api/consumer-service/calls/{code}/returns`. A rotina exige um chamado existente;
+> não cria pedido de venda fictício nem apresenta devoluções pré-preenchidas.
 
 ##### Objetivo
 
@@ -4191,7 +4034,7 @@ Gerar pedidos de devolução a partir de chamados de assistência em garantia, t
 |------|---------|
 | VASS0201 | Cadastro Chamado Assistência — chamado de origem |
 | VENT0200 | Cadastro de Itens — fornecedor/almoxarifado de devolução |
-| VAVR0200 | Cadastro Aviso de Recebimento — fornecedor da devolução |
+| VSUP0500 | Cadastro de Fornecedor — fornecedor da devolução |
 
 ---
 
@@ -4228,7 +4071,7 @@ Gerar pedidos de devolução a partir de chamados de assistência em garantia, t
    └── Previsão (VPRE0201) complementa projeções
 
 3. SUPRIMENTOS (VPDC0200) — pedido de compra
-   ├── Fornecedor (VAVR0200)
+   ├── Fornecedor (VSUP0500)
    ├── Contrato (VCON0200)
    └── Itens por Fornecedor (VVOR0202)
 
@@ -4264,7 +4107,7 @@ Cliente reporta defeito
 ### Ciclo de Importação
 
 ```
-Fornecedor Estrangeiro (VAVR0200)
+Fornecedor Estrangeiro (VSUP0500)
    └── Pedido Compra Importação (VPDC0200)
         └── Status Logístico (VIMP0101)
              ├── CT-e (VIMP0102)
@@ -5106,7 +4949,11 @@ Gerenciar os **cadastros de apoio fiscal** que definem o comportamento tributár
 
 ---
 
-#### VCLI0117 — Permissões e Restrições de Venda
+### VCLI0117 — Permissões e Restrições de Venda
+
+> Integração vigente: regras, consultas por cliente/item e avaliação usam
+> `/api/restriction`. A lista apresentada é exclusivamente a lista devolvida pelo
+> backend; uma consulta sem resultados permanece vazia.
 
 ##### Objetivo
 
@@ -5165,7 +5012,11 @@ Controlar **quais itens ou classificações de itens** podem (Permissão) ou nã
 
 ---
 
-#### VCLI0202 — Percentuais de Frete por Cliente
+### VCLI0202 — Políticas de Frete e Formação de Preço
+
+> Integração vigente: o percentual de frete faz parte da política de formação de
+> preço em `/api/customers/support/sales-price-policies`. Alterações afetam a formação
+> comercial real e devem ser validadas em uma cotação antes do uso em produção.
 
 ##### Objetivo
 
@@ -5222,9 +5073,11 @@ Configurar **percentuais de frete diferenciados** por cliente, com faixas de val
 
 #### VPDV0108 — Política Comercial de Descontos
 
+> **Backend:** `/api/customers/support/commercial-policies` com `kind=DISCOUNT`. A tela tem duas abas — **Políticas** (cadastro + **faixas** `/{code}/lines` + **itens específicos** `/{code}/specific-items`) e **Simulador** (`/evaluate`, que devolve desconto/acréscimo/frete/comissão + `requires_approval`). Substitui o mock antigo em `/api/politica-desconto` (rota morta).
+
 ##### Objetivo
 
-Cadastrar e gerenciar **políticas comerciais de descontos** aplicadas automaticamente durante a criação de pedidos de venda. Cada política define regras de prioridade, vigência, tipo de aplicação e um conjunto de linhas com faixas de valores e gerações automáticas de desconto.
+Cadastrar **políticas de desconto** aplicadas ao pedido: valor/percentual, tetos (máx %), gatilhos (valor mínimo bruto, quantidade mínima), acumulável, requer aprovação e vigência. Cada política pode ter **faixas** (linhas por intervalo de valor) e **itens específicos** (bloquear desconto por item/máscara). O **Simulador** roda as políticas sobre um contexto (valor, quantidade, cliente, item) e mostra o resultado.
 
 ##### Pré-requisitos
 
@@ -5311,9 +5164,11 @@ Cadastrar e gerenciar **políticas comerciais de descontos** aplicadas automatic
 
 #### VPDV0111 — Política Comercial de Fretes
 
+> **Backend:** `/api/customers/support/commercial-policies` com `kind=FREIGHT` (mesmo endpoint de VPDV0108, filtrado por tipo). Abas **Políticas** (+ **faixas** `/{code}/lines`) e **Simulador** (`/evaluate` → `freight_value`). Substitui o mock antigo em `/api/politica-frete` (rota morta).
+
 ##### Objetivo
 
-Cadastrar e gerenciar **políticas comerciais de frete** que determinam automaticamente o valor do frete nos pedidos de venda. Baseadas em múltiplos critérios (Tipo de Dado) selecionáveis via chips (máx. 6), com linhas detalhadas cobrindo seguro, pedágio, excedentes, limites e valor do frete.
+Cadastrar **políticas de frete** que determinam o valor do frete no pedido: cálculo por percentual ou valor fixo, gatilho por valor mínimo bruto, prioridade e vigência, com **faixas** por intervalo. O **Simulador** avalia o frete sobre um contexto (valor, quantidade, transportadora, cliente).
 
 ##### Pré-requisitos
 
@@ -5759,9 +5614,11 @@ Cadastrar e gerenciar os **almoxarifados** do sistema — locais físicos ou ló
 
 #### VCST0202 — Precificação de Produtos
 
+> **Backend:** `/api/customers/sales-tables` (tabelas + preços + `pricing`/`price-formation`/`generate-prices`/`price-history`) e `/api/customers/sales-price-policies` (políticas de formação). Três abas — **Tabelas & Preços**, **Formação de Preço** e **Políticas**. Substitui o mock antigo `/api/custo/precificacao` (rota morta).
+
 ##### Objetivo
 
-Realizar a **simulação e formação de preços de venda** baseados em custos, margens e impostos. Permite criar cenários de precificação com controle de revisões (ciclo de vida Aberta/Fechada), seleção de itens, cálculo automático de margem e configuração de parâmetros comerciais (cliente, tabela de venda, frete, seguro, comissão).
+Formar e manter **preços de venda**. Em **Tabelas & Preços**, cria a tabela de venda (validade, formação, casas decimais, composição FOB/CIF, tolerâncias) e mantém os preços por item (incluir/excluir). Em **Formação de Preço**, calcula o **preço sugerido** a partir de custo + margem/impostos (ou de uma política) e **gera preços em lote** (upsert + histórico). Em **Políticas**, cadastra as políticas de formação (fonte de custo, margem, impostos, comissão).
 
 ##### Pré-requisitos
 
@@ -5949,7 +5806,7 @@ Antes de utilizar as telas do processo fiscal, os seguintes cadastros devem esta
 | **VEMP0100 — Cadastro Empresa** | Cadastro da empresa emitente (CNPJ, Razão Social, IE, regime tributário, endereço) | A VFIS0100 depende do cadastro da empresa para validar o CNPJ e carregar os dados do emitente. Sem empresa cadastrada, não é possível configurar o módulo fiscal. |
 | **VLOC0100 — Localização Países/UFs** | Cadastro de países e Unidades Federativas com códigos IBGE, DDI, BACEN e SISCOMEX | Todas as telas fiscais que trabalham com UF (VFIS0100, VFIS0110, VFIS0200, VFIS0210, VFIS0320, VFIS0330, VFIS0500, VFIS0510, VFIS0520, VFIS0540, VFIS0550, VNFS0100) validam as UFs contra esta tabela. |
 | **VCLI0500 — Cadastro de Cliente** | Cadastro de clientes (CNPJ/CPF, Razão Social, IE, endereço) | A VFIS0200 (NF-e de Saída) utiliza os clientes como destinatários das notas fiscais. |
-| **VAVR0200 — Cadastro de Fornecedores** | Cadastro de fornecedores (CNPJ/CPF, Razão Social, IE, endereço) | A VFIS0210 (NF-e de Entrada) utiliza os fornecedores como emitentes das notas de entrada. A VFIS0220 (CT-e) referencia transportadoras. |
+| **VSUP0500 — Cadastro de Fornecedores** | Cadastro de fornecedores (CNPJ/CPF, Razão Social, IE, endereço) | A VFIS0210 (NF-e de Entrada) utiliza os fornecedores como emitentes das notas de entrada. A VFIS0220 (CT-e) referencia transportadoras. |
 
 ---
 
@@ -6073,9 +5930,13 @@ Cadastrar a identidade fiscal completa do emitente, configurar o token de integr
     - **Juros ao mês (ratio):** Taxa de juros moratórios para ICMS em atraso.
     - **Multa atraso (ratio):** Percentual de multa por recolhimento fora do prazo.
     - **Venc. ICMS (dia), Venc. IPI (dia), Venc. PIS/COFINS (dia):** Dia do mês em que cada tributo vence (1 a 31).
-11. Clique em **Salvar Configuração**. O sistema valida os campos obrigatórios (CNPJ, Razão Social e UF) e persiste os dados.
-12. Para recarregar os dados do banco, utilize o botão **Recarregar** (descarta alterações não salvas).
-13. Para exportar a configuração, utilize o botão **Exportar** (formato CSV/JSON para backup ou transferência entre ambientes).
+11. Na seção **Identidade visual**, selecione opcionalmente um logo PNG ou JPEG. O arquivo deve possuir conteúdo realmente decodificável nesse formato e no máximo 2 MB; apenas trocar a extensão não é aceito.
+12. Informe a **Cor da marca** no seletor ou no campo hexadecimal, sempre no formato `#RRGGBB`. A cor é usada nos cabeçalhos e destaques dos relatórios que suportam branding.
+13. Clique em **Salvar identidade**. Essa ação envia `multipart/form-data` diretamente ao backend e é independente de **Salvar Configuração**. É permitido atualizar somente a cor, somente o logo ou ambos.
+14. Aguarde a mensagem de sucesso e confira o quadro **Preview persistido**. O preview é baixado novamente de `/api/fiscal/config/logo`; portanto, ele confirma o conteúdo salvo no banco, não uma prévia local do arquivo selecionado.
+15. Clique em **Salvar Configuração** para persistir emitente, Focus NF-e, tributação e vencimentos. O sistema valida CNPJ, Razão Social e UF.
+16. Para recarregar a configuração do banco, utilize **Recarregar**. Esse botão não apaga nem substitui o branding.
+17. Para exportar a configuração, utilize **Exportar**. O logo binário e o token sensível não devem ser incluídos em exportações comuns.
 
 ##### Campos
 
@@ -6103,6 +5964,9 @@ Cadastrar a identidade fiscal completa do emitente, configurar o token de integr
 | Venc. ICMS (dia) | number | Não | 1 a 31 | Dia do mês de vencimento do ICMS. |
 | Venc. IPI (dia) | number | Não | 1 a 31 | Dia do mês de vencimento do IPI. |
 | Venc. PIS/COFINS (dia) | number | Não | 1 a 31 | Dia do mês de vencimento do PIS e COFINS. |
+| Logo fiscal | file | Não | PNG/JPEG, até 2 MB | Imagem persistida usada em relatórios, romaneios e documentos que suportam identidade visual. O conteúdo binário é validado no navegador e no backend. |
+| Cor da marca | color/text | Condicional | `#RRGGBB` | Cor hexadecimal persistida. Ao salvar identidade sem logo, a cor é atualizada mantendo o logo atual. |
+| Preview persistido | imagem | — | — | Conteúdo retornado pelo backend. “Nenhum logo configurado” corresponde a resposta 404 do endpoint de logo. |
 
 ##### Observações importantes
 
@@ -6112,6 +5976,9 @@ Cadastrar a identidade fiscal completa do emitente, configurar o token de integr
 - O campo Regime Tributário é imutável na prática durante a operação — alterá-lo requer reconfigurar toda a lógica de apuração. Empresas do Simples Nacional utilizam a VFIS0340; demais regimes utilizam a apuração detalhada por tributo.
 - O rodapé da tela exibe um resumo com o regime tributário selecionado e o ambiente Focus NF-e ativo, facilitando a verificação rápida da configuração atual.
 - A alteração entre ambientes (Homologação/Produção) é uma operação sensível: certifique-se de estar no ambiente correto antes de emitir notas fiscais.
+- O backend rejeita logo maior que 2 MB, arquivo corrompido, conteúdo diferente de PNG/JPEG e cor fora do formato hexadecimal. Nessas situações nada é substituído no banco.
+- Não feche a tela durante **Enviando...**. Após timeout, recarregue a tela e confira o preview antes de repetir o envio.
+- O navegador cria uma URL temporária somente para mostrar a imagem devolvida pelo backend e a revoga ao substituir a imagem ou fechar a tela; o arquivo não é mantido como dado fictício no frontend.
 
 ##### Telas relacionadas
 
@@ -6367,7 +6234,7 @@ Registrar notas fiscais de entrada de mercadorias em três modos flexíveis: ent
 - VFIS0110 (Tabelas Tributárias): NCMs com alíquotas e CSTs de referência.
 - VFIS0300 (CFOPs): CFOPs de entrada cadastrados (ex.: 1101, 1102, 2101, 2102).
 - VFIS0360 (Tipos Operação Entrada): Tipos de operação de entrada configurados para validação de UF.
-- VAVR0200 (Cadastro de Fornecedores): Fornecedores cadastrados para referência como emitentes.
+- VSUP0500 (Cadastro de Fornecedores): Fornecedores cadastrados para referência como emitentes.
 
 ##### Passo a passo
 
@@ -6463,7 +6330,7 @@ Registrar notas fiscais de entrada de mercadorias em três modos flexíveis: ent
 - O upload de XML aceita o conteúdo completo do arquivo XML (elemento `<nfeProc>`). O sistema faz o parsing localmente, portanto não depende de conexão com a API Focus.
 - A ação **Aprovar** é irreversível — uma vez aprovada, a NF-e de entrada não pode ser editada. Certifique-se de revisar todos os campos, especialmente as flags de creditamento, antes de aprovar.
 - As flags de creditamento (Credita ICMS/IPI/PIS/COFINS) são pré-selecionadas com base no CFOP e no regime tributário da VFIS0100, mas podem ser alteradas manualmente. Empresas do Lucro Real geralmente podem creditar PIS/COFINS (não-cumulativo); empresas do Simples Nacional e Lucro Presumido geralmente não.
-- A conta a pagar gerada automaticamente no VFIN0200 é vinculada ao fornecedor emitente. Se o fornecedor não estiver cadastrado no VAVR0200, a geração da conta a pagar pode falhar.
+- A conta a pagar gerada automaticamente no VFIN0200 é vinculada ao fornecedor emitente. Se o fornecedor não estiver cadastrado no VSUP0500, a geração da conta a pagar pode falhar.
 - Os totais de impostos (ICMS, IPI, PIS, COFINS) e valor total da nota são recalculados automaticamente como somatório dos itens + frete + seguro - desconto.
 
 ##### Telas relacionadas
@@ -6474,7 +6341,7 @@ Registrar notas fiscais de entrada de mercadorias em três modos flexíveis: ent
 - **VFIS0360 (Tipos Operação Entrada):** Validação de UF para a operação de entrada. A UF do emitente é validada contra o grupo de estados configurado.
 - **VFIN0200 (Contas a Pagar):** Destino da geração automática de contas a pagar após aprovação da NF-e de entrada.
 - **VFIS0220 (CT-e):** CT-es podem ser vinculados às NF-es de entrada para rateio de frete.
-- **VAVR0200 (Fornecedores):** Cadastro de fornecedores referenciados como emitentes.
+- **VSUP0500 (Fornecedores):** Cadastro de fornecedores referenciados como emitentes.
 
 ---
 
@@ -7844,11 +7711,23 @@ produto final, e cada papel exige configurações diferentes.
 
 ##### Passo a passo
 
-1. Clique em **Listar** para trazer os itens (filtre por código/descrição).
-2. Para cadastrar, use o **Cadastro rápido**: código (opcional), natureza, **grupo/
-   modificador** (PDM), UM de estoque, tipo de engenharia, estrutura, **tipo MRP** e
-   **LLC**. Clique em **Criar item**.
-3. Selecione um item e clique em **Prontidão**: o sistema roda o **checklist de
+1. Clique em **Listar** para trazer os itens persistidos. A grade informa código,
+   descrição composta, natureza, situação e os principais parâmetros de planejamento.
+   Use o código exibido pela grade nas consultas seguintes; não invente um código que
+   ainda não exista.
+2. Para cadastrar, use o **Cadastro rápido**. Informe obrigatoriamente **Código**,
+   **Grupo PDM** e **Modificador PDM** já cadastrados. Escolha a **Natureza**: `Item
+   Base` para o molde principal, `Genérico` para item sem configuração de máscara ou
+   `Configurado` para uma variante. Para Genérico/Configurado, informe também o
+   **Código do item-base** existente que origina a variante.
+3. Complete a UM de estoque, uso do item, tipo de engenharia, estrutura, tipo de
+   planejamento, planejamento de estoque, LLC e demais parâmetros das pastas. Os
+   campos de seleção já enviam os códigos numéricos aceitos pelo backend; escolha a
+   descrição apresentada e não converta o valor manualmente.
+4. Clique em **Criar item**. Aguarde a confirmação do backend e confira o novo registro
+   em **Listar**. A descrição é montada pelo PDM; se Grupo, Modificador ou item-base não
+   existirem, o cadastro é recusado e nada é gravado.
+5. Selecione um item e clique em **Prontidão**: o sistema roda o **checklist de
    ativação** e mostra se o item está ✅ **pronto** ou ⚠️ com **pendências**/**alertas**,
    além da **estrutura (BOM)** do item.
 
@@ -7929,11 +7808,24 @@ comprar, quanto e até quando, para entregar tudo que foi pedido?"*
    LLC). Clique em **Firmar** para aprovar: a sugestão vira **Ordem Planejada** real
    (com número); se for **Fabricação**, uma **Ordem de Produção** é criada
    automaticamente.
+   A Ordem Planejada e a Ordem de Produção possuem **numerações próprias e
+   independentes**. Não espere que os dois números sejam iguais: o vínculo é mantido
+   internamente pelo sistema e pode ser confirmado abrindo a OF criada. Se repetir a
+   operação, consulte primeiro o estado atual; uma ordem já liberada não deve ser
+   liberada novamente.
 5. Consulte o **Perfil MRP** de um item (a "tabela MRP" clássica): demanda, ordens
    planejadas, ordens firmes e **estoque projetado** ao longo do horizonte.
 6. Veja as **exceções** (ordens atrasadas, compras vencidas, excesso de estoque,
    sobrecarga) e cadastre **regras configuradas** por item (ex.: "se lead_time = 0, usar
    15 dias") sem alterar o cadastro do item.
+7. Em **Empresas inter-fábrica**, associe empresas de origem cujas ordens
+   `INTER_FACTORY` devem entrar no cálculo do plano como demanda (marque **Liberação
+   automática** para que as sugestões derivadas sigam sozinhas para liberação). Salvar
+   **substitui a lista inteira** — remover todas esvazia as associações.
+8. Em **Relatórios operacionais**, gere as cinco visões de apoio à decisão sem rodar o
+   MRP: **Perfil** (demanda × estoque projetado), **Disponibilidade** (estoque + ordens
+   − demanda por item ou pedido), **Necessidades agrupadas**, **Explosão** multinível de
+   um item (aplica perdas e valida a estrutura) e **Ponto de reposição**.
 
 ##### Conceitos-chave
 
@@ -8034,6 +7926,306 @@ status **Rascunho (R) → Confirmado (P) → Faturado (F)**, além de **bloqueio
 
 ---
 
+#### VVND0300 — Orçamento de Venda
+
+##### Objetivo
+
+Registrar a **proposta comercial** antes do pedido de venda. O orçamento guarda a
+intenção da venda (validade, probabilidade de fechamento, condições, frete,
+descontos e retenções) e, quando o cliente aprova, é **convertido em pedido de
+venda** — copiando apenas o **saldo aberto** dos itens. É a etapa de negociação e
+acompanhamento de oportunidades da carteira.
+
+##### Pré-requisitos
+
+- **Cliente** cadastrado (VCLI0500).
+- **Itens** cadastrados (VENT0200).
+- **Condição de pagamento** (VFIN0110), quando aplicável.
+
+##### Passo a passo
+
+1. Acesse **VVND0300 — Orçamento de Venda** e clique em **Novo orçamento**.
+2. Informe **Estabelecimento**, **Cliente**, **Tipo** (VENDA, NEGOCIACAO, CONSULTA…),
+   **Validade**, **Probabilidade %** e demais condições; clique em **Criar orçamento**
+   (nasce como **Rascunho / R**).
+3. Abra o orçamento na lista e adicione **itens** (item, quantidade, preço, desconto,
+   data de entrega). Os totais e o **valor ponderado** pela probabilidade são
+   calculados pelo sistema.
+4. Quando aprovado, clique em **Converter em pedido**. O sistema cria o pedido de
+   venda com o **saldo aberto** e registra o vínculo (**→ Pedido N**). O ciclo segue
+   no **VVND0200** (crédito, reserva, MRP, faturamento).
+5. Alternativas: **Atender** encerra a proposta sem gerar pedido; **Cancelar** (exige
+   motivo) mantém o registro consultável; **Descancelar** reabre a proposta.
+
+##### Campos principais
+
+| Campo | Obrigatório | Função |
+|-------|-------------|--------|
+| Estabelecimento | Sim | Empresa emissora |
+| Cliente | Sim | Destinatário da proposta |
+| Tipo | Não | VENDA, NEGOCIACAO, CONSULTA, API_TERCEIROS, FOCCOPORTAL, IMPORTADO |
+| Válido até | Não | Prazo de validade (expira depois) |
+| Probabilidade % | Não | Peso do valor ponderado da carteira |
+| Item / Qtd / Preço | Sim (por item) | Linha do orçamento |
+
+##### Observações importantes
+
+- **Não** emite NF-e nem autoriza documento fiscal — o campo **Venda NFC-e** apenas
+  prepara a intenção fiscal que o pedido/faturamento consome depois.
+- A **conversão é bloqueada** para orçamentos cancelados, expirados, atendidos, do
+  tipo **CONSULTA**, bloqueados comercialmente ou já convertidos.
+- Use **Relatório** para consolidar totais, retenções e valor ponderado por
+  probabilidade da carteira filtrada.
+- Itens só podem ser adicionados/cancelados enquanto o orçamento está em **Rascunho**.
+
+##### Telas relacionadas
+
+- **VVND0200 (Pedido de Venda)**: destino da conversão do orçamento.
+- **VVND0100 (Divisão de Vendas)**: organização comercial associável.
+- **VCLI0500 (Cadastro de Cliente)**: origem do cliente da proposta.
+
+---
+
+#### VVND0400 — Representantes
+
+##### Objetivo
+
+Centralizar o cadastro de **vendedores externos, vendedores internos, gerentes e
+prepostos** que participam da venda. Cada pedido/orçamento aponta para um
+representante cadastrado (com documento, território e comissão) em vez de texto
+livre. Também mantém **tipos**, **pastas** (empresas de atuação, telefones,
+e-mails, regiões…), **bloqueio**, **relatório cadastral** e **ficha de
+acompanhamento comercial**.
+
+##### Pré-requisitos
+
+- Ao menos um **Tipo de representante** cadastrado (aba **Tipos**), opcional mas
+  recomendado.
+- **Nome** e **documento** (CPF/CNPJ) — obrigatórios.
+
+##### Passo a passo
+
+1. Acesse **VVND0400 — Representantes**.
+2. Na aba **Tipos**, crie os tipos (ex.: Externo, Interno, Gerente). Marque
+   **Disponível sem restrição** (`is_free`) e **Ignora faturamento direto** conforme
+   a política comercial.
+3. Volte para **Representantes** e clique em **Novo representante**. Informe **Nome**,
+   **Documento**, **Tipo**, **UF/Cidade**, **Região** e **Comissão %**. A UF é
+   normalizada em maiúsculas. Opcionalmente vincule um **cliente** existente.
+4. Abra o representante e complete as pastas: **Empresas** (empresa de atuação +
+   comissão padrão) e **Contatos** (telefones e e-mails — o contato principal é
+   atualizado automaticamente pelo menor ranking).
+5. Use **Bloquear** (exige motivo) / **Desbloquear** para controlar disponibilidade.
+6. **Relatório** consolida o cadastro por UF/região/situação; **Follow-up** mostra a
+   evolução comercial (orçamentos, pedidos, comissão) do representante selecionado.
+
+##### Campos principais
+
+| Campo | Obrigatório | Função |
+|-------|-------------|--------|
+| Nome | Sim | Identificação do representante |
+| Documento | Sim | CPF ou CNPJ |
+| Tipo | Não | Classificação (externo/interno/gerente…) |
+| UF / Cidade | Não | Território de atuação |
+| Comissão % | Não | Percentual padrão |
+| Cliente vinculado | Não | Reaproveita cadastro existente sem duplicar |
+
+##### Observações importantes
+
+- O representante pode ser vinculado a um **cliente e/ou fornecedor** existente sem
+  duplicar esses cadastros.
+- **Relatório cadastral** aceita filtros por UF, região, tipo e situação
+  (ativo/inativo); **Follow-up** consolida carteira, valores e comissão futura.
+
+##### Telas relacionadas
+
+- **VVND0200 (Pedido de Venda)** e **VVND0300 (Orçamento)**: apontam para o
+  representante.
+- **VCLI0510 (Apoio de Cliente)**: regiões e segmentos usados nas pastas.
+
+---
+
+#### VVND0500 — Metas de Vendas
+
+##### Objetivo
+
+Definir e acompanhar **objetivos comerciais** por período, representante, grupo
+comercial e cliente — por **valor** ou **quantidade** — comparando **previsto ×
+realizado**, percentual de atingimento, premiação e saldos excedentes. A base
+**SALES** calcula o realizado por pedidos de venda no período; **INVOICING** fica
+registrada para fechar por faturamento conforme a integração fiscal evoluir.
+
+##### Pré-requisitos
+
+- Pelo menos um **Período** cadastrado (aba **Períodos**).
+- **Representante** cadastrado (VVND0400).
+
+##### Passo a passo
+
+1. Acesse **VVND0500 — Metas de Vendas**.
+2. Na aba **Períodos**, crie a janela da meta: **Tipo** (Mensal/Semanal/Customizado),
+   **Início** e **Fim** (o sistema rejeita período invertido).
+3. Volte para **Metas**, clique em **Nova meta**, informe **Representante**,
+   **Período**, **Base** (Vendas/Faturamento) e **Premiação %**; clique em **Criar meta**.
+4. Abra a meta e adicione **linhas** na aba **Itens da meta**. Cada linha aponta
+   **exatamente um alvo**: **item**, **classificação** OU **grupo** — com quantidade,
+   valor, unidade e bônus.
+5. Use **Relatório** para consolidar **previsto × realizado**, percentual de
+   atingimento e situação (OPEN / ACHIEVED / NO_TARGET).
+
+##### Campos principais
+
+| Campo | Obrigatório | Função |
+|-------|-------------|--------|
+| Representante | Sim | Dono da meta |
+| Período | Sim | Janela de apuração |
+| Base de análise | Não | SALES (pedidos) ou INVOICING (faturamento) |
+| Premiação % | Não | Bônus sobre o atingimento |
+| Alvo da linha | Sim (por linha) | Item **ou** classificação **ou** grupo — nunca mais de um |
+
+##### Observações importantes
+
+- **Regra do alvo único**: informar mais de um alvo na mesma linha é rejeitado pelo
+  sistema.
+- Percentuais negativos e período invertido são bloqueados.
+- Saldos excedentes (quando o realizado supera a meta ideal) podem ser considerados
+  no período seguinte.
+
+##### Telas relacionadas
+
+- **VVND0400 (Representantes)**: dono das metas e base de comissão.
+- **VVND0200 (Pedido de Venda)**: origem do realizado na base SALES.
+
+---
+
+#### VSAC0100 — Atendimento ao Consumidor (SAC)
+
+##### Objetivo
+
+Centralizar **consumidores finais**, **contatos com clientes** (histórico) e
+**chamados de SAC**. Registra atendimentos recebidos/efetuados/garantia,
+reclamações (com sintomas), visitas técnicas, retornos e indicadores de posição e
+tempo de resolução.
+
+##### Pré-requisitos
+
+- **Tipos de chamado** e **locais/meios de conhecimento** cadastrados (aba **Apoio**).
+- **Consumidor** cadastrado (aba **Consumidores**).
+
+##### Passo a passo
+
+1. Acesse **VSAC0100 — Atendimento ao Consumidor**.
+2. Na aba **Apoio**, crie os **tipos de chamado** (marque **É reclamação** quando
+   deve exigir sintomas) e os **locais de conhecimento**.
+3. Na aba **Consumidores**, clique em **Novo consumidor**: informe **Nome**, **Pessoa**
+   (Física/Jurídica — física não aceita CNPJ e jurídica não aceita CPF), documento,
+   UF/cidade e o local de conhecimento. Depois, adicione **telefones/e-mails**.
+4. Na aba **Chamados**, clique em **Novo chamado**: informe **Estabelecimento**,
+   **Consumidor**, **Tipo**, **Direção**, **Assunto**, **Posição** e **Situação**.
+   Se a situação for **Visita técnica**, a **data da visita** é obrigatória; se o tipo
+   for **reclamação**, os **sintomas** são obrigatórios.
+5. Abra o chamado para **Agendar/Resolver** a posição e **Registrar retorno/contato**.
+6. **Relatório** consolida totais por posição, vistorias e tempo médio de resolução.
+
+##### Campos principais
+
+| Campo | Obrigatório | Função |
+|-------|-------------|--------|
+| Nome / Pessoa | Sim | Identificação do consumidor (F/J) |
+| Tipo de chamado | Sim | Classificação; `É reclamação` exige sintomas |
+| Assunto | Sim | Resumo do chamado |
+| Situação | Não | OTHER / ORDER / DISCONTINUED_ORDER / TECHNICAL_VISIT |
+| Data da visita | Condicional | Obrigatória quando situação = Visita técnica |
+
+##### Observações importantes
+
+- O **contato com cliente** é histórico imutável — não há alteração/exclusão depois
+  de gravado.
+- **Posições**: Pendente → Agendado → Resolvido.
+
+##### Telas relacionadas
+
+- **VATC0280 / VASS0201 (Assistência Técnica)**: chamados de garantia/reparo (fluxo
+  distinto do SAC).
+
+---
+
+#### VVRE0200 — Console de Vendas Recorrentes
+
+##### Objetivo
+
+Gerir **produtos/serviços com cobrança mensal** por cliente/estabelecimento:
+cadastrar recorrências (Venda/Upgrade), acompanhar movimentos, **gerar pedido de
+venda** rastreado, cancelar e projetar a **receita recorrente mensal**.
+
+##### Passo a passo
+
+1. Clique em **Nova recorrência**: informe **Estabelecimento**, **Cliente**, **Item**,
+   **Movimento** (Venda/Upgrade), **Vigência** (Indeterminada exige próximo reajuste;
+   Determinada exige meses, parcelas, carência e valor da parcela), quantidade e valor.
+2. Abra a recorrência e **Gerar pedido** — o ERP cria a capa e as linhas mensais no
+   módulo de Pedido de Venda (VVND0200) e vincula o pedido gerado.
+3. **Cancelar** gera um movimento de cancelamento e inativa a origem.
+4. **Receita mensal** projeta a receita recorrente mês a mês no período.
+
+##### Observações importantes
+
+- Apenas **Venda** e **Upgrade** entram por cadastro direto; Downgrade, Reajuste,
+  Recálculo e Cancelamento são resultado de processo.
+
+##### Telas relacionadas
+
+- **VRE0203 (Comissões Futuras)**: projeção de comissão das recorrências.
+- **VVND0200 (Pedido de Venda)**: destino do pedido gerado.
+
+---
+
+#### VRE0203 — Consulta de Comissões Futuras
+
+##### Objetivo
+
+Projetar as **comissões futuras** das vendas recorrentes ativas por período e
+representante, respeitando a base (ORIGINAL/ADJUSTED) e um eventual percentual de
+reajuste.
+
+##### Passo a passo
+
+1. Defina o **período** (de/até), opcionalmente o **representante** e um **reajuste %**.
+2. Clique em **Consultar** — a grade lista mês a mês a base, o percentual e o valor
+   de comissão projetado, com o total ao final.
+
+---
+
+#### VDPR0100 — Promessa de Entrega — Ocupação e Reservas
+
+##### Objetivo
+
+Apoiar a **promessa de data de entrega**: consultar a **ocupação diária** de
+tanque/setor produtivo, criar/simular **reserva comercial de capacidade** para venda
+futura, **expirar** reservas vencidas e **reprogramar datas de entrega em lote**.
+
+##### Passo a passo
+
+1. **Ocupação**: informe o período e a capacidade diária e clique em **Calcular
+   ocupação** — vê alocado, livre, % de ocupação e valor previsto por dia/tanque.
+2. **Reserva de tanque**: informe a data prometida, validade, capacidade e as
+   **linhas** (item, quantidade, preço). Marque **Descontar ATP** para verificar
+   estoque e **Gravar** para confirmar (desmarcado apenas simula).
+3. **Reprogramação em lote**: filtre por período/cliente e informe a **nova data** —
+   pedidos e itens com **data firme** são ignorados.
+
+##### Observações importantes
+
+- A reserva **não** vira pedido nem demanda de MRP — é só compromisso de capacidade.
+- Os **parâmetros** e o **calendário por item** ficam em VPME0102 / VPME0102ITE.
+
+##### Telas relacionadas
+
+- **VEXR0100 (Reprogramação de Entrega)**: histórico de remarcações por pedido.
+- **VVND0200 (Pedido de Venda)**: origem das datas de entrega.
+
+---
+
 ### Módulo: Engenharia — Máquinas e Tempos
 
 ---
@@ -8087,6 +8279,10 @@ registra a **agenda** da máquina (consumida pelo CRP/APS).
 2. Em **Nova máquina**, informe Código, Nome, **Tipo**, Capacidade, **Unidade de
    capacidade** (Peças, Chapas, Kg, T, M, M², M³, Litros, Un) e **Período** (Por
    Minuto, Por Hora, Por Dia) e a **Eficiência** (0–1). Clique em **Criar máquina**.
+   O campo Tipo usa o código do tipo cadastrado em VMAQ0101. Depois da confirmação,
+   localize a máquina na grade: o sistema conserva tanto o **ID interno** quanto o
+   **Código operacional**, mas o usuário trabalha com o Código; o ID é usado apenas
+   nos vínculos técnicos enviados pela tela.
 3. Em **Tempo por item × máquina**, informe Item, Máquina, **Tempo de ciclo**, unidade
    de tempo, **Quantidade base**, **Setup** e **Prioridade** (1 = máquina preferida).
    Esse cadastro é o **coração do cálculo**.
@@ -8094,6 +8290,9 @@ registra a **agenda** da máquina (consumida pelo CRP/APS).
    **Calcular tempo**. O sistema retorna: **ciclos** (arredondados para cima), tempo de
    setup, tempo de produção, total em minutos/horas e se a máquina está em **gargalo**.
 5. Em **Agenda da máquina**, registre disponibilidade/paradas por data.
+   Selecione a máquina carregada na grade para que a tela envie seu identificador real.
+   Não use o código de uma máquina inexistente: agendas, apontamentos e cálculos sempre
+   validam o cadastro persistido no backend.
 
 ##### Como o cálculo funciona
 
@@ -8203,6 +8402,17 @@ finita** (um trabalho por vez por centro) e produz o **Gantt**. Prioriza por **E
 2. Consulte o **Gantt por ordem** (informe o número da OF) ou **por centro de
    trabalho** (informe o centro e o período).
 3. Analise os horários (início/fim) e a ocupação de cada centro.
+4. Em **Quadro do mês**, escolha ano, mês e o agrupamento (**por centro de trabalho**
+   ou **por ordem**) e clique em **Ver quadro** — o painel consolida o cronograma do mês
+   inteiro: nº de linhas, **dias sobrecarregados** (carga CRP > 100%), **barras
+   atrasadas** e **dependências** finish-start. As barras vêm do sequenciamento (ordens
+   ainda não sequenciadas entram como *fallback* pelas datas da própria OF).
+5. **Exporte** o quadro como **SVG** (web/impressão) ou **PDF** (A4 paisagem com a marca
+   da empresa) pelos botões de export.
+6. **Remaneje** manualmente (drag-drop): informe a **sequência**, o **novo início** e,
+   opcionalmente, um **novo centro**. Com **Cascata**, as operações a jusante da mesma OF
+   são empurradas respeitando a precedência; avisos de capacidade **não bloqueiam** o
+   movimento (decisão do planejador).
 
 ##### Observações importantes
 
@@ -8210,6 +8420,8 @@ finita** (um trabalho por vez por centro) e produz o **Gantt**. Prioriza por **E
   termina antes de começar a próxima).
 - Se uma operação não couber no dia, vai para o próximo dia útil (fins de semana são
   pulados). `duração = setup + tempo planejado`.
+- O **quadro mensal** é um atalho do quadro por *range* com escala diária; o mesmo motor
+  aceita qualquer intervalo e escala semanal (para enxergar trimestres).
 
 ##### Telas relacionadas
 
@@ -8266,6 +8478,54 @@ insumos** (movimento OUT no estoque), **conclusão** (movimento IN do acabado co
 - **VEST0100 (Estoque)**: recebe os movimentos OUT/IN e o lote.
 - **VCUS0100 (Custos)**: fornece o custo/hora dos centros para a apuração.
 - **VPRO0300 (Custo Padrão)**: base de comparação para a variância.
+- **VPRO1000 (Ficha de Produção da Ferramenta)**: define a série física de ferramenta usada em cada operação da OF.
+
+---
+
+#### VPRO1000 — Ficha de Produção da Ferramenta
+
+##### Objetivo
+
+Quando a fábrica tem **várias cópias físicas da mesma ferramenta** (o mesmo molde/matriz, cada uma com seu **número de série**), esta tela define **qual série** roda em cada operação da OF. Ao concluir a operação, o desgaste (golpes/peças/horas) é debitado **na série exata** — assim a fábrica sabe qual peça física está chegando ao fim da vida útil. Também concentra o **cadastro de ferramentas e séries**.
+
+##### Pré-requisitos
+
+- Ordem de produção com roteiro explodido (VPRO0900/VPRO0100).
+- Ferramentas e séries cadastradas (na própria tela, aba **Cadastro de Ferramentas**).
+
+##### Passo a passo — aba **Ficha de Produção**
+
+1. Em **Filtrar por nº / item**, busque a **ordem** (a lista **exclui ordens tipo OFC**) e clique em **Abrir**.
+2. A ficha traz o cabeçalho (tipo, datas, quantidade, item) e as **operações** com recurso, ferramenta e série atual.
+3. Para cada operação, selecione **ferramenta** e **série** e clique em **Vincular**.
+4. Se a série precisar trocar (quebra, manutenção), selecione a **nova série**, informe o **motivo** e clique em **Substituir** — o histórico (série antiga → nova + motivo) é guardado; veja em **Histórico**.
+5. **Atualiza** recarrega os vínculos a qualquer momento.
+
+##### Passo a passo — aba **Cadastro de Ferramentas**
+
+1. Cadastre a ferramenta (o **código é gerado automaticamente**): nome, tipo, **tipo de vida** (GOLPES/HORAS/PEÇAS), limite de vida e custo.
+2. Selecione a ferramenta para gerenciar suas **séries** (número, status ATIVA/MANUTENCAO/INATIVA, localização).
+3. **Zerar vida útil** após a troca física; **Inativar** a ferramenta quando aposentada. O status da série pode ser alterado direto na grade.
+
+##### Campos
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| Ferramenta / Série (operação) | Select | Vínculo aplicado à operação da OF |
+| Motivo | Texto | Justificativa da substituição (guardada no histórico) |
+| Tipo de vida | Select | GOLPES / HORAS / PECAS |
+| Limite de vida | Number | Vida útil máxima antes da troca |
+| Status da série | Select | ATIVA / MANUTENCAO / INATIVA |
+
+##### Observações importantes
+
+- O consumo de vida é debitado na **série** vinculada, não na ferramenta genérica.
+- **Ferramentas → precisam de troca** lista as que atingiram o limite de vida.
+
+##### Telas relacionadas
+
+- **VPRO0900 (Ordem de Produção)**: origem das operações da ficha.
+- **VPRO0100 (Roteiro de Fabricação)**: define as operações e ferramentas por operação.
 
 ---
 
@@ -8297,25 +8557,52 @@ custo = Σ material(BOM) + Σ (tempo_operação × custo/hora_centro) + overhead
 
 ---
 
-#### VPRO0400 — Qualidade (Pontos de Inspeção)
+#### VPRO0400 — Qualidade (Planos, Registros e Não-conformidades)
 
 ##### Objetivo
 
-Registrar **pontos de inspeção** ao longo do processo produtivo (Recebimento, Em
-processo, Final) e lançar **laudos** (Aprovado / Reprovado / Condicional) com
-quantidades inspecionadas, aprovadas e rejeitadas.
+Estruturar a qualidade em quatro peças, sobre `/api/quality`: **planos de inspeção**
+(o que inspecionar e quando — RECEBIMENTO / PROCESSO / EXPEDICAO), **características**
+(os pontos medidos, com nominal e tolerâncias), **registros** (o laudo real por OF/lote,
+com as medições) e **não-conformidades (NC)** quando algo sai fora do padrão, acompanhadas
+até a **disposição**.
 
-##### Passo a passo
+##### Passo a passo — aba **Planos & Características**
 
-1. Clique em **Novo Ponto**, informe Nome, **Tipo** (Recebimento / Em processo /
-   Final), Item e (opcional) Operação. Salve.
-2. Selecione o ponto e **registre o laudo**: veredito, quantidades e observação.
-3. Consulte o histórico de resultados do ponto.
+1. Preencha o **novo plano**: Item, **Momento** (RECEBIMENTO/PROCESSO/EXPEDICAO),
+   descrição, tamanho da amostra, nível de aceitação e (opcional) a operação do roteiro.
+   Clique em **Criar plano**.
+2. **Buscar planos** por item (a API lista planos por item) e selecione um na grade.
+3. No painel do plano, adicione **características** (nome, nominal, tolerâncias −/+,
+   unidade, crítica). **Desativar** encerra o plano.
+
+##### Passo a passo — aba **Registros**
+
+1. Selecione o **plano** (busque-o antes na aba Planos) — as características carregam
+   automaticamente para as medições.
+2. Informe OF, lote, quantidades **inspecionada / aprovada / rejeitada** e o **resultado**
+   (APROVADO / REJEITADO / CONDICIONAL / PENDENTE).
+3. Informe o **valor medido** por característica e marque "conforme". Clique em **Gravar registro**.
+4. Consulte registros **por ordem (OF)** ou **por item**.
+
+##### Passo a passo — aba **Não-conformidades**
+
+1. As NC **em aberto** carregam automaticamente. Registre uma nova NC (item, quantidade,
+   severidade CRITICA/MAIOR/MENOR/OBSERVACAO, descrição; opcional: registro/OF/lote).
+2. Para cada NC, escolha a **disposição** (SUCATA / RETRABALHO / APROVADO_CONDICIONAL /
+   DEVOLVIDO) e clique em **Aplicar**.
+
+##### Observações importantes
+
+- Substitui o modelo antigo de "pontos de inspeção" (que apontava para uma rota inexistente).
+- Não há listagem geral de planos: a consulta é **por item** (`/plans/by-item/{item}`);
+  registros por OF/item; NC por `/open` ou por item.
 
 ##### Telas relacionadas
 
-- **VPRO0900 (OF)**: a inspeção "Em processo" ocorre após uma operação.
-- **VINS0xxx (Inspeção)**: módulo dedicado de ordens de inspeção de recebimento.
+- **VPRO0900 (OF)**: a inspeção "PROCESSO" ocorre após uma operação; registros e NC
+  referenciam a OF.
+- **VPRO0100 (Roteiro)**: a operação do roteiro pode ancorar o plano (`route_operation_id`).
 
 ---
 
@@ -8964,3 +9251,1465 @@ fornecedor e preço). Só então vira pedido firme.
 
 > **Fim do Processo Suprimento e Compras.**
 > Documentação atualizada em Junho 2026.
+# Processos avançados de compras, configuração, terceiros e APS
+
+Esta parte do manual descreve os processos operacionais que complementam Compras,
+Engenharia, Produção, Estoque e Planejamento. Cada rotina abaixo apresenta o momento
+correto de uso, os dados exigidos, os efeitos da confirmação e os cuidados necessários.
+
+## Compras e recebimento
+
+### VAVR0200 — Aviso de Recebimento
+
+Agenda a chegada na doca antes da nota fiscal, registra os itens esperados,
+acompanha o status da conferência e abre divergências de falta, sobra, avaria,
+item, preço, documento ou atraso. Informe fornecedor ou pedido, inclua ao menos
+um item e use **Criar aviso**. Depois, abra o aviso para avançar o status e tratar
+as divergências. Esta rotina não é cadastro de fornecedor.
+
+### VSUP0600 — Inspeção de Recebimento
+
+Centraliza o fluxo de inspeção: cadastrar roteiro, gerar ordem para o material
+recebido, apontar resultados, analisar e dar destinação às quantidades aprovadas
+e rejeitadas. Para quarentena, informe o almoxarifado correspondente. A soma das
+quantidades destinadas deve representar o material efetivamente inspecionado.
+
+### VAVF0300 — Scorecard e IQF do Fornecedor
+
+Consulta o histórico do fornecedor e permite calcular o IQF com dados reais de
+recebimento ou lançar uma avaliação manual. Informe período fechado e fornecedor.
+Use **persistir** no cálculo quando o resultado deva compor o histórico oficial.
+
+### VSUP0610 — Alçadas e Parâmetros de Compras
+
+Mantém limites de aprovação por empresa/escopo/moeda e parâmetros de operação.
+O cadastro de alçada e a alteração de parâmetros exigem perfil **ADMIN**. Antes
+de salvar, confirme vigência, limite automático e eventual valor de bloqueio.
+
+### VSUP0620 — EDI de Fornecedores
+
+Registra e consulta mensagens eletrônicas do fornecedor. Nas confirmações de
+pedido, as linhas podem carregar quantidade, preço e data confirmados e os
+valores do pedido; o backend calcula as divergências conforme as tolerâncias.
+
+### VIMP0300 — Importação e Custo Nacionalizado
+
+Cria processos de importação com moeda, câmbio, itens e despesas; consulta,
+recalcula o rateio e altera a situação. Revise a base de rateio e marque se cada
+despesa compõe o custo do item antes de recalcular.
+
+### VAVF0203 — Homologação de Fornecedores
+
+Registra período avaliado, notas mínimas, categoria, situação e validade da
+homologação. A ação **Gerar itens do fornecedor** cria vínculos a partir do
+histórico real de compras; execute-a somente após revisar o fornecedor informado.
+
+### VPDC0210 — Consulta, Aprovação e Recebimento de Pedidos
+
+Consulta a carteira de pedidos, aprova conforme a alçada, autoriza pedidos
+bloqueados e registra recebimentos físicos. **Autorizar alçada** exige ADMIN.
+No recebimento, informe as linhas do pedido e suas quantidades; o backend aplica
+idempotência, saldos e tolerâncias.
+
+### VSUP0630 — Tolerâncias de Pedido de Compra
+
+Define tolerância por tipo, aplicação, faixa e fornecedor e escolhe a ação para
+o desvio (por exemplo, avisar ou bloquear). Use **Avaliar** para simular esperado
+versus realizado antes de ativar uma nova regra.
+
+## Configurador de produto
+
+### VCFG0100 — Conjuntos e Variáveis
+
+Cadastre conjuntos e, dentro deles, variáveis de resposta. Configure código,
+descrição, composição da máscara e indicadores especiais/marketing. A tradução
+de variável é mantida por idioma e país.
+
+### VCFG0200 — Características
+
+Mantém características, tipo de resposta, conjunto padrão, fórmula, limites,
+obrigatoriedade, tradução e itens de recebimento. Desativar preserva o histórico;
+verifique antes se a característica está vinculada a itens.
+
+### VCFG0300 — Características por Item
+
+Vincula e ordena características no item configurável, incluindo resposta
+padrão, parentesco, fórmula e indicadores de desenho/carga. Sequências menores
+são apresentadas primeiro na configuração.
+
+### VCFG0400 — Geração de Máscaras
+
+Gera uma máscara a partir das respostas ou várias combinações pelo produto
+cartesiano. Para lote, informe ao menos uma restrição de característica. Mantenha
+**persistir = false** para simular e só persista após conferir o resultado.
+
+### VCFG0500 — Descrições Configuradas
+
+Mantém tipos de descrição e as linhas que formam o texto de um item configurado.
+Use **Renderizar** para pré-visualizar com respostas reais antes de gravar o uso
+da descrição em programa, relatório ou lista de valores.
+
+### VCFG0600 — Regras do Configurador
+
+Mantém regras equivalentes entre item pai e filho e regras de preenchimento do
+item configurado. Sempre use **Aplicar/Avaliar** com respostas de exemplo antes
+de colocar uma regra em situação ativa.
+
+## Serviços de terceiros
+
+### VTER0100 — Preços de Serviços
+
+Mantém preço por item, fornecedor, operação, unidade, vigência, frete, impostos,
+fórmula e regras de característica. Consulta e histórico são liberados para
+usuários; criar, alterar, reajustar, copiar/mover e excluir exigem ADMIN.
+
+### VTER0200 — Ordens de Serviço
+
+Gera ordens terceirizadas a partir da ordem de fabricação e acompanha o encadeamento
+OF → requisição → pedido de compra → execução. A geração e a mudança de status
+exigem ADMIN; consultas e relatório são liberados para ADMIN/USER.
+
+### VTER0300 — Remessas e Retornos
+
+Registra movimentos logísticos da ordem de terceiro. Informe tipo, quantidade,
+data, referência, almoxarifado/lote e uma chave de idempotência única. Reutilizar
+a mesma chave impede duplicação acidental do movimento.
+
+### VTER0400 — Conversões Globais
+
+Mantém fatores entre unidades usados na contratação, custo e movimentação de
+serviços. Alterações exigem ADMIN e podem afetar cálculos futuros; não exclua uma
+conversão ainda utilizada por preços vigentes.
+
+## APS — recursos, calendários e operadores
+
+### VAPS0100 — Grupos e Parâmetros de Recursos
+
+Cria grupos e configura recurso/centro de trabalho: calendário, localização,
+criticidade, atividade, centros de custo e capacidade. Alterações exigem ADMIN.
+
+### VAPS0200 — Calendários de Máquinas
+
+Define intervalos semanais de trabalho. O dia da semana e os horários determinam
+a capacidade disponível para o sequenciamento; não sobreponha intervalos.
+
+### VAPS0300 — Paradas de Máquinas
+
+Registra início, fim, tipo, motivo e eventual ordem de manutenção. A parada reduz
+a disponibilidade do recurso no APS. Excluir uma parada exige ADMIN.
+
+### VAPS0400 — Perfil de Operadores
+
+Mantém contatos, funções, centro de custo e indicadores de supervisor/gerente do
+funcionário. A consulta é liberada; salvar o perfil exige ADMIN.
+
+### VAPS0500 — Perfil Industrial de Máquinas
+
+Mantém uso, preparação, fornecedor, marca, responsável, serviços preventivos,
+itens consumidos e campos especiais do recurso. A consulta é liberada; alterações
+exigem ADMIN.
+
+## Engenharia, estoque e planejamento
+
+### VENG0300 — Cabeçalho e Revisão de Estrutura BOM
+
+Cria o cabeçalho versionado da estrutura, consulta por item e controla o status.
+Use rascunho durante a montagem e ative somente após validar componentes,
+quantidades, efetividade e versão.
+
+### VENG0400 — Desenhos e Revisões
+
+Mantém desenho, revisões, distribuição, características vinculadas, código por
+item e parâmetros de fabricação. Uma nova revisão não deve apagar a anterior;
+use a distribuição para rastrear destinatários da documentação controlada.
+
+### VMRP0200 — Pipeline MRP → CRP → APS
+
+Executa o planejamento de materiais, capacidade e sequenciamento em uma operação
+coordenada. Informe o plano e a data inicial e selecione as etapas necessárias.
+Revise o retorno de cada estágio antes de liberar ordens sugeridas.
+
+### VEST0300 — Máscaras de Lote e Série
+
+Define a máscara por aplicação/contexto, adiciona partes fixas, data ou sequência
+e gera o próximo código. A opção de zerar no ano deve ser definida antes do uso
+produtivo da sequência.
+
+## Manual operacional detalhado — Compras e recebimento
+
+### VSUP0600 — Inspeção de Recebimento
+
+#### Objetivo e momento de uso
+
+Use esta rotina depois que o material chegou e antes de disponibilizá-lo para consumo.
+Ela liga o roteiro de inspeção ao recebimento, registra cada medição e separa fisicamente
+o material conforme, rejeitado, em retrabalho ou restrito.
+
+#### Pré-requisitos
+
+- Item, fornecedor, pedido e almoxarifados cadastrados na mesma empresa.
+- Almoxarifado de inspeção separado dos destinos de material aprovado e rejeitado.
+- Características, instrumentos e critérios de amostragem definidos pelo responsável da qualidade.
+
+#### Operação **Cadastrar roteiro**
+
+1. Informe **Empresa** e escolha a **Base** (`ITEM` ou classificação, conforme o processo).
+2. Informe Item/Máscara ou Classificação e o **Almoxarifado de inspeção**.
+3. Defina vigência e os qualificadores opcionais de manuseio, armazenagem, rota, mercado e inspeção.
+4. Em **Etapas**, clique em **Adicionar**. Para cada etapa informe sequência, nome, tipo,
+   modo de apontamento, obrigatoriedade e emissão de etiqueta.
+5. Para inspeção por amostra, informe quantidade amostrada, limite de aceitação e rejeição.
+   Para medição numérica, informe nominal, mínimo e máximo. Para inspeção por atributos,
+   cadastre cada resposta aceitável.
+6. Clique em **Cadastrar** e anote o código retornado.
+
+| Campo | Obrigatório | Regra |
+|-------|-------------|-------|
+| Base | Sim | Determina como o roteiro será localizado |
+| Almoxarifado de inspeção | Sim | Deve existir e pertencer à empresa autenticada |
+| Vigência inicial | Sim | Data a partir da qual o roteiro pode ser usado |
+| Sequência / Nome / Tipo | Sim por etapa | Define ordem e natureza da verificação |
+| Amostra / Aceitação / Rejeição | Conforme tipo | Devem formar um critério coerente |
+
+#### Operações da ordem de inspeção
+
+1. Em **Gerar ordem**, informe a origem (`PURCHASE_ORDER`, aviso ou entrada fiscal), as
+   referências disponíveis, item, máscara, almoxarifado e quantidade recebida.
+2. Em **Consultar**, filtre situação e fornecedor; use **Abrir roteiro** quando precisar
+   confirmar o critério aplicado.
+3. Em **Registrar resultados**, informe etapa, sequência da amostra, valor medido ou
+   atributo, limites, aprovação e observação. Repita para todas as amostras.
+4. Em **Analisar ordem**, distribua a quantidade entre conforme, rejeitada, retrabalho e
+   restrita. A soma deve corresponder à quantidade analisada.
+5. Marque **Afeta score do fornecedor** quando a não conformidade for responsabilidade
+   do fornecedor. Para movimentar estoque, marque **Mover estoque** e informe todos os
+   almoxarifados necessários.
+6. Use **Destinar estoque** para concluir uma inspeção do fluxo simplificado, informando
+   aprovado, rejeitado, destino, quarentena e motivo.
+
+#### Resultado, validações e erros
+
+- Material aprovado só fica disponível após a movimentação ao almoxarifado de destino.
+- Quantidade negativa, soma divergente, roteiro fora da vigência ou almoxarifado de outro
+  tenant devem ser rejeitados.
+- Se a API responder conflito de saldo, atualize a ordem antes de tentar novamente.
+- Não repita um apontamento sem verificar se ele já aparece no resultado da ordem.
+
+#### Telas relacionadas
+
+VAVR0200 (aviso), VPDC0210 (recebimento), VEST0100 (estoque), VAVF0300 (IQF) e VAVF0203 (homologação).
+
+### VAVF0300 — Scorecard e IQF do Fornecedor
+
+#### Pré-requisitos e conceitos
+
+O fornecedor precisa ter recebimentos/inspeções no período. O IQF reúne **Qualidade**,
+**Entrega**, **Comercial** e **Atendimento**. O cálculo automático obtém qualidade e
+entrega do histórico; comercial e atendimento permanecem entradas informadas.
+
+#### Passo a passo — cálculo automático
+
+1. Selecione **Consultar**, informe o fornecedor e conheça os períodos já gravados.
+2. Selecione **Cadastrar/Calcular**, informe fornecedor, início e fim do período.
+3. Informe as notas Comercial e Atendimento. Use valores na escala adotada pela empresa.
+4. Marque **Persistir** somente quando o período estiver fechado e revisado.
+5. Execute e confira quantidade total, rejeições, atrasos, notas parciais e nota final.
+
+#### Passo a passo — avaliação manual
+
+Use **Cadastrar scorecard** apenas quando houver avaliação externa ou implantação sem
+histórico suficiente. Informe as quatro notas e os contadores de recebimentos, rejeições
+e atrasos. Registre o motivo nas observações para manter a auditoria.
+
+#### Cuidados
+
+- Período inicial não pode ser posterior ao final.
+- **Persistir = não** é simulação e não deve aparecer como avaliação oficial.
+- Não misture períodos sobrepostos sem regra interna, pois isso distorce a tendência.
+- Divergências marcadas como “não afeta IQF” não devem penalizar o fornecedor.
+
+### VSUP0610 — Alçadas e Parâmetros de Compras
+
+#### Alçadas
+
+1. Consulte as alçadas antes de cadastrar uma nova vigência.
+2. Informe Empresa, Escopo, referência opcional, moeda e início da validade.
+3. **Aprovação automática até** é o maior valor liberado sem intervenção.
+4. **Bloquear acima de** é o valor que exige autoridade superior; deixe vazio somente se
+   a política da empresa não utilizar bloqueio máximo.
+5. Informe fim de validade para regras temporárias e documente a justificativa.
+
+#### Parâmetros
+
+1. Consulte por domínio para evitar chave duplicada.
+2. Informe Empresa, Domínio, Chave, Valor e Tipo (`TEXT`, `NUMBER`, `BOOLEAN` etc.).
+3. Confirme o formato do valor: booleanos devem usar `true/false`; números não devem
+   carregar símbolo de moeda ou separador de milhar.
+4. Salve e reabra a consulta para confirmar a configuração efetiva.
+
+Alçadas e alteração de parâmetros exigem **ADMIN**. Uma alçada incorreta pode bloquear
+ou liberar pedidos indevidamente; por isso, valide em VPDC0210 com um pedido de teste.
+
+### VSUP0620 — EDI de Fornecedores
+
+#### Fluxo
+
+`Pedido enviado → confirmação recebida → comparação das linhas → divergências → tratamento do comprador`.
+
+#### Passo a passo
+
+1. Consulte mensagens por fornecedor e situação para verificar duplicidade.
+2. Ao cadastrar, informe Empresa, Fornecedor, Direção, Tipo da mensagem, Pedido e
+   referência externa do parceiro.
+3. Informe tolerância de quantidade e preço usada na comparação.
+4. Adicione as linhas: linha do pedido, item/máscara, quantidade/preço/data confirmados e
+   quantidade/preço/data originais do pedido.
+5. Guarde no payload somente os dados adicionais necessários à rastreabilidade.
+6. Execute e abra a mensagem retornada para conferir situação e divergências detectadas.
+
+Campos confirmados fora da tolerância devem ser tratados antes de aprovar ou receber o
+pedido. Uma referência externa já processada não deve ser reenviada sem verificar o
+resultado anterior.
+
+### VIMP0300 — Importação e Custo Nacionalizado
+
+#### Pré-requisitos
+
+Fornecedor estrangeiro, itens, moeda/câmbio e tipos de despesas definidos. Se houver
+pedido, use o mesmo fornecedor e moeda para preservar a conciliação.
+
+#### Cadastro e cálculo
+
+1. Informe Empresa, Fornecedor/Pedido, referência, Incoterm, moeda e taxa de câmbio.
+2. Escolha a base de rateio: `VALUE`, `QUANTITY` ou `WEIGHT`.
+3. Adicione itens com quantidade, peso e preço FOB unitário.
+4. Adicione frete, seguro, imposto, despacho e demais despesas. Marque **Compõe custo do
+   item** somente para valores capitalizáveis.
+5. Cadastre o processo e abra o detalhe.
+6. Use **Recalcular** sempre que câmbio, item ou despesa mudar. Confira custo FOB
+   convertido, parcela rateada e custo nacionalizado de cada item.
+7. Altere a situação apenas quando a fase documental correspondente estiver concluída.
+
+Não recalcule processos fechados sem autorização. Taxa zero, quantidade negativa, peso
+inconsistente ou processo de outro tenant devem ser rejeitados.
+
+### VAVF0203 — Homologação de Fornecedores
+
+1. Consulte o histórico do fornecedor.
+2. Informe período avaliado e os limites **Homologado mínimo** e **Condicional mínimo**.
+   O limite homologado deve ser maior ou igual ao condicional.
+3. Informe situação, categoria, validade e observações da decisão.
+4. Cadastre e confira o registro retornado.
+5. Em **Gerar itens do fornecedor**, informe o fornecedor e execute após validar seu
+   histórico; o processo cria/atualiza vínculos item × fornecedor observados nas compras.
+
+Homologação vencida ou abaixo do limite deve ser considerada pelos compradores antes da
+emissão de novos pedidos. A geração de itens não substitui a revisão de preferência,
+unidade e condições comerciais no cadastro do fornecedor.
+
+### VPDC0210 — Consulta, Aprovação, Autorização e Recebimento
+
+#### Consulta
+
+Use intervalos de pedido, fornecedor e item, comprador, tipo de solicitação, emissão,
+entrega, posição, Kanban e paginação. Os filtros são cumulativos. **Todos os itens**
+controla se a consulta mostra a capa ou cada linha do pedido.
+
+#### Aprovação e autorização
+
+1. Abra o pedido e confirme fornecedor, moeda, itens, preços e total.
+2. Execute **Aprovar**. O backend compara o valor com a alçada vigente.
+3. Se o pedido ficar bloqueado, somente um usuário **ADMIN** deve usar **Autorizar alçada**.
+4. Reconsulte o pedido e confirme a situação final; aprovação não significa recebimento.
+
+#### Recebimento
+
+1. Informe o pedido e adicione cada linha efetivamente recebida.
+2. Para cada linha informe código da linha, quantidade e almoxarifado. Lote, série,
+   partida, validade e observação são opcionais conforme o item.
+3. Confira o saldo aberto e as tolerâncias aplicáveis.
+4. Registre o recebimento uma única vez e valide os movimentos de entrada retornados.
+
+Quantidade superior ao saldo pode gerar aviso ou bloqueio conforme VSUP0630. Lotes e
+séries devem ser informados antes da confirmação quando obrigatórios para o item.
+
+### VSUP0630 — Tolerâncias de Pedido de Compra
+
+#### Campo a campo
+
+| Campo | Função |
+|-------|--------|
+| Tipo de tolerância | Quantidade, preço do item ou valor total |
+| Onde se aplica | Entrada fiscal, aviso de recebimento ou todos |
+| Intervalo mínimo/máximo | Faixa do valor esperado em que a regra é escolhida |
+| Tolerância | Desvio permitido |
+| Tipo do valor | Percentual ou valor fixo |
+| Fornecedor | Especializa a regra para um parceiro |
+| Ação | Permitir, avisar ou bloquear |
+| Ativa | Participa ou não da avaliação |
+
+Cadastre intervalos sem sobreposição ambígua. Antes de ativar, use **Avaliar** com valor
+esperado e realizado nos limites, dentro e fora da tolerância. Ao excluir, confirme que
+nenhum processo depende da regra; a exclusão é permitida para ADMIN e USER pelo backend.
+
+### VSUP0640 — Registros Operacionais de Compras
+
+Rotina de rastreabilidade para ocorrências normalizadas que não possuem tela especializada.
+Consulte por **Tipo** e **Situação**, abra pelo código e altere a situação conforme o
+fluxo. Para cadastrar, informe tipo, situação, referências de fornecedor/pedido/linha,
+item, máscara, almoxarifado, quantidade, referência externa e dados complementares.
+Prefira sempre VAVR0200 ou VSUP0600 quando existir fluxo específico; não duplique a mesma
+ocorrência nas duas formas.
+
+### VSUP0650 — Histórico de Movimentos de Compra
+
+Tela exclusivamente consultiva. Informe fornecedor, item ou ambos e limite de linhas.
+O resultado consolida os movimentos de compra para auditoria, análise de preço e geração
+de itens por fornecedor. A ausência de filtros pode retornar grande volume; comece com
+limite baixo e aumente apenas quando necessário. Nenhuma ação nesta tela altera estoque,
+pedido ou financeiro.
+
+## Manual operacional detalhado — Configurador de produto
+
+### VCFG0100 — Conjuntos, Variáveis e Idiomas
+
+#### Conceito
+
+O **conjunto** agrupa respostas possíveis; a **variável** é uma resposta. Exemplo:
+conjunto COR com variáveis AZUL, BRANCO e PRETO. A composição da máscara é o texto que
+será incorporado ao código configurado.
+
+#### Passo a passo
+
+1. Consulte conjuntos e abra um existente antes de criar outro com a mesma finalidade.
+2. Para cadastrar, informe uma descrição clara. Para alterar, mantenha **Ativo** quando
+   o conjunto ainda puder ser usado; desativar preserva configurações históricas.
+3. Abra **Listar variáveis** com o código do conjunto.
+4. Cadastre Código, Descrição e Composição da máscara. Marque **Especial**, **Inclui
+   descrição** e **Marketing** somente quando a regra funcional exigir.
+5. **Dados especiais** guardam o conteúdo usado pelo tratamento especial da variável.
+6. Use **Traduzir variável** para cada combinação de Idioma e País.
+7. Para corrigir uma tradução, remova o vínculo pelo código e cadastre novamente.
+
+| Campo da variável | Obrigatório | Uso |
+|-------------------|-------------|-----|
+| Código | Sim | Identificador curto e estável |
+| Descrição | Sim | Texto apresentado ao usuário |
+| Composição da máscara | Sim conforme configuração | Trecho inserido na máscara |
+| Especial | Não | Ativa tratamento específico |
+| Inclui descrição | Não | Leva a descrição ao texto configurado |
+| Dados especiais | Conforme Especial | Parâmetro do tratamento especial |
+| Marketing | Não | Disponibiliza no ciclo de marketing |
+
+Não exclua/desative variável sem consultar seus vínculos em características e itens. O
+backend permite manutenção para ADMIN e USER, sempre respeitando o tenant autenticado.
+
+### VCFG0200 — Características e Itens de Recebimento
+
+#### Tipos e regras
+
+- `CAMPO`: obtém valor de um campo de origem.
+- `DESENHO`: resposta referencia desenho/dígito cadastrado.
+- `ESCOLHA`: uma variável de um conjunto.
+- `ESCOLHA_MULT`: várias variáveis.
+- `FORMULA`: resultado calculado.
+- `INF_CARACTER`: texto livre.
+- `INF_NUMERICA`: número sujeito a mínimo, máximo e múltiplo.
+
+#### Cadastro
+
+1. Consulte e abra uma característica semelhante.
+2. Informe código, pergunta/descrição, tipo e conjunto quando o tipo usar variáveis.
+3. Configure máscara, variável padrão e os indicadores Especial, Afeta preço, Controla
+   metas e Obrigatória.
+4. Para campo/fórmula, informe Fonte e Fórmula. Para número, informe mínimo, máximo e
+   múltiplo. Para opção lógica, informe textos Verdadeiro/Falso.
+5. Cadastre traduções com idioma, descrição e máscara.
+6. Consulte **Itens vinculados** antes de desativar.
+
+#### Itens de recebimento
+
+Em **Listar/Vincular item de recebimento**, informe a variável opcional, tipo
+`RECEBIMENTO` ou `VINCULO` e o Item ou Classificação. Variável vazia significa que o
+vínculo vale para toda a característica. Para remover, use o código do vínculo retornado.
+
+Fórmula inválida, faixa numérica incoerente, conjunto inexistente ou tipo incompatível
+devem ser corrigidos antes de vincular a característica a um item.
+
+### VCFG0300 — Características por Item
+
+1. Informe o item e consulte a sequência atual.
+2. Em **Adicionar**, informe Característica, Sequência, Variável padrão e Pai opcional.
+3. Marque Especial, Desenho ou Carga somente quando o processo consumir esses indicadores.
+4. Informe fórmula no vínculo quando o cálculo depende do contexto específico do item.
+5. Em **Respostas padrão**, adicione os códigos de variáveis que devem iniciar marcados.
+6. Para reordenar ou corrigir, use o código do vínculo em **Alterar vínculo**.
+7. Para excluir, confirme que nenhuma máscara persistida ou regra depende do vínculo.
+
+Sequências não devem se repetir no mesmo item. O Pai deve pertencer à mesma configuração
+e aparecer antes do filho. Depois de qualquer alteração, simule na VCFG0400.
+
+### VCFG0400 — Geração Individual e em Lote
+
+#### Geração individual
+
+1. Informe o item.
+2. Adicione uma resposta por característica: Variável para escolha ou Valor para texto,
+   número, opção e desenho.
+3. Mantenha **Persistir desmarcado** e execute a simulação.
+4. Confira máscara, descrição, regras aplicadas e mensagens.
+5. Marque Persistir e execute novamente somente para criar a configuração definitiva.
+
+#### Geração em lote
+
+1. Informe Item e, se aplicável, Cliente e Divisão.
+2. Adicione ao menos uma restrição, indicando Característica e lista de Variáveis.
+3. Calcule previamente o número de combinações multiplicando as quantidades de opções.
+4. Simule sem persistência; revise duplicidades e combinações inválidas.
+5. Persista somente o conjunto aprovado.
+
+Evite produtos cartesianos muito grandes. Resposta ausente em característica obrigatória,
+valor fora de faixa e combinação rejeitada por regra impedem a geração.
+
+### VCFG0500 — Tipos e Linhas de Descrição
+
+#### Tipo de descrição
+
+Cadastre Código, Descrição, Natureza (`PROGRAMA`, `RELATORIO`, `LOV` ou `GERAL`) e
+situação. Abra/alterar preserva o mesmo código; desativar impede novos usos sem apagar
+descrições históricas.
+
+#### Descrição do item
+
+1. Cadastre a descrição informando Item e Tipo.
+2. Abra o registro. Use **Recarregar linhas** para reconstruir a base a partir das
+   características atuais; essa ação pode substituir a composição ainda não revisada.
+3. Em **Atualizar linhas**, defina ordem, exibição da característica, exibição da máscara,
+   tipo (`DESCRICAO` ou `COMP_MASCARA`), texto fixo e quebra de linha.
+4. Use **Renderizar** com respostas reais para pré-visualizar.
+5. Só depois da conferência utilize a descrição nos programas e relatórios.
+
+Excluir remove a configuração de descrição, não o item. Recarregar e renderizar são ações
+diferentes: recarregar altera a grade-base; renderizar apenas produz a visualização.
+
+### VCFG0600 — Regras Equivalentes e Regras de Item
+
+#### Regra equivalente pai → filho
+
+1. Informe item pai/unidade e item filho/sequência.
+2. Defina característica, operador e variável da condição no pai.
+3. Defina característica, operador e variável resultante no filho.
+4. Use fórmula quando a resposta não for uma atribuição direta.
+5. Cadastre e execute **Aplicar** com respostas reais do pai.
+6. Abra/alterar pelo código; desative em vez de recriar quando houver histórico.
+
+#### Regra do item configurado
+
+1. Informe Item, tabela/campo de destino, conteúdo, fórmula, descrição e situação.
+2. Adicione condições com Característica, Operador e Variável.
+3. Cadastre em situação não produtiva quando possível.
+4. Execute **Avaliar** e confira todos os campos resultantes.
+5. Ative somente depois de testar cenários que atendem e que não atendem às condições.
+
+Regras conflitantes podem produzir resultado dependente da ordem. Não use fórmula para
+contornar cadastro mestre ausente. Alteração e exclusão exigem revisão das máscaras já
+persistidas e das estruturas pai/filho relacionadas.
+
+## Manual operacional detalhado — Serviços de terceiros
+
+### VTER0100 — Preços, Resolução e Custo
+
+#### Consulta
+
+Filtre intervalo de Item e Fornecedor, Operação, Data de referência, tipo de preço e
+preferencial. A data segue a regra de vigência: preços na data ou posteriores são
+apresentados; quando não houver, usa-se o anterior mais próximo conforme a seleção do
+backend. Use **Abrir preço** e **Histórico** para conferir alterações.
+
+#### Cadastro e alteração
+
+1. Informe Item/Máscara, Fornecedor e Operação de origem terceiros.
+2. Informe UM e Data de referência.
+3. Marque Preferencial somente quando este for o fornecedor padrão da operação.
+4. Informe Preço unitário, Fator de conversão, Tipo/Valor do frete e Percentual de imposto.
+   Valores decimais são enviados como texto para preservar precisão.
+5. Se houver fórmula, informe-a e adicione regras por Característica/Resposta.
+6. Informe o motivo e grave. Criação e alteração exigem **ADMIN**.
+
+#### Resolver preço e custo
+
+- **Resolver preço** recebe Item, Máscara, Fornecedor opcional, Operação, Data e atributos;
+  retorna o registro efetivo escolhido pelas regras e vigência.
+- **Calcular custo** recebe Item, Máscara, Operação, Data e Modo. Confira custo bruto,
+  frete, impostos recuperáveis, conversão e custo efetivo unitário.
+
+#### Reajuste, cópia e movimentação
+
+Selecione códigos de preços, percentual, nova referência e motivo para reajustar. Em
+**Copiar/Mover**, informe novo fornecedor/operação: Copiar mantém a origem; Mover transfere
+e encerra a aplicabilidade anterior conforme a regra do backend. Sempre consulte o
+histórico depois. Exclusão exige ADMIN e não apaga auditoria.
+
+### VTER0200 — Ordens de Serviço de Terceiros
+
+#### Pré-requisitos
+
+OF com operação de origem terceiros, fornecedor habilitado e preço válido. Item, unidade
+e conversão devem permitir calcular a quantidade e o custo contratado.
+
+#### Fluxo completo
+
+`OF liberada → gerar ordem de terceiro → requisição de compra → pedido de compra → remessa → serviço → retorno/recebimento`.
+
+1. Consulte por situação e fornecedor ou emita o relatório.
+2. Em **Gerar pela OF**, informe a ordem de fabricação. A operação é ADMIN e pode gerar
+   uma ou mais ordens de terceiros conforme o roteiro.
+3. Abra cada ordem e confira OF, operação, item, quantidade, fornecedor e preço.
+4. Em **Alterar status**, informe a nova situação e, quando existirem, os códigos da
+   requisição e do pedido de compra.
+5. Reabra o detalhe para confirmar a transição e consulte movimentos/histórico na VTER0300.
+
+Não gere novamente sem conferir se a OF já possui ordens; reprocessamento indevido pode
+duplicar a cadeia de compras. Transições inválidas são rejeitadas pelo domínio.
+
+### VTER0300 — Remessas, Retornos e Histórico
+
+1. Informe a ordem de terceiro e consulte movimentos existentes.
+2. Para registrar, escolha Tipo (`SHIPMENT`, `RETURN`, `RECEIPT` ou `ADJUSTMENT`),
+   Quantidade e Data/hora.
+3. Informe Tipo/Código de referência documental, observação, almoxarifado e lote quando
+   aplicáveis.
+4. Crie uma **Chave de idempotência** estável, por exemplo `OS15-REMESSA-NF123-1`.
+5. Execute uma vez. Se houver timeout, consulte os movimentos antes de repetir com a mesma chave.
+6. Use **Histórico da ordem** para visualizar transições e responsáveis, não apenas estoque.
+
+Quantidade deve ser positiva e não pode exceder o saldo permitido para o tipo de
+movimento. Registrar movimento exige ADMIN; consulta é liberada para ADMIN/USER.
+
+### VTER0400 — Conversões Globais
+
+Consulte antes de cadastrar. Informe Unidade de origem, Unidade de destino e Fator decimal
+positivo. Exemplo: origem `CX`, destino `UN`, fator `12` significa uma caixa igual a doze
+unidades. A conversão inversa não deve ser presumida sem confirmar que o backend a resolve.
+Cadastro e exclusão exigem ADMIN. Não exclua conversão usada por preço ou ordem vigente;
+primeiro migre os registros dependentes e valide novamente o custo na VTER0100.
+
+## Manual operacional detalhado — APS
+
+### VAPS0100 — Grupos, Recursos e Centros de Trabalho
+
+#### Grupo de recursos
+
+Consulte grupos, cadastre/atualize Código e Descrição e exclua somente grupos sem recursos
+ativos. O cadastro é um **upsert**: repetir um código atualiza o grupo correspondente.
+
+#### Configuração do recurso
+
+Informe Recurso, Grupo, Calendário, Localização, Crítico e Ativo. Recursos críticos
+merecem acompanhamento prioritário no Gantt; recursos inativos só aparecem quando o
+parâmetro VAPS0600 permitir.
+
+#### Configuração do centro
+
+Informe Centro de trabalho, Centro de custo máquina, Centro de custo mão de obra e
+Capacidade em horas. Os dois centros de custo devem representar naturezas distintas.
+Alterações afetam cálculos futuros de capacidade e custo, não devem reescrever apontamentos.
+
+Todas as mutações desta rotina exigem ADMIN.
+
+### VAPS0200 — Calendários de Máquinas
+
+1. Consulte para evitar código duplicado.
+2. Informe Código e Descrição do calendário.
+3. Adicione intervalos com Dia da semana, Início e Fim. Confirme no cadastro da empresa
+   a convenção numérica do dia usada pelo backend antes da implantação.
+4. Para dois turnos no mesmo dia, use dois intervalos sem sobreposição.
+5. Salve e vincule o calendário aos recursos na VAPS0100.
+
+Fim deve ser posterior ao início. Intervalos sobrepostos ou vazios distorcem a capacidade.
+Excluir exige ADMIN e só deve ocorrer depois de desvincular todos os recursos.
+
+### VAPS0300 — Paradas de Máquinas
+
+Consulte por Máquina e intervalo completo de data/hora. Ao cadastrar, informe Máquina,
+Início, Fim, Tipo, Motivo e Ordem de manutenção opcional. Horários são enviados em
+RFC3339 considerando o fuso do navegador; confira o resultado retornado. A parada reduz
+a capacidade disponível no período e pode deslocar operações no próximo sequenciamento.
+Fim anterior ao início e máquina inexistente devem ser rejeitados. Exclusão exige ADMIN.
+
+### VAPS0400 — Perfil de Operadores
+
+1. Informe o Funcionário e consulte o perfil.
+2. Em **Salvar perfil**, adicione contatos com Tipo, Valor e Principal.
+3. Adicione funções com Nome, Centro de custo, Supervisor e Gerente.
+4. Informe Limite de crédito e Validade somente quando esse controle fizer parte da
+   política administrativa associada ao funcionário.
+5. Salvar faz upsert do perfil completo; confira o retorno antes de fechar.
+6. Use as ações granulares **Alterar/Excluir contato** e **Alterar/Excluir função** quando
+   precisar preservar os demais componentes do perfil.
+
+Consulta é ADMIN/USER. Salvar, alterar e excluir exigem ADMIN. Contato principal deve ser
+único por tipo conforme a política da empresa.
+
+### VAPS0500 — Perfil Industrial de Máquinas
+
+#### Cadastro principal
+
+Informe descrição de uso, data de aquisição, tempo/unidade de preparação, fornecedor,
+marca, preferência e funcionário responsável pela manutenção.
+
+#### Serviços
+
+Para cada serviço informe código, descrição, tipo, frequência/unidade, tolerância,
+fornecedor, implantação, última execução, observações, itens e responsáveis. Itens usam
+Item, Quantidade decimal e Observação. Use ações granulares para alterar ou excluir um
+serviço/item sem substituir o perfil inteiro.
+
+#### Campos especiais
+
+Cadastre Nome, Tipo, Valor textual ou numérico e tamanho máximo. Use **Alterar campo
+especial** para corrigir e a exclusão somente quando o campo não for mais necessário.
+
+O perfil alimenta planejamento de manutenção e informações do recurso; consulta é
+ADMIN/USER, enquanto todas as alterações exigem ADMIN.
+
+### VAPS0600 — Cálculo e Consulta do Sequenciamento
+
+#### Sequenciar
+
+1. Informe data/hora inicial.
+2. Opcionalmente informe listas de ordens, máquinas, centros e operações; listas vazias
+   deixam o motor considerar todo o universo elegível.
+3. Execute e confira operações sequenciadas, não sequenciadas e mensagens de capacidade.
+
+#### Consultar visão e recursos
+
+Use **Consultar recursos** para escolher o grupo. Em **Consultar visão**, informe início,
+fim, grupo, intervalos opcionais de ordem/máquina/centro/planejador, unidade de tempo e
+valor de atualização. **Exportar eventos** usa os mesmos filtros para gerar a saída.
+
+#### Parâmetro
+
+**Listar somente recursos ativos** controla as listas do sequenciamento e exige ADMIN.
+Depois de mudar, reabra a consulta de recursos. O Gantt operacional permanece na
+VPRO0210; VAPS0600 prepara e consulta os dados do motor.
+
+## Manual operacional detalhado — Engenharia, estoque e planejamento
+
+### VENG0300 — Cabeçalho e Situação da BOM
+
+#### Conceito
+
+O cabeçalho identifica a estrutura versionada do item. As linhas continuam sendo
+mantidas no cadastro de estrutura; esta rotina controla Item, Máscara, Tipo (`EBOM` de
+engenharia ou `MBOM` de manufatura), vigência e situação.
+
+#### Passo a passo
+
+1. Consulte por Item e confirme que não existe cabeçalho equivalente vigente.
+2. Cadastre Item, Máscara opcional, Tipo e Vigência inicial. O usuário criador é obtido
+   da sessão autenticada; não deve ser inventado ou copiado de outro usuário.
+3. Abra pelo código e confira as linhas/versão relacionadas no cadastro de estrutura.
+4. Use **Alterar status** somente após a revisão: `DRAFT` durante montagem, `APPROVED`
+   para uso produtivo e `OBSOLETE` quando substituída.
+
+Não aprove BOM sem componentes, quantidades, unidades e efetividade validados. Tornar
+obsoleta não apaga histórico nem deve alterar ordens já firmadas.
+
+### VENG0400 — Desenhos, Revisões e Distribuição
+
+#### Cadastro do desenho
+
+Informe Código, Dígito, Formato, Modelo, Item opcional, Descrição, Unidade, Peso,
+Especificação de material e Data de criação. Código + Dígito devem identificar o documento
+sem ambiguidade. Use Abrir/Alterar e Desativar; não recrie desenho para corrigir descrição.
+
+#### Revisões
+
+1. Abra o desenho e liste as revisões.
+2. Adicione Revisão, Início/Fim, especificação, motivo, aprovador, data de aprovação e
+   indicador Atual.
+3. Ao tornar uma revisão atual, confirme o encerramento lógico da anterior conforme a
+   regra da empresa.
+4. Alterar/excluir revisão exige avaliar OFs e documentos que já a referenciam.
+
+#### Distribuição controlada
+
+Em **Distribuir revisão**, informe destinatário, data e observação. O código retornado
+permite excluir uma distribuição incorreta. A exclusão não deve ser usada para esconder
+que uma cópia foi entregue; registre a correção conforme o procedimento documental.
+
+#### Características e código do item
+
+Vincule Característica, Operador e Variável ao desenho e consulte os vínculos antes de
+remover. Em **Manter código por item**, informe Item, Máscara e Código do desenho; use
+**Consultar código por item** para conferir a resolução.
+
+#### Parâmetros fabris
+
+**Replicar revisão do desenho** define se a revisão acompanha os registros de fabricação.
+Consulte antes de alterar e valide o impacto com Engenharia e Produção.
+
+### VMRP0200 — Pipeline MRP → CRP → APS
+
+#### Pré-requisitos
+
+- Plano e demandas válidos.
+- Itens com LLC/BOM, estoque e parâmetros MRP.
+- Roteiros, centros, recursos, calendários e paradas cadastrados.
+- Permissão específica para executar planejamento.
+
+#### Execução
+
+1. Informe **Código do plano**.
+2. Informe **Número inicial da ordem** reservado para as sugestões geradas.
+3. Marque **Gerar LLC** quando os níveis baixos precisarem ser recalculados.
+4. Informe data/hora inicial do sequenciamento.
+5. Execute uma única vez e acompanhe o retorno consolidado.
+
+O fluxo é sequencial: MRP calcula necessidades; CRP mede capacidade; APS posiciona as
+operações. Leia o resultado de cada etapa, especialmente itens sem estrutura/lead time,
+centros sobrecarregados e operações não sequenciadas. Falha em uma etapa pode impedir as
+seguintes; não presuma atomicidade total sem conferir os registros retornados. Só libere
+sugestões depois de revisar a viabilidade.
+
+### VEST0300 — Máscaras de Lote e Série
+
+#### Cadastro da máscara
+
+1. Consulte máscaras existentes.
+2. Informe Aplicação, Cliente/Item opcionais, Tipo/Código de classificação, indicador de
+   zerar no ano e Descrição.
+3. Abra a máscara e adicione partes na ordem desejada.
+
+| Tipo de parte | Campos principais | Exemplo |
+|---------------|------------------|---------|
+| `CARACTER` | Valor e tamanho | Prefixo `LT` |
+| `DATA` | Formato de data | `yyyyMMdd` |
+| `SEQ_NUMERICA` | Tamanho e zerar no ano | `000001` |
+| `SEQ_CARACTER` | Tamanho | Sequência alfanumérica |
+
+Use **Alterar parte** para sequência, valor, tamanho e formato; exclua parte somente após
+simular o código final. Partes são concatenadas por sequência.
+
+#### Geração
+
+Informe a máscara explicitamente ou o contexto de Aplicação, Cliente, Item e Classificação.
+O backend resolve a máscara aplicável e avança a sequência. A geração é operação de
+negócio, não mera pré-visualização: não clique repetidamente. Em concorrência, o backend
+deve garantir unicidade; sempre utilize exatamente o código retornado no lote/serial.
+
+#### Alteração e desativação
+
+Não altere composição de máscara já usada sem avaliar rastreabilidade. Desativar impede
+novas gerações, mas os lotes existentes permanecem válidos. DELETE é permitido a
+ADMIN/USER e representa desativação lógica conforme o handler.
+
+## Fluxos ponta a ponta
+
+### Compra nacional com inspeção
+
+`Pedido (VPDC0200/VPDC0210) → Aviso (VAVR0200) → Recebimento → Ordem de inspeção (VSUP0600) → Destinação de estoque → IQF (VAVF0300) → Homologação (VAVF0203)`
+
+### Produto configurado com documentação
+
+`Conjuntos (VCFG0100) → Características (VCFG0200) → Item (VCFG0300) → Regras (VCFG0600) → Simulação/Persistência (VCFG0400) → Descrição (VCFG0500) → Desenho (VENG0400)`
+
+### Operação terceirizada
+
+`Preço/Custo (VTER0100) → OF com operação externa → Ordem de terceiro (VTER0200) → Pedido de compra → Remessa/Retorno (VTER0300) → Recebimento/inspeção`.
+
+### Planejamento industrial
+
+`Dados mestres/BOM → Calendários e recursos (VAPS0100–VAPS0500) → Pipeline (VMRP0200) → Cálculo APS (VAPS0600) → Gantt e remanejamento (VPRO0210)`.
+
+## Diagnóstico de problemas frequentes
+
+| Mensagem/sintoma | Verificação recomendada |
+|------------------|-------------------------|
+| 400 — dados inválidos | Campo obrigatório, número, data/hora e estrutura das listas |
+| 401 — sessão inválida | Refazer login; não repetir a operação antes de autenticar |
+| 403 — acesso negado | A ação exige ADMIN ou permissão específica de planejamento |
+| 404 — não encontrado | Código pertence à empresa autenticada e registro não foi desativado |
+| 409/422 — regra de negócio | Situação atual, saldo, vigência, duplicidade e transição permitida |
+| Grade vazia | Limpar filtros, conferir período/tenant e executar Consultar |
+| Timeout após gravar | Consultar pelo código/referência antes de reenviar |
+
+## Conferência antes de encerrar a rotina
+
+1. Verifique a mensagem de sucesso ou erro.
+2. Confira o identificador e a situação retornados.
+3. Reexecute a consulta da entidade alterada.
+4. Confirme efeitos colaterais: estoque, pedido, custo, score ou sequenciamento.
+5. Em operação com lista, compare a quantidade de linhas enviada e processada.
+6. Guarde referência e observação suficientes para auditoria.
+
+## Segurança, plataforma e obrigações fiscais
+
+### VSEC0100 — Solicitação e Aprovação de Troca de Senha
+
+#### Fluxo do titular
+
+1. Selecione **Solicitar troca**. A solicitação nasce pendente para a empresa e usuário autenticados.
+2. Aguarde a aprovação do administrador. Depois de aprovada, a autorização vale por 15 minutos.
+3. Em **Concluir troca**, informe o ID da solicitação, senha atual, nova senha e confirmação.
+4. A nova senha deve ter de 12 a 128 caracteres, maiúscula, minúscula, número e caractere especial.
+5. Após a confirmação, autentique-se novamente; as sessões anteriores são invalidadas pela versão de autenticação.
+
+#### Fluxo administrativo
+
+ADMIN consulta por situação (`PENDING`, `APPROVED`, `REJECTED`, `USED` ou `EXPIRED`) e
+aprova ou rejeita. Na rejeição, informe motivo objetivo com até 500 caracteres. O
+administrador não conhece nem define a nova senha do titular.
+
+Senha atual incorreta retorna 401; senha fraca ou confirmação diferente retorna 400;
+solicitação vencida, usada ou pertencente a outro tenant não pode ser concluída.
+
+### VADM0100 — Trilha de Auditoria
+
+Tela somente leitura e exclusiva de ADMIN. Filtre por UUID do usuário, padrão da rota,
+data/hora inicial e final, limite e deslocamento. Datas são enviadas em RFC3339. O
+resultado é ordenado do evento mais recente para o mais antigo e mostra quem alterou,
+qual rota foi executada e quando. O limite padrão é 100 e o máximo aceito é 500.
+Auditoria não deve ser editada ou usada como substituto do histórico funcional das entidades.
+
+### VPLA0300 — Parâmetros do Planejamento
+
+1. Consulte a lista e localize o número documentado do parâmetro.
+2. Abra pelo número e confira descrição, valor atual e tipo interpretado pelo MRP.
+3. Em **Alterar**, informe número e novo valor; o usuário atual é obtido da sessão.
+4. Reabra o parâmetro e execute um cálculo controlado para validar o efeito.
+
+Os valores são armazenados como texto e interpretados pelo domínio. Não inclua símbolos
+ou formatação incompatível. Alterar lote, estoque de segurança ou políticas de cálculo
+pode modificar todas as sugestões futuras, portanto documente a mudança.
+
+### VRES0100 — Motivos de Restrição
+
+Cadastre uma descrição clara e situação ativa/inativa. Consulte antes para evitar motivos
+duplicados. Abrir e alterar usam o código retornado; excluir exige conferir se o motivo
+está ligado a restrições existentes. Esta rotina complementa VPRO0800 e as restrições
+comerciais, fornecendo a explicação apresentada quando uma combinação é recusada.
+
+### VFIS0600 — SPED EFD ICMS/IPI
+
+#### Pré-requisitos
+
+Cadastro fiscal da empresa, participante, unidades, itens, documentos e inventário
+conferidos; período fiscal fechado; contabilista e regime tributário validados.
+
+#### Geração
+
+1. Informe CNPJ, nome, UF, inscrições, município e regime tributário.
+2. Informe início/fim do período e indicador de situação do arquivo.
+3. Informe dados do contabilista.
+4. Revise participantes, unidades, itens, documentos fiscais e inventário enviados.
+5. Clique em **Gerar EFD**. A rotina baixa `SPED_EFD_ICMS_IPI.txt`.
+6. Valide o arquivo no PVA antes de transmitir. A geração não equivale à entrega à Receita.
+
+Datas invertidas, CNPJ/município inválidos ou documentos inconsistentes impedem a geração.
+Nunca transmita arquivo sem validação fiscal e autorização do responsável.
+
+### VFIS0610 — Importação de NF-e de Compra por Chave
+
+1. Confirme que o token e ambiente da Focus NF-e estão configurados.
+2. Informe a chave de acesso com 44 dígitos, pedido opcional e almoxarifado de entrada.
+3. Execute uma única vez. O backend consulta a NF-e, identifica fornecedor/itens, cria a
+   entrada, baixa linhas compatíveis do pedido e movimenta estoque.
+4. Confira entrada criada, quantidade de movimentos, fornecedor encontrado, linhas do
+   pedido baixadas e itens ignorados.
+
+Antes de repetir após timeout, procure a chave nas entradas fiscais. Fornecedor não
+identificado, item sem correspondência ou token ausente aparecem no resultado/erro e
+precisam de correção cadastral antes de nova tentativa.
+
+### VEXP0110 — Gestão de Cargas de Expedição
+
+Esta rotina controla a carga física que agrupa um ou mais romaneios de VEXP0100. O
+código legado VPLC0200 abre esta mesma rotina e não utiliza mais dados simulados.
+
+#### Preparação e montagem
+
+1. Antes de criar a carga, conclua a separação e a conferência dos romaneios em
+   VEXP0100. Cadastre previamente as caixas/posições em VEXP0120.
+2. Em **Criar**, informe descrição, transportadora, placa, motorista e documento.
+   Complete rota, origem, destino, caixa de despacho, datas previstas e observações.
+3. Guarde o código retornado. Use **Adicionar romaneio** informando esse código, o
+   código do romaneio e a sequência física de entrega.
+4. Repita para todos os romaneios. Se um vínculo estiver incorreto, remova-o antes da
+   liberação. Remover o vínculo não cancela nem exclui o romaneio.
+5. Em **Adicionar nota fiscal**, informe a saída fiscal, sequência e, quando existentes,
+   romaneio, número e chave da NF-e. Confira se cada remessa possui cobertura fiscal.
+6. Use **Vincular caixa** quando a doca/posição da carga não tiver sido informada na
+   criação. O código deve existir em VEXP0120.
+
+#### Ciclo obrigatório
+
+O fluxo normal é `OPEN → RELEASED → LOADING → LOADED → SHIPPED`:
+
+1. **Liberar carga** bloqueia a composição operacional para iniciar a execução.
+2. **Iniciar carregamento** registra que veículo e equipe começaram a movimentação.
+3. **Concluir carregamento** deve ser usado somente após conferência física, lacres,
+   romaneios e documentos.
+4. **Despachar carga** encerra a saída logística. Não execute antes da autorização
+   fiscal e da conferência do responsável.
+5. **Cancelar carga** é uma exceção. Antes de cancelar, registre externamente o motivo
+   e verifique os efeitos sobre reservas, romaneios e documentos fiscais.
+
+Use **Abrir carga** para conferir composição e situação. **Monitor geral** acompanha o
+ciclo; **Monitor de separação** destaca pendências anteriores ao carregamento; **Painel
+logístico** consolida a operação. Os filtros de situação, transportadora e período na
+consulta devem ser usados para reduzir o volume. Erros 422 indicam transição inválida,
+romaneio/nota incompatível ou dado obrigatório ausente; recarregue a carga antes de
+tentar novamente. Um despacho confirmado não deve ser repetido após timeout sem antes
+consultar a situação atual.
+
+### VEXP0120 — Instruções e Caixas de Despacho
+
+O código legado VPLC0211 abre esta rotina com o contrato real do backend.
+
+#### Instruções de entrega
+
+1. Consulte por carga quando a orientação for específica; mantenha **Somente ativas**
+   marcado no trabalho diário. Desmarque apenas para auditoria histórica.
+2. Em **Criar**, informe título objetivo e instrução completa. Use carga para uma viagem
+   específica ou cliente para uma regra recorrente; preencha ambos somente quando a
+   regra for deliberadamente restrita àquela combinação.
+3. Defina a prioridade: números menores devem representar leitura/execução anterior.
+4. Após criar, consulte novamente e confirme que a orientação aparece na carga correta.
+   Nunca coloque senhas, documentos pessoais desnecessários ou segredos no texto.
+
+#### Caixas e posições de despacho
+
+1. Consulte as caixas ativas antes de cadastrar para evitar código duplicado.
+2. Informe código curto e estável, descrição operacional, almoxarifado e zona.
+3. Crie e reconsulte. Depois use o código em VEXP0110 para vincular a posição à carga.
+4. A caixa representa uma posição/doca operacional, não um volume de VEXP0100.
+
+Código duplicado, almoxarifado inexistente ou carga de outro tenant são recusados. A
+instrução retornada pelo backend é a fonte vigente; se houver conflito com documento
+fiscal ou regra de segurança, interrompa o despacho e peça validação do responsável.
+
+### VVOR0202 — Fornecedor e Qualidade por Item
+
+VVOR0202 agora utiliza a mesma rotina real de VSUP0130, eliminando a antiga grade
+simulada. Selecione o item, carregue os fornecedores, informe fornecedor, ranking,
+lead time, código/descrição e unidade usados pelo fornecedor e salve. Menor ranking
+significa maior preferência. Exclua somente após verificar contratos e pedidos em aberto.
+Os relatórios de qualidade pertencem ao vínculo retornado e devem ser consultados antes
+de alterar a preferência; a exclusão remove o vínculo, não o cadastro do fornecedor.
+
+### VENG0500 — Consulta e Manutenção Avançada de Estruturas
+
+Use esta rotina depois que item pai e componentes estiverem cadastrados. Em **Filhos
+diretos**, informe o item pai para conferir somente o primeiro nível. Em **Consultar
+estrutura**, informe item, máscara opcional, data de efetividade e quantidade de níveis;
+zero percorre toda a árvore. **Onde usado** faz a pesquisa inversa e mostra em quais
+produtos o componente participa. Antes de **Alterar componente**, consulte a estrutura,
+confirme sequência, quantidade e vigência e verifique se a mudança não cria ciclo. Após
+salvar, repita a consulta na mesma data de efetividade. Item inexistente, ciclo, quantidade
+inválida ou vigência conflitante são recusados; não repita a gravação sem reler a árvore.
+
+### VMAQ0300 — Tempos e Programação de Máquina
+
+Em **Registrar tempo**, selecione a máquina pelo código da URL e informe item, prioridade
+e tempo produtivo na unidade adotada pela máquina. Prioridade menor representa maior
+preferência. Em **Programar máquina**, informe ordem, data, início/fim, quantidade
+planejada, situação e sequência. A ordem e a máquina devem existir e o intervalo deve
+ser cronológico. Consulte o sequenciamento em VAPS0600 depois da inclusão para detectar
+sobreposição. Não use esta rotina para registrar produção realizada; `produced_qty`
+somente deve ser informado quando o processo responsável permitir a atualização.
+
+### VCAL0200 — Dias Úteis Prometidos por Item
+
+Informe item, máscara, ano e mês. Para item sem configuração use a máscara vazia aceita
+pelo cadastro; quando o campo exigir valor, use o identificador de máscara definido no
+item, nunca uma máscara inventada. O resultado mostra exclusivamente os dias úteis
+persistidos que participam do cálculo de promessa. Compare o mês com VCAL0100 e com as
+exceções do item. Ano/mês inválido, item inexistente ou máscara incompatível retornam
+erro; uma lista vazia significa ausência de dias configurados e não deve ser preenchida
+manualmente pela interface.
+
+### VPRO1100 — Parâmetros de Estoque da Manufatura
+
+Esta rotina altera comportamento transversal da produção e deve ser operada por usuário
+autorizado. Em **Parâmetros gerais**, escolha o modo de retorno de lote, baixa automática
+e janela de movimentos. Em **Controle por item**, informe item, UM de estoque, controles
+de lote/endereço, grupo de inventário, tipo de baixa e almoxarifado de linha. Em
+**Endereços de almoxarifado**, informe o almoxarifado, se utiliza WMS e a saída
+intermediária. Use **Listar almoxarifados** antes de gravar IDs. Depois da alteração,
+abra uma OF de teste e valide reserva, baixa e retorno. Não mude parâmetros durante
+apontamentos em andamento; combinações incompatíveis de lote, WMS ou almoxarifado são
+recusadas pelo backend.
+
+### VVND0600 — Análise, Atendimento e Conferência de Pedidos
+
+O pedido deve existir em VVND0200. Execute na ordem prevista pelo processo comercial:
+
+1. **Analisar**: informe área, decisão e justificativa; a análise não substitui crédito.
+2. **Atender**: registre motivo e data efetiva somente quando o pedido puder seguir.
+3. **Conferir**: informe situação e justificativa após validar cliente, itens, preços,
+   impostos, quantidades e datas.
+4. **Motivo de atraso**: registre motivo e ação (`RESCHEDULE`, conforme regra vigente)
+   quando a promessa não puder ser cumprida.
+
+Reabra o pedido depois de cada ação. Transição fora de ordem, pedido cancelado, bloqueio
+comercial ou situação inválida retorna erro. Após timeout, consulte o histórico antes de
+repetir para evitar eventos duplicados.
+
+### VVND0610 — Reajuste de Venda Recorrente
+
+**Objetivo.** Recalcular o valor ajustado de uma venda recorrente já cadastrada, preservando no backend o percentual aplicado e a justificativa da decisão. A operação altera o contrato real; não é uma simulação de preço.
+
+**Pré-requisitos.** Localize o código da venda recorrente, confirme que o contrato está ativo e revise valor-base, índice previsto, vigência e autorização comercial. Se o reajuste depender de índice externo, registre somente o percentual já aprovado segundo o processo da empresa.
+
+**Passo a passo.**
+
+1. Abra a venda recorrente na rotina de consulta e anote o código, o valor vigente e a data do último reajuste.
+2. Na VVND0610, selecione **Recalcular reajuste** e informe o código da venda recorrente.
+3. Em **Percentual de reajuste**, informe o percentual contratual. Exemplo: `5.25` significa acréscimo de 5,25%. Valor negativo reduz o contrato e só deve ser utilizado quando houver autorização expressa.
+4. Em **Motivo**, registre índice, período de referência, aprovação ou cláusula que fundamenta a alteração. Evite textos genéricos, pois esse campo compõe a rastreabilidade comercial.
+5. Execute uma única vez. Confira no retorno o código, percentual, valor anterior, valor recalculado e datas retornadas pelo backend.
+6. Reabra a venda recorrente e valide o novo valor antes da próxima geração de pedido/faturamento. Se a chamada expirar, consulte primeiro; não repita sem confirmar o estado persistido.
+
+**Regras e erros.** Código inexistente, contrato inativo, percentual fora da regra ou motivo ausente são recusados. A rotina não recalcula documentos já faturados e não substitui aprovação comercial. O frontend não preenche índice ou percentual automaticamente e não utiliza valores falsos.
+
+### VSAC0200 — Relatórios, Etiquetas e Anexos do Atendimento
+
+**Etiquetas de consumidores** e **Etiquetas de chamados** usam os filtros e dados
+persistidos do atendimento; **Relatório de contatos** consolida os contatos reais.
+Nenhuma consulta gera consumidores fictícios quando não há resultado. Para **Vincular
+anexo**, abra primeiro o chamado, informe nome, caminho persistente/acessível ao backend,
+tipo MIME e observação. O campo caminho não envia o conteúdo do arquivo: confirme que o
+documento já está no repositório definido pela implantação. Chamado inexistente, caminho
+inválido ou falta de permissão impedem a inclusão. Reabra o chamado para confirmar o ID
+do anexo retornado.
+
+### VREP0600 — Complementos do Representante
+
+Cadastre o representante antes desta rotina. Para segmento, informe representante,
+segmento e indicador principal. Para plano de venda, informe códigos e início de
+vigência. Interesse recebe uma descrição objetiva. Correspondência exige CEP, cidade,
+UF, logradouro e número conforme o endereço efetivo. Grave um complemento por vez e
+reabra o representante na rotina principal para validar o vínculo. Códigos de apoio
+inexistentes, duplicidade de vínculo e dados de outro tenant são recusados.
+
+### VEST0400 — Consultas de Movimentos e Saldos por Almoxarifado
+
+Use **Movimentos do almoxarifado** para a trilha cronológica de entradas e saídas.
+**Consultar saldo** exige item e almoxarifado; lote é obrigatório somente para item
+controlado. **Saldos do almoxarifado** apresenta a posição consolidada de todos os itens.
+Compare saldo com movimentos e reservas antes de concluir divergência. As consultas são
+somente leitura: não corrigem estoque. Resultado vazio significa ausência de registros
+para o contexto autenticado. Para ajuste, use a rotina de inventário/movimentação com
+justificativa e autorização.
+
+### VFIN0600 — Adiantamentos de Clientes e Fornecedores
+
+**Objetivo.** Controlar dinheiro recebido antecipadamente de clientes e valores pagos antecipadamente a fornecedores, mantendo saldo, aplicações e vínculo contábil com a conta bancária. A rotina não cria um título fictício: ela registra o movimento financeiro no backend e posteriormente consome o saldo ao aplicá-lo em uma conta a pagar ou a receber existente.
+
+**Pré-requisitos.** Cadastre a conta bancária na VFIN0100, o cliente ou fornecedor correspondente e, antes da aplicação, o título na VFIN0200 ou VFIN0210. O usuário deve possuir acesso financeiro à empresa autenticada.
+
+**Registrar um adiantamento — passo a passo.**
+
+1. Selecione **Cadastrar**.
+2. Em **Tipo**, use `PAGAR` para um adiantamento entregue a fornecedor ou `RECEBER` para um valor antecipado por cliente. O tipo define também em qual espécie de título o saldo poderá ser aplicado.
+3. Informe **Parceiro ID** quando o adiantamento pertencer a um fornecedor ou cliente específico e **Conta bancária ID** da conta efetivamente movimentada.
+4. Preencha **Número do documento** com a referência do comprovante, **Data do adiantamento** no formato `AAAA-MM-DD`, **Valor original** maior que zero e uma **Descrição** que permita reconhecer a finalidade.
+5. Execute **Cadastrar**. Confira no retorno o identificador, valor original, saldo disponível, situação e data gravada. Não repita o envio se a resposta indicar sucesso.
+
+**Consultar e aplicar — passo a passo.**
+
+1. Em **Consultar**, deixe os filtros vazios para todos os registros ou informe `PAGAR`/`RECEBER` e o parceiro. A grade vem diretamente do banco da empresa autenticada.
+2. Use **Abrir adiantamento**, informe o ID e confira o saldo e a coleção `aplicacoes`; essa consulta é a conferência oficial antes de abater um título.
+3. Selecione **Aplicar em título**. Informe o ID do adiantamento, `conta_tipo` igual ao tipo do adiantamento, o ID real da conta a pagar/receber, o valor a abater e, opcionalmente, a data `AAAA-MM-DD`.
+4. Execute uma única vez e confira o ID da aplicação. Reabra o adiantamento para confirmar a redução do saldo e abra o título na VFIN0200/VFIN0210 para validar o efeito financeiro.
+
+**Regras e erros.** Valor zero, negativo ou superior ao saldo é recusado. Um adiantamento `PAGAR` não pode ser usado em conta a receber, nem `RECEBER` em conta a pagar. IDs inexistentes, registros de outra empresa, falta de permissão e datas inválidas não são ignorados. A aplicação é uma operação financeira efetiva e não possui exclusão nesta rotina.
+
+### VFIN0610 — Remessa Bancária CNAB 240
+
+**Objetivo.** Gerar um arquivo `.rem` no padrão CNAB 240 a partir dos dados reais do convênio bancário e dos títulos que serão enviados ao banco. A tela chama o gerador do backend e baixa exatamente o conteúdo retornado; não produz arquivo de demonstração no navegador.
+
+**Pré-requisitos.** Confirme com o banco o código, agência, conta, convênio, sequência do arquivo e regras da carteira. Os títulos devem existir no financeiro e os dados do sacado precisam estar completos. A operação requer a permissão de gestão financeira.
+
+**Passo a passo.**
+
+1. Selecione **Gerar remessa**.
+2. No grupo `config`, preencha os campos exigidos pelo convênio: banco, agência e dígito, conta e dígito, razão social e CNPJ/CPF da empresa, número do convênio e sequência do arquivo. Não reutilize uma sequência já aceita pelo banco.
+3. Em `titulos`, mantenha uma linha para cada cobrança. Informe nosso número, documento, vencimento e emissão em `AAAA-MM-DD`, valor, nome do sacado, tipo `1` para CPF ou `2` para CNPJ, documento sem formatação, endereço, bairro, cidade, UF e CEP.
+4. Use **Adicionar** para incluir títulos e **Remover** apenas para retirar uma linha antes da geração. Confira valores, vencimentos e documentos contra VFIN0210.
+5. Clique em **Gerar remessa**. Em caso de sucesso o backend responde `text/plain` e a rotina salva `remessa.rem`; o resultado mostra também o tamanho recebido.
+6. Valide o arquivo no validador/homologador do banco antes de transmiti-lo e arquive o protocolo externo. Gerar o arquivo não significa que o banco registrou os títulos.
+
+**Regras e erros.** Datas inválidas, campos incompatíveis com o leiaute, documentos incompletos e configuração bancária incorreta podem produzir rejeição local ou bancária. O exemplo exibido é somente um modelo editável de campos: substitua integralmente seus valores pelos dados da empresa e dos títulos reais antes de executar.
+
+### VFIN0620 — Conciliação Bancária por OFX
+
+**Objetivo.** Importar o extrato eletrônico disponibilizado pelo banco e reconciliar seus movimentos com a conta bancária do ERP. O arquivo é lido localmente apenas para formar `ofx_content`; todo processamento, persistência e isolamento por empresa ocorrem no backend.
+
+**Pré-requisitos.** A conta deve existir na VFIN0100 e corresponder à conta do extrato. Exporte no internet banking um arquivo OFX íntegro para o período desejado. Não converta PDF, CSV ou planilha mudando apenas a extensão.
+
+**Passo a passo.**
+
+1. Selecione **Importar arquivo OFX**.
+2. Informe o ID da **Conta bancária**. Compare banco, agência e conta com o cabeçalho do arquivo para evitar conciliação na conta errada.
+3. Em **Arquivo OFX**, escolha o `.ofx` original exportado pelo banco. A tela lê o texto do arquivo e não usa conteúdo pré-preenchido ou simulado.
+4. Clique em **Importar arquivo OFX** e aguarde o retorno. Confira as quantidades informadas pelo backend, especialmente movimentos lidos, conciliados, criados ou ignorados.
+5. Abra o extrato/fluxo na VFIN0300 e valide datas, sinais de débito/crédito, valores e saldo. Se o banco fornecer identificador único por movimento, uma reimportação deve ser conferida quanto a duplicidades antes de prosseguir.
+
+**Regras e erros.** Arquivo vazio, conteúdo que não seja OFX, conta inexistente, ausência de permissão ou falha de interpretação interrompem a importação. A extensão é um filtro de seleção, não uma garantia de conteúdo válido. Como a API atual recebe JSON, a tela transmite o texto no campo `ofx_content`; ela não envia multipart e não persiste uma cópia falsa do arquivo no frontend.
+
+### VSUP0660 — Parâmetros e Contatos Complementares do Fornecedor
+
+**Objetivo.** Definir regras corporativas aplicadas a todos os fornecedores de uma empresa e complementar com telefone ou e-mail um contato que já pertence a um fornecedor. A rotina grava diretamente nos cadastros do backend; ela não mantém agenda local.
+
+**Pré-requisitos.** A empresa deve existir, o fornecedor deve estar cadastrado na VSUP0500 e o contato principal deve ter sido criado antes da inclusão de seus meios de comunicação. Tenha em mãos o ID do contato, não apenas o código do fornecedor.
+
+**Consultar e salvar parâmetros.**
+
+1. Selecione **Consultar parâmetros**, informe o código da empresa e execute. Se não houver configuração, confirme com o administrador antes de criar a primeira.
+2. Em **Salvar parâmetros**, informe `enterprise_code`. Revise a conta financeira padrão e ative **requires_financial_account** quando todo fornecedor precisar de conta válida.
+3. **unique_item_code_per_supplier** impede repetição do código usado pelo fornecedor; **use_stock_uom** determina o uso da unidade de estoque nas compras.
+4. Informe o tipo padrão de fornecedor de compra quando aplicável. **copy_obs_to_purchase_order** leva observações ao pedido e **copy_obs_to_entry_invoice** à entrada fiscal.
+5. **homologation_default** só deve ser ativado quando a política permitir homologação inicial automática. `generic_supplier_code` identifica o fornecedor genérico autorizado; não use um fornecedor operacional comum.
+6. Defina a base padrão de vencimento conforme os valores aceitos pela implantação e execute. Consulte novamente para confirmar todos os indicadores persistidos.
+
+**Adicionar telefone ou e-mail.**
+
+1. Abra o fornecedor e identifique o ID do contato correto.
+2. Escolha **Cadastrar** correspondente ao telefone ou e-mail, informe `contact_id`, o valor real e o ranking. Ranking 1 representa normalmente o canal prioritário.
+3. Execute uma vez e reabra o fornecedor para conferir o meio de comunicação no contato. Telefone/e-mail do fornecedor geral e telefone/e-mail do contato são registros diferentes.
+
+**Erros e cuidados.** Empresa ou contato inexistente, contato de outro tenant, e-mail inválido e ranking incompatível são recusados. Alterar parâmetros afeta operações futuras de compras e entradas; valide em um fornecedor controlado antes de liberar a regra para os usuários.
+
+### VSUP0670 — Itens do Fornecedor e Relatórios de Qualidade
+
+**Objetivo.** Consultar todos os itens associados a um fornecedor e guardar laudos, certificados ou relatórios no vínculo exato entre item e fornecedor. O arquivo selecionado é convertido em Base64 e enviado ao backend, que persiste conteúdo e metadados.
+
+**Pré-requisitos.** Fornecedor e item devem existir e estar vinculados. Use a consulta por fornecedor para obter o ID do vínculo; esse ID não é o código do item nem o código do fornecedor.
+
+**Fluxo completo.**
+
+1. Selecione **Itens por fornecedor**, informe o fornecedor e execute. Confira item, ranking, código do item no fornecedor, unidade e lead time.
+2. Anote o ID da linha desejada. Em **Consultar relatórios**, informe esse ID para verificar documentos anteriores, situação e datas.
+3. Para incluir uma evidência, selecione **Anexar relatório** e repita o ID do vínculo.
+4. Informe a data efetiva do documento em `AAAA-MM-DD` e a situação usada pela qualidade, como aprovado, pendente ou rejeitado conforme as regras cadastradas.
+5. Preencha o nome original com extensão e o tipo MIME correto, por exemplo `application/pdf`, `image/png` ou `image/jpeg`.
+6. Escolha o arquivo real. A tela lê os bytes e envia o conteúdo em Base64; não informe caminho local e não cole conteúdo de demonstração.
+7. Registre observações sobre validade, laboratório, lote ou restrição e execute. Consulte novamente e confira nome, tamanho/metadados, data e status retornados.
+
+**Erros e cuidados.** Arquivo vazio, vínculo inexistente, Base64 inválido ou falta de permissão interrompem a gravação. Verifique limites de tamanho definidos pelo servidor. Um laudo anexado ao vínculo errado pode influenciar homologação e IQF; confira fornecedor e item antes de enviar.
+
+### VSUP0680 — Fontes e Atualização de Preços de Compra
+
+**Objetivo.** Encontrar preços efetivamente praticados, selecionar candidatos para uma tabela de compra, aplicar as fontes escolhidas e copiar critérios de ajuste entre linhas da tabela.
+
+**Pré-requisitos.** Cadastre a tabela e seus itens na rotina mestre de preços de compra. Pedidos, fornecedores e classificações usados como fonte precisam existir no mesmo tenant.
+
+**Consultar fontes e candidatos.**
+
+1. Em **Consultar fontes**, informe obrigatoriamente início e fim em `AAAA-MM-DD`. Opcionalmente filtre fornecedor, tabela e origem.
+2. Execute e compare preço, moeda, unidade, data e documento de origem. Resultado vazio significa que não há fonte persistida para os filtros.
+3. Em **Consultar candidatos**, informe a tabela. O modo padrão é `INTERNAL` e a ordenação `NUMERIC`; altere somente quando o processo definir outro modo. A classificação restringe os itens elegíveis.
+4. Confira se cada candidato pertence à tabela, unidade e período pretendidos antes de aplicar.
+
+**Aplicar fontes.**
+
+1. Selecione **Cadastrar** na operação de aplicação, informe `table_code` e mantenha `overwrite=false` para proteger preços existentes, salvo autorização explícita.
+2. Em `selections`, adicione uma linha por origem, informando `source_type` e `source_id` exatamente como retornados pela consulta.
+3. Execute e confira `applied`. Reabra os itens da tabela e valide preço, fornecedor, moeda, unidade e vigência.
+
+**Copiar ajustes.** Informe os IDs das linhas de origem e destino, não os códigos dos itens. Escolha o modo aceito pelo backend e execute somente após comparar as duas linhas. A cópia transfere os ajustes configurados; não significa copiar indiscriminadamente todo o cadastro.
+
+**Erros e cuidados.** Intervalo invertido, origem inexistente, candidato de outro tenant e IDs de linha inválidos são recusados. `overwrite=true` pode substituir preço vigente; registre a justificativa do processo e confira o histórico depois da execução. A rotina não inventa preços nem completa fontes quando a consulta retorna vazia.
+
+### VENG0600 — Rede de Precedência do Roteiro
+
+**Objetivo.** Definir a sequência lógica entre operações de um roteiro, inclusive quando uma sucessora pode começar antes do término completo da predecessora. Essa rede alimenta cálculo de lead time e caminho crítico.
+
+**Pré-requisitos e fluxo.** Abra o roteiro e confirme os IDs internos das operações. Em **Definir dependência**, informe o roteiro, predecessora, sucessora e sobreposição percentual. Zero exige término da predecessora; percentual positivo permite execução parcialmente simultânea. Execute e consulte novamente o detalhe/lead time do roteiro. Para retirar uma ligação, use **Remover dependência** com o mesmo par de IDs e confirme a operação destrutiva.
+
+Não ligue uma operação a ela mesma nem crie ciclo direto ou indireto. IDs são das operações vinculadas ao roteiro, não da biblioteca de operações. Sobreposição incompatível, operação de outro roteiro ou ciclo são recusados pelo backend. Antes de liberar o roteiro, confira todas as arestas e o caminho crítico.
+
+### VENG0610 — Seriais Físicos de Ferramentas
+
+**Objetivo.** Manter cada unidade física de uma ferramenta rastreável por número de série, situação e localização.
+
+1. Em **Consultar serial**, informe o ID interno e confira ferramenta mestre, serial, vida, situação e localização.
+2. Para corrigir o cadastro, use **Alterar serial**. Informe novamente o número gravado na peça, uma situação válida, localização física e observação auditável.
+3. Consulte depois da alteração e confira o retorno antes de disponibilizar a ferramenta à produção.
+4. Use **Desativar serial** somente para baixa definitiva, perda ou descarte autorizado. A confirmação evita exclusão acidental; o backend preserva a rastreabilidade.
+
+Não reutilize número físico em outra instância. Serial em uso, de outro tenant ou com situação incompatível pode ser bloqueado. Desativação não substitui registro de manutenção ou consumo de vida útil.
+
+### VCLI0600 — Manutenção Avançada de Preços de Venda
+
+**Objetivo.** Consultar o preço pontual de um item, revisar seu histórico, alterar ou excluir uma linha e gerar preços em lote a partir de política comercial e custos persistidos.
+
+**Fluxo de consulta.** Informe tabela e item em **Preço do item**. Compare preço, unidade, conversão, máscara, situação e bloqueio. Em **Histórico**, informe a tabela e opcionalmente o item para confirmar alterações anteriores, vigências e justificativas.
+
+**Alteração individual.** Use o ID da linha retornada, não o código da tabela. Preencha preço, UME/UMC, preço convertido, fórmula, situação, bloqueio, observação, linha de produto e máscara conforme aplicável. Execute e consulte o item novamente. Excluir preço remove/desativa a linha selecionada e exige confirmação; valide que pedidos abertos não dependem dela.
+
+**Geração em lote.** Informe tabela, política, códigos reais dos itens, almoxarifado usado na origem de custo e motivo. Adicione ou remova itens no editor antes de executar. Confira o resultado e o histórico de cada amostra. A geração usa custos e políticas do backend; a tela não calcula nem inventa valores.
+
+Tabela, política ou item inexistente, custo ausente, margem inválida e falta de permissão impedem a geração. Não execute novamente após timeout sem consultar o histórico, pois a primeira solicitação pode ter sido persistida.
+
+### VCTB0600 — SPED ECD — Escrituração Contábil Digital
+
+**Objetivo.** Gerar o arquivo oficial da Escrituração Contábil Digital a partir do plano e dos lançamentos reais do período, complementados pelos dados cadastrais e livros exigidos pelo leiaute.
+
+**Pré-requisitos.** Feche o período contábil, confira plano referencial, lançamentos balanceados, centros de custo, saldos, dados legais e numeração do livro. A geração não corrige inconsistências contábeis.
+
+**Passo a passo.**
+
+1. Selecione **Gerar SPED ECD** e informe `plan_id`, empresa, início e fim em `AAAA-MM-DD`.
+2. Revise no grupo `empresa` CNPJ/CPF, nome, UF, município IBGE, endereço, registros, indicadores legais, tipo da ECD e dados de substituição quando houver.
+3. Em `livros`, mantenha uma linha por livro e informe número de ordem, natureza, número, descrição, período em ISO e hashes somente quando exigidos.
+4. Execute. O backend consulta plano, contas, lançamentos e saldos no banco e retorna `SPED_ECD.txt`, baixado diretamente pela rotina.
+5. Valide o arquivo no PVA vigente, corrija a origem de qualquer erro e gere novamente. A criação do TXT não representa assinatura nem transmissão à Receita Federal.
+
+Os nomes internos de `empresa` e `livros` aparecem em PascalCase porque correspondem ao contrato Go efetivo. Datas inválidas, período invertido, lançamentos não balanceados, plano de outro tenant ou dados cadastrais incompletos causam rejeição. Nunca transmita sem validação contábil e assinatura autorizada.
+
+### VFIS0620 — Manifestação do Destinatário e Inutilização
+
+**Objetivo.** Transmitir eventos oficiais à SEFAZ usando a configuração fiscal e o token Focus NF-e persistidos. Manifestação trata uma NF-e recebida; inutilização comunica uma faixa de números próprios que nunca foi usada.
+
+**Manifestação.** Confirme a chave de 44 dígitos na NF-e consultada. Selecione a operação, informe a chave, o tipo aceito pelo provedor (`CIENCIA`, confirmação, desconhecimento ou operação não realizada conforme a regra vigente) e justificativa quando exigida. Execute uma única vez e arquive protocolo/status retornado. Não manifeste desconhecimento antes de conferir CNPJ, fornecedor e escrituração.
+
+**Inutilização.** Confirme no sequencial fiscal que nenhum número da faixa foi autorizado, cancelado ou utilizado. Informe série, número inicial, final igual ou superior e justificativa objetiva. Após transmissão, registre o protocolo e não reutilize a faixa. A operação não cancela NF-e existente.
+
+Token ausente, ambiente incorreto, chave inválida, justificativa insuficiente ou faixa já utilizada são recusados. Em timeout, consulte SEFAZ antes de repetir o evento.
+
+### VFIS0630 — Tabela IBPT e Carga Tributária Aproximada
+
+**Objetivo.** Manter no banco as alíquotas aproximadas da Lei da Transparência por UF e NCM, usando o arquivo oficial IBPT/SCI.
+
+1. Obtenha o CSV oficial vigente e confirme UF, versão e validade.
+2. Em **Importar tabela IBPT**, informe a UF e selecione o CSV original separado por ponto e vírgula. A tela lê o conteúdo real e o envia ao backend; somente administrador pode importar.
+3. Confira a quantidade `imported`. Não interrompa nem repita sem validar a versão carregada.
+4. Em **Consultar alíquota**, informe NCM e UF e confira fonte, vigência e percentuais retornados.
+5. Faça consultas de amostragem antes de liberar o cálculo ao faturamento.
+
+Arquivo de outra UF, cabeçalho incompatível, NCM inválido e versão ausente causam rejeição ou resultado inconsistente. A rotina não cria alíquotas quando a consulta não encontra registro.
+
+### VFIS0640 — Faturamento Fiscal de Carga e DANFE
+
+**Objetivo.** Transformar uma carga expedida em NF-e de saída, aproveitando itens e quantidades persistidos, e consultar os documentos oficiais após autorização.
+
+**Gerar a NF-e.** Confira carga, cliente, itens, lotes, pesos e entrega. Informe carga, série, datas, destinatário, CFOP, natureza, frete, seguro, desconto e origem. `item_overrides` deve ser usado somente para substituir dados fiscais/preços de itens específicos, identificando item e, quando necessário, remessa. Execute e confira o código da saída criada. Depois revise e autorize na VFIS0200.
+
+**Consultar DANFE.** Após autorização, informe o ID da saída. O backend consulta a informação persistida ou o provedor fiscal e retorna URLs do DANFE e XML. Abra somente os endereços retornados; a consulta não fabrica PDF local. DANFE indisponível geralmente indica nota ainda não autorizada, rejeitada ou integração sem documento.
+
+Não gere duas saídas para a mesma carga. Em timeout, consulte a lista fiscal antes de repetir. Divergência de destinatário, item sem tributação, carga vazia ou já faturada é recusada.
+
+### VFIS0120 — Exclusão Controlada de Tributação NCM
+
+**Objetivo.** Remover uma tributação NCM obsoleta ou cadastrada incorretamente. A consulta e manutenção normal continuam na VFIS0110; esta rotina isola a operação destrutiva.
+
+1. Consulte o NCM na VFIS0110 e confirme código, vigência e alíquotas.
+2. Verifique se itens, pedidos ou documentos abertos dependem do cadastro.
+3. Informe o NCM exatamente como persistido, clique em excluir e confirme.
+4. Consulte novamente na VFIS0110 e valide o comportamento dos itens afetados.
+
+Não exclua apenas para mudar alíquota: atualize o cadastro quando houver continuidade histórica. NCM em uso ou pertencente a outro tenant pode ser recusado. A confirmação não substitui autorização fiscal interna.
+
+### VFIS0660 — Consultas Pontuais de Parâmetros Fiscais
+
+**Objetivo.** Localizar diretamente um registro fiscal quando a listagem ampla das VFIS0300–VFIS0540 não for suficiente. Esta rotina é somente leitura e sempre consulta o banco da empresa autenticada.
+
+**Como escolher a operação.** Use dispositivo por código para conferir um fundamento legal específico e por tipo para revisar todos os dispositivos ICMS, IPI, PIS, COFINS ou laudo. Consulte CFOP pelo código quando estiver validando uma operação e por direção para separar entradas de saídas. Parâmetros ICMS/IPI podem ser encontrados pelo ID técnico, UF, item ou NCM; compare todos os resultados aplicáveis antes de concluir qual regra será usada.
+
+Motivo DAPI, códigos de ajuste e linha de apuração devem ser consultados pela chave exibida em suas telas de cadastro. Para um lançamento resumo, informe o ID e depois use a VFIS0540 para conferir suas notas vinculadas. Na apuração do Simples, informe competência no formato aceito pelo backend, normalmente `AAAA-MM`, e o anexo em algarismo romano.
+
+**Passo a passo.**
+
+1. Selecione a consulta correspondente ao dado que deseja validar.
+2. Copie a chave diretamente da tela de origem; não confunda código funcional com ID técnico.
+3. Execute e confira situação ativa, vigência, UF, operação e descrição.
+4. Resultado vazio ou 404 significa que a chave não existe no tenant atual. Volte à rotina de cadastro adequada para criar ou corrigir; esta tela não preenche valores alternativos.
+
+Uma consulta pontual não calcula o imposto final e não substitui a simulação fiscal do documento. Regras por item, NCM e UF podem coexistir; respeite a precedência definida no backend.
+
+### VUTL0560 — Consulta Pontual de UF e Região Comercial
+
+**Objetivo.** Confirmar os dados persistidos de uma UF ou região sem percorrer toda a listagem administrativa.
+
+Para UF, informe a sigla de duas letras e confira nome, código IBGE e situação. Para região, informe o código interno exibido na VCLI0510 e confira descrição e estado ativo. Use o resultado para validar cadastros de endereço, clientes e regras comerciais; não digite um código apenas com base no nome apresentado em documentos externos.
+
+Sigla inválida, região inexistente ou registro de outra empresa retorna erro/resultado vazio. A rotina não cria UF ou região e não possui fallback local de municípios, estados ou regiões.
+
+## Permissões e mensagens
+
+- Operações marcadas como **requer administrador** retornam 403 para usuários sem
+  perfil ADMIN; a tela mantém essa indicação ao lado da rota.
+- Erros de validação e banco são traduzidos pelo tratamento central do frontend.
+- A grade mostra o retorno confirmado pelo backend. Uma mensagem de sucesso não
+  substitui a conferência de status, quantidades e identificadores retornados.
+- Todos os dados são enviados no contexto da empresa autenticada; não reutilize
+  identificadores obtidos em outra empresa/tenant.
+
+### Regra operacional para excluir, cancelar, inativar e encerrar
+
+Cada rotina apresenta somente as ações realmente expostas pelo backend. **Excluir**
+remove um cadastro apenas quando existe rota de exclusão e a regra de integridade
+permite. Documentos que participam de estoque, fiscal, financeiro, compras, vendas,
+produção ou auditoria não devem desaparecer: neles a operação correta é **Cancelar**,
+**Inativar**, **Encerrar**, **Bloquear** ou avançar para um estado terminal.
+
+1. Consulte o registro e confirme empresa, código, situação e vínculos.
+2. Escolha a ação apresentada pela própria rotina. A ausência do botão Excluir é uma
+   regra do processo, não uma limitação visual.
+3. Informe motivo ou complemento quando solicitado. Esses textos passam a integrar o
+   histórico do documento.
+4. Confirme a ação e consulte novamente. Para cancelamento/inativação, o registro deve
+   continuar visível com o novo estado; para exclusão física válida, a consulta deve
+   retornar vazio ou não encontrado.
+5. Se o backend responder conflito ou entidade não processável, resolva primeiro os
+   vínculos informados. Nunca tente contornar a integridade excluindo cadastros
+   relacionados em sequência.
+
+Em geral, cadastros auxiliares sem uso podem aceitar exclusão; contratos são
+encerrados, fornecedores/clientes são bloqueados ou inativados, pedidos e documentos
+são cancelados, ordens são canceladas/fechadas e ocorrências recebem disposição ou
+resolução. O HELP específico de cada rotina prevalece quando houver uma transição mais
+restritiva.
+
+### Importação de arquivos e integrações externas
+
+Importações nunca usam conteúdo de demonstração no frontend. O arquivo selecionado é
+enviado ou lido pela rota correspondente e o resultado exibido vem do backend.
+
+1. Confirme que está no ambiente correto. Desenvolvimento/homologação não deve usar
+   credenciais ou documentos destinados à produção.
+2. Selecione o tipo de importação: XML de NF-e, OFX bancário, CSV IBPT ou processo de
+   importação/nacionalização. Cada formato possui validação própria; renomear a extensão
+   não converte o conteúdo.
+3. Escolha um documento legítimo e autorizado para o tenant. Antes de confirmar,
+   confira emitente/conta/UF, período e empresa.
+4. Execute a validação. Corrija rejeições de estrutura, assinatura, chave, duplicidade,
+   fornecedor, item, conta ou permissão antes de tentar novamente.
+5. Após importar, abra o documento criado e confronte totais, itens, unidades,
+   impostos, datas e vínculos. Uma resposta HTTP de sucesso não substitui essa
+   conferência funcional.
+
+Consultas CNPJ/SEFAZ, Focus NF-e/NFS-e/CT-e, SMTP e outros provedores dependem de
+credencial válida configurada no backend. Falha de autenticação, timeout ou
+indisponibilidade do provedor não autoriza preencher a tela com dados locais. Em
+operações fiscais com timeout, consulte a situação no provedor/SEFAZ antes de reenviar,
+evitando duplicidade. Logos fiscais aceitam somente PNG/JPEG de até 2 MB; a cor deve
+ser hexadecimal e o preview precisa reaparecer após nova consulta, comprovando que foi
+persistido.
+
+### Perfis e segurança por rotina
+
+- **ADMIN** pode acessar operações administrativas explicitamente registradas, como
+  parâmetros, usuários, importações protegidas e manutenção estrutural.
+- **USER** acessa as operações operacionais autorizadas. Quando uma ação exigir ADMIN,
+  a rotina a identifica e a mantém desabilitada; chamada direta deve retornar 403.
+- Sem token válido, qualquer rota de rotina redireciona ao login. Resposta 401 encerra
+  a sessão local para impedir reutilização de credencial expirada.
+- Código e ID nunca são intercambiáveis. Use o código funcional mostrado ao operador;
+  a tela resolve e envia o ID técnico quando a FK do backend o exigir.
+- Dados, listas, estados vazios e mensagens sempre pertencem à empresa do token. Um
+  identificador válido em outro tenant deve ser tratado como inexistente.

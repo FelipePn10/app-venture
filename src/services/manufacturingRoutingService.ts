@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/routing';
 
@@ -115,8 +115,12 @@ export async function listOperations(): Promise<OperationDTO[]> {
   const { data } = await httpClient.get(`${BASE}/operations`);
   return unwrapArray(data).map(parseOperation);
 }
+export async function getOperation(id: number): Promise<OperationDTO> {
+  const { data } = await httpClient.get(`${BASE}/operations/${id}`);
+  return parseOperation(data);
+}
 export async function createOperation(dto: OperationDTO): Promise<OperationDTO> {
-  const { data } = await httpClient.post(`${BASE}/operations`, dto);
+  const { data } = await httpClient.post(`${BASE}/operations`, { ...dto, created_by: currentUserId() });
   return parseOperation(data);
 }
 export async function updateOperation(id: number, dto: OperationDTO): Promise<OperationDTO> {
@@ -133,7 +137,11 @@ export async function listRoutes(itemCode: number): Promise<RouteDTO[]> {
   return unwrapArray(data).map(parseRoute);
 }
 export async function createRoute(dto: RouteDTO): Promise<RouteDTO> {
-  const { data } = await httpClient.post(`${BASE}/routes`, dto);
+  const { data } = await httpClient.post(`${BASE}/routes`, { ...dto, created_by: currentUserId() });
+  return parseRoute(data);
+}
+export async function updateRoute(id: number, dto: Partial<RouteDTO> & { situation?: string }): Promise<RouteDTO> {
+  const { data } = await httpClient.put(`${BASE}/routes/${id}`, { id, ...dto });
   return parseRoute(data);
 }
 export async function deleteRoute(id: number): Promise<void> {
@@ -151,14 +159,76 @@ export async function getRouteDetail(id: number): Promise<RouteDetail> {
 
 // ── Operações do roteiro ──
 export async function addRouteOperation(routeId: number, dto: RouteOperationDTO): Promise<RouteOperationDTO> {
-  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}`, dto);
+  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}`, { route_id: routeId, situation: 'APROVADA', ...dto });
+  return parseRouteOp(data);
+}
+export async function updateRouteOperation(routeId: number, opId: number, dto: Partial<RouteOperationDTO> & { situation?: string }): Promise<RouteOperationDTO> {
+  const { data } = await httpClient.put(`${BASE}/route-operations/${routeId}/${opId}`, { id: opId, ...dto });
   return parseRouteOp(data);
 }
 export async function removeRouteOperation(routeId: number, opId: number): Promise<void> {
   await httpClient.delete(`${BASE}/route-operations/${routeId}/${opId}`);
 }
 
-// ── Rede de dependências ──
+// ── Recursos alternativos por operação (R5) ──
+export interface RouteOpResourceDTO {
+  id?: number;
+  route_operation_id?: number;
+  work_center_id: number;
+  priority: number;
+  /** Escala o tempo da operação (1.0 = base). */
+  time_factor?: number;
+  is_primary?: boolean;
+}
+function parseResource(raw: unknown): RouteOpResourceDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: parseNum(o, 'id', 'ID'),
+    route_operation_id: parseNum(o, 'route_operation_id', 'RouteOperationID') || undefined,
+    work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID'),
+    priority: parseNum(o, 'priority', 'Priority'),
+    time_factor: parseNum(o, 'time_factor', 'TimeFactor'),
+    is_primary: parseBool(o, 'is_primary', 'IsPrimary'),
+  };
+}
+export async function listRouteOpResources(routeId: number, opId: number): Promise<RouteOpResourceDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/route-operations/${routeId}/${opId}/resources`);
+  return unwrapArray(data).map(parseResource);
+}
+export async function addRouteOpResource(routeId: number, opId: number, dto: RouteOpResourceDTO): Promise<RouteOpResourceDTO> {
+  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}/${opId}/resources`, { route_operation_id: opId, time_factor: 1, ...dto });
+  return parseResource(data);
+}
+export async function updateRouteOpResource(routeId: number, opId: number, resourceId: number, dto: { priority: number; time_factor: number }): Promise<RouteOpResourceDTO> {
+  const { data } = await httpClient.put(`${BASE}/route-operations/${routeId}/${opId}/resources/${resourceId}`, { id: resourceId, ...dto });
+  return parseResource(data);
+}
+export async function setRouteOpResourcePrimary(routeId: number, opId: number, resourceId: number): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}/${opId}/resources/${resourceId}/primary`, {});
+  return unwrapObject(data);
+}
+export async function removeRouteOpResource(routeId: number, opId: number, resourceId: number): Promise<void> {
+  await httpClient.delete(`${BASE}/route-operations/${routeId}/${opId}/resources/${resourceId}`);
+}
+
+// ── Ferramentas por operação (R3) ──
+export async function listRouteOpTools(routeId: number, opId: number): Promise<Obj[]> {
+  const { data } = await httpClient.get(`${BASE}/route-operations/${routeId}/${opId}/tools`);
+  return unwrapArray(data).map(unwrapObject);
+}
+export async function addRouteOpTool(routeId: number, opId: number, toolId: number, quantity = 1): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}/${opId}/tools`, { route_operation_id: opId, tool_id: toolId, quantity });
+  return unwrapObject(data);
+}
+export async function removeRouteOpTool(routeId: number, opId: number, toolLinkId: number): Promise<void> {
+  await httpClient.delete(`${BASE}/route-operations/${routeId}/${opId}/tools/${toolLinkId}`);
+}
+
+// ── Rede de dependências (predecessor → sucessor, com overlap%) ──
+export async function getNetworkEdges(routeId: number): Promise<EdgeDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/routes/${routeId}/edges`);
+  return unwrapArray(data).map(parseEdge);
+}
 export async function createEdge(routeId: number, dto: EdgeDTO): Promise<EdgeDTO> {
   const { data } = await httpClient.post(`${BASE}/routes/${routeId}/edges`, dto);
   return parseEdge(data);

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   listItemCalendarMonth,
   upsertItemCalendarDay,
@@ -20,12 +20,6 @@ const DIAS_SEMANA_ABREV = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-
-interface TransferModal {
-  open: boolean;
-  dateKey: string;
-  transferDate: string;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -62,33 +56,13 @@ function buildWeeks(year: number, month: number): Array<Array<Date | null>> {
 }
 
 function extractErrorMessage(err: unknown): string {
-  if (axios.isAxiosError(err)) {
-    const status = err.response?.status;
-    const data = err.response?.data as Record<string, unknown> | undefined;
-    const apiMsg =
-      (data?.message as string | undefined) ??
-      (data?.error as string | undefined) ??
-      (data?.msg as string | undefined);
-    if (apiMsg) return `Erro ${status ?? ""}: ${apiMsg}`.trim();
-    if (status === 401) return "Sessão expirada. Faça login novamente.";
-    if (status === 403) return "Sem permissão para acessar este recurso.";
-    if (status === 500) return "Erro interno no servidor (500).";
-    if (!err.response) return "Servidor indisponível. Verifique se o backend está em execução.";
-    return `Erro HTTP ${status ?? "desconhecido"}.`;
-  }
-  if (err instanceof Error) return err.message;
-  return "Erro desconhecido. Consulte o console para detalhes.";
-}
-
-// Mock: check if a day has tank movements — replace with a real endpoint when available
-function hasMovimentacoes(day: number): boolean {
-  return [10, 15, 20].includes(day);
+  return humanizeApiError(err);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Vpme0102ItePage(): JSX.Element {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
 
   // ── Item + mask ───────────────────────────────────────────────────────────
   const [itemCodeInput, setItemCodeInput] = useState("");
@@ -109,17 +83,14 @@ export function Vpme0102ItePage(): JSX.Element {
   const [isLoadingCal, setIsLoadingCal] = useState(false);
   const [isSaving,     setIsSaving]     = useState(false);
   const [feedback,     setFeedback]     = useState<FeedbackState>(null);
-  const [transferModal, setTransferModal] = useState<TransferModal>({
-    open: false, dateKey: "", transferDate: "",
-  });
 
   // Days the user explicitly confirmed as workday in this session (dark green)
   const [confirmedWorkdays, setConfirmedWorkdays] = useState<Set<string>>(new Set());
   const clickTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  const anos = useMemo(() => Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i), []);
+  const anos = useMemo(() => Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i), [today]);
   const weeks = useMemo(() => buildWeeks(ano, mes), [ano, mes]);
-  const todayKey = useMemo(() => keyFromDate(today), []);
+  const todayKey = useMemo(() => keyFromDate(today), [today]);
 
   const industrialNaoUteis = useMemo<Set<string>>(() => {
     const s = new Set<string>();
@@ -215,14 +186,10 @@ export function Vpme0102ItePage(): JSX.Element {
     setFeedback(null);
   }, []);
 
-  const marcarNaoUtil = useCallback((date: Date, key: string) => {
+  const marcarNaoUtil = useCallback((_date: Date, key: string) => {
     setConfirmedWorkdays((p) => { const n = new Set(p); n.delete(key); return n; });
-    if (hasMovimentacoes(date.getDate())) {
-      setTransferModal({ open: true, dateKey: key, transferDate: "" });
-    } else {
-      setLocalNaoUteis((p) => { const n = new Set(p); n.add(key); return n; });
-      setFeedback(null);
-    }
+    setLocalNaoUteis((p) => { const n = new Set(p); n.add(key); return n; });
+    setFeedback(null);
   }, []);
 
   const handleDayClick = useCallback((date: Date) => {
@@ -245,16 +212,6 @@ export function Vpme0102ItePage(): JSX.Element {
     }, 260);
     clickTimers.current.set(key, timer);
   }, [industrialNaoUteis, marcarUtil, marcarNaoUtil]);
-
-  function handleConfirmarTransferencia() {
-    if (!transferModal.transferDate) return;
-    setLocalNaoUteis((p) => { const n = new Set(p); n.add(transferModal.dateKey); return n; });
-    setFeedback({
-      type: "info",
-      message: `Movimentações de ${transferModal.dateKey} serão transferidas para ${transferModal.transferDate}.`,
-    });
-    setTransferModal({ open: false, dateKey: "", transferDate: "" });
-  }
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -326,33 +283,33 @@ export function Vpme0102ItePage(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .ite-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
 
         /* ── TOPBAR ── */
         .ite-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 110px 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .ite-topbar-left { display: flex; align-items: center; gap: 10px; }
         .ite-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .ite-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .ite-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .ite-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .ite-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
         .ite-screen-badge {
           font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
-          background: rgba(62,150,84,0.15); color: #7ecb8f;
+          background: rgba(62,150,84,0.15); color: #8fce9f;
           border: 1px solid rgba(62,150,84,0.25); border-radius: 5px;
           padding: 3px 8px;
         }
@@ -371,13 +328,13 @@ export function Vpme0102ItePage(): JSX.Element {
         .ite-action-group:last-child { border-right: none; }
         .ite-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 6px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 6px; white-space: nowrap;
         }
         .ite-nav-btn {
           width: 30px; height: 30px; border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
           background: transparent; border: 1.5px solid #d4e8d0;
-          cursor: pointer; color: #4a7060;
+          cursor: pointer; color: #46574c;
           transition: background 0.12s, border-color 0.12s;
         }
         .ite-nav-btn:hover:not(:disabled) { background: #edf7ea; border-color: #a0c8a8; }
@@ -389,11 +346,11 @@ export function Vpme0102ItePage(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .ite-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .ite-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .ite-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .ite-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .ite-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ite-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .ite-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; }
+        .ite-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .ite-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; }
         .ite-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .ite-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .ite-btn-danger:hover:not(:disabled) { background: #fff0f0; }
@@ -422,15 +379,15 @@ export function Vpme0102ItePage(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .ite-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .ite-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
-        .ite-card-badge { font-size: 10.5px; font-weight: 500; color: #3e9654; background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px; }
+        .ite-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
+        .ite-card-badge { font-size: 10.5px; font-weight: 500; color: #2f7d47; background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px; }
         .ite-card-body { padding: 18px; }
 
         /* ── FIELDS ── */
         .ite-selector-row { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
         .ite-field { display: flex; flex-direction: column; gap: 5px; }
         .ite-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
         }
         .ite-label-req { color: #c84040; font-size: 12px; }
@@ -438,22 +395,22 @@ export function Vpme0102ItePage(): JSX.Element {
           height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .ite-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .ite-input::placeholder { color: #b0c8b8; font-size: 12px; }
+        .ite-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .ite-input::placeholder { color: #a9b6ac; font-size: 12px; }
         .ite-select {
           height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none; appearance: none; cursor: pointer;
+          font-size: 13px; color: #1c2b22; outline: none; appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s;
         }
-        .ite-select:focus { border-color: #3e9654; }
-        .ite-select:disabled { background-color: #f0f4ee; color: #8aaa94; cursor: not-allowed; }
+        .ite-select:focus { border-color: #2f7d47; }
+        .ite-select:disabled { background-color: #dfe4e0; color: #8aaa94; cursor: not-allowed; }
         .ite-item-display {
           display: flex; align-items: center; gap: 8px;
           padding: 8px 14px; background: #eef9f0;
@@ -462,7 +419,7 @@ export function Vpme0102ItePage(): JSX.Element {
         }
         .ite-item-code { font-weight: 700; font-size: 12px; background: #dff0e0; padding: 2px 6px; border-radius: 4px; color: #1a4030; }
         .ite-item-clear {
-          background: none; border: none; cursor: pointer; color: #96b8a0; padding: 2px;
+          background: none; border: none; cursor: pointer; color: #94a49a; padding: 2px;
           transition: color 0.12s; margin-left: auto;
         }
         .ite-item-clear:hover { color: #b94040; }
@@ -486,16 +443,16 @@ export function Vpme0102ItePage(): JSX.Element {
         .ite-calendar { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 520px; }
         .ite-cal-head-row th {
           padding: 8px 6px; text-align: center;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 2px solid #dbe8d5; background: #f4f9f2;
         }
-        .ite-th-week { color: #96b8a0 !important; font-weight: 600 !important; font-size: 10px !important; width: 52px; border-right: 1px solid #e8f0e4; }
+        .ite-th-week { color: #94a49a !important; font-weight: 600 !important; font-size: 10px !important; width: 52px; border-right: 1px solid #e8f0e4; }
         .ite-th-dom, .ite-th-sab { color: #a0907a !important; }
         .ite-cal-body tr:last-child td { border-bottom: none; }
         .ite-td-week {
           padding: 4px 8px; text-align: center;
-          font-size: 10px; font-weight: 600; color: #96b8a0;
+          font-size: 10px; font-weight: 600; color: #94a49a;
           background: #fafcf9; border-right: 1px solid #e8f0e4;
           border-bottom: 1px solid #f0f6ec; vertical-align: middle;
         }
@@ -508,13 +465,13 @@ export function Vpme0102ItePage(): JSX.Element {
         .ite-day-cell {
           display: inline-flex; align-items: center; justify-content: center; flex-direction: column;
           width: 44px; height: 44px; border-radius: 8px;
-          font-size: 14px; font-weight: 500; color: #2a4a35;
+          font-size: 14px; font-weight: 500; color: #253a2d;
           transition: background 0.12s, color 0.12s, transform 0.1s;
           user-select: none; gap: 2px;
         }
         .ite-day-cell.clickable { cursor: pointer; }
         .ite-day-cell.clickable:hover { transform: scale(1.06); }
-        .ite-day-util { background: #f6fbf4; color: #2a4a35; }
+        .ite-day-util { background: #f6fbf4; color: #253a2d; }
         .ite-day-util:hover { background: #e4f4e0 !important; }
         .ite-day-fim-semana { background: #f5f5f0; color: #8a7a6a; cursor: default !important; }
         .ite-day-industrial-nao-util {
@@ -527,13 +484,13 @@ export function Vpme0102ItePage(): JSX.Element {
         }
         .ite-day-item-nao-util:hover { background: #ffd8d8 !important; }
         .ite-day-empty { background: transparent; cursor: default !important; }
-        .ite-day-hoje { box-shadow: inset 0 0 0 2px #3e9654 !important; }
+        .ite-day-hoje { box-shadow: inset 0 0 0 2px #2f7d47 !important; }
         .ite-day-hoje.ite-day-util { background: #edfaed; }
         .ite-day-cell.ite-day-confirmed {
           background: #1c4a2a;
           color: #a8f0b8;
           font-weight: 700;
-          box-shadow: inset 0 0 0 2px #3e9654;
+          box-shadow: inset 0 0 0 2px #2f7d47;
         }
         .ite-day-cell.has-movimentos::after {
           content: ''; display: block;
@@ -550,11 +507,11 @@ export function Vpme0102ItePage(): JSX.Element {
         .ite-legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #5a7a68; }
         .ite-legend-dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
         .ite-legend-dot.util              { background: #f6fbf4; border: 1.5px solid #c8e8c4; }
-        .ite-legend-dot.confirmed         { background: #1c4a2a; border: 1.5px solid #3e9654; }
+        .ite-legend-dot.confirmed         { background: #1c4a2a; border: 1.5px solid #2f7d47; }
         .ite-legend-dot.fim-semana        { background: #f5f5f0; border: 1.5px solid #ddd8d0; }
         .ite-legend-dot.industrial-nao    { background: #f0eaea; border: 1.5px solid #e0c0c0; }
         .ite-legend-dot.item-nao          { background: #ffebeb; border: 1.5px solid #f4b8b8; }
-        .ite-legend-dot.hoje              { background: #edfaed; box-shadow: inset 0 0 0 2px #3e9654; }
+        .ite-legend-dot.hoje              { background: #edfaed; box-shadow: inset 0 0 0 2px #2f7d47; }
         .ite-legend-movimento { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5a7a68; }
         .ite-legend-mov-dot { width: 6px; height: 6px; border-radius: 50%; background: #c88000; }
 
@@ -578,11 +535,11 @@ export function Vpme0102ItePage(): JSX.Element {
         /* ── LOADING ── */
         .ite-loading-overlay {
           display: flex; align-items: center; justify-content: center;
-          padding: 48px; gap: 10px; color: #5a8068; font-size: 13px;
+          padding: 48px; gap: 10px; color: #6b7d71; font-size: 13px;
         }
         .ite-loading-spinner {
           width: 18px; height: 18px;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: iteSpin 0.65s linear infinite; flex-shrink: 0;
         }
         .ite-spinner {
@@ -606,13 +563,13 @@ export function Vpme0102ItePage(): JSX.Element {
           display: flex; align-items: center; justify-content: space-between;
           padding: 16px 20px; border-bottom: 1px solid #edf5e8;
         }
-        .ite-modal-title { font-size: 13.5px; font-weight: 600; color: #162e20; }
+        .ite-modal-title { font-size: 13.5px; font-weight: 600; color: #16281d; }
         .ite-modal-close {
           background: none; border: none; cursor: pointer; color: #8aaa94;
           padding: 4px; border-radius: 6px; display: flex; align-items: center;
           transition: background 0.12s;
         }
-        .ite-modal-close:hover { background: #f0f4ee; color: #3a5a45; }
+        .ite-modal-close:hover { background: #dfe4e0; color: #46574c; }
         .ite-modal-body { padding: 20px; }
         .ite-modal-footer { padding: 12px 20px; border-top: 1px solid #edf5e8; display: flex; justify-content: flex-end; gap: 8px; }
         .ite-modal-warn {
@@ -629,8 +586,8 @@ export function Vpme0102ItePage(): JSX.Element {
           justify-content: space-between; flex-shrink: 0;
         }
         .ite-footer-left { display: flex; align-items: center; gap: 20px; }
-        .ite-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .ite-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .ite-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .ite-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         @keyframes iteFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
@@ -729,8 +686,8 @@ export function Vpme0102ItePage(): JSX.Element {
             <div className="ite-card-header">
               <div className="ite-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="5.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M6 8l1.5 1.5L11 6" stroke="#3e9654" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="8" cy="8" r="5.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M6 8l1.5 1.5L11 6" stroke="#2f7d47" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span className="ite-card-title">Parâmetros</span>
               </div>
@@ -857,9 +814,9 @@ export function Vpme0102ItePage(): JSX.Element {
             <div className="ite-card-header">
               <div className="ite-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M5 2v2M11 2v2M2 7h12" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
-                  <path d="M5 10h2M9 10h2M5 12.5h2" stroke="#3e9654" strokeWidth="1.2" strokeLinecap="round" />
+                  <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M5 2v2M11 2v2M2 7h12" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M5 10h2M9 10h2M5 12.5h2" stroke="#2f7d47" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 <span className="ite-card-title">
                   Calendário — {MESES[mes]} {ano}
@@ -919,7 +876,6 @@ export function Vpme0102ItePage(): JSX.Element {
                                 const isFimSemana   = di === 0 || di === 6;
                                 const isHoje        = key === todayKey;
                                 const isClickable   = !isIndNU && !isFimSemana;
-                                const hasMovs       = isClickable && hasMovimentacoes(dia.getDate());
 
                                 const isConfirmed = confirmedWorkdays.has(key);
 
@@ -931,7 +887,6 @@ export function Vpme0102ItePage(): JSX.Element {
                                 else if (isFimSemana) cls += " ite-day-fim-semana";
                                 else                  cls += " ite-day-util";
                                 if (isHoje) cls += " ite-day-hoje";
-                                if (hasMovs) cls += " has-movimentos";
 
                                 const tip = isIndNU
                                   ? `${dia.getDate()} — Não útil no calendário industrial (imutável)`
@@ -939,7 +894,7 @@ export function Vpme0102ItePage(): JSX.Element {
                                   ? `${dia.getDate()} — Final de semana`
                                   : isItemNU
                                   ? `${dia.getDate()} — Não útil para este item · clique para restaurar`
-                                  : `${dia.getDate()} — Dia útil · clique para marcar como não útil${hasMovs ? " (possui movimentações)" : ""}`;
+                                  : `${dia.getDate()} — Dia útil · clique para marcar como não útil`;
 
                                 return (
                                   <td key={di} className="ite-td-day">
@@ -967,7 +922,6 @@ export function Vpme0102ItePage(): JSX.Element {
                     <div className="ite-legend-item"><div className="ite-legend-dot industrial-nao" /><span>Não útil no calendário industrial (imutável)</span></div>
                     <div className="ite-legend-item"><div className="ite-legend-dot item-nao" /><span>Não útil para este item</span></div>
                     <div className="ite-legend-item"><div className="ite-legend-dot hoje" /><span>Hoje</span></div>
-                    <div className="ite-legend-movimento"><div className="ite-legend-mov-dot" /><span>Possui movimentações no tanque</span></div>
                     <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#7a9c84" }}>
                       1 clique = dia útil &nbsp;·&nbsp; 2 cliques = dia não útil
                     </span>
@@ -992,56 +946,6 @@ export function Vpme0102ItePage(): JSX.Element {
         </footer>
       </div>
 
-      {/* ── MODAL TRANSFERÊNCIA ── */}
-      {transferModal.open && (
-        <div className="ite-modal-overlay" onClick={() => setTransferModal((p) => ({ ...p, open: false }))}>
-          <div className="ite-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ite-modal-header">
-              <span className="ite-modal-title">Transferência de Movimentações</span>
-              <button type="button" className="ite-modal-close" onClick={() => setTransferModal((p) => ({ ...p, open: false }))}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-            <div className="ite-modal-body">
-              <div className="ite-modal-warn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                  <path d="M8 2L1.5 13.5h13L8 2z" stroke="#e8b800" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M8 6v4M8 11.5h.01" stroke="#e8b800" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-                <span>
-                  O dia <strong>{transferModal.dateKey}</strong> possui <strong>movimentações de tanque</strong>.
-                  Ao marcar como não útil, as movimentações serão transferidas para outra data.
-                </span>
-              </div>
-              <div className="ite-field">
-                <label className="ite-label">Data de Transferência <span className="ite-label-req">*</span></label>
-                <input
-                  className="ite-input" style={{ width: 200 }}
-                  type="date"
-                  value={transferModal.transferDate}
-                  min={transferModal.dateKey}
-                  onChange={(e) => setTransferModal((p) => ({ ...p, transferDate: e.target.value }))}
-                />
-                <span style={{ fontSize: 11.5, color: "#7a9c84", marginTop: 4 }}>
-                  Informe uma data útil no calendário industrial.
-                </span>
-              </div>
-            </div>
-            <div className="ite-modal-footer">
-              <button type="button" className="ite-btn ite-btn-ghost" onClick={() => setTransferModal((p) => ({ ...p, open: false }))}>Cancelar</button>
-              <button
-                type="button" className="ite-btn ite-btn-primary"
-                disabled={!transferModal.transferDate}
-                onClick={handleConfirmarTransferencia}
-              >
-                Confirmar Transferência
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

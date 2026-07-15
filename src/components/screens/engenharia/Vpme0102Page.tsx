@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   DEFAULT_PARAMS,
   getDeliveryPromiseParams,
@@ -28,23 +28,7 @@ type FeedbackState = { type: "success" | "error"; message: string } | null;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function extractErrorMessage(err: unknown): string {
-  if (axios.isAxiosError(err)) {
-    const status = err.response?.status;
-    const data = err.response?.data as Record<string, unknown> | undefined;
-    const apiMsg =
-      (data?.message as string | undefined) ??
-      (data?.error as string | undefined) ??
-      (data?.msg as string | undefined);
-
-    if (apiMsg) return `Erro ${status ?? ""}: ${apiMsg}`.trim();
-    if (status === 401) return "Sessão expirada. Faça login novamente.";
-    if (status === 403) return "Sem permissão para acessar este recurso.";
-    if (status === 500) return "Erro interno no servidor (500). Verifique os logs do backend.";
-    if (!err.response) return `Servidor indisponível. Verifique se o backend está em execução em ${import.meta.env.VITE_API_PROXY_TARGET || "localhost"}.`;
-    return `Erro HTTP ${status ?? "desconhecido"}.`;
-  }
-  if (err instanceof Error) return err.message;
-  return "Erro desconhecido. Consulte o console para detalhes.";
+  return humanizeApiError(err);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -127,33 +111,33 @@ export function Vpme0102Page(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .pme-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
 
         /* ── TOPBAR ── */
         .pme-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 110px 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .pme-topbar-left { display: flex; align-items: center; gap: 10px; }
         .pme-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .pme-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .pme-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .pme-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .pme-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
         .pme-screen-badge {
           font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
-          background: rgba(62,150,84,0.15); color: #7ecb8f;
+          background: rgba(62,150,84,0.15); color: #8fce9f;
           border: 1px solid rgba(62,150,84,0.25); border-radius: 5px;
           padding: 3px 8px;
         }
@@ -172,7 +156,7 @@ export function Vpme0102Page(): JSX.Element {
         .pme-action-group:last-child { border-right: none; }
         .pme-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 6px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 6px; white-space: nowrap;
         }
         .pme-btn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -181,11 +165,11 @@ export function Vpme0102Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .pme-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .pme-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .pme-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .pme-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .pme-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pme-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .pme-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; }
+        .pme-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .pme-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; }
         .pme-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .pme-dirty-badge {
           font-size: 10.5px; font-weight: 600; color: #b86000;
@@ -211,7 +195,7 @@ export function Vpme0102Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .pme-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .pme-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .pme-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .pme-card-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 0; }
 
         /* ── PARAM ROW ── */
@@ -242,12 +226,12 @@ export function Vpme0102Page(): JSX.Element {
           background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
           transition: transform 0.2s;
         }
-        .pme-toggle-input:checked + .pme-toggle-track { background: #3e9654; }
+        .pme-toggle-input:checked + .pme-toggle-track { background: #2f7d47; }
         .pme-toggle-input:checked + .pme-toggle-track::after { transform: translateX(18px); }
         .pme-toggle-input:disabled + .pme-toggle-track { opacity: 0.4; cursor: not-allowed; }
         .pme-toggle-value {
           font-size: 11px; font-weight: 600; margin-top: 4px; text-align: center;
-          color: #96b8a0; transition: color 0.2s;
+          color: #94a49a; transition: color 0.2s;
         }
         .pme-toggle-value.on { color: #2d8040; }
 
@@ -256,22 +240,22 @@ export function Vpme0102Page(): JSX.Element {
           height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none; appearance: none; cursor: pointer;
+          font-size: 13px; color: #1c2b22; outline: none; appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s, box-shadow 0.13s; min-width: 200px;
         }
-        .pme-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .pme-select:disabled { background-color: #f0f4ee; color: #8aaa94; cursor: not-allowed; }
+        .pme-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .pme-select:disabled { background-color: #dfe4e0; color: #8aaa94; cursor: not-allowed; }
         .pme-number-input {
           height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none; width: 100px;
+          font-size: 13px; color: #1c2b22; outline: none; width: 100px;
           transition: border-color 0.13s, box-shadow 0.13s; text-align: right;
         }
-        .pme-number-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .pme-number-input:disabled { background-color: #f0f4ee; color: #8aaa94; cursor: not-allowed; }
+        .pme-number-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .pme-number-input:disabled { background-color: #dfe4e0; color: #8aaa94; cursor: not-allowed; }
 
         /* ── FEEDBACK ── */
         .pme-feedback {
@@ -310,8 +294,8 @@ export function Vpme0102Page(): JSX.Element {
           padding: 8px 20px; display: flex; align-items: center;
           justify-content: space-between; flex-shrink: 0;
         }
-        .pme-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .pme-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .pme-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .pme-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         @keyframes pmeFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
@@ -403,8 +387,8 @@ export function Vpme0102Page(): JSX.Element {
             <div className="pme-card-header">
               <div className="pme-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="5.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M8 5v3l2 2" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="8" cy="8" r="5.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M8 5v3l2 2" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span className="pme-card-title">Ativação</span>
               </div>
@@ -427,8 +411,8 @@ export function Vpme0102Page(): JSX.Element {
             <div className="pme-card-header">
               <div className="pme-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2L2 5v5c0 3.3 2.7 5.7 6 6 3.3-.3 6-2.7 6-6V5L8 2z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M6 8l1.5 1.5L10 6.5" stroke="#3e9654" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M8 2L2 5v5c0 3.3 2.7 5.7 6 6 3.3-.3 6-2.7 6-6V5L8 2z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d="M6 8l1.5 1.5L10 6.5" stroke="#2f7d47" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span className="pme-card-title">Restrições</span>
               </div>
@@ -460,8 +444,8 @@ export function Vpme0102Page(): JSX.Element {
             <div className="pme-card-header">
               <div className="pme-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="2" fill="#3e9654" />
-                  <path d="M8 2v2M8 12v2M2 8h2M12 8h2M3.5 3.5l1.5 1.5M11 11l1.5 1.5M3.5 12.5L5 11M11 5l1.5-1.5" stroke="#3e9654" strokeWidth="1.3" strokeLinecap="round" />
+                  <circle cx="8" cy="8" r="2" fill="#2f7d47" />
+                  <path d="M8 2v2M8 12v2M2 8h2M12 8h2M3.5 3.5l1.5 1.5M11 11l1.5 1.5M3.5 12.5L5 11M11 5l1.5-1.5" stroke="#2f7d47" strokeWidth="1.3" strokeLinecap="round" />
                 </svg>
                 <span className="pme-card-title">Comportamento de Processamento</span>
               </div>
@@ -507,8 +491,8 @@ export function Vpme0102Page(): JSX.Element {
             <div className="pme-card-header">
               <div className="pme-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 8s2.5-5 6-5 6 5 6 5-2.5 5-6 5-6-5-6-5z" stroke="#3e9654" strokeWidth="1.4" />
-                  <circle cx="8" cy="8" r="2" stroke="#3e9654" strokeWidth="1.4" />
+                  <path d="M2 8s2.5-5 6-5 6 5 6 5-2.5 5-6 5-6-5-6-5z" stroke="#2f7d47" strokeWidth="1.4" />
+                  <circle cx="8" cy="8" r="2" stroke="#2f7d47" strokeWidth="1.4" />
                 </svg>
                 <span className="pme-card-title">Configurações de Exibição</span>
               </div>

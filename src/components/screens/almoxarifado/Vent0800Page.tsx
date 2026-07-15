@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   fetchWarehouseByCode,
   lookupCustomer,
@@ -101,19 +101,7 @@ function localizacaoBloqueada(loc: Localizacao): boolean {
 }
 
 function normalizeErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const apiMessage =
-      (error.response?.data as { message?: string; error?: string } | undefined)
-        ?.message ??
-      (error.response?.data as { message?: string; error?: string } | undefined)
-        ?.error;
-
-    if (apiMessage) {
-      return apiMessage;
-    }
-  }
-
-  return error instanceof Error ? error.message : fallback;
+  return humanizeApiError(error, fallback);
 }
 
 function buildWarehousePayload(
@@ -395,9 +383,9 @@ export function Vent0800Page(): JSX.Element {
 
         .al-root {
           min-height: 100vh;
-          background: #f0f4ee;
+          background: #dfe4e0;
           font-family: 'Inter', sans-serif;
-          color: #1a2e22;
+          color: #1c2b22;
           display: flex;
           flex-direction: column;
         }
@@ -405,20 +393,20 @@ export function Vent0800Page(): JSX.Element {
         /* ── TOPBAR ── */
         .al-topbar {
           height: 52px;
-          background: #162e20;
+          background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .al-topbar-left { display: flex; align-items: center; gap: 10px; }
         .al-logo-mark {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .al-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .al-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .al-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .al-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
@@ -437,13 +425,13 @@ export function Vent0800Page(): JSX.Element {
         .al-action-group:last-child { border-right: none; }
         .al-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 6px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 6px; white-space: nowrap;
         }
         .al-nav-btn {
           width: 30px; height: 30px; border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
           background: transparent; border: 1.5px solid #d4e8d0;
-          cursor: pointer; color: #4a7060;
+          cursor: pointer; color: #46574c;
           transition: background 0.12s, border-color 0.12s;
         }
         .al-nav-btn:hover { background: #edf7ea; border-color: #a0c8a8; }
@@ -455,11 +443,11 @@ export function Vent0800Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .al-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .al-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .al-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .al-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .al-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .al-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .al-btn-ghost:hover { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
+        .al-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .al-btn-ghost:hover { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
         .al-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .al-btn-danger:hover { background: #fff0f0; border-color: #e09090; }
         .al-btn-sm {
@@ -483,9 +471,9 @@ export function Vent0800Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .al-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .al-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .al-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .al-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
+          font-size: 10.5px; font-weight: 500; color: #2f7d47;
           background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
         }
         .al-card-body { padding: 20px 18px; }
@@ -523,7 +511,7 @@ export function Vent0800Page(): JSX.Element {
         .al-field { display: flex; flex-direction: column; gap: 5px; }
 
         .al-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
           display: flex; align-items: center; gap: 4px;
         }
@@ -533,36 +521,36 @@ export function Vent0800Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .al-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .al-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .al-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .al-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .al-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .al-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
         .al-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
 
         .al-textarea {
           width: 100%; min-height: 70px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 8px 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none; resize: vertical;
+          font-size: 13px; color: #1c2b22; outline: none; resize: vertical;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .al-textarea:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .al-textarea::placeholder { color: #b0c8b8; font-size: 12px; }
+        .al-textarea:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .al-textarea::placeholder { color: #a9b6ac; font-size: 12px; }
 
         .al-select {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .al-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .al-select:disabled { background-color: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .al-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .al-select:disabled { background-color: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
         .al-select.has-error { border-color: #e05252; }
 
         .al-input-wrap { position: relative; display: flex; }
@@ -586,21 +574,21 @@ export function Vent0800Page(): JSX.Element {
           position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px;
           transition: background 0.2s;
         }
-        .al-toggle input:checked ~ .al-toggle-track { background: #3e9654; }
+        .al-toggle input:checked ~ .al-toggle-track { background: #2f7d47; }
         .al-toggle-thumb {
           position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
           background: #fff; border-radius: 50%; transition: transform 0.2s;
           box-shadow: 0 1px 3px rgba(0,0,0,0.15);
         }
         .al-toggle input:checked ~ .al-toggle-thumb { transform: translateX(18px); }
-        .al-toggle-label { font-size: 13px; color: #3a5a45; font-weight: 500; }
+        .al-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; }
         .al-toggle-sub { font-size: 11.5px; color: #7a9c84; }
 
         /* Localização info box */
         .al-loc-info {
           margin-top: 6px; padding: 8px 12px;
           background: #f4f9f2; border: 1px solid #d4e8cc;
-          border-radius: 7px; font-size: 12px; color: #3a5a45; line-height: 1.55;
+          border-radius: 7px; font-size: 12px; color: #46574c; line-height: 1.55;
         }
 
         /* ── ABAS ── */
@@ -611,32 +599,32 @@ export function Vent0800Page(): JSX.Element {
         }
         .al-tab {
           padding: 10px 20px; font-size: 12.5px; font-weight: 500;
-          color: #6a8a74; cursor: pointer; border: none; background: transparent;
+          color: #6b7d71; cursor: pointer; border: none; background: transparent;
           border-bottom: 2px solid transparent; margin-bottom: -2px;
           transition: color 0.13s, border-color 0.13s; white-space: nowrap;
           font-family: 'Inter', sans-serif;
         }
-        .al-tab:hover { color: #2a4a35; }
-        .al-tab.active { color: #162e20; border-bottom-color: #3e9654; font-weight: 600; }
+        .al-tab:hover { color: #253a2d; }
+        .al-tab.active { color: #16281d; border-bottom-color: #2f7d47; font-weight: 600; }
         .al-tab-body { padding: 20px 18px; }
 
         /* ── VINCULOS TABLE ── */
         .al-vinculos-head {
           display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
         }
-        .al-vinculos-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.5px; }
+        .al-vinculos-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.5px; }
         .al-vinculos-add { display: flex; align-items: center; gap: 8px; }
 
         .al-vinculos-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .al-vinculos-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5;
         }
-        .al-vinculos-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; }
+        .al-vinculos-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; }
         .al-vinculos-table tbody tr:hover { background: #f4fbf2; }
-        .al-vinculos-empty { text-align: center; padding: 32px 12px; color: #96b8a0; font-size: 12.5px; }
+        .al-vinculos-empty { text-align: center; padding: 32px 12px; color: #94a49a; font-size: 12.5px; }
 
         .al-remove-btn {
           background: transparent; border: none; cursor: pointer; color: #c89090; padding: 3px 6px; border-radius: 5px;
@@ -661,8 +649,8 @@ export function Vent0800Page(): JSX.Element {
           padding: 8px 20px; display: flex; align-items: center;
           justify-content: space-between; flex-shrink: 0;
         }
-        .al-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .al-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .al-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .al-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         /* Spinner */
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -912,13 +900,13 @@ export function Vent0800Page(): JSX.Element {
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M2 6l6-4 6 4v8a1 1 0 01-1 1H3a1 1 0 01-1-1V6z"
-                    stroke="#3e9654"
+                    stroke="#2f7d47"
                     strokeWidth="1.4"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M6 15V9h4v6"
-                    stroke="#3e9654"
+                    stroke="#2f7d47"
                     strokeWidth="1.4"
                     strokeLinejoin="round"
                   />
@@ -1511,7 +1499,7 @@ export function Vent0800Page(): JSX.Element {
                           <td style={{ fontWeight: 600, color: "#1a4a2a" }}>
                             {c.codigo}
                           </td>
-                          <td style={{ color: c.nome ? "#243830" : "#96b8a0" }}>
+                          <td style={{ color: c.nome ? "#233029" : "#94a49a" }}>
                             {c.nome || "—"}
                           </td>
                           <td>
@@ -1591,7 +1579,7 @@ export function Vent0800Page(): JSX.Element {
                           <td style={{ fontWeight: 600, color: "#1a4a2a" }}>
                             {f.codigo}
                           </td>
-                          <td style={{ color: f.nome ? "#243830" : "#96b8a0" }}>
+                          <td style={{ color: f.nome ? "#233029" : "#94a49a" }}>
                             {f.nome || "—"}
                           </td>
                           <td>

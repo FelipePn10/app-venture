@@ -9,6 +9,7 @@ import {
   deleteCidade,
   getCidade,
 } from "@/services/cidadeUfService";
+import { humanizeApiError } from "@/services/apiError";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,17 +30,6 @@ const FORM_INICIAL: FormCidade = {
   codigo: "", cidade: "", ddd: "", tipo: "Interior", zf: false,
   gmb: "", ibge: "", cod_tom: "",
 };
-
-// ─── MOCK ─────────────────────────────────────────────────────────────────────
-
-const MOCK_CIDADES: CidadeResponse[] = [
-  { codigo: "001", cidade: "São Paulo", ddd: "11", tipo: "Capital", zf: false, gmb: "001", ibge: "3550308", cod_tom: "001" },
-  { codigo: "002", cidade: "Campinas", ddd: "19", tipo: "Interior", zf: false, gmb: "002", ibge: "3509502", cod_tom: "002" },
-  { codigo: "003", cidade: "Manaus", ddd: "92", tipo: "Capital", zf: true, gmb: "003", ibge: "1302603", cod_tom: "003" },
-  { codigo: "004", cidade: "Santos", ddd: "13", tipo: "Interior", zf: false, gmb: "004", ibge: "3548500", cod_tom: "004" },
-  { codigo: "005", cidade: "Tabatinga", ddd: "97", tipo: "Interior", zf: true, gmb: "005", ibge: "1304062", cod_tom: "005" },
-  { codigo: "006", cidade: "Rio de Janeiro", ddd: "21", tipo: "Capital", zf: false, gmb: "006", ibge: "3304557", cod_tom: "006" },
-];
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -71,9 +61,10 @@ export function Vutl0555Page(): JSX.Element {
       (async () => {
         try {
           const data = await listCidades();
-          setList(data.length ? data : MOCK_CIDADES);
-        } catch {
-          setList(MOCK_CIDADES);
+          setList(data);
+        } catch (error) {
+          setList([]);
+          setFeedback({ type: "error", message: humanizeApiError(error, "Não foi possível carregar as cidades.") });
         }
         setLoaded(true);
       })();
@@ -122,9 +113,8 @@ export function Vutl0555Page(): JSX.Element {
       await deleteCidade(codigo);
       setList((p) => p.filter((c) => c.codigo !== codigo));
       setFeedback({ type: "success", message: `Cidade ${codigo} excluída.` });
-    } catch {
-      setList((p) => p.filter((c) => c.codigo !== codigo));
-      setFeedback({ type: "success", message: `Cidade ${codigo} excluída.` });
+    } catch (error) {
+      setFeedback({ type: "error", message: humanizeApiError(error, `Não foi possível excluir a cidade ${codigo}.`) });
     } finally {
       setIsLoading(false);
     }
@@ -137,13 +127,9 @@ export function Vutl0555Page(): JSX.Element {
       if (filtroUf) results = results.filter((c) => c.codigo.startsWith(filtroUf.toUpperCase()));
       if (filtroCidade) results = results.filter((c) => c.cidade.toLowerCase().includes(filtroCidade.toLowerCase()));
       if (filtroCodigo) results = results.filter((c) => c.codigo === filtroCodigo);
-      setList(results.length ? results : MOCK_CIDADES.filter((c) => {
-        if (filtroUf && !c.codigo.startsWith(filtroUf.toUpperCase())) return false;
-        if (filtroCidade && !c.cidade.toLowerCase().includes(filtroCidade.toLowerCase())) return false;
-        if (filtroCodigo && c.codigo !== filtroCodigo) return false;
-        return true;
-      }));
+      setList(results);
       setMostrarResultados(true);
+      if (results.length === 0) setFeedback({ type: "info", message: "Nenhuma cidade encontrada para os filtros informados." });
     } finally {
       setIsSearching(false);
     }
@@ -162,18 +148,9 @@ export function Vutl0555Page(): JSX.Element {
       if (c) {
         handleEdit(c);
         setFeedback({ type: "info", message: `Cidade ${c.codigo} — ${c.cidade} carregada.` });
-      } else {
-        // mock lookup
-        const found = MOCK_CIDADES.find((m) => m.codigo === form.codigo.trim());
-        if (found) {
-          handleEdit(found);
-          setFeedback({ type: "info", message: `Cidade ${found.codigo} — ${found.cidade} carregada.` });
-        } else {
-          setFeedback({ type: "info", message: `Cidade ${form.codigo} não encontrada.` });
-        }
-      }
-    } catch {
-      setFeedback({ type: "error", message: "Erro ao consultar cidade." });
+      } else setFeedback({ type: "info", message: `Cidade ${form.codigo} não encontrada.` });
+    } catch (error) {
+      setFeedback({ type: "error", message: humanizeApiError(error, "Erro ao consultar cidade.") });
     } finally {
       setIsLoading(false);
     }
@@ -207,15 +184,8 @@ export function Vutl0555Page(): JSX.Element {
         setFeedback({ type: "success", message: `Cidade ${dto.codigo} — ${dto.cidade} cadastrada.` });
         setEditMode(true);
       }
-    } catch {
-      if (editMode) {
-        setList((p) => p.map((c) => (c.codigo === dto.codigo ? { ...dto } : c)));
-        setFeedback({ type: "success", message: `Cidade ${dto.codigo} — ${dto.cidade} atualizada.` });
-      } else {
-        setList((p) => [...p, { ...dto }]);
-        setFeedback({ type: "success", message: `Cidade ${dto.codigo} — ${dto.cidade} cadastrada.` });
-        setEditMode(true);
-      }
+    } catch (error) {
+      setFeedback({ type: "error", message: humanizeApiError(error, `Não foi possível ${editMode ? "atualizar" : "cadastrar"} a cidade.`) });
     } finally {
       setIsSaving(false);
     }
@@ -228,26 +198,26 @@ export function Vutl0555Page(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .utl-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
 
         .utl-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .utl-topbar-left { display: flex; align-items: center; gap: 10px; }
         .utl-logo {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .utl-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .utl-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .utl-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .utl-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
@@ -266,7 +236,7 @@ export function Vutl0555Page(): JSX.Element {
         .utl-action-group:last-child { border-right: none; }
         .utl-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 4px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
         }
         .utl-btn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -275,11 +245,11 @@ export function Vutl0555Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .utl-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .utl-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .utl-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .utl-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .utl-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .utl-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .utl-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; color: #1a3828; }
+        .utl-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .utl-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
         .utl-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .utl-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
         .utl-btn-danger:hover:not(:disabled) { background: #fff0f0; border-color: #e09090; }
@@ -289,7 +259,7 @@ export function Vutl0555Page(): JSX.Element {
         }
         .utl-btn-new:hover:not(:disabled) { background: #dff5e4; border-color: #88c898; }
         .utl-btn-dime {
-          background: #e8f0fc; color: #2a5080; border-color: #a8c0e8; font-weight: 600;
+          background: #e8f0fc; color: #276a3c; border-color: #a8c0e8; font-weight: 600;
         }
         .utl-btn-dime:hover:not(:disabled) { background: #dce8f8; border-color: #88a8d8; }
 
@@ -308,12 +278,12 @@ export function Vutl0555Page(): JSX.Element {
         .utl-section-banner:first-child { padding-top: 0; }
         .utl-section-banner-pill {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #5a8068;
+          text-transform: uppercase; color: #6b7d71;
           background: #e0ede0; border: 1px solid #c8dcc8;
           border-radius: 20px; padding: 3px 10px; white-space: nowrap;
         }
         .utl-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .utl-section-banner-hint { font-size: 11px; color: #96b8a0; white-space: nowrap; }
+        .utl-section-banner-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
 
         /* ── CARD ── */
         .utl-card {
@@ -325,9 +295,9 @@ export function Vutl0555Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .utl-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .utl-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .utl-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .utl-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
+          font-size: 10.5px; font-weight: 500; color: #2f7d47;
           background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
         }
         .utl-card-body { padding: 18px 18px; }
@@ -347,7 +317,7 @@ export function Vutl0555Page(): JSX.Element {
         /* ── FIELDS ── */
         .utl-field { display: flex; flex-direction: column; gap: 5px; }
         .utl-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
           display: flex; align-items: center; gap: 4px;
         }
@@ -356,24 +326,24 @@ export function Vutl0555Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .utl-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .utl-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .utl-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .utl-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .utl-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .utl-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
 
         .utl-select {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           appearance: none; cursor: pointer;
           background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 10px center;
           transition: border-color 0.13s;
         }
-        .utl-select:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .utl-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
 
         .utl-input-wrap { position: relative; display: flex; }
         .utl-input-btn {
@@ -392,14 +362,14 @@ export function Vutl0555Page(): JSX.Element {
         .utl-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
         .utl-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
         .utl-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .utl-toggle input:checked ~ .utl-toggle-track { background: #3e9654; }
+        .utl-toggle input:checked ~ .utl-toggle-track { background: #2f7d47; }
         .utl-toggle-thumb {
           position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
           background: #fff; border-radius: 50%; transition: transform 0.2s;
           box-shadow: 0 1px 3px rgba(0,0,0,0.15);
         }
         .utl-toggle input:checked ~ .utl-toggle-thumb { transform: translateX(18px); }
-        .utl-toggle-label { font-size: 13px; color: #3a5a45; font-weight: 500; }
+        .utl-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; }
 
         .utl-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
 
@@ -410,18 +380,18 @@ export function Vutl0555Page(): JSX.Element {
           padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
         }
         .utl-results-bar-left { display: flex; align-items: center; gap: 8px; }
-        .utl-results-bar-label { font-size: 11px; font-weight: 600; color: #4a7060; text-transform: uppercase; letter-spacing: 0.5px; }
+        .utl-results-bar-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
         .utl-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .utl-results-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
         }
-        .utl-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; vertical-align: middle; }
+        .utl-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
         .utl-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
         .utl-results-table tbody tr:hover { background: #eef9f0; }
-        .utl-results-empty { text-align: center; padding: 28px 12px; color: #96b8a0; font-size: 12.5px; }
+        .utl-results-empty { text-align: center; padding: 28px 12px; color: #94a49a; font-size: 12.5px; }
 
         .utl-action-btn {
           background: transparent; border: none; cursor: pointer; font-size: 12px;
@@ -429,7 +399,7 @@ export function Vutl0555Page(): JSX.Element {
           transition: background 0.12s, color 0.12s; margin: 0 2px;
         }
         .utl-edit-btn { color: #4a7a9a; }
-        .utl-edit-btn:hover { background: #e8f4fc; color: #2a5a7a; }
+        .utl-edit-btn:hover { background: #e8f4fc; color: #2f7d47; }
         .utl-delete-btn { color: #c89090; }
         .utl-delete-btn:hover { background: #fdecea; color: #b94040; }
 
@@ -457,12 +427,12 @@ export function Vutl0555Page(): JSX.Element {
           display: flex; align-items: center; justify-content: space-between;
           padding: 14px 20px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
-        .utl-modal-title { font-size: 13px; font-weight: 600; color: #1a2e22; }
+        .utl-modal-title { font-size: 13px; font-weight: 600; color: #1c2b22; }
         .utl-modal-close {
-          background: transparent; border: none; cursor: pointer; color: #96b8a0;
+          background: transparent; border: none; cursor: pointer; color: #94a49a;
           font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px;
         }
-        .utl-modal-close:hover { background: #f0f4ee; color: #4a7060; }
+        .utl-modal-close:hover { background: #dfe4e0; color: #46574c; }
         .utl-modal-body { padding: 20px; }
         .utl-modal-footer {
           display: flex; align-items: center; justify-content: flex-end; gap: 8px;
@@ -476,8 +446,8 @@ export function Vutl0555Page(): JSX.Element {
           justify-content: space-between; flex-shrink: 0;
         }
         .utl-footer-left { display: flex; align-items: center; gap: 20px; }
-        .utl-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .utl-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .utl-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .utl-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         @keyframes utlSpin { to { transform: rotate(360deg); } }
         .utl-spinner {
@@ -487,7 +457,7 @@ export function Vutl0555Page(): JSX.Element {
         }
         .utl-spinner-dark {
           width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: utlSpin 0.65s linear infinite;
         }
         @keyframes utlFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -586,8 +556,8 @@ export function Vutl0555Page(): JSX.Element {
             <div className="utl-card-header">
               <div className="utl-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#3e9654" strokeWidth="1.4" />
-                  <path d="M10 10l3.5 3.5" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#2f7d47" strokeWidth="1.4" />
+                  <path d="M10 10l3.5 3.5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="utl-card-title">Pesquisa de Cidades</span>
               </div>
@@ -640,7 +610,7 @@ export function Vutl0555Page(): JSX.Element {
                 <div className="utl-results-bar">
                   <div className="utl-results-bar-left">
                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 4h12M2 8h12M2 12h8" stroke="#5a8068" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M2 4h12M2 8h12M2 12h8" stroke="#6b7d71" strokeWidth="1.4" strokeLinecap="round" />
                     </svg>
                     <span className="utl-results-bar-label">Resultados</span>
                     <span className="utl-card-badge">{list.length} registro(s)</span>
@@ -681,7 +651,7 @@ export function Vutl0555Page(): JSX.Element {
                           <td style={{ textAlign: "center" }}>
                             {c.zf
                               ? <span style={{ color: "#2a8040", fontWeight: 600, fontSize: 12 }}>Sim</span>
-                              : <span style={{ color: "#96b8a0", fontSize: 12 }}>Não</span>
+                              : <span style={{ color: "#94a49a", fontSize: 12 }}>Não</span>
                             }
                           </td>
                           <td>{c.gmb}</td>
@@ -713,8 +683,8 @@ export function Vutl0555Page(): JSX.Element {
             <div className="utl-card-header">
               <div className="utl-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5 2v4h6V2M5 9h6" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d="M5 2v4h6V2M5 9h6" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="utl-card-title">Cidade</span>
               </div>
@@ -800,7 +770,7 @@ export function Vutl0555Page(): JSX.Element {
             <div className="utl-footer-stat">ZF: <strong>{form.zf ? "Sim" : "Não"}</strong></div>
           </div>
           <div className="utl-footer-stat" style={{ gap: 8 }}>
-            <span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
+            <span style={{ color: "#a9b6ac", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
           </div>
         </footer>
 

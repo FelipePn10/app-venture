@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+
+const IN_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+function safeWindow(): ReturnType<typeof getCurrentWindow> | null {
+  if (!IN_TAURI) return null;
+  try { return getCurrentWindow(); } catch { return null; }
+}
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
-  const appWindow = getCurrentWindow();
+  const appWindow = useMemo(() => safeWindow(), []);
 
   useEffect(() => {
+    if (!appWindow) return;
     appWindow.isMaximized().then(setIsMaximized);
     const unlisten = appWindow.onResized(() => {
       appWindow.isMaximized().then(setIsMaximized);
@@ -13,7 +20,7 @@ export function TitleBar() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [appWindow]);
 
   return (
     <>
@@ -181,7 +188,7 @@ export function TitleBar() {
           {/* Minimizar */}
           <button
             className="titlebar-btn"
-            onClick={() => appWindow.minimize()}
+            onClick={() => appWindow?.minimize()}
             title="Minimizar"
           >
             <svg viewBox="0 0 12 12">
@@ -192,7 +199,7 @@ export function TitleBar() {
           {/* Maximizar / Restaurar */}
           <button
             className="titlebar-btn"
-            onClick={() => appWindow.toggleMaximize()}
+            onClick={() => appWindow?.toggleMaximize()}
             title={isMaximized ? "Restaurar" : "Maximizar"}
           >
             {isMaximized ? (
@@ -210,7 +217,7 @@ export function TitleBar() {
           {/* Fechar */}
           <button
             className="titlebar-btn close"
-            onClick={() => appWindow.close()}
+            onClick={() => appWindow?.close()}
             title="Fechar"
           >
             <svg viewBox="0 0 12 12">

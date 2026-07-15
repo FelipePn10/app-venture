@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import { humanizeApiError } from '@/services/apiError';
 import {
   MACHINE_TYPE_ENUMS,
   machineTypeLabel,
@@ -23,17 +23,7 @@ function resolveUserId(id: string | undefined, token: string | null): string {
 }
 
 function extractErrorMessage(err: unknown): string {
-  if (axios.isAxiosError(err)) {
-    const status = err.response?.status;
-    const data = err.response?.data as Record<string, unknown> | undefined;
-    const msg = (data?.message ?? data?.error ?? data?.msg) as string | undefined;
-    if (msg) return `Erro ${status ?? ""}: ${msg}`.trim();
-    if (status === 401) return "Sessão expirada. Faça login novamente.";
-    if (status === 403) return "Sem permissão.";
-    if (!err.response) return "Servidor indisponível.";
-    return `Erro HTTP ${status ?? "desconhecido"}.`;
-  }
-  return err instanceof Error ? err.message : "Erro desconhecido.";
+  return humanizeApiError(err);
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -52,7 +42,7 @@ const EMPTY: Form = { code: "", name: "", description: "", type: "CUT", is_activ
 
 const TYPE_COLORS: Record<string, string> = {
   CUT: "#ef4444", BEND: "#f97316", WELD: "#eab308", ASSEMBLE: "#22c55e",
-  PAINT: "#3b82f6", LATHE: "#8b5cf6", MILL: "#06b6d4", PRESS: "#ec4899", INJECT: "#14b8a6",
+  PAINT: "#2f7d47", LATHE: "#8b5cf6", MILL: "#06b6d4", PRESS: "#ec4899", INJECT: "#14b8a6",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -124,29 +114,29 @@ export function Vmaq0101Page(): JSX.Element {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .mtp-root { min-height: 100vh; background: #f0f4ee; font-family: 'Inter', sans-serif; color: #1a2e22; display: flex; flex-direction: column; }
+        .mtp-root { min-height: 100vh; background: #dfe4e0; font-family: 'Inter', sans-serif; color: #1c2b22; display: flex; flex-direction: column; }
 
         /* TOPBAR */
-        .mtp-topbar { height: 52px; background: #162e20; display: flex; align-items: center; justify-content: space-between; padding: 0 110px 0 20px; flex-shrink: 0; border-bottom: 1px solid rgba(62,150,84,0.15); }
+        .mtp-topbar { height: 52px; background: #16281d; display: flex; align-items: center; justify-content: space-between; padding: 0 110px 0 20px; flex-shrink: 0; border-bottom: 1px solid rgba(62,150,84,0.15); }
         .mtp-topbar-left { display: flex; align-items: center; gap: 10px; }
-        .mtp-logo { width: 28px; height: 28px; background: #3e9654; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+        .mtp-logo { width: 28px; height: 28px; background: #2f7d47; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
         .mtp-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .mtp-app-sub { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
-        .mtp-screen-title { font-size: 12.5px; font-weight: 500; color: #5a9a6a; padding-left: 14px; margin-left: 14px; border-left: 1px solid rgba(255,255,255,0.08); }
-        .mtp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; background: rgba(62,150,84,0.15); color: #7ecb8f; border: 1px solid rgba(62,150,84,0.25); border-radius: 5px; padding: 3px 8px; }
+        .mtp-app-sub { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
+        .mtp-screen-title { font-size: 12.5px; font-weight: 500; color: #3f8a58; padding-left: 14px; margin-left: 14px; border-left: 1px solid rgba(255,255,255,0.08); }
+        .mtp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; background: rgba(62,150,84,0.15); color: #8fce9f; border: 1px solid rgba(62,150,84,0.25); border-radius: 5px; padding: 3px 8px; }
 
         /* ACTIONBAR */
         .mtp-actionbar { background: #fff; border-bottom: 1px solid #dbe8d5; padding: 0 20px; display: flex; align-items: center; gap: 6px; height: 46px; flex-shrink: 0; }
         .mtp-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1.5px solid transparent; border-radius: 7px; font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.13s, border-color 0.13s; }
-        .mtp-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .mtp-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .mtp-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .mtp-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .mtp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .mtp-btn-ghost { background: transparent; color: #4a7060; border-color: #d4e8d0; }
-        .mtp-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #b0d4b8; }
+        .mtp-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
+        .mtp-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; }
         .mtp-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .mtp-sep { width: 1px; height: 20px; background: #e8f0e4; margin: 0 4px; }
         .mtp-spinner { width: 14px; height: 14px; flex-shrink: 0; border: 2px solid rgba(223,240,226,0.3); border-top-color: #dff0e2; border-radius: 50%; animation: mtpSpin 0.65s linear infinite; }
-        .mtp-spin { width: 18px; height: 18px; border: 2px solid #d4e8cc; border-top-color: #3e9654; border-radius: 50%; animation: mtpSpin 0.65s linear infinite; }
+        .mtp-spin { width: 18px; height: 18px; border: 2px solid #d4e8cc; border-top-color: #2f7d47; border-radius: 50%; animation: mtpSpin 0.65s linear infinite; }
         @keyframes mtpSpin { to { transform: rotate(360deg); } }
 
         /* BODY */
@@ -161,24 +151,24 @@ export function Vmaq0101Page(): JSX.Element {
         /* CARD */
         .mtp-card { background: #fff; border: 1px solid #dbe8d5; border-radius: 12px; overflow: hidden; }
         .mtp-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9; }
-        .mtp-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
-        .mtp-card-badge { font-size: 10.5px; font-weight: 500; color: #3e9654; background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px; }
+        .mtp-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
+        .mtp-card-badge { font-size: 10.5px; font-weight: 500; color: #2f7d47; background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px; }
         .mtp-card-body { padding: 18px; }
 
         /* FORM */
         .mtp-form-fields { display: flex; flex-direction: column; gap: 13px; }
         .mtp-row { display: flex; gap: 12px; }
         .mtp-field { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-        .mtp-label { font-size: 10.5px; font-weight: 600; color: #5a8068; text-transform: uppercase; letter-spacing: 0.4px; }
+        .mtp-label { font-size: 10.5px; font-weight: 600; color: #6b7d71; text-transform: uppercase; letter-spacing: 0.4px; }
         .mtp-req { color: #c84040; font-size: 12px; }
         .mtp-input, .mtp-select, .mtp-textarea {
           background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px;
-          font-family: 'Inter', sans-serif; font-size: 13px; color: #1a2e22; outline: none;
+          font-family: 'Inter', sans-serif; font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
         .mtp-input, .mtp-select { height: 36px; padding: 0 10px; }
-        .mtp-input:focus, .mtp-select:focus, .mtp-textarea:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .mtp-input::placeholder, .mtp-textarea::placeholder { color: #b0c8b8; font-size: 12px; }
+        .mtp-input:focus, .mtp-select:focus, .mtp-textarea:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .mtp-input::placeholder, .mtp-textarea::placeholder { color: #a9b6ac; font-size: 12px; }
         .mtp-select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
         .mtp-textarea { padding: 8px 10px; resize: vertical; min-height: 70px; }
         .mtp-toggle-row { display: flex; align-items: center; gap: 10px; }
@@ -186,15 +176,15 @@ export function Vmaq0101Page(): JSX.Element {
         .mtp-toggle input { opacity: 0; width: 0; height: 0; }
         .mtp-toggle-slider { position: absolute; inset: 0; background: #d4e8cc; border-radius: 20px; transition: background 0.2s; cursor: pointer; }
         .mtp-toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
-        .mtp-toggle input:checked + .mtp-toggle-slider { background: #3e9654; }
+        .mtp-toggle input:checked + .mtp-toggle-slider { background: #2f7d47; }
         .mtp-toggle input:checked + .mtp-toggle-slider::before { transform: translateX(18px); }
-        .mtp-toggle-label { font-size: 13px; color: #3a5a45; }
+        .mtp-toggle-label { font-size: 13px; color: #46574c; }
 
         /* TABLE */
         .mtp-table-wrap { overflow-x: auto; }
         .mtp-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 400px; }
-        .mtp-table th { padding: 8px 12px; text-align: left; font-size: 10.5px; font-weight: 700; color: #5a8068; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dbe8d5; background: #f4f9f2; white-space: nowrap; }
-        .mtp-table td { padding: 10px 12px; font-size: 13px; color: #1a2e22; border-bottom: 1px solid #f0f6ec; }
+        .mtp-table th { padding: 8px 12px; text-align: left; font-size: 10.5px; font-weight: 700; color: #6b7d71; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dbe8d5; background: #f4f9f2; white-space: nowrap; }
+        .mtp-table td { padding: 10px 12px; font-size: 13px; color: #1c2b22; border-bottom: 1px solid #f0f6ec; }
         .mtp-table tr:last-child td { border-bottom: none; }
         .mtp-table tr:hover td { background: #fafdf8; }
         .mtp-type-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
@@ -207,8 +197,8 @@ export function Vmaq0101Page(): JSX.Element {
         /* FOOTER */
         .mtp-footer { background: #fff; border-top: 1px solid #dbe8d5; padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .mtp-footer-left { display: flex; align-items: center; gap: 20px; }
-        .mtp-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .mtp-stat strong { color: #1a2e22; font-weight: 600; }
+        .mtp-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .mtp-stat strong { color: #1c2b22; font-weight: 600; }
       `}</style>
 
       <div className="mtp-root">
@@ -344,7 +334,7 @@ export function Vmaq0101Page(): JSX.Element {
                                 {machineTypeLabel(t.type)}
                               </span>
                             </td>
-                            <td style={{ color: "#6a8a74", fontSize: 12, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <td style={{ color: "#6b7d71", fontSize: 12, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {t.description ?? "—"}
                             </td>
                             <td>

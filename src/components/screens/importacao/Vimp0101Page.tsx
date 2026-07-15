@@ -7,6 +7,7 @@ import {
   updateStatusLogistico,
   deleteStatusLogistico,
 } from "@/services/importacaoService";
+import { errMessage } from "@/services/fiscalShared";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,19 +22,6 @@ interface FormSL {
 }
 
 const FORM_INICIAL: FormSL = { codigo: "", descricao: "", observacao: "", ativo: true, prefiltro: false };
-
-// ─── MOCK ─────────────────────────────────────────────────────────────────────
-
-const MOCK_LIST: (StatusLogisticoResponse & { prefiltro?: boolean })[] = [
-  { codigo: "01", descricao: "Em Trânsito — Origem", observacao: "Carga saiu da origem", ativo: true, prefiltro: true },
-  { codigo: "02", descricao: "Em Trânsito — Internacional", observacao: null, ativo: true, prefiltro: true },
-  { codigo: "03", descricao: "Chegada no Porto/Aeroporto", observacao: "Aguardando desembaraço", ativo: true, prefiltro: false },
-  { codigo: "04", descricao: "Em Desembaraço Aduaneiro", observacao: null, ativo: true, prefiltro: true },
-  { codigo: "05", descricao: "Desembaraçado — Liberado", observacao: "Disponível para retirada", ativo: true, prefiltro: false },
-  { codigo: "06", descricao: "Em Transporte Interno", observacao: "Rodoviário até o destino", ativo: true, prefiltro: false },
-  { codigo: "07", descricao: "Entregue no Destino", observacao: null, ativo: true, prefiltro: false },
-  { codigo: "08", descricao: "Cancelado", observacao: "Processo cancelado", ativo: false, prefiltro: false },
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -51,10 +39,10 @@ export function Vimp0101Page(): JSX.Element {
       (async () => {
         try {
           const data = await listStatusLogisticos();
-          const merged = data.length ? data.map((d) => ({ ...d, prefiltro: false })) : MOCK_LIST;
-          setList(merged as any);
-        } catch {
-          setList(MOCK_LIST);
+          setList(data.map((d) => ({ ...d, prefiltro: false })));
+        } catch (error) {
+          setList([]);
+          setFeedback({ type: "error", message: errMessage(error, "Falha ao carregar os status logísticos.") });
         }
         setLoaded(true);
       })();
@@ -81,7 +69,7 @@ export function Vimp0101Page(): JSX.Element {
       descricao: sl.descricao,
       observacao: sl.observacao ?? "",
       ativo: sl.ativo,
-      prefiltro: (sl as any).prefiltro ?? false,
+      prefiltro: sl.prefiltro ?? false,
     });
     setEditCodigo(sl.codigo);
     setFeedback(null);
@@ -96,10 +84,8 @@ export function Vimp0101Page(): JSX.Element {
       setList((p) => p.filter((s) => s.codigo !== codigo));
       if (editCodigo === codigo) handleCadastrar();
       setFeedback({ type: "success", message: `Status ${codigo} excluído.` });
-    } catch {
-      setList((p) => p.filter((s) => s.codigo !== codigo));
-      if (editCodigo === codigo) handleCadastrar();
-      setFeedback({ type: "success", message: `Status ${codigo} excluído.` });
+    } catch (error) {
+      setFeedback({ type: "error", message: errMessage(error, `Falha ao excluir o status ${codigo}.`) });
     } finally {
       setIsLoading(false);
     }
@@ -120,24 +106,17 @@ export function Vimp0101Page(): JSX.Element {
     };
     try {
       if (editCodigo) {
-        await updateStatusLogistico(editCodigo, dto);
-        setList((p) => p.map((s) => (s.codigo === editCodigo ? { ...dto, prefiltro: form.prefiltro } as any : s)));
+        const saved = await updateStatusLogistico(editCodigo, dto);
+        setList((p) => p.map((s) => (s.codigo === editCodigo ? { ...saved, prefiltro: form.prefiltro } : s)));
         setFeedback({ type: "success", message: `Status ${dto.codigo} atualizado com sucesso.` });
       } else {
-        await createStatusLogistico(dto);
-        setList((p) => [...p, { ...dto, prefiltro: form.prefiltro } as any]);
+        const saved = await createStatusLogistico(dto);
+        setList((p) => [...p, { ...saved, prefiltro: form.prefiltro }]);
         setFeedback({ type: "success", message: `Status ${dto.codigo} cadastrado com sucesso.` });
         setEditCodigo(dto.codigo);
       }
-    } catch {
-      if (editCodigo) {
-        setList((p) => p.map((s) => (s.codigo === editCodigo ? { ...dto, prefiltro: form.prefiltro } as any : s)));
-        setFeedback({ type: "success", message: `Status ${dto.codigo} atualizado com sucesso.` });
-      } else {
-        setList((p) => [...p, { ...dto, prefiltro: form.prefiltro } as any]);
-        setFeedback({ type: "success", message: `Status ${dto.codigo} cadastrado com sucesso.` });
-        setEditCodigo(dto.codigo);
-      }
+    } catch (error) {
+      setFeedback({ type: "error", message: errMessage(error, `Falha ao salvar o status ${dto.codigo}.`) });
     } finally {
       setIsSaving(false);
     }
@@ -150,26 +129,26 @@ export function Vimp0101Page(): JSX.Element {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .imp3-root {
-          min-height: 100vh; background: #f0f4ee;
-          font-family: 'Inter', sans-serif; color: #1a2e22;
+          min-height: 100vh; background: #dfe4e0;
+          font-family: 'Inter', sans-serif; color: #1c2b22;
           display: flex; flex-direction: column;
         }
 
         .imp3-topbar {
-          height: 52px; background: #162e20;
+          height: 52px; background: #16281d;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 20px; flex-shrink: 0;
           border-bottom: 1px solid rgba(62,150,84,0.15);
         }
         .imp3-topbar-left { display: flex; align-items: center; gap: 10px; }
         .imp3-logo {
-          width: 28px; height: 28px; background: #3e9654;
+          width: 28px; height: 28px; background: #2f7d47;
           border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .imp3-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .imp3-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #3d6b4d; }
+        .imp3-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
         .imp3-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #5a9a6a;
+          font-size: 12.5px; font-weight: 500; color: #3f8a58;
           padding-left: 14px; margin-left: 14px;
           border-left: 1px solid rgba(255,255,255,0.08);
         }
@@ -187,7 +166,7 @@ export function Vimp0101Page(): JSX.Element {
         .imp3-action-group:last-child { border-right: none; }
         .imp3-action-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #96b8a0; margin-right: 4px; white-space: nowrap;
+          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
         }
         .imp3-btn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -196,8 +175,8 @@ export function Vimp0101Page(): JSX.Element {
           font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
           transition: background 0.13s, border-color 0.13s, color 0.13s;
         }
-        .imp3-btn-primary { background: #162e20; color: #dff0e2; border-color: #162e20; }
-        .imp3-btn-primary:hover:not(:disabled) { background: #1e3a2a; }
+        .imp3-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
+        .imp3-btn-primary:hover:not(:disabled) { background: #1e3728; }
         .imp3-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .imp3-btn-new {
           background: #eef9f0; color: #1a6030; border-color: #b4d8b8; font-weight: 600;
@@ -217,12 +196,12 @@ export function Vimp0101Page(): JSX.Element {
         .imp3-section-banner:first-child { padding-top: 0; }
         .imp3-section-banner-pill {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #5a8068;
+          text-transform: uppercase; color: #6b7d71;
           background: #e0ede0; border: 1px solid #c8dcc8;
           border-radius: 20px; padding: 3px 10px; white-space: nowrap;
         }
         .imp3-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .imp3-section-banner-hint { font-size: 11px; color: #96b8a0; white-space: nowrap; }
+        .imp3-section-banner-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
 
         .imp3-card {
           background: #fff; border: 1px solid #dbe8d5;
@@ -233,9 +212,9 @@ export function Vimp0101Page(): JSX.Element {
           padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
         }
         .imp3-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .imp3-card-title { font-size: 12px; font-weight: 600; color: #2a4a35; text-transform: uppercase; letter-spacing: 0.6px; }
+        .imp3-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
         .imp3-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #3e9654;
+          font-size: 10.5px; font-weight: 500; color: #2f7d47;
           background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
         }
         .imp3-card-body { padding: 18px 18px; }
@@ -249,7 +228,7 @@ export function Vimp0101Page(): JSX.Element {
 
         .imp3-field { display: flex; flex-direction: column; gap: 5px; }
         .imp3-label {
-          font-size: 10.5px; font-weight: 600; color: #5a8068;
+          font-size: 10.5px; font-weight: 600; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.4px;
           display: flex; align-items: center; gap: 4px;
         }
@@ -257,35 +236,35 @@ export function Vimp0101Page(): JSX.Element {
           width: 100%; height: 36px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none;
+          font-size: 13px; color: #1c2b22; outline: none;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .imp3-input:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .imp3-input::placeholder { color: #b0c8b8; font-size: 12px; }
-        .imp3-input:disabled { background: #f0f4ee; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+        .imp3-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .imp3-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .imp3-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
 
         .imp3-textarea {
           width: 100%; min-height: 72px; background: #f8fbf6;
           border: 1.5px solid #d4e8cc; border-radius: 7px;
           padding: 8px 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1a2e22; outline: none; resize: vertical;
+          font-size: 13px; color: #1c2b22; outline: none; resize: vertical;
           transition: border-color 0.13s, box-shadow 0.13s;
         }
-        .imp3-textarea:focus { border-color: #3e9654; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .imp3-textarea::placeholder { color: #b0c8b8; font-size: 12px; }
+        .imp3-textarea:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
+        .imp3-textarea::placeholder { color: #a9b6ac; font-size: 12px; }
 
         .imp3-toggle-row { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
         .imp3-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
         .imp3-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
         .imp3-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .imp3-toggle input:checked ~ .imp3-toggle-track { background: #3e9654; }
+        .imp3-toggle input:checked ~ .imp3-toggle-track { background: #2f7d47; }
         .imp3-toggle-thumb {
           position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
           background: #fff; border-radius: 50%; transition: transform 0.2s;
           box-shadow: 0 1px 3px rgba(0,0,0,0.15);
         }
         .imp3-toggle input:checked ~ .imp3-toggle-thumb { transform: translateX(18px); }
-        .imp3-toggle-label { font-size: 13px; color: #3a5a45; font-weight: 500; }
+        .imp3-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; }
         .imp3-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
 
         .imp3-results-wrap { border-top: 1px solid #edf5e8; overflow-x: auto; }
@@ -294,15 +273,15 @@ export function Vimp0101Page(): JSX.Element {
           padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
         }
         .imp3-results-bar-left { display: flex; align-items: center; gap: 8px; }
-        .imp3-results-bar-label { font-size: 11px; font-weight: 600; color: #4a7060; text-transform: uppercase; letter-spacing: 0.5px; }
+        .imp3-results-bar-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
         .imp3-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .imp3-results-table th {
           background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #5a8068;
+          font-size: 10.5px; font-weight: 700; color: #6b7d71;
           text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
         }
-        .imp3-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #243830; vertical-align: middle; }
+        .imp3-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
         .imp3-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
         .imp3-results-table tbody tr:hover { background: #eef9f0; }
         .imp3-action-btn {
@@ -311,7 +290,7 @@ export function Vimp0101Page(): JSX.Element {
           transition: background 0.12s, color 0.12s; margin: 0 2px;
         }
         .imp3-edit-btn { color: #4a7a9a; }
-        .imp3-edit-btn:hover { background: #e8f4fc; color: #2a5a7a; }
+        .imp3-edit-btn:hover { background: #e8f4fc; color: #2f7d47; }
         .imp3-delete-btn { color: #c89090; }
         .imp3-delete-btn:hover { background: #fdecea; color: #b94040; }
 
@@ -330,8 +309,8 @@ export function Vimp0101Page(): JSX.Element {
           justify-content: space-between; flex-shrink: 0;
         }
         .imp3-footer-left { display: flex; align-items: center; gap: 20px; }
-        .imp3-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6a8a74; }
-        .imp3-footer-stat strong { color: #1a2e22; font-weight: 600; }
+        .imp3-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
+        .imp3-footer-stat strong { color: #1c2b22; font-weight: 600; }
 
         @keyframes imp3Spin { to { transform: rotate(360deg); } }
         .imp3-spinner {
@@ -341,7 +320,7 @@ export function Vimp0101Page(): JSX.Element {
         }
         .imp3-spinner-dark {
           width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #3e9654;
+          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
           border-radius: 50%; animation: imp3Spin 0.65s linear infinite;
         }
         @keyframes imp3FadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -416,8 +395,8 @@ export function Vimp0101Page(): JSX.Element {
             <div className="imp3-card-header">
               <div className="imp3-card-header-left">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#3e9654" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5 2v4h6V2M5 9h6" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d="M5 2v4h6V2M5 9h6" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
                 <span className="imp3-card-title">Status Logístico</span>
               </div>
@@ -501,7 +480,7 @@ export function Vimp0101Page(): JSX.Element {
               <div className="imp3-results-bar">
                 <div className="imp3-results-bar-left">
                   <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 4h12M2 8h12M2 12h8" stroke="#5a8068" strokeWidth="1.4" strokeLinecap="round" />
+                    <path d="M2 4h12M2 8h12M2 12h8" stroke="#6b7d71" strokeWidth="1.4" strokeLinecap="round" />
                   </svg>
                   <span className="imp3-results-bar-label">Registros</span>
                   <span className="imp3-card-badge">{list.length} registro(s)</span>
@@ -523,23 +502,23 @@ export function Vimp0101Page(): JSX.Element {
                     <tr key={sl.codigo}>
                       <td style={{ fontWeight: 600, color: "#1a4a2a" }}>{sl.codigo}</td>
                       <td>{sl.descricao}</td>
-                      <td style={{ color: (sl as any).observacao ? "#243830" : "#96b8a0" }}>
-                        {(sl as any).observacao || "—"}
+                      <td style={{ color: sl.observacao ? "#233029" : "#94a49a" }}>
+                        {sl.observacao || "—"}
                       </td>
                       <td style={{ textAlign: "center" }}>
                         {sl.ativo
                           ? <span style={{ color: "#2a8040", fontWeight: 600, fontSize: 12 }}>Sim</span>
-                          : <span style={{ color: "#96b8a0", fontSize: 12 }}>Não</span>
+                          : <span style={{ color: "#94a49a", fontSize: 12 }}>Não</span>
                         }
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        {(sl as any).prefiltro
+                        {sl.prefiltro
                           ? <span style={{ color: "#2a8040", fontWeight: 600, fontSize: 12 }}>Sim</span>
-                          : <span style={{ color: "#96b8a0", fontSize: 12 }}>Não</span>
+                          : <span style={{ color: "#94a49a", fontSize: 12 }}>Não</span>
                         }
                       </td>
                       <td>
-                        <button className="imp3-action-btn imp3-edit-btn" onClick={() => handleEdit(sl as any)}>
+                        <button className="imp3-action-btn imp3-edit-btn" onClick={() => handleEdit(sl)}>
                           Editar
                         </button>
                         <button className="imp3-action-btn imp3-delete-btn" onClick={() => void handleDelete(sl.codigo)}>
@@ -560,7 +539,7 @@ export function Vimp0101Page(): JSX.Element {
             <div className="imp3-footer-stat">Ativos: <strong>{list.filter((s) => s.ativo).length}</strong></div>
           </div>
           <div className="imp3-footer-stat" style={{ gap: 8 }}>
-            <span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
+            <span style={{ color: "#a9b6ac", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
           </div>
         </footer>
       </div>
