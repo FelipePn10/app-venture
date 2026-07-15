@@ -83,6 +83,12 @@ export interface ErpScreen {
 export const ERP_SCREENS: ErpScreen[] = [
   // ── Módulos de plataforma / novos (backend recém-exposto)
   {
+    code: "VCFG0100",
+    title: "Configurador de Produto",
+    description: "Conjuntos, variáveis e características do configurador cfg_*; vincular características ao item e gerar a máscara.",
+    module: "engenharia",
+  },
+  {
     code: "VPLN0100",
     title: "Pipeline de Planejamento (MRP→CRP→APS)",
     description: "Executar MRP, CRP e APS num único disparo com parecer de viabilidade, e manter parâmetros de planejamento.",
