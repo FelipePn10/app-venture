@@ -9875,11 +9875,23 @@ ocorrência nas duas formas.
 
 ### VSUP0650 — Histórico de Movimentos de Compra
 
-Tela exclusivamente consultiva. Informe fornecedor, item ou ambos e limite de linhas.
-O resultado consolida os movimentos de compra para auditoria, análise de preço e geração
-de itens por fornecedor. A ausência de filtros pode retornar grande volume; comece com
-limite baixo e aumente apenas quando necessário. Nenhuma ação nesta tela altera estoque,
-pedido ou financeiro.
+Tela exclusivamente consultiva para rastrear compras persistidas por fornecedor e item.
+
+1. Informe o fornecedor quando quiser avaliar relacionamento, recorrência ou evolução de preço.
+2. Informe o item quando quiser comparar suas aquisições entre fornecedores. Use os dois filtros
+   para restringir ao vínculo específico.
+3. Comece com limite baixo, por exemplo 100, e execute **Listar**. A ausência de filtros pode
+   retornar grande volume.
+4. Confira pedido/documento de origem, data, quantidade, unidade, preço, moeda e fornecedor antes
+   de usar a linha como evidência comercial.
+5. Para gerar ou validar itens do fornecedor, compare o histórico com VSUP0670 e com o cadastro
+   mestre; movimento histórico não transforma automaticamente o vínculo em preferencial.
+6. Aumente o limite somente quando a última linha indicar que o período necessário não foi coberto.
+
+Resultado vazio significa ausência de movimentos para os filtros e o tenant, não autorização para
+simular linhas. Fornecedor/item inexistente ou limite inválido deve gerar mensagem clara e limpar o
+resultado anterior. Nenhuma ação nesta tela altera estoque, pedido ou financeiro. ADMIN e USER
+podem consultar conforme a permissão do módulo; a tela não oferece mutações.
 
 ## Manual operacional detalhado — Configurador de produto
 
@@ -10100,11 +10112,22 @@ movimento. Registrar movimento exige ADMIN; consulta é liberada para ADMIN/USER
 
 ### VTER0400 — Conversões Globais
 
-Consulte antes de cadastrar. Informe Unidade de origem, Unidade de destino e Fator decimal
-positivo. Exemplo: origem `CX`, destino `UN`, fator `12` significa uma caixa igual a doze
-unidades. A conversão inversa não deve ser presumida sem confirmar que o backend a resolve.
-Cadastro e exclusão exigem ADMIN. Não exclua conversão usada por preço ou ordem vigente;
-primeiro migre os registros dependentes e valide novamente o custo na VTER0100.
+As conversões globais são usadas quando um preço ou serviço de terceiros precisa transformar uma
+unidade em outra sem regra específica do item.
+
+1. Execute **Listar conversões** e procure o par origem/destino antes de cadastrar.
+2. Em **Cadastrar**, informe Unidade de origem, Unidade de destino e Fator decimal positivo.
+   Exemplo: origem `CX`, destino `UN`, fator `12` significa uma caixa igual a doze unidades.
+3. Salve e consulte novamente. Confirme que o backend devolveu exatamente o par e o fator esperado.
+4. Valide a conversão resolvendo um preço/custo conhecido na VTER0100. A conversão inversa não deve
+   ser presumida sem confirmar que o backend a resolve.
+5. Para excluir, copie o ID persistido, identifique preços e ordens dependentes, migre-os e somente
+   então execute **Excluir**. Repita o cálculo conhecido após a remoção.
+
+Fator zero/negativo, unidades iguais quando proibidas, unidade desconhecida e par duplicado devem
+falhar. Casas decimais devem respeitar a precisão do contrato; não use vírgula dentro do JSON.
+Consulta é permitida ao perfil operacional; cadastro e exclusão exigem ADMIN. Uma falha não deve
+deixar na grade o resultado de outra empresa.
 
 ## Manual operacional detalhado — APS
 
@@ -10143,11 +10166,22 @@ Excluir exige ADMIN e só deve ocorrer depois de desvincular todos os recursos.
 
 ### VAPS0300 — Paradas de Máquinas
 
-Consulte por Máquina e intervalo completo de data/hora. Ao cadastrar, informe Máquina,
-Início, Fim, Tipo, Motivo e Ordem de manutenção opcional. Horários são enviados em
-RFC3339 considerando o fuso do navegador; confira o resultado retornado. A parada reduz
-a capacidade disponível no período e pode deslocar operações no próximo sequenciamento.
-Fim anterior ao início e máquina inexistente devem ser rejeitados. Exclusão exige ADMIN.
+Registra indisponibilidade real ou planejada que reduz a capacidade considerada pelo APS.
+
+1. Consulte por Máquina e intervalo completo de data/hora. Verifique se já existe parada sobreposta.
+2. Em **Cadastrar**, informe Máquina, Início, Fim, Tipo, Motivo e Ordem de manutenção opcional.
+   Vincule a ordem apenas quando ela existir e representar a causa da indisponibilidade.
+3. Horários são convertidos para RFC3339 considerando o fuso do navegador. Depois de salvar,
+   confira data/hora retornadas para evitar deslocamento de fuso.
+4. Atualize a listagem no mesmo intervalo e confirme que a parada aparece uma única vez.
+5. Execute um sequenciamento controlado e valide que operações não ocupam o período bloqueado.
+6. Para remover um lançamento incorreto, copie o ID, confirme que não é evidência necessária e use
+   **Excluir** com perfil ADMIN; consulte e sequencie novamente.
+
+Fim anterior/igual ao início, máquina inexistente, intervalo inválido ou vínculo de outro tenant
+devem ser rejeitados. Sobreposição precisa ser analisada conforme a regra do backend. Consulta é
+ADMIN/USER; cadastro e exclusão são administrativos. Não cadastre uma parada falsa para ajustar
+manualmente o Gantt.
 
 ### VAPS0400 — Perfil de Operadores
 
@@ -10379,11 +10413,23 @@ solicitação vencida, usada ou pertencente a outro tenant não pode ser conclu�
 
 ### VADM0100 — Trilha de Auditoria
 
-Tela somente leitura e exclusiva de ADMIN. Filtre por UUID do usuário, padrão da rota,
-data/hora inicial e final, limite e deslocamento. Datas são enviadas em RFC3339. O
-resultado é ordenado do evento mais recente para o mais antigo e mostra quem alterou,
-qual rota foi executada e quando. O limite padrão é 100 e o máximo aceito é 500.
-Auditoria não deve ser editada ou usada como substituto do histórico funcional das entidades.
+Tela somente leitura e exclusiva de ADMIN.
+
+1. Defina o objetivo da investigação e um intervalo de data/hora curto.
+2. Para um operador específico, informe seu UUID completo; para uma família de ações, informe o
+   padrão de rota. Os filtros podem ser combinados.
+3. Mantenha limite 100 na primeira consulta. Datas são enviadas em RFC3339; confira o fuso exibido.
+4. Execute e leia do evento mais recente para o mais antigo: usuário, rota, método/ação, instante,
+   contexto e identificadores disponíveis.
+5. Quando houver mais registros, avance o deslocamento sem alterar os demais filtros. O máximo
+   aceito por página é 500.
+6. Correlacione o evento com o histórico funcional da entidade e registre a evidência conforme a
+   política interna; não tente editar a auditoria.
+
+UUID, data ou paginação inválidos devem ser corrigidos. Resultado vazio significa ausência de evento
+compatível, não ausência absoluta de atividade. USER deve receber bloqueio de permissão. A trilha não
+substitui logs técnicos nem o histórico de negócio e não deve expor tokens, senhas ou payloads
+sensíveis na documentação gerada.
 
 ### VPLA0300 — Parâmetros do Planejamento
 
@@ -10398,10 +10444,22 @@ pode modificar todas as sugestões futuras, portanto documente a mudança.
 
 ### VRES0100 — Motivos de Restrição
 
-Cadastre uma descrição clara e situação ativa/inativa. Consulte antes para evitar motivos
-duplicados. Abrir e alterar usam o código retornado; excluir exige conferir se o motivo
-está ligado a restrições existentes. Esta rotina complementa VPRO0800 e as restrições
-comerciais, fornecendo a explicação apresentada quando uma combinação é recusada.
+Mantém os motivos apresentados quando uma combinação comercial ou configurada é recusada.
+
+1. Execute **Listar** e procure descrição equivalente antes de cadastrar.
+2. Em **Cadastrar**, escreva descrição objetiva, orientada ao usuário, e selecione situação ativa.
+   Evite mensagens técnicas ou que revelem regra confidencial.
+3. Salve, copie o código retornado e use **Abrir motivo** para confirmar descrição e situação.
+4. Em **Alterar**, informe o código e o contrato completo. Prefira inativar quando o motivo já fizer
+   parte do histórico; alteração de texto afeta a orientação futura.
+5. Valide o motivo em uma avaliação controlada na VPRO0800/VCLI0117.
+6. Antes de **Excluir**, confirme que nenhuma restrição o referencia. Depois, liste novamente e
+   reavalie uma regra conhecida.
+
+Descrição vazia/duplicada, situação fora do enum, código inexistente e vínculo de outro tenant devem
+falhar. Exclusão referenciada deve ser bloqueada; não contorne a integridade removendo a regra no
+navegador. Consulta e manutenção seguem as permissões do módulo de restrições. Resultado vazio
+significa que ainda não há motivo persistido para a empresa autenticada.
 
 ### VFIS0600 — SPED EFD ICMS/IPI
 
