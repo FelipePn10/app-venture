@@ -81,6 +81,67 @@ export interface ErpScreen {
 }
 
 export const ERP_SCREENS: ErpScreen[] = [
+  // ── Módulos de plataforma / novos (backend recém-exposto)
+  {
+    code: "VPCT0100",
+    title: "Tolerâncias de Pedido de Compra",
+    description: "Faixas de tolerância (quantidade/preço/total) por operação e fornecedor, com ação BLOCK/WARN, e avaliação.",
+    module: "suprimento",
+  },
+  {
+    code: "VDES0100",
+    title: "Desenhos Técnicos",
+    description: "Cadastrar desenhos (código/dígito/formato), revisões com vigência/aprovação e características.",
+    module: "engenharia",
+  },
+  {
+    code: "VTPS0100",
+    title: "Serviços de Terceiros",
+    description: "Preços de serviço por item×fornecedor×operação e ordens de serviço (OF→requisição→OC).",
+    module: "suprimento",
+  },
+  {
+    code: "VCFG0100",
+    title: "Configurador de Produto",
+    description: "Conjuntos, variáveis e características do configurador cfg_*; vincular características ao item e gerar a máscara.",
+    module: "engenharia",
+  },
+  {
+    code: "VPLN0100",
+    title: "Pipeline de Planejamento (MRP→CRP→APS)",
+    description: "Executar MRP, CRP e APS num único disparo com parecer de viabilidade, e manter parâmetros de planejamento.",
+    module: "planejamento",
+  },
+  {
+    code: "VRES0100",
+    title: "Motivos de Restrição",
+    description: "Cadastrar os motivos usados nas restrições/dependências do configurador.",
+    module: "producao",
+  },
+  {
+    code: "VBOM0100",
+    title: "Cabeçalhos de Estrutura (BOM)",
+    description: "Versão, tipo (EBOM/MBOM) e status (DRAFT→APPROVED→OBSOLETE) da estrutura por item.",
+    module: "engenharia",
+  },
+  {
+    code: "VLOT0100",
+    title: "Máscaras de Lote/Série",
+    description: "Compor o número de lote/série por partes (caractere/data/sequencial) e gerar o próximo lote.",
+    module: "almoxarifado",
+  },
+  {
+    code: "VAUD0100",
+    title: "Log de Auditoria",
+    description: "Consultar os eventos de auditoria do sistema (somente ADMIN).",
+    module: "cadastros",
+  },
+  {
+    code: "VUSR0100",
+    title: "Solicitações de Troca de Senha",
+    description: "Solicitar, aprovar, concluir ou rejeitar solicitações de troca de senha de usuários.",
+    module: "cadastros",
+  },
   // ── Comercial
   {
     code: "VENT0100",

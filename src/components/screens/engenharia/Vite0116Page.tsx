@@ -8,9 +8,8 @@ type Attr = { name: string; value: string };
 
 /**
  * VITE0116 — Atributos (PDM). No backend, atributos NÃO têm cadastro próprio: são pares
- * `{name, value}` gravados no objeto `pdm` do **item** (VITE cadastro de item). Esta tela
- * é o **montador**: escolhe Grupo + Modificador (cadastros reais) e os atributos do item,
- * pré-visualizando o payload `pdm` e a descrição técnica composta.
+ * `{name, value}` gravados no objeto `pdm` do **item**. Esta tela é o **montador**:
+ * escolhe Grupo + Modificador reais e os atributos, pré-visualizando o payload `pdm`.
  */
 export function Vite0116Page(): JSX.Element {
   const [grupos, setGrupos] = useState<GrupoPDM[]>([]);
@@ -27,97 +26,56 @@ export function Vite0116Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  const carregar = () => run(async () => {
-    const [g, m] = await Promise.all([listarGrupos(), listarModificadores()]);
-    setGrupos(g); setMods(m);
-    setFeedback({ type: "info", message: `${g.length} grupo(s) e ${m.length} modificador(es) carregados.` });
-  });
-
-  const addAttr = () => {
-    if (!attrForm.name.trim() || !attrForm.value.trim()) { setFeedback({ type: "error", message: "Nome e valor do atributo são obrigatórios." }); return; }
-    setAttrs((a) => [...a, { name: attrForm.name.trim().toUpperCase(), value: attrForm.value.trim() }]);
-    setAttrForm({ name: "", value: "" });
-  };
+  const carregar = () => run(async () => { const [g, m] = await Promise.all([listarGrupos(), listarModificadores()]); setGrupos(g); setMods(m); setFeedback({ type: "info", message: `${g.length} grupo(s) e ${m.length} modificador(es) carregados.` }); });
+  const addAttr = () => { if (!attrForm.name.trim() || !attrForm.value.trim()) { setFeedback({ type: "error", message: "Nome e valor do atributo são obrigatórios." }); return; } setAttrs((a) => [...a, { name: attrForm.name.trim().toUpperCase(), value: attrForm.value.trim() }]); setAttrForm({ name: "", value: "" }); };
   const removeAttr = (i: number) => setAttrs((a) => a.filter((_, idx) => idx !== i));
 
   const grupo = grupos.find((g) => g.code === Number(groupCode));
   const mod = mods.find((m) => m.id === Number(modifierId));
   const descricao = [grupo?.description, mod?.description, ...attrs.map((a) => `${a.name}:${a.value}`)].filter(Boolean).join(" ");
-  const pdmPayload = {
-    group_code: Number(groupCode) || null,
-    modifier_code: Number(modifierId) || null,
-    attributes: attrs,
-    description_technique: descricao,
-  };
-
-  const copiar = () => { void navigator.clipboard?.writeText(JSON.stringify(pdmPayload, null, 2)); setFeedback({ type: "success", message: "Payload `pdm` copiado — cole no cadastro do item (VITE)." }); };
+  const pdmPayload = { group_code: Number(groupCode) || null, modifier_code: Number(modifierId) || null, attributes: attrs, description_technique: descricao };
+  const copiar = () => { void navigator.clipboard?.writeText(JSON.stringify(pdmPayload, null, 2)); setFeedback({ type: "success", message: "Payload `pdm` copiado — cole no cadastro do item." }); };
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VITE0116 — Atributos (PDM) — montador do item</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Engenharia</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Atributos (PDM) — montador do item</span><span className="erp-crumb-code">VITE0116</span></nav>
+        <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">{attrs.length} atributo(s)</span>
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Cadastros</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={carregar} disabled={busy}>Carregar grupos/modificadores</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
-          <ExportButton title="VITE0116 — Atributos PDM" filename="vite0116" /></div>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastros</span><button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Carregar grupos/modificadores</button></div>
+        <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VITE0116 — Atributos PDM" filename="vite0116" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-
-        <div className="fsc-feedback info" style={{ marginBottom: 12 }}>
-          Atributos não têm cadastro próprio no ERP — eles são gravados no objeto <strong>pdm</strong> do <strong>item</strong> (VITE — cadastro de item).
-          Aqui você monta e pré-visualiza esse objeto a partir dos cadastros reais de Grupo e Modificador.
-        </div>
-
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Grupo &amp; Modificador</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-6"><label className="fsc-label">Grupo</label>
-            <select className="fsc-input" value={groupCode} onChange={(e) => setGroupCode(e.target.value)}>
-              <option value="">— selecione —</option>
-              {grupos.map((g) => <option key={g.code} value={g.code}>{g.code} — {g.description}</option>)}
-            </select></div>
-          <div className="fsc-field fsc-col-6"><label className="fsc-label">Modificador</label>
-            <select className="fsc-input" value={modifierId} onChange={(e) => setModifierId(e.target.value)}>
-              <option value="">— selecione —</option>
-              {mods.map((m) => <option key={m.id} value={m.id}>{m.id} — {m.description}</option>)}
-            </select></div>
-        </div></div></div>
-
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Atributos do item ({attrs.length})</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-4"><label className="fsc-label">Nome (ex.: COR)</label><input className="fsc-input" value={attrForm.name} onChange={(e) => setAttrForm((f) => ({ ...f, name: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-6"><label className="fsc-label">Valor (ex.: PRETO)</label><input className="fsc-input" value={attrForm.value} onChange={(e) => setAttrForm((f) => ({ ...f, value: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={addAttr}>Adicionar</button></div>
-        </div>
-        {attrs.length > 0 && (
-          <table className="fsc-table" style={{ marginTop: 10 }}>
-            <thead><tr><th>Nome</th><th>Valor</th><th></th></tr></thead>
-            <tbody>{attrs.map((a, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{a.name}</td><td>{a.value}</td><td><button className="fsc-btn fsc-btn-ghost" onClick={() => removeAttr(i)}>Remover</button></td></tr>)}</tbody>
-          </table>
-        )}
-        </div></div>
-
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Pré-visualização</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">cole o objeto `pdm` no cadastro do item</span></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-12"><label className="fsc-label">Descrição técnica composta</label><input className="fsc-input" value={descricao} readOnly /></div>
-          <div className="fsc-field fsc-col-12"><label className="fsc-label">Objeto pdm (item)</label>
-            <textarea className="fsc-input" style={{ minHeight: 140, fontFamily: "monospace" }} value={JSON.stringify(pdmPayload, null, 2)} readOnly /></div>
-          <div className="fsc-field fsc-col-3"><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={copiar}>Copiar pdm</button></div>
-        </div></div></div>
+      <div className="erp-content">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Montador do objeto pdm do item</button></div>
+          <div className="erp-detail-body">
+            <div className="erp-feedback info" style={{ marginBottom: 12 }}>Atributos não têm cadastro próprio — são gravados no objeto <strong>pdm</strong> do <strong>item</strong> (VENT0200). Aqui você monta e pré-visualiza esse objeto.</div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo &amp; Modificador</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c6"><label className="erp-label">Grupo</label><select className="erp-input" value={groupCode} onChange={(e) => setGroupCode(e.target.value)}><option value="">— selecione —</option>{grupos.map((g) => <option key={g.code} value={g.code}>{g.code} — {g.description}</option>)}</select></div>
+              <div className="erp-field erp-c6"><label className="erp-label">Modificador</label><select className="erp-input" value={modifierId} onChange={(e) => setModifierId(e.target.value)}><option value="">— selecione —</option>{mods.map((m) => <option key={m.id} value={m.id}>{m.id} — {m.description}</option>)}</select></div>
+            </div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Atributos do item ({attrs.length})</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c4"><label className="erp-label">Nome (ex.: COR)</label><input className="erp-input" value={attrForm.name} onChange={(e) => setAttrForm((f) => ({ ...f, name: e.target.value }))} /></div>
+              <div className="erp-field erp-c6"><label className="erp-label">Valor (ex.: PRETO)</label><input className="erp-input" value={attrForm.value} onChange={(e) => setAttrForm((f) => ({ ...f, value: e.target.value }))} /></div>
+              <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={addAttr}>Adicionar</button></div>
+              {attrs.length > 0 && <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Nome</th><th>Valor</th><th></th></tr></thead>
+                <tbody>{attrs.map((a, i) => <tr key={i}><td><strong>{a.name}</strong></td><td>{a.value}</td><td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeAttr(i)}>×</button></td></tr>)}</tbody></table></div>}
+            </div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Pré-visualização</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c12"><label className="erp-label">Descrição técnica composta</label><input className="erp-input" value={descricao} readOnly /></div>
+              <div className="erp-field erp-c12"><label className="erp-label">Objeto pdm (item)</label><textarea className="erp-input" style={{ minHeight: 130, fontFamily: "monospace" }} value={JSON.stringify(pdmPayload, null, 2)} readOnly /></div>
+              <div className="erp-field erp-c3"><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={copiar}>Copiar pdm</button></div>
+            </div></div>
+          </div>
+        </section>
       </div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Atributos: <strong>{attrs.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
-      </footer>
+      <footer className="erp-statusbar"><div className="erp-status-item">Atributos: <strong>{attrs.length}</strong></div><div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span></footer>
     </div>
   );
 }
