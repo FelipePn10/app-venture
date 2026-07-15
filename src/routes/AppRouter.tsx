@@ -4,6 +4,7 @@ import { SessionBootstrap } from "@/components/auth/SessionBootstrap";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { ScreenHostPage } from "@/components/screens/ScreenHostPage";
 import { useAuthStore } from "@/store/authStore";
+import { BackendUpdateBanner } from "@/components/system/BackendUpdateBanner";
 
 function PrivateRoute({ children }: { children: JSX.Element }): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
@@ -23,7 +24,7 @@ export function AppRouter(): JSX.Element {
             path="/dashboard"
             element={
               <PrivateRoute>
-                <DashboardPage />
+                <><BackendUpdateBanner /><DashboardPage /></>
               </PrivateRoute>
             }
           />

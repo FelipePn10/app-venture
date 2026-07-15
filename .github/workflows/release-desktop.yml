@@ -1,0 +1,62 @@
+name: Release desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-windows:
+    if: github.repository == 'FelipePn10/app-venture'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and synchronize version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]
+          node scripts/set-release-version.mjs "${version}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install and validate frontend
+        shell: bash
+        run: |
+          npm ci
+          npm run test:versioning
+          npm run lint
+          npm run build:production
+
+      - name: Validate Rust host
+        working-directory: src-tauri
+        run: cargo test --locked
+
+      - name: Build signed installers and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: ERP Venture ${{ github.ref_name }}
+          releaseBody: Consulte o CHANGELOG e a documentação da versão antes de instalar.
+          releaseDraft: false
+          prerelease: false
+          args: --bundles nsis,msi

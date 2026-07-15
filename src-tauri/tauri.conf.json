@@ -10,6 +10,9 @@
     "devUrl": "http://localhost:5173"
   },
   "app": {
+    "security": {
+      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost https://api.venturerp.com https://dev-api.venturerp.com http://localhost:* ws://localhost:*; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self'"
+    },
     "windows": [
       {
         "title": "ERP Venture Desktop",
@@ -27,7 +30,25 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": []
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ3RDJDNDQ0RUZERjJFNUQKUldSZEx0L3ZSTVRTUjhPTDhZenVEVk1Od0w3TUZOVGl6MHpEdzJlZVJLb0x5eEpMN3N1RTJuR0wK",
+      "endpoints": [
+        "https://github.com/FelipePn10/app-venture/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
