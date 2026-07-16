@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "preview:demo": "vite preview --mode demo",
     "lint": "eslint . --ext ts,tsx --max-warnings 0",
+    "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:dev:demo": "tauri dev --config src-tauri/tauri.demo.conf.json",
     "tauri:build": "tauri build",
