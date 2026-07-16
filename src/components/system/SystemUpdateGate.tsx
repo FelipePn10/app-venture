@@ -19,12 +19,23 @@ export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Ele
   const validate = useCallback(async () => {
     setState('checking');
     setMessage('Validando compatibilidade com o servidor…');
+    // A trava de compatibilidade só é obrigatória no app de PRODUÇÃO. Em
+    // desenvolvimento e na demo o backend pode estar fora do ar (ou local), e
+    // isso não deve impedir o uso/teste do aplicativo.
+    const enforce = import.meta.env.MODE === 'production';
     try {
       const [backend, client] = await Promise.all([getBackendVersion(), getClientVersion()]);
-      if (client !== 'dev' && backend.min_client !== 'dev' && compareVersions(client, backend.min_client) < 0) {
+      const incompatible =
+        client !== 'dev' && backend.min_client !== 'dev' && compareVersions(client, backend.min_client) < 0;
+      if (incompatible && enforce) {
         setState('blocked');
         setMessage(`Este aplicativo é v${client}. O servidor exige no mínimo v${backend.min_client}.`);
       } else {
+        if (incompatible) {
+          console.warn(
+            `SystemUpdateGate: cliente v${client} abaixo do min_client v${backend.min_client} (ignorado fora de produção).`,
+          );
+        }
         setState('ready');
       }
       try {
@@ -33,8 +44,13 @@ export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Ele
         // A indisponibilidade do catálogo não impede uma versão compatível de operar.
       }
     } catch {
-      setState('unavailable');
-      setMessage('Não foi possível validar a versão do servidor. Verifique a conexão e tente novamente.');
+      if (enforce) {
+        setState('unavailable');
+        setMessage('Não foi possível validar a versão do servidor. Verifique a conexão e tente novamente.');
+      } else {
+        // Dev/demo: seguir sem travar mesmo com o backend inacessível.
+        setState('ready');
+      }
     }
   }, []);
 
