@@ -14,13 +14,14 @@ O workflow usa a assinatura do updater, que garante autenticidade do pacote para
 
 1. Integre `develop` em `main` após revisão e testes.
 2. Confirme que a versão do desktop atende `min_client` do backend que será publicado.
-3. Rode `make release-check VERSION=1.4.0`.
-4. Revise o CHANGELOG e execute `make release VERSION=1.4.0`.
-5. O comando sincroniza package/Cargo/Tauri, atualiza o CHANGELOG, cria commit/tag e envia ambos atomicamente.
-6. Acompanhe **Release desktop** no GitHub Actions. O runner Windows gera NSIS e MSI, cria artefatos assinados do updater e publica `latest.json` na GitHub Release.
-7. Em uma instalação Windows de homologação, abra o aplicativo anterior, confirme a oferta, instale, reinicie e confira a versão/compatibilidade.
+3. Autentique o `gh` (`gh auth status`) — é necessário para publicar na `main` protegida.
+4. Rode `make release-check VERSION=1.4.0`.
+5. Revise o CHANGELOG e execute `make release VERSION=1.4.0`.
+6. O comando sincroniza package/Cargo/Tauri, atualiza o CHANGELOG e cria o commit de release. Como `main` é **branch protegida**, ele publica o commit via **PR auto-mesclado com admin** (branch `release/vX.Y.Z`) e então taggeia o commit resultante de `main`. A tag dispara o pipeline.
+7. Acompanhe **Release desktop** no GitHub Actions. O runner Windows gera NSIS e MSI, cria artefatos assinados do updater e publica `latest.json` na GitHub Release.
+8. Em uma instalação Windows de homologação, abra o aplicativo anterior, confirme a oferta, instale, reinicie e confira a versão/compatibilidade.
 
-Nunca mova/reutilize uma tag. Falhas recebem um patch novo, como `1.4.1`.
+Nunca mova/reutilize uma tag já distribuída. Falhas recebem um patch novo, como `1.4.1`.
 
 ## Comportamento no cliente
 
