@@ -1,6 +1,6 @@
 {
   "name": "erp-desktop-frontend",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,9 +19,9 @@
     "doctor:package": "node scripts/verify-package-json.mjs",
     "validate:backend-alignment": "node scripts/validate-backend-alignment.mjs && node scripts/validate-no-registered-mocks.mjs",
     "validate:no-mocks": "node scripts/validate-no-registered-mocks.mjs",
-    "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing"
-    ,"test:versioning": "node scripts/test-versioning.mjs"
-    ,"version:sync": "node scripts/set-release-version.mjs"
+    "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing",
+    "test:versioning": "node scripts/test-versioning.mjs",
+    "version:sync": "node scripts/set-release-version.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",
