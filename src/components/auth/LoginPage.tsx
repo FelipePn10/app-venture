@@ -1,9 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { login } from "@/services/authService";
+import { getClientVersion } from "@/services/versionService";
 import { useAuthStore } from "@/store/authStore";
 import { WindowControls } from "@/components/window/WindowControls";
+import { PasswordChangeDialog } from "@/components/system/PasswordChangeDialog";
+import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
 
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
@@ -18,6 +21,21 @@ export function LoginPage(): JSX.Element {
     password?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [clientVersion, setClientVersion] = useState<string>("");
+
+  useEffect(() => {
+    let alive = true;
+    void getClientVersion().then((v) => {
+      if (alive) setClientVersion(v);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const versionLabel = clientVersion && clientVersion !== "dev" ? `v${clientVersion}` : "dev";
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -808,7 +826,7 @@ export function LoginPage(): JSX.Element {
             {[
               { num: "99.9%", label: "Uptime SLA" },
               { num: "+240", label: "Integrações" },
-              { num: "v4.2", label: "Versão atual" },
+              { num: versionLabel, label: "Versão atual" },
             ].map((s, i) => (
               <div className="lp-stat" key={i}>
                 <div className="lp-stat-num">{s.num}</div>
@@ -944,9 +962,14 @@ export function LoginPage(): JSX.Element {
               <div className="lp-field">
                 <div className="lp-field-label">
                   <span className="lp-label-text">Senha</span>
-                  <a href="#" className="lp-forgot">
-                    Esqueci a senha
-                  </a>
+                  <button
+                    type="button"
+                    className="lp-forgot"
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" }}
+                    onClick={() => setShowPasswordDialog(true)}
+                  >
+                    Trocar senha
+                  </button>
                 </div>
                 <div className="lp-input-wrap">
                   <span className="lp-input-icon">
@@ -1140,13 +1163,22 @@ export function LoginPage(): JSX.Element {
                 TLS 1.3
               </span>
               <div className="lp-footer-sep" />
-              <span className="lp-footer-badge">ISO 27001</span>
+              <button
+                type="button"
+                className="lp-footer-badge"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#3e9654", fontWeight: 600 }}
+                onClick={() => setShowNotes(true)}
+              >
+                Novidades
+              </button>
               <div className="lp-footer-sep" />
-              <span className="lp-footer-badge">v4.2.1</span>
+              <span className="lp-footer-badge">{versionLabel}</span>
             </div>
           </div>
         </section>
       </main>
+      {showPasswordDialog && <PasswordChangeDialog onClose={() => setShowPasswordDialog(false)} />}
+      {showNotes && <ReleaseNotesDialog onClose={() => setShowNotes(false)} />}
     </>
   );
 }

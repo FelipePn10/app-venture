@@ -38,3 +38,39 @@ export async function installDesktopUpdate(update: Update): Promise<void> {
   await update.downloadAndInstall();
   await relaunch();
 }
+
+export interface ReleaseNote {
+  version: string;
+  name: string;
+  notes: string;
+  date: string;
+  url: string;
+}
+
+// Notas de versão do app desktop (o que cada atualização traz). Vem direto da
+// GitHub Releases API (envia CORS: *); a origem precisa estar no connect-src da
+// CSP (ver tauri.conf.json). É o mesmo repositório que o updater consulta.
+const RELEASES_API =
+  'https://api.github.com/repos/FelipePn10/app-venture/releases?per_page=20';
+
+export async function fetchReleaseNotes(): Promise<ReleaseNote[]> {
+  const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
+  if (!res.ok) throw new Error(`GitHub respondeu ${res.status}`);
+  const data = (await res.json()) as Array<{
+    tag_name?: string;
+    name?: string;
+    body?: string;
+    published_at?: string;
+    html_url?: string;
+    draft?: boolean;
+  }>;
+  return data
+    .filter((r) => !r.draft)
+    .map((r) => ({
+      version: (r.tag_name ?? '').replace(/^v/, ''),
+      name: r.name || r.tag_name || '',
+      notes: (r.body ?? '').trim(),
+      date: r.published_at ?? '',
+      url: r.html_url ?? '',
+    }));
+}
