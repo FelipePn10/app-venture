@@ -42,7 +42,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ3RDJDNDQ0RUZERjJFNUQKUldSZEx0L3ZSTVRTUjhPTDhZenVEVk1Od0w3TUZOVGl6MHpEdzJlZVJLb0x5eEpMN3N1RTJuR0wK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQzMjAzRERDQTI0OUI5NjkKUldScHVVbWkzRDBnUXhoRWp2ZFA2STlRWVpzeGlMTE5pYXpjams1aVc2dWlmU1gwMjJYRE1kVzEK",
       "endpoints": [
         "https://github.com/FelipePn10/app-venture/releases/latest/download/latest.json"
       ],
