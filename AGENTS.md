@@ -8,6 +8,6 @@ O `tauri-action` executa `npm run tauri build`, então o `package.json` precisa 
 
 O updater usa a chave pública de `tauri.conf.json`; a privada existe somente no GitHub Actions e em backup seguro do proprietário. Nunca registre, imprima ou substitua essa chave em uma alteração comum. Perder a chave impede atualizar instalações existentes.
 
-No boot, `SystemUpdateGate` consulta `/api/version`, aplica `min_client` e só então verifica o catálogo assinado. Browser/dev não chama plugins nativos. O banner do backend é exclusivo de `ADMIN` e chama somente os endpoints da API; o desktop nunca acessa SSH/Docker.
+No boot, `SystemUpdateGate` consulta `/api/version`, aplica `min_client` e só então verifica o catálogo assinado. A trava só é **obrigatória no build de produção** (`import.meta.env.MODE === 'production'`); em desenvolvimento e demo o app segue mesmo com o backend inacessível ou incompatível, para não travar testes locais. Browser/dev não chama plugins nativos. O banner do backend é exclusivo de `ADMIN` e chama somente os endpoints da API; o desktop nunca acessa SSH/Docker.
 
 Antes de modificar releases/updater, leia `RELEASES.md`. Depois rode `npm run test:versioning`, lint, build de produção, `cargo test --locked` e valide no Windows. Não publique tags para testar CI; use branches/PRs.
