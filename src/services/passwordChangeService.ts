@@ -10,8 +10,14 @@ export async function listPasswordChangeRequests(params?: Obj): Promise<Obj[]> {
   const { data } = await httpClient.get(`${BASE}/`, { params });
   return unwrapArray(data).map((r) => unwrapObject(r));
 }
-export async function requestPasswordChange(reason: string): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/`, { reason });
+/** Config opcional com token explícito — usado na tela de login, onde o store
+ *  de auth ainda está vazio (o interceptor não injeta Authorization). */
+function withToken(token?: string) {
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+}
+
+export async function requestPasswordChange(reason: string, token?: string): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/`, { reason }, withToken(token));
   return unwrapObject(data);
 }
 export async function approvePasswordChange(requestId: number): Promise<Obj> {
@@ -23,7 +29,7 @@ export async function rejectPasswordChange(requestId: number, reason = ''): Prom
   return unwrapObject(data);
 }
 /** Conclui a troca informando a senha atual + nova + confirmação. */
-export async function completePasswordChange(requestId: number, currentPassword: string, newPassword: string, confirmPassword: string): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/${requestId}/complete`, { current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword });
+export async function completePasswordChange(requestId: number | string, currentPassword: string, newPassword: string, confirmPassword: string, token?: string): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/${requestId}/complete`, { current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword }, withToken(token));
   return unwrapObject(data);
 }

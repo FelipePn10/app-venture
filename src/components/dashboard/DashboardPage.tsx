@@ -13,6 +13,7 @@ import {
 } from "@/types/erpScreen";
 import { openErpScreenWindow } from "@/utils/windowManager";
 import { useAuthStore } from "@/store/authStore";
+import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
 
 const MAX_RECENTS   = 5;
 const MAX_FAVORITES = 8;
@@ -51,6 +52,7 @@ export function DashboardPage(): JSX.Element {
   const [searchQuery,     setSearchQuery]     = useState("");
   const [recents,         setRecents]         = useState<string[]>([]);
   const [favorites,       setFavorites]       = useState<string[]>(loadFavorites);
+  const [showNotes,       setShowNotes]       = useState(false);
 
   // Parent areas start EXPANDED so the navigation reads as a populated workstation
   // (an empty tree looked "prototype"). Modules stay collapsed to keep it scannable.
@@ -259,10 +261,13 @@ export function DashboardPage(): JSX.Element {
           <div className="ui"><span className="un">{welcomeName}</span><span className="ur">{userRoleLabel}</span></div>
           <div className="av">{initials}</div>
           <button type="button" className="lo" onClick={handleLogout}><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>Sair</button>
+          <button type="button" className="hl" onClick={() => setShowNotes(true)} title="Novidades"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L8 9.9 4.8 11.1l.6-3.6L2.8 5.4l3.6-.5L8 1.6z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg></button>
           <button type="button" className="hl" onClick={() => { import("@tauri-apps/plugin-opener").then(m => m.openUrl("https://help.venturerp.com")); }} title="Ajuda"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/><path d="M6.2 6a2 2 0 012.6-1.8 1.9 1.9 0 011 2.5c-.4.9-1.2 1.3-1.8 1.8M8 11.4h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
           <WindowControls />
         </div>
       </header>
+
+      {showNotes && <ReleaseNotesDialog onClose={() => setShowNotes(false)} />}
 
       <aside className="s">
         <div className="stp">

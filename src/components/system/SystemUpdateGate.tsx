@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { Update } from '@tauri-apps/plugin-updater';
 import {
   checkDesktopUpdate,
@@ -10,8 +12,22 @@ import {
 
 type GateState = 'checking' | 'ready' | 'blocked' | 'unavailable';
 
+// Cada tela do ERP abre em uma WebviewWindow própria (label "screen-*") que
+// recarrega este componente. A trava de compatibilidade só faz sentido uma vez,
+// na janela principal ("main"); as demais já foram validadas no login. Sem isto,
+// toda tela reexibiria o "Validando…/Atualização necessária" por alguns segundos.
+function isMainGateWindow(): boolean {
+  if (!isTauri()) return true; // navegador/dev: trata como janela principal
+  try {
+    return getCurrentWindow().label === 'main';
+  } catch {
+    return true;
+  }
+}
+
 export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Element {
-  const [state, setState] = useState<GateState>('checking');
+  const gated = useMemo(() => isMainGateWindow(), []);
+  const [state, setState] = useState<GateState>(gated ? 'checking' : 'ready');
   const [message, setMessage] = useState('Validando compatibilidade com o servidor…');
   const [update, setUpdate] = useState<Update | null>(null);
   const [installing, setInstalling] = useState(false);
@@ -54,7 +70,9 @@ export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Ele
     }
   }, []);
 
-  useEffect(() => { void validate(); }, [validate]);
+  useEffect(() => {
+    if (gated) void validate();
+  }, [gated, validate]);
 
   async function install(): Promise<void> {
     if (!update) return;
@@ -66,6 +84,9 @@ export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Ele
       setMessage('A instalação falhou. Nenhuma alteração insegura foi aplicada; tente novamente.');
     }
   }
+
+  // Janelas de tela (screen-*) não passam pela trava: renderizam direto.
+  if (!gated) return <>{children}</>;
 
   if (state !== 'ready') {
     return (
