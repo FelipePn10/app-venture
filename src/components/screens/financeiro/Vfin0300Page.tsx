@@ -15,7 +15,7 @@ function lastDayOfMonth() { const d = new Date(); return new Date(d.getFullYear(
 
 function tipoPill(t: string): JSX.Element {
   const isIn = t.toUpperCase().includes("ENTRADA");
-  return <span className={`fsc-pill ${isIn ? "fsc-pill-green" : "fsc-pill-red"}`}>{t}</span>;
+  return <span className={`erp-badge ${isIn ? "erp-badge-green" : "erp-badge-red"}`}>{t}</span>;
 }
 
 export function Vfin0300Page(): JSX.Element {
@@ -45,70 +45,64 @@ export function Vfin0300Page(): JSX.Element {
   const totalSaldos = saldos.reduce((s, c) => s + c.saldo_atual, 0);
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIN0300 — Fluxo de Caixa &amp; Saldos</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Fluxo de Caixa &amp; Saldos</span><span className="erp-crumb-code">VFIN0300</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
+      <div className="erp-toolbar">
         {(tab !== "saldos") && (
-          <div className="fsc-action-group">
-            <span className="fsc-action-label">Início</span>
-            <input className="fsc-input" style={{ width: 150, height: 32 }} type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+          <div className="erp-tgroup">
+            <span className="erp-tgroup-label">Início</span>
+            <input className="erp-input" style={{ width: 150, height: 32 }} type="date" value={start} onChange={(e) => setStart(e.target.value)} />
             {tab === "realizado" && <>
-              <span className="fsc-action-label">Fim</span>
-              <input className="fsc-input" style={{ width: 150, height: 32 }} type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+              <span className="erp-tgroup-label">Fim</span>
+              <input className="erp-input" style={{ width: 150, height: 32 }} type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </>}
           </div>
         )}
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Ações</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void reload()} disabled={busy}>{busy ? "Carregando..." : "Consultar"}</button>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Ações</span>
+          <button className="erp-btn erp-btn-primary" onClick={() => void reload()} disabled={busy}>{busy ? "Carregando..." : "Consultar"}</button>
           <ExportButton title="VFIN0300 — Fluxo de Caixa & Saldos" filename="fluxo-de-caixa" disabled={busy}
             subtitle={tab === "saldos" ? "Saldos das contas" : `Período: ${start} a ${end}`}
             meta={{ aba: tab }} />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Fluxo de Caixa &amp; Saldo</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "realizado" ? "active" : ""}`} onClick={() => setTab("realizado")}>Realizado</button>
-            <button className={`fsc-tab ${tab === "projetado" ? "active" : ""}`} onClick={() => setTab("projetado")}>Projetado</button>
-            <button className={`fsc-tab ${tab === "saldos" ? "active" : ""}`} onClick={() => setTab("saldos")}>Saldos das Contas</button>
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "realizado" ? "active" : ""}`} onClick={() => setTab("realizado")}>Realizado</button>
+            <button className={`erp-tab ${tab === "projetado" ? "active" : ""}`} onClick={() => setTab("projetado")}>Projetado</button>
+            <button className={`erp-tab ${tab === "saldos" ? "active" : ""}`} onClick={() => setTab("saldos")}>Saldos das Contas</button>
           </div>
 
           {tab === "realizado" && (
             <>
-              <div className="fsc-card-body" style={{ paddingBottom: 0 }}>
-                <div className="fsc-metrics">
-                  <div className="fsc-metric"><div className="fsc-metric-label">Entradas</div><div className="fsc-metric-value" style={{ color: "#1e6030" }}>{money(entradas)}</div></div>
-                  <div className="fsc-metric"><div className="fsc-metric-label">Saídas</div><div className="fsc-metric-value" style={{ color: "#b91c1c" }}>{money(saidas)}</div></div>
-                  <div className="fsc-metric"><div className="fsc-metric-label">Saldo do período</div><div className="fsc-metric-value">{money(entradas - saidas)}</div></div>
+              <div className="erp-fieldset-body" style={{ paddingBottom: 0 }}>
+                <div className="erp-metrics">
+                  <div className="erp-metric"><div className="erp-metric-label">Entradas</div><div className="erp-metric-value" style={{ color: "#1e6030" }}>{money(entradas)}</div></div>
+                  <div className="erp-metric"><div className="erp-metric-label">Saídas</div><div className="erp-metric-value" style={{ color: "#b91c1c" }}>{money(saidas)}</div></div>
+                  <div className="erp-metric"><div className="erp-metric-label">Saldo do período</div><div className="erp-metric-value">{money(entradas - saidas)}</div></div>
                 </div>
               </div>
-              <div className="fsc-results-wrap">
-                <table className="fsc-table">
-                  <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Conciliado</th><th className="fsc-num">Valor</th></tr></thead>
+              <div className="erp-fieldset-body">
+                <table className="erp-grid">
+                  <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Conciliado</th><th>Valor</th></tr></thead>
                   <tbody>
-                    {realizado.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhum lançamento no período.</td></tr>}
+                    {realizado.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum lançamento no período.</td></tr>}
                     {realizado.map((r, i) => (
                       <tr key={i}><td>{r.data?.slice(0, 10)}</td><td>{tipoPill(r.tipo)}</td><td>{r.descricao}</td>
-                        <td>{r.conciliado ? <span className="fsc-pill fsc-pill-green">Sim</span> : <span className="fsc-pill fsc-pill-gray">Não</span>}</td>
-                        <td className="fsc-num">{money(r.valor)}</td></tr>
+                        <td>{r.conciliado ? <span className="erp-badge ok">Sim</span> : <span className="erp-badge erp-badge-gray">Não</span>}</td>
+                        <td>{money(r.valor)}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -117,13 +111,13 @@ export function Vfin0300Page(): JSX.Element {
           )}
 
           {tab === "projetado" && (
-            <div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th className="fsc-num">Valor</th></tr></thead>
+            <div className="erp-fieldset-body">
+              <table className="erp-grid">
+                <thead><tr><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr></thead>
                 <tbody>
-                  {projetado.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma projeção a partir da data.</td></tr>}
+                  {projetado.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma projeção a partir da data.</td></tr>}
                   {projetado.map((r, i) => (
-                    <tr key={i}><td>{r.data_vencimento?.slice(0, 10)}</td><td>{tipoPill(r.tipo)}</td><td>{r.descricao}</td><td className="fsc-num">{money(r.valor)}</td></tr>
+                    <tr key={i}><td>{r.data_vencimento?.slice(0, 10)}</td><td>{tipoPill(r.tipo)}</td><td>{r.descricao}</td><td>{money(r.valor)}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -132,29 +126,29 @@ export function Vfin0300Page(): JSX.Element {
 
           {tab === "saldos" && (
             <>
-              <div className="fsc-card-body" style={{ paddingBottom: 0 }}>
-                <div className="fsc-metrics">
-                  <div className="fsc-metric"><div className="fsc-metric-label">Contas</div><div className="fsc-metric-value">{saldos.length}</div></div>
-                  <div className="fsc-metric"><div className="fsc-metric-label">Saldo Total</div><div className="fsc-metric-value">{money(totalSaldos)}</div></div>
+              <div className="erp-fieldset-body" style={{ paddingBottom: 0 }}>
+                <div className="erp-metrics">
+                  <div className="erp-metric"><div className="erp-metric-label">Contas</div><div className="erp-metric-value">{saldos.length}</div></div>
+                  <div className="erp-metric"><div className="erp-metric-label">Saldo Total</div><div className="erp-metric-value">{money(totalSaldos)}</div></div>
                 </div>
               </div>
-              <div className="fsc-results-wrap">
-                <table className="fsc-table">
-                  <thead><tr><th>Banco</th><th>Descrição</th><th className="fsc-num">Saldo Atual</th></tr></thead>
+              <div className="erp-fieldset-body">
+                <table className="erp-grid">
+                  <thead><tr><th>Banco</th><th>Descrição</th><th>Saldo Atual</th></tr></thead>
                   <tbody>
-                    {saldos.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhuma conta.</td></tr>}
-                    {saldos.map((c) => <tr key={c.id}><td style={{ fontWeight: 600 }}>{c.banco}</td><td>{c.descricao}</td><td className="fsc-num">{money(c.saldo_atual)}</td></tr>)}
+                    {saldos.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhuma conta.</td></tr>}
+                    {saldos.map((c) => <tr key={c.id}><td style={{ fontWeight: 600 }}>{c.banco}</td><td>{c.descricao}</td><td>{money(c.saldo_atual)}</td></tr>)}
                   </tbody>
                 </table>
               </div>
             </>
           )}
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Visão: <strong>{tab}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Visão: <strong>{tab}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

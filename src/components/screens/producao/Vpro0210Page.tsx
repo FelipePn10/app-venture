@@ -14,8 +14,8 @@ const now = new Date();
 
 function statusPill(s: string): JSX.Element {
   const x = s.toLowerCase();
-  const cls = x.includes("done") || x.includes("conclu") ? "fsc-pill-green" : x.includes("progress") ? "fsc-pill-blue" : "fsc-pill-amber";
-  return <span className={`fsc-pill ${cls}`}>{s || "—"}</span>;
+  const cls = x.includes("done") || x.includes("conclu") ? "erp-badge-green" : x.includes("progress") ? "erp-badge-blue" : "erp-badge-amber";
+  return <span className={`erp-badge ${cls}`}>{s || "—"}</span>;
 }
 
 export function Vpro0210Page(): JSX.Element {
@@ -88,124 +88,124 @@ export function Vpro0210Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRO0210 — APS (Sequenciamento / Gantt)</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">APS (Sequenciamento / Gantt)</span><span className="erp-crumb-code">VPRO0210</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Planejamento</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void sequenciar()} disabled={busy}>{busy ? "..." : "Sequenciar ordens"}</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Gantt</span>
-          <button className={`fsc-btn ${mode === "order" ? "fsc-btn-primary" : "fsc-btn-ghost"}`} onClick={() => setMode("order")}>Por ordem</button>
-          <button className={`fsc-btn ${mode === "centro" ? "fsc-btn-primary" : "fsc-btn-ghost"}`} onClick={() => setMode("centro")}>Por centro</button>
-          <button className={`fsc-btn ${mode === "mes" ? "fsc-btn-primary" : "fsc-btn-ghost"}`} onClick={() => setMode("mes")}>Quadro do mês</button></div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Planejamento</span>
+          <button className="erp-btn erp-btn-primary" onClick={() => void sequenciar()} disabled={busy}>{busy ? "..." : "Sequenciar ordens"}</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Gantt</span>
+          <button className={`erp-btn ${mode === "order" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("order")}>Por ordem</button>
+          <button className={`erp-btn ${mode === "centro" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("centro")}>Por centro</button>
+          <button className={`erp-btn ${mode === "mes" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("mes")}>Quadro do mês</button></div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0210 — APS (Sequenciamento / Gantt)" filename="vpro0210" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">APS</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {mode !== "mes" && (
           <>
-            <div className="fsc-card"><div className="fsc-card-body">
-              <div className="fsc-grid">
+            <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
+              
                 {mode === "order" ? (
-                  <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Ordem de Produção (ID)</label>
-                    <input className="fsc-input fsc-input-right" type="number" value={orderId} onChange={(e) => setOrderId(e.target.value)} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label erp-req">Ordem de Produção (ID)</label>
+                    <input className="erp-input num" type="number" value={orderId} onChange={(e) => setOrderId(e.target.value)} /></div>
                 ) : (
                   <>
-                    <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Centro (ID)</label><input className="fsc-input fsc-input-right" type="number" value={wcId} onChange={(e) => setWcId(e.target.value)} /></div>
-                    <div className="fsc-field fsc-col-3"><label className="fsc-label">De</label><input className="fsc-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-                    <div className="fsc-field fsc-col-3"><label className="fsc-label">Até</label><input className="fsc-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro (ID)</label><input className="erp-input num" type="number" value={wcId} onChange={(e) => setWcId(e.target.value)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">De</label><input className="erp-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Até</label><input className="erp-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
                   </>
                 )}
-                <div className="fsc-field fsc-col-3" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void verGantt()} disabled={busy}>Ver Gantt</button></div>
-              </div>
+                <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void verGantt()} disabled={busy}>Ver Gantt</button></div>
+              
             </div></div>
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Gantt</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{rows.length} operação(ões)</span></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th>Ordem</th><th className="fsc-num">Pos.</th><th>Centro</th><th>Início</th><th>Fim</th><th className="fsc-num">Horas</th><th>Status</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Gantt — <span style={{fontWeight:400,opacity:0.65}}>{rows.length} operação(ões)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Ordem</th><th>Pos.</th><th>Centro</th><th>Início</th><th>Fim</th><th>Horas</th><th>Status</th></tr></thead>
                 <tbody>
-                  {rows.length === 0 && <tr><td colSpan={7} className="fsc-empty">Sem agendamento. Sequencie e consulte.</td></tr>}
+                  {rows.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Sem agendamento. Sequencie e consulte.</td></tr>}
                   {rows.map((r) => (
                     <tr key={r.sequence_id}>
-                      <td style={{ fontWeight: 600 }}>{r.production_order_id}</td><td className="fsc-num">{r.sequence_position}</td><td>{r.work_center_id}</td>
-                      <td>{dt(r.scheduled_start)}</td><td>{dt(r.scheduled_end)}</td><td className="fsc-num">{r.duration_hours}</td><td>{statusPill(r.status)}</td>
+                      <td style={{ fontWeight: 600 }}>{r.production_order_id}</td><td>{r.sequence_position}</td><td>{r.work_center_id}</td>
+                      <td>{dt(r.scheduled_start)}</td><td>{dt(r.scheduled_end)}</td><td>{r.duration_hours}</td><td>{statusPill(r.status)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div></div>
+            </div>
           </>
         )}
 
         {mode === "mes" && (
           <>
-            <div className="fsc-card"><div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Ano</label><input className="fsc-input fsc-input-right" type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Mês</label><input className="fsc-input fsc-input-right" type="number" min={1} max={12} value={month} onChange={(e) => setMonth(e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Agrupar por</label>
-                  <select className="fsc-input" value={groupBy} onChange={(e) => setGroupBy(e.target.value as GanttGroupBy)}><option value="work_center">Centro de trabalho</option><option value="order">Ordem de produção</option></select></div>
-                <div className="fsc-field fsc-col-5" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
-                  <button className="fsc-btn fsc-btn-primary" onClick={() => void verQuadro()} disabled={busy}>Ver quadro</button>
-                  <button className="fsc-btn fsc-btn-ghost" onClick={() => void baixarExport("svg")} disabled={busy}>Export SVG</button>
-                  <button className="fsc-btn fsc-btn-ghost" onClick={() => void baixarExport("pdf")} disabled={busy}>Export PDF</button>
+            <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c2"><label className="erp-label">Ano</label><input className="erp-input num" type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Mês</label><input className="erp-input num" type="number" min={1} max={12} value={month} onChange={(e) => setMonth(e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Agrupar por</label>
+                  <select className="erp-input" value={groupBy} onChange={(e) => setGroupBy(e.target.value as GanttGroupBy)}><option value="work_center">Centro de trabalho</option><option value="order">Ordem de produção</option></select></div>
+                <div className="erp-field erp-c5" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
+                  <button className="erp-btn erp-btn-primary" onClick={() => void verQuadro()} disabled={busy}>Ver quadro</button>
+                  <button className="erp-btn" onClick={() => void baixarExport("svg")} disabled={busy}>Export SVG</button>
+                  <button className="erp-btn" onClick={() => void baixarExport("pdf")} disabled={busy}>Export PDF</button>
                 </div>
-              </div>
+              
             </div></div>
 
             {board && (
-              <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Linhas ({groupBy === "order" ? "OFs" : "centros"})</label><input className="fsc-input fsc-input-right" value={board.rows.length} readOnly /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Dias sobrecarregados</label><input className="fsc-input fsc-input-right" value={board.overloaded_days} readOnly /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Barras atrasadas</label><input className="fsc-input fsc-input-right" value={board.late_bars} readOnly /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Dependências</label><input className="fsc-input fsc-input-right" value={board.dependencies.length} readOnly /></div>
-              </div></div></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c3"><label className="erp-label">Linhas ({groupBy === "order" ? "OFs" : "centros"})</label><input className="erp-input num" value={board.rows.length} readOnly /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Dias sobrecarregados</label><input className="erp-input num" value={board.overloaded_days} readOnly /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Barras atrasadas</label><input className="erp-input num" value={board.late_bars} readOnly /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Dependências</label><input className="erp-input num" value={board.dependencies.length} readOnly /></div>
+              </div></div>
             )}
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Barras do quadro</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{boardBars.length} barra(s)</span></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th>Linha</th><th>Rótulo</th><th className="fsc-num">Seq.</th><th>Centro</th><th>Início</th><th>Fim</th><th className="fsc-num">% concl.</th><th>Atrasada</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Barras do quadro — <span style={{fontWeight:400,opacity:0.65}}>{boardBars.length} barra(s)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Linha</th><th>Rótulo</th><th>Seq.</th><th>Centro</th><th>Início</th><th>Fim</th><th>% concl.</th><th>Atrasada</th></tr></thead>
                 <tbody>
-                  {boardBars.length === 0 && <tr><td colSpan={8} className="fsc-empty">Sem barras. Sequencie (APS) e clique em Ver quadro.</td></tr>}
+                  {boardBars.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Sem barras. Sequencie (APS) e clique em Ver quadro.</td></tr>}
                   {boardBars.map((b, i) => (
                     <tr key={i} style={b.color_hex ? { borderLeft: `3px solid ${b.color_hex}` } : undefined}>
-                      <td>{b.rowLabel}</td><td style={{ fontWeight: 600 }}>{b.label}</td><td className="fsc-num">{b.sequence_id ?? "—"}</td><td>{b.work_center_id ?? "—"}</td>
-                      <td>{dt(b.start)}</td><td>{dt(b.end)}</td><td className="fsc-num">{b.percent_done != null ? `${Math.round(b.percent_done)}%` : "—"}</td>
-                      <td>{b.is_late ? <span className="fsc-pill fsc-pill-amber">Atrasada</span> : "—"}</td>
+                      <td>{b.rowLabel}</td><td style={{ fontWeight: 600 }}>{b.label}</td><td>{b.sequence_id ?? "—"}</td><td>{b.work_center_id ?? "—"}</td>
+                      <td>{dt(b.start)}</td><td>{dt(b.end)}</td><td>{b.percent_done != null ? `${Math.round(b.percent_done)}%` : "—"}</td>
+                      <td>{b.is_late ? <span className="erp-badge warn">Atrasada</span> : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div></div>
+            </div>
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Remanejar (arraste manual)</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">move a sequência + cascata finish-start</span></div>
-            <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-              <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Sequência (ID)</label><input className="fsc-input fsc-input-right" type="number" value={resForm.sequenceId} onChange={(e) => setResForm((s) => ({ ...s, sequenceId: e.target.value }))} /></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Novo início</label><input className="fsc-input" type="datetime-local" value={resForm.newStart} onChange={(e) => setResForm((s) => ({ ...s, newStart: e.target.value }))} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Novo centro (ID)</label><input className="fsc-input fsc-input-right" type="number" value={resForm.newWc} onChange={(e) => setResForm((s) => ({ ...s, newWc: e.target.value }))} /></div>
-              <div className="fsc-field fsc-col-2" style={{ alignSelf: "end" }}><label className="fsc-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={resForm.cascade} onChange={(e) => setResForm((s) => ({ ...s, cascade: e.target.checked }))} />Cascata</label></div>
-              <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" onClick={() => void remanejar()} disabled={busy}>Remanejar</button></div>
-            </div></div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Remanejar (arraste manual) — <span style={{fontWeight:400,opacity:0.65}}>move a sequência + cascata finish-start</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Sequência (ID)</label><input className="erp-input num" type="number" value={resForm.sequenceId} onChange={(e) => setResForm((s) => ({ ...s, sequenceId: e.target.value }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Novo início</label><input className="erp-input" type="datetime-local" value={resForm.newStart} onChange={(e) => setResForm((s) => ({ ...s, newStart: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Novo centro (ID)</label><input className="erp-input num" type="number" value={resForm.newWc} onChange={(e) => setResForm((s) => ({ ...s, newWc: e.target.value }))} /></div>
+              <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><label className="erp-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={resForm.cascade} onChange={(e) => setResForm((s) => ({ ...s, cascade: e.target.checked }))} />Cascata</label></div>
+              <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={() => void remanejar()} disabled={busy}>Remanejar</button></div>
+            </div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Operações: <strong>{rows.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Operações: <strong>{rows.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

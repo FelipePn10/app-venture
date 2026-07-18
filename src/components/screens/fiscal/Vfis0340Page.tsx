@@ -48,93 +48,84 @@ export function Vfis0340Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIS0340 — Apuração do Simples Nacional</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Apuração do Simples Nacional</span><span className="erp-crumb-code">VFIS0340</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-new" onClick={novo} disabled={busy}>+ Nova Apuração</button>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Cadastro</span>
+          <button className="erp-btn erp-btn-new" onClick={novo} disabled={busy}>+ Nova Apuração</button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Ações</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Ações</span>
+          <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VFIS0340 — Apuração do Simples Nacional" filename="vfis0340" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Dados</span><div className="fsc-section-banner-line" />
-          <span className="fsc-section-banner-hint">Par (período, anexo) é único</span></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <div className="fsc-grid">
-            <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Período</label>
-              <input className="fsc-input" value={form.period} placeholder="2024-01" disabled={editing} onChange={(e) => setF("period", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Anexo</label>
-              <select className="fsc-select" value={form.annex} disabled={editing} onChange={(e) => setF("annex", e.target.value as SimplesAnexo)}>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Apuração do Simples Nacion</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Dados  — <span style={{fontWeight:400,opacity:0.65}}>Par (período, anexo) é único</span></div><div className="erp-fieldset-body">
+          
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Período</label>
+              <input className="erp-input" value={form.period} placeholder="2024-01" disabled={editing} onChange={(e) => setF("period", e.target.value)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Anexo</label>
+              <select className="erp-input" value={form.annex} disabled={editing} onChange={(e) => setF("annex", e.target.value as SimplesAnexo)}>
                 {ANEXOS.map((a) => <option key={a} value={a}>{a}</option>)}</select></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Receita Interna</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.receita_interna} onChange={(e) => setNum("receita_interna", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Receita Externa</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.receita_externa} onChange={(e) => setNum("receita_externa", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Folha de Pagamento</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.folha_pagamento} onChange={(e) => setNum("folha_pagamento", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Receita Bruta 12m</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.receita_bruta_12m} onChange={(e) => setNum("receita_bruta_12m", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Simples Recolhido</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.simples_recolhido} onChange={(e) => setNum("simples_recolhido", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Alíq. Nominal (%)</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.aliquota_nominal} onChange={(e) => setNum("aliquota_nominal", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Alíq. Efetiva (%)</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.aliquota_efetiva} onChange={(e) => setNum("aliquota_efetiva", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Alíq. Efetiva ICMS (%)</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.aliquota_efetiva_icms} onChange={(e) => setNum("aliquota_efetiva_icms", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Parcela a Deduzir</label>
-              <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.parcela_deduzir} onChange={(e) => setNum("parcela_deduzir", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-12"><label className="fsc-label">Observação</label>
-              <input className="fsc-input" value={form.observation ?? ""} onChange={(e) => setF("observation", e.target.value)} /></div>
-          </div>
+            <div className="erp-field erp-c4"><label className="erp-label">Receita Interna</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.receita_interna} onChange={(e) => setNum("receita_interna", e.target.value)} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label">Receita Externa</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.receita_externa} onChange={(e) => setNum("receita_externa", e.target.value)} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label">Folha de Pagamento</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.folha_pagamento} onChange={(e) => setNum("folha_pagamento", e.target.value)} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label">Receita Bruta 12m</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.receita_bruta_12m} onChange={(e) => setNum("receita_bruta_12m", e.target.value)} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label">Simples Recolhido</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.simples_recolhido} onChange={(e) => setNum("simples_recolhido", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Alíq. Nominal (%)</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.aliquota_nominal} onChange={(e) => setNum("aliquota_nominal", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Alíq. Efetiva (%)</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.aliquota_efetiva} onChange={(e) => setNum("aliquota_efetiva", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Alíq. Efetiva ICMS (%)</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.aliquota_efetiva_icms} onChange={(e) => setNum("aliquota_efetiva_icms", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Parcela a Deduzir</label>
+              <input className="erp-input num" type="number" step="0.01" value={form.parcela_deduzir} onChange={(e) => setNum("parcela_deduzir", e.target.value)} /></div>
+            <div className="erp-field erp-c12"><label className="erp-label">Observação</label>
+              <input className="erp-input" value={form.observation ?? ""} onChange={(e) => setF("observation", e.target.value)} /></div>
+          
         </div></div>
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Apurações</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{list.length}</span></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th>Período</th><th>Anexo</th><th className="fsc-num">Receita Bruta 12m</th><th className="fsc-num">Alíq. Efetiva</th><th className="fsc-num">Recolhido</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Apurações — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Período</th><th>Anexo</th><th>Receita Bruta 12m</th><th>Alíq. Efetiva</th><th>Recolhido</th><th style={{ width: 80 }}>Ações</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={6} className="fsc-empty">Nenhuma apuração cadastrada.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma apuração cadastrada.</td></tr>}
               {list.map((a) => (
                 <tr key={`${a.period}-${a.annex}`}>
-                  <td style={{ fontWeight: 600 }}>{a.period}</td><td><span className="fsc-pill fsc-pill-gray">{a.annex}</span></td>
-                  <td className="fsc-num">{money(a.receita_bruta_12m)}</td><td className="fsc-num">{a.aliquota_efetiva}%</td>
-                  <td className="fsc-num">{money(a.simples_recolhido)}</td>
-                  <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => edit(a)}>Editar</button></td>
+                  <td style={{ fontWeight: 600 }}>{a.period}</td><td><span className="erp-badge erp-badge-gray">{a.annex}</span></td>
+                  <td>{money(a.receita_bruta_12m)}</td><td>{a.aliquota_efetiva}%</td>
+                  <td>{money(a.simples_recolhido)}</td>
+                  <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => edit(a)}>Editar</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div></div>
-      </div>
+        </div></div></div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Apurações: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Apurações: <strong>{list.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

@@ -92,109 +92,95 @@ export function Vcus0100Page(): JSX.Element {
   });
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCUS0100 — Custos (centro, compra, alocação, overhead)</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Custos / Precificação</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Custos (centro, compra, alocação, overhead)</span><span className="erp-crumb-code">VCUS0100</span></nav>
+        <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">custo padrão &amp; alocações</span>
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Dados</span>
-          <button className="fsc-btn fsc-btn-ghost" onClick={loadAll} disabled={busy}>Recarregar</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
-          <ExportButton title="VCUS0100 — Custos" filename="vcus0100" /></div>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Dados</span><button className="erp-btn erp-btn-dark" onClick={loadAll} disabled={busy}>{busy && <span className="erp-spin" />}Recarregar</button></div>
+        <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VCUS0100 — Custos" filename="vcus0100" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Custos</button></div>
+          <div className="erp-detail-body">
 
-        {/* Rollup do custo padrão */}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Custo padrão — rollup</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Item</label><input className="fsc-input fsc-input-right" type="number" value={rollupItem || ""} onChange={(e) => setRollupItem(Number(e.target.value))} /></div>
-          <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" onClick={rodarRollup} disabled={busy}>Recalcular (rollup)</button></div>
-          {rollup && <>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Material</label><input className="fsc-input fsc-input-right" value={money(rollup.material_cost)} readOnly /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Operação</label><input className="fsc-input fsc-input-right" value={money(rollup.operation_cost)} readOnly /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Total</label><input className="fsc-input fsc-input-right" value={money(rollup.total_cost)} readOnly /></div>
-          </>}
-        </div></div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Custo padrão — rollup</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={rollupItem || ""} onChange={(e) => setRollupItem(Number(e.target.value))} /></div>
+              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={rodarRollup} disabled={busy}>Recalcular (rollup)</button></div>
+              {rollup && <>
+                <div className="erp-field erp-c2"><label className="erp-label">Material</label><input className="erp-input num" value={money(rollup.material_cost)} readOnly /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Operação</label><input className="erp-input num" value={money(rollup.operation_cost)} readOnly /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Total</label><input className="erp-input num" value={money(rollup.total_cost)} readOnly /></div>
+              </>}
+            </div></div>
 
-        {/* Custo/hora por centro de trabalho */}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Custo/hora por centro de trabalho</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Centro de trabalho (ID)</label><input className="fsc-input fsc-input-right" type="number" value={wccForm.work_center_id || ""} onChange={(e) => setWccForm((p) => ({ ...p, work_center_id: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Custo/hora</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={wccForm.cost_per_hour || ""} onChange={(e) => setWccForm((p) => ({ ...p, cost_per_hour: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" onClick={salvarWcc} disabled={busy}>Salvar custo/hora</button></div>
-        </div></div></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Centro</th><th className="fsc-num">Custo/hora</th><th>Moeda</th></tr></thead>
-            <tbody>
-              {wccs.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhum custo de centro cadastrado.</td></tr>}
-              {wccs.map((w) => <tr key={w.id ?? w.work_center_id}><td className="fsc-num">{w.work_center_id}</td><td className="fsc-num">{money(w.cost_per_hour)}</td><td>{w.currency ?? "BRL"}</td></tr>)}
-            </tbody>
-          </table>
-        </div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Custo/hora por centro de trabalho</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro de trabalho (ID)</label><input className="erp-input num" type="number" value={wccForm.work_center_id || ""} onChange={(e) => setWccForm((p) => ({ ...p, work_center_id: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Custo/hora</label><input className="erp-input num" type="number" step="0.01" value={wccForm.cost_per_hour || ""} onChange={(e) => setWccForm((p) => ({ ...p, cost_per_hour: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarWcc} disabled={busy}>Salvar custo/hora</button></div>
+              <div className="erp-field erp-c12"><table className="erp-grid">
+                <thead><tr><th>Centro</th><th>Custo/hora</th><th>Moeda</th></tr></thead>
+                <tbody>
+                  {wccs.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhum custo de centro cadastrado.</td></tr>}
+                  {wccs.map((w) => <tr key={w.id ?? w.work_center_id}><td>{w.work_center_id}</td><td>{money(w.cost_per_hour)}</td><td>{w.currency ?? "BRL"}</td></tr>)}
+                </tbody>
+              </table></div>
+            </div></div>
 
-        {/* Custo de compra por item */}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Custo de compra por item</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Item</label><input className="fsc-input fsc-input-right" type="number" value={pcForm.item_code || ""} onChange={(e) => setPcForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-3"><label className="fsc-label">Custo</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={pcForm.cost || ""} onChange={(e) => setPcForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-6" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
-            <button className="fsc-btn fsc-btn-primary" onClick={salvarPc} disabled={busy}>Salvar custo</button>
-            <button className="fsc-btn fsc-btn-ghost" onClick={consultarPc} disabled={busy}>Consultar</button>
-            {pcResult && <span className="fsc-action-label">Item {pcResult.item_code}: {money(pcResult.cost)} {pcResult.currency ?? ""}</span>}
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Custo de compra por item</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={pcForm.item_code || ""} onChange={(e) => setPcForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Custo</label><input className="erp-input num" type="number" step="0.01" value={pcForm.cost || ""} onChange={(e) => setPcForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c6" style={{ flexDirection: "row", gap: 8, alignItems: "flex-end" }}>
+                <button className="erp-btn erp-btn-primary" onClick={salvarPc} disabled={busy}>Salvar custo</button>
+                <button className="erp-btn" onClick={consultarPc} disabled={busy}>Consultar</button>
+                {pcResult && <span className="erp-tgroup-label">Item {pcResult.item_code}: {money(pcResult.cost)} {pcResult.currency ?? ""}</span>}
+              </div>
+            </div></div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Base de alocação (critério de rateio)</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={baseForm.code || ""} onChange={(e) => setBaseForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={baseForm.description} onChange={(e) => setBaseForm((p) => ({ ...p, description: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Período</label><input className="erp-input" placeholder="YYYY-MM" value={baseForm.period ?? ""} onChange={(e) => setBaseForm((p) => ({ ...p, period: e.target.value }))} /></div>
+              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarBase} disabled={busy}>Criar base</button></div>
+              <div className="erp-field erp-c12"><table className="erp-grid">
+                <thead><tr><th>Código</th><th>Descrição</th><th>Período</th></tr></thead>
+                <tbody>
+                  {bases.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhuma base de alocação.</td></tr>}
+                  {bases.map((b, i) => <tr key={b.code || i}><td>{b.code}</td><td>{b.description || "—"}</td><td>{b.period || "—"}</td></tr>)}
+                </tbody>
+              </table></div>
+            </div></div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Alocação de overhead</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Centro de custo</label><input className="erp-input num" type="number" value={ovhForm.cost_center_code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, cost_center_code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Início</label><input className="erp-input" type="date" value={ovhForm.period_start} onChange={(e) => setOvhForm((p) => ({ ...p, period_start: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Fim</label><input className="erp-input" type="date" value={ovhForm.period_end} onChange={(e) => setOvhForm((p) => ({ ...p, period_end: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Alvo (centro)</label><input className="erp-input num" type="number" value={ovhForm.target_cost_center || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_cost_center: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Alvo %</label><input className="erp-input num" type="number" step="0.01" value={ovhForm.target_pct || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_pct: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Descrição</label><input className="erp-input" value={ovhForm.description} onChange={(e) => setOvhForm((p) => ({ ...p, description: e.target.value }))} /></div>
+              <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={salvarOvh} disabled={busy}>Criar alocação de overhead</button></div>
+              <div className="erp-field erp-c12"><table className="erp-grid">
+                <thead><tr><th>Centro custo</th><th>Período</th><th>Tipo</th><th>Alvos</th></tr></thead>
+                <tbody>
+                  {ovhs.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma alocação de overhead.</td></tr>}
+                  {ovhs.map((o, i) => <tr key={o.id ?? i}><td>{o.cost_center_code}</td><td>{o.period_start?.slice(0, 10)} → {o.period_end?.slice(0, 10)}</td><td>{o.allocation_type ?? "—"}</td><td>{o.targets?.length ?? 0}</td></tr>)}
+                </tbody>
+              </table></div>
+            </div></div>
+
           </div>
-        </div></div></div>
-
-        {/* Base de alocação */}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Base de alocação (critério de rateio)</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código</label><input className="fsc-input fsc-input-right" type="number" value={baseForm.code || ""} onChange={(e) => setBaseForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-5"><label className="fsc-label fsc-label-req">Descrição</label><input className="fsc-input" value={baseForm.description} onChange={(e) => setBaseForm((p) => ({ ...p, description: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Período</label><input className="fsc-input" placeholder="YYYY-MM" value={baseForm.period ?? ""} onChange={(e) => setBaseForm((p) => ({ ...p, period: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" onClick={salvarBase} disabled={busy}>Criar base</button></div>
-        </div></div></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Código</th><th>Descrição</th><th>Período</th></tr></thead>
-            <tbody>
-              {bases.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhuma base de alocação.</td></tr>}
-              {bases.map((b, i) => <tr key={b.code || i}><td className="fsc-num">{b.code}</td><td>{b.description || "—"}</td><td>{b.period || "—"}</td></tr>)}
-            </tbody>
-          </table>
-        </div></div>
-
-        {/* Alocação de overhead */}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Alocação de overhead</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Centro de custo</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.cost_center_code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, cost_center_code: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Início</label><input className="fsc-input" type="date" value={ovhForm.period_start} onChange={(e) => setOvhForm((p) => ({ ...p, period_start: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Fim</label><input className="fsc-input" type="date" value={ovhForm.period_end} onChange={(e) => setOvhForm((p) => ({ ...p, period_end: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Alvo (centro)</label><input className="fsc-input fsc-input-right" type="number" value={ovhForm.target_cost_center || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_cost_center: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Alvo %</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={ovhForm.target_pct || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_pct: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Descrição</label><input className="fsc-input" value={ovhForm.description} onChange={(e) => setOvhForm((p) => ({ ...p, description: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-12"><button className="fsc-btn fsc-btn-primary" onClick={salvarOvh} disabled={busy}>Criar alocação de overhead</button></div>
-        </div></div></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Centro custo</th><th>Período</th><th>Tipo</th><th className="fsc-num">Alvos</th></tr></thead>
-            <tbody>
-              {ovhs.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma alocação de overhead.</td></tr>}
-              {ovhs.map((o, i) => <tr key={o.id ?? i}><td className="fsc-num">{o.cost_center_code}</td><td>{o.period_start?.slice(0, 10)} → {o.period_end?.slice(0, 10)}</td><td>{o.allocation_type ?? "—"}</td><td className="fsc-num">{o.targets?.length ?? 0}</td></tr>)}
-            </tbody>
-          </table>
-        </div></div>
+        </section>
       </div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Centros: <strong>{wccs.length}</strong></div><div className="fsc-footer-stat">Bases: <strong>{bases.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div className="erp-status-item">Centros: <strong>{wccs.length}</strong></div><div className="erp-status-item">Bases: <strong>{bases.length}</strong></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

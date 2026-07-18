@@ -20,25 +20,26 @@ export function Vcli0510Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCLI0510 — Apoio de Cliente (Básico)</span>
-      </div></header>
-      <div className="fsc-actionbar"><div className="fsc-action-group"><span className="fsc-action-label">Cadastros de apoio</span></div><div className="fsc-action-group"><span className="fsc-action-label">Relatório</span><ExportButton title="VCLI0510 — Apoio de Cliente (Básico)" filename="vcli0510" /></div></div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Cliente</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Apoio de Cliente (Básico)</span><span className="erp-crumb-code">VCLI0510</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
+      <div className="erp-toolbar"><div className="erp-tgroup"><span className="erp-tgroup-label">Cadastros de apoio</span></div><div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span><ExportButton title="VCLI0510 — Apoio de Cliente (Básico)" filename="vcli0510" /></div></div>
 
-      <div className="fsc-body">
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "regiao" ? "active" : ""}`} onClick={() => setTab("regiao")}>Região</button>
-            <button className={`fsc-tab ${tab === "segmento" ? "active" : ""}`} onClick={() => setTab("segmento")}>Segmento</button>
-            <button className={`fsc-tab ${tab === "tcontato" ? "active" : ""}`} onClick={() => setTab("tcontato")}>Tipo Contato</button>
-            <button className={`fsc-tab ${tab === "tcliente" ? "active" : ""}`} onClick={() => setTab("tcliente")}>Tipo Cliente</button>
-            <button className={`fsc-tab ${tab === "portador" ? "active" : ""}`} onClick={() => setTab("portador")}>Portador</button>
-            <button className={`fsc-tab ${tab === "grupo" ? "active" : ""}`} onClick={() => setTab("grupo")}>Grupo Portadores</button>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Apoio de Cliente</button></div>
+          <div className="erp-detail-body">
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "regiao" ? "active" : ""}`} onClick={() => setTab("regiao")}>Região</button>
+            <button className={`erp-tab ${tab === "segmento" ? "active" : ""}`} onClick={() => setTab("segmento")}>Segmento</button>
+            <button className={`erp-tab ${tab === "tcontato" ? "active" : ""}`} onClick={() => setTab("tcontato")}>Tipo Contato</button>
+            <button className={`erp-tab ${tab === "tcliente" ? "active" : ""}`} onClick={() => setTab("tcliente")}>Tipo Cliente</button>
+            <button className={`erp-tab ${tab === "portador" ? "active" : ""}`} onClick={() => setTab("portador")}>Portador</button>
+            <button className={`erp-tab ${tab === "grupo" ? "active" : ""}`} onClick={() => setTab("grupo")}>Grupo Portadores</button>
           </div>
 
           {tab === "regiao" && <SupportCrud resource="regions"
@@ -74,22 +75,22 @@ export function Vcli0510Page(): JSX.Element {
               <SupportCrud resource="carrier-groups"
                 fields={[{ key: "description", label: "Descrição", col: 10, required: true }]}
                 columns={[{ key: "description", label: "Descrição" }]} />
-              <div className="fsc-card-body" style={{ borderTop: "1px solid #e2e8e4" }}>
-                {feedback && <div className={`fsc-feedback ${feedback.type}`} style={{ marginBottom: 10 }}>{feedback.message}</div>}
-                <div className="fsc-results-bar"><div className="fsc-results-bar-left"><span className="fsc-results-bar-label">Vincular portador ao grupo</span></div>
-                  <input className="fsc-input" style={{ width: 90, height: 30 }} type="number" placeholder="grupo" value={member.carrier_group_code} onChange={(e) => setMember((p) => ({ ...p, carrier_group_code: e.target.value }))} />
-                  <input className="fsc-input" style={{ width: 90, height: 30 }} type="number" placeholder="portador" value={member.carrier_code} onChange={(e) => setMember((p) => ({ ...p, carrier_code: e.target.value }))} />
-                  <button className="fsc-btn fsc-btn-primary" onClick={() => void addMember()} disabled={busy}>+ Vincular</button>
+              <div className="erp-fieldset-body" style={{ borderTop: "1px solid #e2e8e4" }}>
+                {feedback && <div className={`erp-feedback ${feedback.type}`} style={{ marginBottom: 10 }}>{feedback.message}</div>}
+                <div className="erp-results-bar"><div className="erp-results-bar-left"><span className="erp-results-bar-label">Vincular portador ao grupo</span></div>
+                  <input className="erp-input" style={{ width: 90, height: 30 }} type="number" placeholder="grupo" value={member.carrier_group_code} onChange={(e) => setMember((p) => ({ ...p, carrier_group_code: e.target.value }))} />
+                  <input className="erp-input" style={{ width: 90, height: 30 }} type="number" placeholder="portador" value={member.carrier_code} onChange={(e) => setMember((p) => ({ ...p, carrier_code: e.target.value }))} />
+                  <button className="erp-btn erp-btn-primary" onClick={() => void addMember()} disabled={busy}>+ Vincular</button>
                 </div>
               </div>
             </>
           )}
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Apoio: <strong>{tab}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Apoio: <strong>{tab}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

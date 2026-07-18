@@ -77,98 +77,94 @@ export function Vavr0200Page(): JSX.Element {
   }); };
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VAVR0200 — Aviso de Recebimento</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Suprimento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Aviso de Recebimento</span><span className="erp-crumb-code">VAVR0200</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Avisos</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={carregar} disabled={busy}>Listar</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Avisos</span>
+          <button className="erp-btn erp-btn-primary" onClick={carregar} disabled={busy}>Listar</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VAVR0200 — Avisos de Recebimento" filename="vavr0200" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Aviso de Recebimento</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Novo aviso</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">agenda de doca e conferência antes da NF</span></div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Empresa</label><input className="fsc-input fsc-input-right" type="number" value={capa.enterprise_code} onChange={(e) => setC("enterprise_code", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Fornecedor</label><input className="fsc-input fsc-input-right" type="number" value={capa.supplier_code} onChange={(e) => setC("supplier_code", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Pedido de compra</label><input className="fsc-input fsc-input-right" type="number" value={capa.purchase_order_code} onChange={(e) => setC("purchase_order_code", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Transportadora</label><input className="fsc-input fsc-input-right" type="number" value={capa.carrier_code} onChange={(e) => setC("carrier_code", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Doca</label><input className="fsc-input" value={capa.dock} onChange={(e) => setC("dock", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Nº NF</label><input className="fsc-input" value={capa.invoice_number} onChange={(e) => setC("invoice_number", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-3"><label className="fsc-label">Agendado para</label><input className="fsc-input" type="datetime-local" value={capa.scheduled_at} onChange={(e) => setC("scheduled_at", e.target.value)} /></div>
-          <div className="fsc-field fsc-col-9"><label className="fsc-label">Observações</label><input className="fsc-input" value={capa.notes} onChange={(e) => setC("notes", e.target.value)} /></div>
-        </div>
-        <div className="fsc-grid" style={{ marginTop: 8 }}>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Item</label><input className="fsc-input fsc-input-right" type="number" value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Máscara</label><input className="fsc-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Qtd esperada</label><input className="fsc-input fsc-input-right" type="number" value={itemForm.expected_qty} onChange={(e) => setItemForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-1"><label className="fsc-label">UM</label><input className="fsc-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" onClick={addItem}>+ item</button></div>
-          <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={criar} disabled={busy}>Criar aviso</button></div>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Novo aviso — <span style={{fontWeight:400,opacity:0.65}}>agenda de doca e conferência antes da NF</span></div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={capa.enterprise_code} onChange={(e) => setC("enterprise_code", e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Fornecedor</label><input className="erp-input num" type="number" value={capa.supplier_code} onChange={(e) => setC("supplier_code", e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Pedido de compra</label><input className="erp-input num" type="number" value={capa.purchase_order_code} onChange={(e) => setC("purchase_order_code", e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><input className="erp-input num" type="number" value={capa.carrier_code} onChange={(e) => setC("carrier_code", e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Doca</label><input className="erp-input" value={capa.dock} onChange={(e) => setC("dock", e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Nº NF</label><input className="erp-input" value={capa.invoice_number} onChange={(e) => setC("invoice_number", e.target.value)} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Agendado para</label><input className="erp-input" type="datetime-local" value={capa.scheduled_at} onChange={(e) => setC("scheduled_at", e.target.value)} /></div>
+          <div className="erp-field erp-c9"><label className="erp-label">Observações</label><input className="erp-input" value={capa.notes} onChange={(e) => setC("notes", e.target.value)} /></div>
+        
+        <div className="erp-fieldset-body" style={{ marginTop: 8 }}>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd esperada</label><input className="erp-input num" type="number" value={itemForm.expected_qty} onChange={(e) => setItemForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
+          <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
+          <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={addItem}>+ item</button></div>
+          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={criar} disabled={busy}>Criar aviso</button></div>
         </div>
         {items.length > 0 && (
-          <table className="fsc-table" style={{ marginTop: 10 }}>
-            <thead><tr><th className="fsc-num">Item</th><th>Máscara</th><th className="fsc-num">Qtd esperada</th><th>UM</th><th></th></tr></thead>
-            <tbody>{items.map((it, i) => <tr key={i}><td className="fsc-num">{it.item_code}</td><td>{it.mask || "—"}</td><td className="fsc-num">{it.expected_qty}</td><td>{it.unit || "—"}</td><td><button className="fsc-btn fsc-btn-ghost" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>Remover</button></td></tr>)}</tbody>
+          <table className="erp-grid" style={{ marginTop: 10 }}>
+            <thead><tr><th>Item</th><th>Máscara</th><th>Qtd esperada</th><th>UM</th><th></th></tr></thead>
+            <tbody>{items.map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.expected_qty}</td><td>{it.unit || "—"}</td><td><button className="erp-btn" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>Remover</button></td></tr>)}</tbody>
           </table>
         )}
         </div></div>
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Avisos ({notices.length})</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Nº</th><th className="fsc-num">Fornecedor</th><th className="fsc-num">Pedido</th><th>Doca</th><th>Agendado</th><th>Status</th><th></th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Avisos ({notices.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Nº</th><th>Fornecedor</th><th>Pedido</th><th>Doca</th><th>Agendado</th><th>Status</th><th></th></tr></thead>
             <tbody>
-              {notices.length === 0 && <tr><td colSpan={7} className="fsc-empty">Nenhum aviso. Clique em Listar.</td></tr>}
+              {notices.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum aviso. Clique em Listar.</td></tr>}
               {notices.map((n) => (
-                <tr key={n.id} className={detalhe?.id === n.id ? "fsc-row-selected" : ""}>
-                  <td className="fsc-num" style={{ fontWeight: 600 }}>{n.notice_number ?? n.id}</td><td className="fsc-num">{n.supplier_code ?? "—"}</td><td className="fsc-num">{n.purchase_order_code ?? "—"}</td>
+                <tr key={n.id} className={detalhe?.id === n.id ? "erp-row-sel" : ""}>
+                  <td style={{ fontWeight: 600 }}>{n.notice_number ?? n.id}</td><td>{n.supplier_code ?? "—"}</td><td>{n.purchase_order_code ?? "—"}</td>
                   <td>{n.dock || "—"}</td><td>{dt(n.scheduled_at)}</td><td>{n.status}{n.blocked ? " 🔒" : ""}</td>
-                  <td><button className="fsc-btn fsc-btn-ghost" onClick={() => abrir(n.id)} disabled={busy}>Abrir</button></td>
+                  <td><button className="erp-btn" onClick={() => abrir(n.id)} disabled={busy}>Abrir</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div></div>
+        </div>
 
         {detalhe && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Aviso {detalhe.notice_number ?? detalhe.id} — {detalhe.status}</span><div className="fsc-section-banner-line" />
-              <span className="fsc-action-label">Avançar</span>
-              <select className="fsc-input" style={{ height: 28, width: 150 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as NoticeStatus)}>{NOTICE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-              <button className="fsc-btn fsc-btn-primary fsc-btn-sm" onClick={avancar} disabled={busy}>Aplicar</button></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th className="fsc-num">Item</th><th>Máscara</th><th className="fsc-num">Esperada</th><th className="fsc-num">Recebida</th><th>UM</th></tr></thead>
-                <tbody>{(detalhe.items ?? []).map((it, i) => <tr key={i}><td className="fsc-num">{it.item_code}</td><td>{it.mask || "—"}</td><td className="fsc-num">{it.expected_qty}</td><td className="fsc-num">{it.received_qty ?? 0}</td><td>{it.unit || "—"}</td></tr>)}</tbody>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Aviso {detalhe.notice_number ?? detalhe.id} — {detalhe.status} <span className="erp-tgroup-label">Avançar</span> <select className="erp-input" style={{ height: 28, width: 150 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as NoticeStatus)}>{NOTICE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={avancar} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Item</th><th>Máscara</th><th>Esperada</th><th>Recebida</th><th>UM</th></tr></thead>
+                <tbody>{(detalhe.items ?? []).map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.expected_qty}</td><td>{it.received_qty ?? 0}</td><td>{it.unit || "—"}</td></tr>)}</tbody>
               </table>
             </div></div>
-
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Divergências ({divs.length})</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">falta/sobra/avaria/preço… alimentam o IQF do fornecedor</span></div>
-            <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Item</label><input className="fsc-input fsc-input-right" type="number" value={divForm.item_code} onChange={(e) => setDivForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Tipo</label><select className="fsc-input" value={divForm.divergence_type} onChange={(e) => setDivForm((f) => ({ ...f, divergence_type: e.target.value as DivergenceType }))}>{DIVERGENCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Esperada</label><input className="fsc-input fsc-input-right" type="number" value={divForm.expected_qty} onChange={(e) => setDivForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Real</label><input className="fsc-input fsc-input-right" type="number" value={divForm.actual_qty} onChange={(e) => setDivForm((f) => ({ ...f, actual_qty: e.target.value }))} /></div>
-              <div className="fsc-field fsc-col-2" style={{ alignSelf: "end" }}><label className="fsc-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={divForm.affects_supplier_score} onChange={(e) => setDivForm((f) => ({ ...f, affects_supplier_score: e.target.checked }))} />Afeta IQF</label></div>
-              <div className="fsc-field fsc-col-2" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={addDiv} disabled={busy}>Registrar</button></div>
             </div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Divergências ({divs.length}) — <span style={{fontWeight:400,opacity:0.65}}>falta/sobra/avaria/preço… alimentam o IQF do fornecedor</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={divForm.item_code} onChange={(e) => setDivForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={divForm.divergence_type} onChange={(e) => setDivForm((f) => ({ ...f, divergence_type: e.target.value as DivergenceType }))}>{DIVERGENCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Esperada</label><input className="erp-input num" type="number" value={divForm.expected_qty} onChange={(e) => setDivForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Real</label><input className="erp-input num" type="number" value={divForm.actual_qty} onChange={(e) => setDivForm((f) => ({ ...f, actual_qty: e.target.value }))} /></div>
+              <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><label className="erp-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={divForm.affects_supplier_score} onChange={(e) => setDivForm((f) => ({ ...f, affects_supplier_score: e.target.checked }))} />Afeta IQF</label></div>
+              <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={addDiv} disabled={busy}>Registrar</button></div>
+            
             {divs.length > 0 && (
-              <table className="fsc-table" style={{ marginTop: 10 }}>
-                <thead><tr><th className="fsc-num">Item</th><th>Tipo</th><th className="fsc-num">Esperada</th><th className="fsc-num">Real</th><th>Resolução</th><th></th></tr></thead>
+              <table className="erp-grid" style={{ marginTop: 10 }}>
+                <thead><tr><th>Item</th><th>Tipo</th><th>Esperada</th><th>Real</th><th>Resolução</th><th></th></tr></thead>
                 <tbody>{divs.map((d) => (
-                  <tr key={d.id}><td className="fsc-num">{d.item_code ?? "—"}</td><td>{d.divergence_type}</td><td className="fsc-num">{d.expected_qty}</td><td className="fsc-num">{d.actual_qty}</td><td>{d.resolution}</td>
+                  <tr key={d.id}><td>{d.item_code ?? "—"}</td><td>{d.divergence_type}</td><td>{d.expected_qty}</td><td>{d.actual_qty}</td><td>{d.resolution}</td>
                     <td>{d.resolution === "PENDING" && (
-                      <select className="fsc-input" style={{ height: 26 }} defaultValue="" onChange={(e) => { if (e.target.value) resolver(d.id, e.target.value as DivergenceResolution); }}>
+                      <select className="erp-input" style={{ height: 26 }} defaultValue="" onChange={(e) => { if (e.target.value) resolver(d.id, e.target.value as DivergenceResolution); }}>
                         <option value="">resolver…</option>{DIVERGENCE_RESOLUTIONS.filter((r) => r !== "PENDING").map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>)}</td></tr>
                 ))}</tbody>
@@ -177,11 +173,11 @@ export function Vavr0200Page(): JSX.Element {
             </div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Avisos: <strong>{notices.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Avisos: <strong>{notices.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

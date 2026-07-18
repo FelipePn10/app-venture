@@ -36,69 +36,67 @@ export function Vpro0600Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRO0600 — Previsão Estatística</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Previsão Estatística</span><span className="erp-crumb-code">VPRO0600</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Item</span>
-          <input className="fsc-input" style={{ width: 90, height: 32 }} type="number" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
-          <span className="fsc-action-label">Períodos à frente</span>
-          <input className="fsc-input" style={{ width: 60, height: 32 }} type="number" value={periodsAhead} onChange={(e) => setPeriodsAhead(e.target.value)} />
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Prever"}</button></div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
+          <input className="erp-input" style={{ width: 90, height: 32 }} type="number" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
+          <span className="erp-tgroup-label">Períodos à frente</span>
+          <input className="erp-input" style={{ width: 60, height: 32 }} type="number" value={periodsAhead} onChange={(e) => setPeriodsAhead(e.target.value)} />
+          <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Prever"}</button></div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0600 — Previsão Estatística" filename="vpro0600" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Histórico</span><div className="fsc-section-banner-line" />
-          <button className="fsc-btn fsc-btn-ghost" onClick={addRow}>+ Período</button></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th>Período (YYYY-MM)</th><th className="fsc-num">Quantidade</th><th style={{ width: 60 }}></th></tr></thead>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Previsão Estatística</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Histórico <button className="erp-btn" onClick={addRow}>+ Período</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Período (YYYY-MM)</th><th>Quantidade</th><th style={{ width: 60 }}></th></tr></thead>
             <tbody>
               {history.map((h, i) => (
                 <tr key={i}>
-                  <td><input className="fsc-input" style={{ height: 30, width: 130 }} value={h.period} placeholder="2026-01" onChange={(e) => setH(i, { period: e.target.value })} /></td>
-                  <td><input className="fsc-input fsc-input-right" style={{ height: 30, width: 120 }} type="number" value={h.quantity} onChange={(e) => setH(i, { quantity: Number(e.target.value) })} /></td>
-                  <td><button className="fsc-action-btn fsc-delete-btn" onClick={() => removeRow(i)} disabled={history.length <= 2}>✕</button></td>
+                  <td><input className="erp-input" style={{ height: 30, width: 130 }} value={h.period} placeholder="2026-01" onChange={(e) => setH(i, { period: e.target.value })} /></td>
+                  <td><input className="erp-input num" style={{ height: 30, width: 120 }} type="number" value={h.quantity} onChange={(e) => setH(i, { quantity: Number(e.target.value) })} /></td>
+                  <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeRow(i)} disabled={history.length <= 2}>✕</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div></div>
+        </div></div></div>
 
         {result && (
           <>
-            <div className="fsc-metrics">
-              <div className="fsc-metric"><div className="fsc-metric-label">Modelo</div><div className="fsc-metric-value" style={{ fontSize: 15 }}>{result.model_used}</div></div>
-              <div className="fsc-metric"><div className="fsc-metric-label">MAPE</div><div className="fsc-metric-value">{num(result.mape)}%</div></div>
-              <div className="fsc-metric"><div className="fsc-metric-label">Item</div><div className="fsc-metric-value">{result.item_code}</div></div>
+            <div className="erp-metrics">
+              <div className="erp-metric"><div className="erp-metric-label">Modelo</div><div className="erp-metric-value" style={{ fontSize: 15 }}>{result.model_used}</div></div>
+              <div className="erp-metric"><div className="erp-metric-label">MAPE</div><div className="erp-metric-value">{num(result.mape)}%</div></div>
+              <div className="erp-metric"><div className="erp-metric-label">Item</div><div className="erp-metric-value">{result.item_code}</div></div>
             </div>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Previsão</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{result.forecasts.length} período(s)</span></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th>Período</th><th className="fsc-num">Quantidade prevista</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Previsão — <span style={{fontWeight:400,opacity:0.65}}>{result.forecasts.length} período(s)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Período</th><th>Quantidade prevista</th></tr></thead>
                 <tbody>
-                  {result.forecasts.map((f, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{f.period}</td><td className="fsc-num">{num(f.quantity)}</td></tr>)}
+                  {result.forecasts.map((f, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{f.period}</td><td>{num(f.quantity)}</td></tr>)}
                 </tbody>
               </table>
-            </div></div>
+            </div></div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Histórico: <strong>{history.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Histórico: <strong>{history.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

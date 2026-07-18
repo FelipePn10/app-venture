@@ -13,8 +13,8 @@ const EMPTY_PLAN: MaintPlanDTO = { machine_id: 0, work_center_id: undefined, fre
 
 function orderPill(s?: string): JSX.Element {
   const x = (s ?? "").toUpperCase();
-  const cls = x === "DONE" ? "fsc-pill-green" : x === "IN_PROGRESS" ? "fsc-pill-blue" : x === "CANCELLED" ? "fsc-pill-red" : "fsc-pill-amber";
-  return <span className={`fsc-pill ${cls}`}>{s || "—"}</span>;
+  const cls = x === "DONE" ? "erp-badge-green" : x === "IN_PROGRESS" ? "erp-badge-blue" : x === "CANCELLED" ? "erp-badge-red" : "erp-badge-amber";
+  return <span className={`erp-badge ${cls}`}>{s || "—"}</span>;
 }
 
 export function Vpro0500Page(): JSX.Element {
@@ -77,98 +77,94 @@ export function Vpro0500Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRO0500 — Manutenção Preventiva</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Manutenção Preventiva</span><span className="erp-crumb-code">VPRO0500</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Plano</span>
-          <button className="fsc-btn fsc-btn-new" onClick={() => { setForm(EMPTY_PLAN); setFeedback(null); }} disabled={busy}>+ Novo</button>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvarPlano()} disabled={busy}>{busy ? "..." : "Salvar"}</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Gerar ordens</span>
-          <input className="fsc-input" style={{ width: 70, height: 32 }} type="number" value={horizon} onChange={(e) => setHorizon(e.target.value)} />
-          <span className="fsc-action-label">dias</span>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => void gerar()} disabled={busy}>Gerar</button></div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Plano</span>
+          <button className="erp-btn erp-btn-new" onClick={() => { setForm(EMPTY_PLAN); setFeedback(null); }} disabled={busy}>+ Novo</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => void salvarPlano()} disabled={busy}>{busy ? "..." : "Salvar"}</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Gerar ordens</span>
+          <input className="erp-input" style={{ width: 70, height: 32 }} type="number" value={horizon} onChange={(e) => setHorizon(e.target.value)} />
+          <span className="erp-tgroup-label">dias</span>
+          <button className="erp-btn" onClick={() => void gerar()} disabled={busy}>Gerar</button></div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0500 — Manutenção Preventiva" filename="vpro0500" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Novo plano</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <div className="fsc-grid">
-            <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Máquina (ID)</label><input className="fsc-input fsc-input-right" type="number" value={form.machine_id || ""} onChange={(e) => setF("machine_id", Number(e.target.value))} /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Centro (ID)</label><input className="fsc-input fsc-input-right" type="number" value={form.work_center_id ?? ""} onChange={(e) => setF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Descrição</label><input className="fsc-input" value={form.description ?? ""} onChange={(e) => setF("description", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Frequência</label>
-              <select className="fsc-select" value={form.frequency} onChange={(e) => setF("frequency", e.target.value as MaintFrequency)}>{FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Intervalo (dias)</label><input className="fsc-input fsc-input-right" type="number" value={form.frequency_days ?? ""} onChange={(e) => setF("frequency_days", e.target.value ? Number(e.target.value) : undefined)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Horas estimadas</label><input className="fsc-input fsc-input-right" type="number" step="0.1" value={form.estimated_hours} onChange={(e) => setF("estimated_hours", Number(e.target.value))} /></div>
-          </div>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Manutenção Preventiva</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Novo plano</div><div className="erp-fieldset-body">
+          
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Máquina (ID)</label><input className="erp-input num" type="number" value={form.machine_id || ""} onChange={(e) => setF("machine_id", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Centro (ID)</label><input className="erp-input num" type="number" value={form.work_center_id ?? ""} onChange={(e) => setF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description ?? ""} onChange={(e) => setF("description", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Frequência</label>
+              <select className="erp-input" value={form.frequency} onChange={(e) => setF("frequency", e.target.value as MaintFrequency)}>{FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Intervalo (dias)</label><input className="erp-input num" type="number" value={form.frequency_days ?? ""} onChange={(e) => setF("frequency_days", e.target.value ? Number(e.target.value) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Horas estimadas</label><input className="erp-input num" type="number" step="0.1" value={form.estimated_hours} onChange={(e) => setF("estimated_hours", Number(e.target.value))} /></div>
+          
         </div></div>
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Planos</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{plans.length}</span></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th>#</th><th>Máquina</th><th>Centro</th><th>Frequência</th><th className="fsc-num">Horas</th><th>Próxima</th><th style={{ width: 150 }}>Ações</th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Planos — <span style={{fontWeight:400,opacity:0.65}}>{plans.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>#</th><th>Máquina</th><th>Centro</th><th>Frequência</th><th>Horas</th><th>Próxima</th><th style={{ width: 150 }}>Ações</th></tr></thead>
             <tbody>
-              {plans.length === 0 && <tr><td colSpan={7} className="fsc-empty">Nenhum plano.</td></tr>}
+              {plans.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum plano.</td></tr>}
               {plans.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td><td style={{ fontWeight: 600 }}>{p.machine_id}</td><td>{p.work_center_id ?? "—"}</td>
-                  <td>{p.frequency}{p.frequency_days ? ` (${p.frequency_days}d)` : ""}</td><td className="fsc-num">{p.estimated_hours}</td>
+                  <td>{p.frequency}{p.frequency_days ? ` (${p.frequency_days}d)` : ""}</td><td>{p.estimated_hours}</td>
                   <td>{(p.next_scheduled_at ?? "").slice(0, 10) || "—"}</td>
                   <td>
-                    <button className="fsc-action-btn fsc-edit-btn" onClick={() => void abrir(p)}>Ordens</button>
-                    <button className="fsc-action-btn fsc-delete-btn" onClick={() => p.id && void removerPlano(p.id)}>Desativar</button>
+                    <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void abrir(p)}>Ordens</button>
+                    <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => p.id && void removerPlano(p.id)}>Desativar</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div></div>
+        </div></div></div>
 
         {selected && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Ordens do plano {selected.id}</span><div className="fsc-section-banner-line" />
-              <button className="fsc-btn fsc-btn-ghost" onClick={() => void novaOrdem()} disabled={busy}>+ Ordem manual</button>
-              <button className="fsc-btn fsc-btn-ghost" onClick={() => setSelected(null)}>Fechar</button></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th>#</th><th>Data</th><th>Status</th><th className="fsc-num">Horas reais</th><th style={{ width: 200 }}>Ações</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Ordens do plano {selected.id} <button className="erp-btn" onClick={() => void novaOrdem()} disabled={busy}>+ Ordem manual</button> <button className="erp-btn" onClick={() => setSelected(null)}>Fechar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>#</th><th>Data</th><th>Status</th><th>Horas reais</th><th style={{ width: 200 }}>Ações</th></tr></thead>
                 <tbody>
-                  {orders.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhuma ordem.</td></tr>}
+                  {orders.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma ordem.</td></tr>}
                   {orders.map((o) => {
                     const s = (o.status ?? "").toUpperCase();
                     return (
                       <tr key={o.id}>
-                        <td>{o.id}</td><td>{o.scheduled_date?.slice(0, 10)}</td><td>{orderPill(o.status)}</td><td className="fsc-num">{o.actual_hours ?? "—"}</td>
+                        <td>{o.id}</td><td>{o.scheduled_date?.slice(0, 10)}</td><td>{orderPill(o.status)}</td><td>{o.actual_hours ?? "—"}</td>
                         <td>
-                          {s === "PLANNED" && <button className="fsc-action-btn fsc-edit-btn" onClick={() => void avancar(o, "IN_PROGRESS")}>Iniciar</button>}
-                          {s === "IN_PROGRESS" && <button className="fsc-action-btn fsc-edit-btn" onClick={() => void avancar(o, "DONE")}>Concluir</button>}
-                          {(s === "PLANNED" || s === "IN_PROGRESS") && <button className="fsc-action-btn fsc-delete-btn" onClick={() => void avancar(o, "CANCELLED")}>Cancelar</button>}
+                          {s === "PLANNED" && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void avancar(o, "IN_PROGRESS")}>Iniciar</button>}
+                          {s === "IN_PROGRESS" && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void avancar(o, "DONE")}>Concluir</button>}
+                          {(s === "PLANNED" || s === "IN_PROGRESS") && <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void avancar(o, "CANCELLED")}>Cancelar</button>}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            </div></div>
+            </div></div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Planos: <strong>{plans.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Planos: <strong>{plans.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

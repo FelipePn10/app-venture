@@ -23,7 +23,7 @@ export interface ExportButtonProps {
   filename: string;
   /**
    * Monta a tabela a exportar a partir do estado ATUAL da tela. Opcional: se
-   * omitido, o botão lê a tabela `.fsc-table` visível na própria tela (todas as
+   * omitido, o botão lê a tabela `.erp-grid` visível na própria tela (todas as
    * linhas do resultado, já formatadas em pt-BR), ignorando a coluna de "Ações".
    * Use `build` apenas quando precisar de colunas/linhas diferentes do exibido.
    */
@@ -41,11 +41,11 @@ export interface ExportButtonProps {
 
 const ACTION_HEADER = /^(a[çc][aã]o(es|ões)?|actions?)$/i;
 
-/** Lê a tabela `.fsc-table` visível dentro do escopo da tela, ignorando "Ações". */
+/** Lê a tabela `.erp-grid` visível dentro do escopo da tela, ignorando "Ações". */
 function scrapeTable(scope: Element | Document): ExportTable | null {
-  const tables = Array.from(scope.querySelectorAll<HTMLTableElement>('table.fsc-table'));
+  const tables = Array.from(scope.querySelectorAll<HTMLTableElement>('table.erp-grid'));
   const table =
-    tables.find((t) => t.querySelector('tbody tr td:not(.fsc-empty)')) ?? tables[0];
+    tables.find((t) => t.querySelector('tbody tr td:not(.erp-grid-empty)')) ?? tables[0];
   if (!table) return null;
 
   const headers = Array.from(table.querySelectorAll('thead th')).map(
@@ -58,7 +58,7 @@ function scrapeTable(scope: Element | Document): ExportTable | null {
   const rows: ExportCell[][] = [];
   for (const tr of Array.from(table.querySelectorAll('tbody tr'))) {
     const cells = Array.from(tr.children) as HTMLElement[];
-    if (cells.length === 1 && (cells[0].classList.contains('fsc-empty') || cells[0].hasAttribute('colspan'))) continue;
+    if (cells.length === 1 && (cells[0].classList.contains('erp-grid-empty') || cells[0].hasAttribute('colspan'))) continue;
     const vals = cells
       .map((td) => ((td as HTMLElement).innerText || td.textContent || '').trim().replace(/\s+/g, ' '))
       .filter((_, i) => !skip.has(i));
@@ -140,7 +140,7 @@ export function ExportButton({
 
   async function choose(format: ExportFormat) {
     setOpen(false);
-    const scope = wrapRef.current?.closest('.fsc-root') ?? document;
+    const scope = wrapRef.current?.closest('.erp-screen') ?? document;
     const table = build ? build() : scrapeTable(scope);
     if (!table || !table.rows.length) {
       // useReportExport já emite o toast de "nada para exportar".
@@ -164,7 +164,7 @@ export function ExportButton({
       <button
         ref={btnRef}
         type="button"
-        className="fsc-btn fsc-btn-ghost"
+        className="erp-btn"
         onClick={() => setOpen((o) => !o)}
         disabled={disabled || busy}
         aria-haspopup="menu"
@@ -216,7 +216,6 @@ export function ExportButton({
             border: `1px solid ${toast.type === 'success' ? '#2e7d4f' : '#a13b3b'}`,
             color: '#eaf3ee', borderRadius: 10, padding: '12px 16px', fontSize: 13,
             maxWidth: 340, boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-            animation: 'fscBodyIn 0.2s ease both',
           }}
           role="status"
         >

@@ -69,108 +69,108 @@ export function Vctb0200Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCTB0200 — Contabilidade (SPED ECD)</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Contabilidade</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Contabilidade (SPED ECD)</span><span className="erp-crumb-code">VCTB0200</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Competência</span>
-          <input className="fsc-input" style={{ width: 110, height: 32 }} value={period} placeholder="YYYY-MM" onChange={(e) => setPeriod(e.target.value)} /></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Competência</span>
+          <input className="erp-input" style={{ width: 110, height: 32 }} value={period} placeholder="YYYY-MM" onChange={(e) => setPeriod(e.target.value)} /></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCTB0200 — Contabilidade" filename="vctb0200" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "plans" ? "active" : ""}`} onClick={() => setTab("plans")}>Planos</button>
-            <button className={`fsc-tab ${tab === "accounts" ? "active" : ""}`} onClick={() => setTab("accounts")}>Contas</button>
-            <button className={`fsc-tab ${tab === "journal" ? "active" : ""}`} onClick={() => { setTab("journal"); void loadJournal(); }}>Lançamentos</button>
-            <button className={`fsc-tab ${tab === "balancete" ? "active" : ""}`} onClick={() => setTab("balancete")}>Balancete</button>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Contabilidade</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "plans" ? "active" : ""}`} onClick={() => setTab("plans")}>Planos</button>
+            <button className={`erp-tab ${tab === "accounts" ? "active" : ""}`} onClick={() => setTab("accounts")}>Contas</button>
+            <button className={`erp-tab ${tab === "journal" ? "active" : ""}`} onClick={() => { setTab("journal"); void loadJournal(); }}>Lançamentos</button>
+            <button className={`erp-tab ${tab === "balancete" ? "active" : ""}`} onClick={() => setTab("balancete")}>Balancete</button>
           </div>
 
           {tab === "plans" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-7"><label className="fsc-label fsc-label-req">Nome do plano</label><input className="fsc-input" value={pForm.name} onChange={(e) => setPForm((p) => ({ ...p, name: e.target.value }))} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Ano</label><input className="fsc-input fsc-input-right" type="number" value={pForm.year} onChange={(e) => setPForm((p) => ({ ...p, year: Number(e.target.value) }))} /></div>
-                <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void savePlan()} disabled={busy}>Criar plano</button></div>
-              </div>
-              <div className="fsc-results-wrap" style={{ marginTop: 16 }}><table className="fsc-table">
-                <thead><tr><th className="fsc-num">ID</th><th>Nome</th><th className="fsc-num">Ano</th><th style={{ width: 90 }}>Ações</th></tr></thead>
-                <tbody>{plans.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhum plano.</td></tr>}
-                  {plans.map((p) => <tr key={p.id}><td className="fsc-num">{p.id}</td><td>{p.name}</td><td className="fsc-num">{p.year}</td>
-                    <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => { p.id && void loadAccounts(p.id); setTab("accounts"); }}>Abrir</button></td></tr>)}
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c7"><label className="erp-label erp-req">Nome do plano</label><input className="erp-input" value={pForm.name} onChange={(e) => setPForm((p) => ({ ...p, name: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Ano</label><input className="erp-input num" type="number" value={pForm.year} onChange={(e) => setPForm((p) => ({ ...p, year: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void savePlan()} disabled={busy}>Criar plano</button></div>
+              
+              <div className="erp-fieldset-body" style={{ marginTop: 16 }}><table className="erp-grid">
+                <thead><tr><th>ID</th><th>Nome</th><th>Ano</th><th style={{ width: 90 }}>Ações</th></tr></thead>
+                <tbody>{plans.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum plano.</td></tr>}
+                  {plans.map((p) => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.year}</td>
+                    <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => { p.id && void loadAccounts(p.id); setTab("accounts"); }}>Abrir</button></td></tr>)}
                 </tbody></table></div>
             </div>
           )}
 
           {tab === "accounts" && (
-            <div className="fsc-card-body">
-              <div className="fsc-section-banner" style={{ marginBottom: 12 }}><span className="fsc-section-banner-pill">Plano {planId ?? "—"}</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">Selecione um plano na aba Planos</span></div>
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Código</label><input className="fsc-input" value={aForm.code} placeholder="1.1.1.01" onChange={(e) => setAForm((p) => ({ ...p, code: e.target.value }))} /></div>
-                <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Nome</label><input className="fsc-input" value={aForm.name} onChange={(e) => setAForm((p) => ({ ...p, name: e.target.value }))} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Tipo</label><select className="fsc-select" value={aForm.account_type} onChange={(e) => setAForm((p) => ({ ...p, account_type: e.target.value as AccountType }))}><option value="ANALITICA">Analítica</option><option value="SINTETICA">Sintética</option></select></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Natureza</label><select className="fsc-select" value={aForm.nature} onChange={(e) => setAForm((p) => ({ ...p, nature: e.target.value as AccountNature }))}><option value="DEVEDORA">Devedora</option><option value="CREDORA">Credora</option></select></div>
-                <div className="fsc-field fsc-col-1" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void saveAccount()} disabled={busy}>+</button></div>
-              </div>
-              <div className="fsc-results-wrap" style={{ marginTop: 16 }}><table className="fsc-table">
-                <thead><tr><th className="fsc-num">ID</th><th>Código</th><th>Nome</th><th>Tipo</th><th>Natureza</th></tr></thead>
-                <tbody>{accounts.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhuma conta.</td></tr>}
-                  {accounts.map((a) => <tr key={a.id}><td className="fsc-num">{a.id}</td><td style={{ fontWeight: 600 }}>{a.code}</td><td>{a.name}</td><td>{a.account_type}</td><td>{a.nature}</td></tr>)}
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Código</label><input className="erp-input" value={aForm.code} placeholder="1.1.1.01" onChange={(e) => setAForm((p) => ({ ...p, code: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={aForm.name} onChange={(e) => setAForm((p) => ({ ...p, name: e.target.value }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={aForm.account_type} onChange={(e) => setAForm((p) => ({ ...p, account_type: e.target.value as AccountType }))}><option value="ANALITICA">Analítica</option><option value="SINTETICA">Sintética</option></select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Natureza</label><select className="erp-input" value={aForm.nature} onChange={(e) => setAForm((p) => ({ ...p, nature: e.target.value as AccountNature }))}><option value="DEVEDORA">Devedora</option><option value="CREDORA">Credora</option></select></div>
+                <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveAccount()} disabled={busy}>+</button></div>
+              
+              <div className="erp-fieldset-body" style={{ marginTop: 16 }}><table className="erp-grid">
+                <thead><tr><th>ID</th><th>Código</th><th>Nome</th><th>Tipo</th><th>Natureza</th></tr></thead>
+                <tbody>{accounts.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma conta.</td></tr>}
+                  {accounts.map((a) => <tr key={a.id}><td>{a.id}</td><td style={{ fontWeight: 600 }}>{a.code}</td><td>{a.name}</td><td>{a.account_type}</td><td>{a.nature}</td></tr>)}
                 </tbody></table></div>
             </div>
           )}
 
           {tab === "journal" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Histórico</label><input className="fsc-input" value={jForm.history} onChange={(e) => setJForm((p) => ({ ...p, history: e.target.value }))} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Débito (conta ID)</label><input className="fsc-input fsc-input-right" type="number" value={jForm.debit_account_id || ""} onChange={(e) => setJForm((p) => ({ ...p, debit_account_id: Number(e.target.value) }))} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Crédito (conta ID)</label><input className="fsc-input fsc-input-right" type="number" value={jForm.credit_account_id || ""} onChange={(e) => setJForm((p) => ({ ...p, credit_account_id: Number(e.target.value) }))} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Valor</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={jForm.value || ""} onChange={(e) => setJForm((p) => ({ ...p, value: Number(e.target.value) }))} /></div>
-                <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void saveJournal()} disabled={busy}>Lançar</button></div>
-              </div>
-              <div className="fsc-results-wrap" style={{ marginTop: 16 }}><table className="fsc-table">
-                <thead><tr><th>Data</th><th>Histórico</th><th className="fsc-num">Débito</th><th className="fsc-num">Crédito</th><th className="fsc-num">Valor</th></tr></thead>
-                <tbody>{journal.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhum lançamento no período.</td></tr>}
-                  {journal.map((j) => <tr key={j.id}><td>{j.entry_date?.slice(0, 10)}</td><td>{j.history}</td><td className="fsc-num">{j.debit_account_id}</td><td className="fsc-num">{j.credit_account_id}</td><td className="fsc-num">{money(j.value)}</td></tr>)}
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c4"><label className="erp-label erp-req">Histórico</label><input className="erp-input" value={jForm.history} onChange={(e) => setJForm((p) => ({ ...p, history: e.target.value }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Débito (conta ID)</label><input className="erp-input num" type="number" value={jForm.debit_account_id || ""} onChange={(e) => setJForm((p) => ({ ...p, debit_account_id: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Crédito (conta ID)</label><input className="erp-input num" type="number" value={jForm.credit_account_id || ""} onChange={(e) => setJForm((p) => ({ ...p, credit_account_id: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Valor</label><input className="erp-input num" type="number" step="0.01" value={jForm.value || ""} onChange={(e) => setJForm((p) => ({ ...p, value: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveJournal()} disabled={busy}>Lançar</button></div>
+              
+              <div className="erp-fieldset-body" style={{ marginTop: 16 }}><table className="erp-grid">
+                <thead><tr><th>Data</th><th>Histórico</th><th>Débito</th><th>Crédito</th><th>Valor</th></tr></thead>
+                <tbody>{journal.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum lançamento no período.</td></tr>}
+                  {journal.map((j) => <tr key={j.id}><td>{j.entry_date?.slice(0, 10)}</td><td>{j.history}</td><td>{j.debit_account_id}</td><td>{j.credit_account_id}</td><td>{money(j.value)}</td></tr>)}
                 </tbody></table></div>
             </div>
           )}
 
           {tab === "balancete" && (
-            <div className="fsc-card-body">
-              <button className="fsc-btn fsc-btn-primary" onClick={() => void loadBalancete()} disabled={busy}>Gerar balancete ({period})</button>
+            <div className="erp-fieldset-body">
+              <button className="erp-btn erp-btn-primary" onClick={() => void loadBalancete()} disabled={busy}>Gerar balancete ({period})</button>
               {balancete && (
                 <>
-                  <div className="fsc-metrics" style={{ marginTop: 14 }}>
-                    <div className="fsc-metric"><div className="fsc-metric-label">Total débitos</div><div className="fsc-metric-value">{money(balancete.total_debit)}</div></div>
-                    <div className="fsc-metric"><div className="fsc-metric-label">Total créditos</div><div className="fsc-metric-value">{money(balancete.total_credit)}</div></div>
-                    <div className="fsc-metric"><div className="fsc-metric-label">Partidas dobradas</div><div className="fsc-metric-value">{balancete.balanced ? "✓ OK" : "✗"}</div></div>
+                  <div className="erp-metrics" style={{ marginTop: 14 }}>
+                    <div className="erp-metric"><div className="erp-metric-label">Total débitos</div><div className="erp-metric-value">{money(balancete.total_debit)}</div></div>
+                    <div className="erp-metric"><div className="erp-metric-label">Total créditos</div><div className="erp-metric-value">{money(balancete.total_credit)}</div></div>
+                    <div className="erp-metric"><div className="erp-metric-label">Partidas dobradas</div><div className="erp-metric-value">{balancete.balanced ? "✓ OK" : "✗"}</div></div>
                   </div>
-                  <div className="fsc-results-wrap" style={{ marginTop: 14 }}><table className="fsc-table">
-                    <thead><tr><th>Conta</th><th>Nome</th><th className="fsc-num">Débito</th><th className="fsc-num">Crédito</th><th className="fsc-num">Saldo</th></tr></thead>
-                    <tbody>{balancete.rows.length === 0 && <tr><td colSpan={5} className="fsc-empty">Sem movimento.</td></tr>}
-                      {balancete.rows.map((r, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{r.account_code}</td><td>{r.account_name}</td><td className="fsc-num">{money(r.debit)}</td><td className="fsc-num">{money(r.credit)}</td><td className="fsc-num">{money(r.balance)}</td></tr>)}
+                  <div className="erp-fieldset-body" style={{ marginTop: 14 }}><table className="erp-grid">
+                    <thead><tr><th>Conta</th><th>Nome</th><th>Débito</th><th>Crédito</th><th>Saldo</th></tr></thead>
+                    <tbody>{balancete.rows.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem movimento.</td></tr>}
+                      {balancete.rows.map((r, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{r.account_code}</td><td>{r.account_name}</td><td>{money(r.debit)}</td><td>{money(r.credit)}</td><td>{money(r.balance)}</td></tr>)}
                     </tbody></table></div>
                 </>
               )}
             </div>
           )}
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Planos: <strong>{plans.length}</strong></div><div className="fsc-footer-stat">Competência: <strong>{period}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Planos: <strong>{plans.length}</strong></div><div className="erp-status-item">Competência: <strong>{period}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

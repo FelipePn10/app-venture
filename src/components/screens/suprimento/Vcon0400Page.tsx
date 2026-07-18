@@ -31,71 +31,67 @@ export function Vcon0400Page(): JSX.Element {
   const filtrados = filtroStatus ? contratos.filter((c) => c.status === filtroStatus) : contratos;
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCON0400 — Consulta de Contratos de Fornecedores</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Suprimento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Consulta de Contratos de Fornecedores</span><span className="erp-crumb-code">VCON0400</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Contratos</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={carregar} disabled={busy}>Listar</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Status</span>
-          <select className="fsc-input" style={{ height: 32 }} value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as "" | ContractStatus)}>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Contratos</span>
+          <button className="erp-btn erp-btn-primary" onClick={carregar} disabled={busy}>Listar</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Status</span>
+          <select className="erp-input" style={{ height: 32 }} value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as "" | ContractStatus)}>
             <option value="">todos</option>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCON0400 — Consulta de Contratos" filename="vcon0400" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Consulta de Contratos de F</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Contratos ({filtrados.length})</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Nº interno</th><th>Número</th><th className="fsc-num">Fornecedor</th><th>Status</th><th>Vigência</th><th>Moeda</th><th></th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Contratos ({filtrados.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Nº interno</th><th>Número</th><th>Fornecedor</th><th>Status</th><th>Vigência</th><th>Moeda</th><th></th></tr></thead>
             <tbody>
-              {filtrados.length === 0 && <tr><td colSpan={7} className="fsc-empty">Nenhum contrato. Clique em Listar.</td></tr>}
+              {filtrados.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum contrato. Clique em Listar.</td></tr>}
               {filtrados.map((c) => (
-                <tr key={c.id} className={detalhe?.id === c.id ? "fsc-row-selected" : ""}>
-                  <td className="fsc-num" style={{ fontWeight: 600 }}>{c.id}</td><td>{c.contract_number}</td><td className="fsc-num">{c.supplier_code}</td>
+                <tr key={c.id} className={detalhe?.id === c.id ? "erp-row-sel" : ""}>
+                  <td style={{ fontWeight: 600 }}>{c.id}</td><td>{c.contract_number}</td><td>{c.supplier_code}</td>
                   <td>{c.status}</td><td>{d10(c.valid_from)} → {d10(c.valid_to)}</td><td>{c.currency}</td>
-                  <td><button className="fsc-btn fsc-btn-ghost" onClick={() => abrir(c.id)} disabled={busy}>Abrir</button></td>
+                  <td><button className="erp-btn" onClick={() => abrir(c.id)} disabled={busy}>Abrir</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div></div>
+        </div></div></div>
 
         {detalhe && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Contrato {detalhe.contract_number} — {detalhe.status}</span><div className="fsc-section-banner-line" />
-              <span className="fsc-action-label">Novo status</span>
-              <select className="fsc-input" style={{ height: 28, width: 130 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as ContractStatus)}>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-              <button className="fsc-btn fsc-btn-primary fsc-btn-sm" onClick={mudarStatus} disabled={busy}>Aplicar</button></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th className="fsc-num">Item</th><th>Máscara</th><th>UM</th><th className="fsc-num">Contratada</th><th className="fsc-num">Consumida</th><th className="fsc-num">Saldo</th><th className="fsc-num">Preço</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Contrato {detalhe.contract_number} — {detalhe.status} <span className="erp-tgroup-label">Novo status</span> <select className="erp-input" style={{ height: 28, width: 130 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as ContractStatus)}>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={mudarStatus} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Item</th><th>Máscara</th><th>UM</th><th>Contratada</th><th>Consumida</th><th>Saldo</th><th>Preço</th></tr></thead>
                 <tbody>
-                  {(detalhe.items ?? []).length === 0 && <tr><td colSpan={7} className="fsc-empty">Sem linhas.</td></tr>}
+                  {(detalhe.items ?? []).length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Sem linhas.</td></tr>}
                   {(detalhe.items ?? []).map((it, i) => (
-                    <tr key={i}><td className="fsc-num">{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.unit || "—"}</td>
-                      <td className="fsc-num">{num(it.contracted_qty)}</td><td className="fsc-num">{num(it.consumed_qty)}</td>
-                      <td className="fsc-num" style={{ fontWeight: 600 }}>{num(it.remaining_qty)}</td><td className="fsc-num">{num(it.unit_price)}</td></tr>
+                    <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.unit || "—"}</td>
+                      <td>{num(it.contracted_qty)}</td><td>{num(it.consumed_qty)}</td>
+                      <td style={{ fontWeight: 600 }}>{num(it.remaining_qty)}</td><td>{num(it.unit_price)}</td></tr>
                   ))}
                 </tbody>
               </table>
-            </div></div>
+            </div></div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Contratos: <strong>{contratos.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Contratos: <strong>{contratos.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

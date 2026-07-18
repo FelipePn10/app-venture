@@ -44,74 +44,75 @@ export function Vpro0200Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRO0200 — CRP (Capacity Requirements Planning)</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">CRP (Capacity Requirements Planning)</span><span className="erp-crumb-code">VPRO0200</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Plano MRP</span>
-          <input className="fsc-input" style={{ width: 100, height: 32 }} type="number" value={planCode} onChange={(e) => setPlanCode(e.target.value)} />
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Calcular CRP"}</button>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Plano MRP</span>
+          <input className="erp-input" style={{ width: 100, height: 32 }} type="number" value={planCode} onChange={(e) => setPlanCode(e.target.value)} />
+          <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Calcular CRP"}</button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0200 — CRP (Capacity Requirements Planning)" filename="vpro0200" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">CRP</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         {summary && (
-          <div className="fsc-metrics">
-            <div className="fsc-metric"><div className="fsc-metric-label">Plano</div><div className="fsc-metric-value">{summary.plan_code}</div></div>
-            <div className="fsc-metric"><div className="fsc-metric-label">Registros</div><div className="fsc-metric-value">{summary.total_entries}</div></div>
-            <div className="fsc-metric"><div className="fsc-metric-label">Sobrecargas</div><div className="fsc-metric-value" style={{ color: summary.overload_count ? "#b91c1c" : "#1e6030" }}>{summary.overload_count}</div></div>
+          <div className="erp-metrics">
+            <div className="erp-metric"><div className="erp-metric-label">Plano</div><div className="erp-metric-value">{summary.plan_code}</div></div>
+            <div className="erp-metric"><div className="erp-metric-label">Registros</div><div className="erp-metric-value">{summary.total_entries}</div></div>
+            <div className="erp-metric"><div className="erp-metric-label">Sobrecargas</div><div className="erp-metric-value" style={{ color: summary.overload_count ? "#b91c1c" : "#1e6030" }}>{summary.overload_count}</div></div>
           </div>
         )}
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "todos" ? "active" : ""}`} onClick={() => void ver("todos")}>Todos</button>
-            <button className={`fsc-tab ${tab === "overload" ? "active" : ""}`} onClick={() => void ver("overload")}>Sobrecarga</button>
-            <button className={`fsc-tab ${tab === "centro" ? "active" : ""}`} onClick={() => setTab("centro")}>Por centro</button>
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "todos" ? "active" : ""}`} onClick={() => void ver("todos")}>Todos</button>
+            <button className={`erp-tab ${tab === "overload" ? "active" : ""}`} onClick={() => void ver("overload")}>Sobrecarga</button>
+            <button className={`erp-tab ${tab === "centro" ? "active" : ""}`} onClick={() => setTab("centro")}>Por centro</button>
           </div>
           {tab === "centro" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Centro (ID)</label><input className="fsc-input fsc-input-right" type="number" value={wcId} onChange={(e) => setWcId(e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">De</label><input className="fsc-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Até</label><input className="fsc-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void ver("centro")} disabled={busy}>Consultar</button></div>
-              </div>
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c3"><label className="erp-label">Centro (ID)</label><input className="erp-input num" type="number" value={wcId} onChange={(e) => setWcId(e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">De</label><input className="erp-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Até</label><input className="erp-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+                <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void ver("centro")} disabled={busy}>Consultar</button></div>
+              
             </div>
           )}
-          <div className="fsc-results-wrap">
-            <table className="fsc-table">
-              <thead><tr><th>Centro</th><th>Data</th><th className="fsc-num">Necessário (h)</th><th className="fsc-num">Disponível (h)</th><th className="fsc-num">Carga %</th><th>Status</th></tr></thead>
+          <div className="erp-fieldset-body">
+            <table className="erp-grid">
+              <thead><tr><th>Centro</th><th>Data</th><th>Necessário (h)</th><th>Disponível (h)</th><th>Carga %</th><th>Status</th></tr></thead>
               <tbody>
-                {rows.length === 0 && <tr><td colSpan={6} className="fsc-empty">Nenhum registro. Calcule um plano.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum registro. Calcule um plano.</td></tr>}
                 {rows.map((r, i) => (
                   <tr key={i}>
                     <td style={{ fontWeight: 600 }}>{r.work_center_id}</td><td>{r.req_date?.slice(0, 10)}</td>
-                    <td className="fsc-num">{num(r.required_hours)}</td><td className="fsc-num">{num(r.available_hours)}</td>
-                    <td className="fsc-num" style={{ fontWeight: 600, color: r.is_overloaded ? "#b91c1c" : "#1e6030" }}>{num(r.load_pct)}</td>
-                    <td>{r.is_overloaded ? <span className="fsc-pill fsc-pill-red">Sobrecarga</span> : <span className="fsc-pill fsc-pill-green">OK</span>}</td>
+                    <td>{num(r.required_hours)}</td><td>{num(r.available_hours)}</td>
+                    <td style={{ fontWeight: 600, color: r.is_overloaded ? "#b91c1c" : "#1e6030" }}>{num(r.load_pct)}</td>
+                    <td>{r.is_overloaded ? <span className="erp-badge err">Sobrecarga</span> : <span className="erp-badge ok">OK</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Registros: <strong>{rows.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Registros: <strong>{rows.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

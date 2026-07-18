@@ -29,56 +29,53 @@ export function Vpri0100Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRI0100 — Prioridade de Ordens (APS)</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Cadastros & Plataforma</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Prioridade de Ordens (APS)</span><span className="erp-crumb-code">VPRI0100</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Adicionar"}</button>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => void reload()} disabled={busy}>Recarregar</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span>
+          <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Adicionar"}</button>
+          <button className="erp-btn" onClick={() => void reload()} disabled={busy}>Recarregar</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRI0100 — Prioridade de Ordens" filename="vpri0100" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner">
-          <span className="fsc-section-banner-pill">APS</span><div className="fsc-section-banner-line" />
-          <span className="fsc-section-banner-hint">Níveis de prioridade usados no sequenciamento de ordens.</span>
-        </div>
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Prioridade</label>
-            <input className="fsc-input" value={form.priority} placeholder="Ex.: Urgente, Alta, Normal" onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-5"><label className="fsc-label">Descrição</label>
-            <input className="fsc-input" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Intervalo início</label>
-            <input className="fsc-input fsc-input-right" type="number" value={form.interval_start} onChange={(e) => setForm((p) => ({ ...p, interval_start: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-2"><label className="fsc-label">Intervalo fim</label>
-            <input className="fsc-input fsc-input-right" type="number" value={form.interval_end} onChange={(e) => setForm((p) => ({ ...p, interval_end: Number(e.target.value) }))} /></div>
-        </div></div></div>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Prioridade de Ordens</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">APS  — <span style={{fontWeight:400,opacity:0.65}}>Níveis de prioridade usados no sequenciamento de ordens.</span></div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c3"><label className="erp-label erp-req">Prioridade</label>
+            <input className="erp-input" value={form.priority} placeholder="Ex.: Urgente, Alta, Normal" onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} /></div>
+          <div className="erp-field erp-c5"><label className="erp-label">Descrição</label>
+            <input className="erp-input" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Intervalo início</label>
+            <input className="erp-input num" type="number" value={form.interval_start} onChange={(e) => setForm((p) => ({ ...p, interval_start: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Intervalo fim</label>
+            <input className="erp-input num" type="number" value={form.interval_end} onChange={(e) => setForm((p) => ({ ...p, interval_end: Number(e.target.value) }))} /></div>
+        </div></div>
 
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Cód.</th><th>Prioridade</th><th>Descrição</th><th className="fsc-num">Início</th><th className="fsc-num">Fim</th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Cód.</th><th>Prioridade</th><th>Descrição</th><th>Início</th><th>Fim</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhuma prioridade cadastrada.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma prioridade cadastrada.</td></tr>}
               {list.slice().sort((a, b) => a.interval_start - b.interval_start).map((p, i) => (
-                <tr key={p.code ?? i}><td className="fsc-num">{p.code}</td><td style={{ fontWeight: 600 }}>{p.priority}</td><td>{p.description}</td><td className="fsc-num">{p.interval_start}</td><td className="fsc-num">{p.interval_end}</td></tr>
+                <tr key={p.code ?? i}><td>{p.code}</td><td style={{ fontWeight: 600 }}>{p.priority}</td><td>{p.description}</td><td>{p.interval_start}</td><td>{p.interval_end}</td></tr>
               ))}
             </tbody>
           </table>
-        </div></div>
-      </div>
+        </div></div></div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Prioridades: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Prioridades: <strong>{list.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

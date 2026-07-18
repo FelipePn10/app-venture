@@ -46,71 +46,69 @@ export function Vpro0800Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRO0800 — Restrições e Configurador</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Restrições e Configurador</span><span className="erp-crumb-code">VPRO0800</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-new" onClick={() => { setForm(EMPTY); setFeedback(null); }} disabled={busy}>+ Nova</button>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Salvar"}</button></div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span>
+          <button className="erp-btn erp-btn-new" onClick={() => { setForm(EMPTY); setFeedback(null); }} disabled={busy}>+ Nova</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Salvar"}</button></div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0800 — Restrições e Configurador" filename="vpro0800" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Regra</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <div className="fsc-grid">
-            <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Nome</label><input className="fsc-input" value={form.name} onChange={(e) => setF("name", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Atributo</label><input className="fsc-input" value={form.attribute} placeholder="cor, tensao..." onChange={(e) => setF("attribute", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Operador</label>
-              <select className="fsc-select" value={form.operator} onChange={(e) => setF("operator", e.target.value as RestrictionOperator)}>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Restrições e Configurador</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Regra</div><div className="erp-fieldset-body">
+          
+            <div className="erp-field erp-c4"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={form.name} onChange={(e) => setF("name", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Atributo</label><input className="erp-input" value={form.attribute} placeholder="cor, tensao..." onChange={(e) => setF("attribute", e.target.value)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Operador</label>
+              <select className="erp-input" value={form.operator} onChange={(e) => setF("operator", e.target.value as RestrictionOperator)}>
                 {OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Valor</label><input className="fsc-input" value={form.value} placeholder="azul  ou  azul,verde (IN)" onChange={(e) => setF("value", e.target.value)} /></div>
-          </div>
+            <div className="erp-field erp-c3"><label className="erp-label">Valor</label><input className="erp-input" value={form.value} placeholder="azul  ou  azul,verde (IN)" onChange={(e) => setF("value", e.target.value)} /></div>
+          
         </div></div>
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Restrições</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{list.length}</span></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Restrições — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
             <thead><tr><th>#</th><th>Nome</th><th>Atributo</th><th>Operador</th><th>Valor</th><th style={{ width: 80 }}>Ações</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={6} className="fsc-empty">Nenhuma restrição.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma restrição.</td></tr>}
               {list.map((r) => (
                 <tr key={r.id}><td>{r.id}</td><td style={{ fontWeight: 600 }}>{r.name}</td><td>{r.attribute}</td>
-                  <td><span className="fsc-pill fsc-pill-gray">{r.operator}</span></td><td>{r.value}</td>
-                  <td><button className="fsc-action-btn fsc-delete-btn" onClick={() => r.id && void remover(r.id)}>Excluir</button></td></tr>
+                  <td><span className="erp-badge erp-badge-gray">{r.operator}</span></td><td>{r.value}</td>
+                  <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => r.id && void remover(r.id)}>Excluir</button></td></tr>
               ))}
             </tbody>
           </table>
-        </div></div>
+        </div></div></div>
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Avaliar</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">contexto em JSON</span></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <div className="fsc-grid">
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Restrição</label>
-              <select className="fsc-select" value={evalId} onChange={(e) => setEvalId(e.target.value ? Number(e.target.value) : "")}>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Avaliar — <span style={{fontWeight:400,opacity:0.65}}>contexto em JSON</span></div><div className="erp-fieldset-body">
+          
+            <div className="erp-field erp-c4"><label className="erp-label">Restrição</label>
+              <select className="erp-input" value={evalId} onChange={(e) => setEvalId(e.target.value ? Number(e.target.value) : "")}>
                 <option value="">— selecione —</option>
                 {list.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
-            <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void avaliar()} disabled={busy}>Avaliar</button></div>
-            <div className="fsc-field fsc-col-12"><label className="fsc-label">Contexto (JSON)</label>
-              <textarea className="fsc-textarea" rows={4} value={ctx} onChange={(e) => setCtx(e.target.value)} /></div>
-          </div>
+            <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void avaliar()} disabled={busy}>Avaliar</button></div>
+            <div className="erp-field erp-c12"><label className="erp-label">Contexto (JSON)</label>
+              <textarea className="erp-textarea" rows={4} value={ctx} onChange={(e) => setCtx(e.target.value)} /></div>
+          
         </div></div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Restrições: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Restrições: <strong>{list.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );
