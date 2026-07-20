@@ -14,6 +14,7 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -33,6 +34,7 @@ const EMPTY: FiscalConfig = {
   telefone: "",
   icms_interno_aliquota: 0,
   icms_diferimento_percentual: 0,
+  focus_nfe_configured: false,
   focus_nfe_token: "",
   focus_nfe_ambiente: "homologacao",
   juros_mes: 0,
@@ -49,6 +51,7 @@ const REGIMES: { value: RegimeTributario; label: string }[] = [
 ];
 
 export function Vfis0100Page(): JSX.Element {
+  const isAdmin = useAuthStore((state) => state.user?.role?.toUpperCase() === "ADMIN");
   const [form, setForm] = useState<FiscalConfig>(EMPTY);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -163,7 +166,8 @@ export function Vfis0100Page(): JSX.Element {
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Ações</span>
-          <button className="erp-btn erp-btn-primary" onClick={() => void handleSalvar()} disabled={isSaving || isLoading}>
+          <button className="erp-btn erp-btn-primary" onClick={() => void handleSalvar()} disabled={!isAdmin || isSaving || isLoading}
+            title={isAdmin ? undefined : "Somente administradores podem alterar a configuração fiscal"}>
             {isSaving ? <><div className="erp-spin" />Salvando...</> : "Salvar Configuração"}
           </button>
         </div>
@@ -296,9 +300,14 @@ export function Vfis0100Page(): JSX.Element {
         <div className="erp-fieldset"><div className="erp-fieldset-head">Focus NF-e   — <span style={{fontWeight:400,opacity:0.65}}>Integração com a SEFAZ</span></div><div className="erp-fieldset-body">
             
               <div className="erp-field erp-c8">
-                <label className="erp-label erp-req">Token Focus NF-e</label>
-                <input className="erp-input" value={form.focus_nfe_token ?? ""}
+                <label className="erp-label">Novo token Focus NF-e</label>
+                <input className="erp-input" type="password" autoComplete="new-password"
+                  value={form.focus_nfe_token ?? ""} disabled={!isAdmin}
+                  placeholder={form.focus_nfe_configured ? "Token configurado — deixe vazio para manter" : "Informe o token"}
                   onChange={(e) => setField("focus_nfe_token", e.target.value)} />
+                <span className="erp-field-hint">
+                  {form.focus_nfe_configured ? "Token atual configurado e protegido." : "Nenhum token configurado."}
+                </span>
               </div>
               <div className="erp-field erp-c4">
                 <label className="erp-label erp-req">Ambiente</label>

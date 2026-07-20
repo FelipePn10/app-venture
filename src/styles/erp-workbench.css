@@ -84,6 +84,10 @@
 .erp-btn-danger { color: var(--v-err); border-color: var(--v-err-bd); }
 .erp-btn-danger:hover:not(:disabled) { background: var(--v-err-bg); border-color: #d99; color: var(--v-err); }
 .erp-btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.erp-btn-new { background: var(--v-green); border-color: var(--v-green); color: #fff; box-shadow: var(--v-shadow-sm); }
+.erp-btn-new:hover:not(:disabled) { background: var(--v-green-hover); border-color: var(--v-green-hover); color: #fff; }
+.erp-btn-ghost { background: transparent; border-color: transparent; color: var(--v-text-2); }
+.erp-btn-ghost:hover:not(:disabled) { background: var(--v-surface-3); border-color: var(--v-border-strong); color: var(--v-text); }
 
 .erp-tinput, .erp-tselect {
   height: 32px; border: 1px solid var(--v-border-strong); border-radius: var(--v-r-sm);
@@ -253,6 +257,13 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-badge.info { color: var(--v-info); background: var(--v-info-bg); border-color: var(--v-info-bd); }
 .erp-badge.warn { color: var(--v-warn); background: var(--v-warn-bg); border-color: var(--v-warn-bd); }
 .erp-badge.err { color: var(--v-err); background: var(--v-err-bg); border-color: var(--v-err-bd); }
+/* Variantes por cor (equivalentes aos estados semânticos) usadas por telas que
+   mapeiam status → cor diretamente (financeiro, fiscal, cadastros). */
+.erp-badge-green { color: var(--v-ok); background: var(--v-ok-bg); border-color: var(--v-ok-bd); }
+.erp-badge-red { color: var(--v-err); background: var(--v-err-bg); border-color: var(--v-err-bd); }
+.erp-badge-amber { color: var(--v-warn); background: var(--v-warn-bg); border-color: var(--v-warn-bd); }
+.erp-badge-blue { color: var(--v-info); background: var(--v-info-bg); border-color: var(--v-info-bd); }
+.erp-badge-gray { color: var(--v-text-2); background: var(--v-surface-3); border-color: var(--v-border-strong); }
 
 /* ── DETAIL EMPTY (no selection) ──────────────────────────────────────────── */
 .erp-detail-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--v-text-muted); text-align: center; padding: 40px; }
