@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.0.3] — 2026-07-20
+
 - Visual renovado: todas as telas do sistema adotaram o novo padrão, mais organizado, consistente e fácil de ler.
 - Novidades mais legíveis: o painel de novidades passa a exibir as notas de atualização já formatadas (sem símbolos técnicos na tela).
 - Seu nome real passa a aparecer no topo do sistema após entrar (antes mostrava "Usuário ERP").
