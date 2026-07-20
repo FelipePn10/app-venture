@@ -38,60 +38,61 @@ export function Vcal0100Page(): JSX.Element {
   const holidays = days.filter((d) => !d.is_workday).length;
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCAL0100 — Calendário Industrial</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Cadastros & Plataforma</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Calendário Industrial</span><span className="erp-crumb-code">VCAL0100</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Período</span>
-          <input className="fsc-input fsc-input-right" style={{ width: 80, height: 32 }} type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
-          <select className="fsc-select" style={{ width: 90, height: 32 }} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Período</span>
+          <input className="erp-input num" style={{ width: 80, height: 32 }} type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+          <select className="erp-input" style={{ width: 90, height: 32 }} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
             {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => void reload()} disabled={busy}>Ver</button></div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+          <button className="erp-btn" onClick={() => void reload()} disabled={busy}>Ver</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCAL0100 — Calendário Industrial" filename="vcal0100" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Calendário Industrial</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="fsc-metrics">
-          <div className="fsc-metric"><div className="fsc-metric-label">Dias úteis</div><div className="fsc-metric-value">{workdays}</div></div>
-          <div className="fsc-metric"><div className="fsc-metric-label">Dias não úteis</div><div className="fsc-metric-value">{holidays}</div></div>
-          <div className="fsc-metric"><div className="fsc-metric-label">Registrados</div><div className="fsc-metric-value">{days.length}</div></div>
+        <div className="erp-metrics">
+          <div className="erp-metric"><div className="erp-metric-label">Dias úteis</div><div className="erp-metric-value">{workdays}</div></div>
+          <div className="erp-metric"><div className="erp-metric-label">Dias não úteis</div><div className="erp-metric-value">{holidays}</div></div>
+          <div className="erp-metric"><div className="erp-metric-label">Registrados</div><div className="erp-metric-value">{days.length}</div></div>
         </div>
 
-        <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-          <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Dia</label><input className="fsc-input fsc-input-right" type="number" min={1} max={31} value={newDay.day} onChange={(e) => setNewDay((p) => ({ ...p, day: Number(e.target.value) }))} /></div>
-          <div className="fsc-field fsc-col-3"><label className="fsc-label">Dia útil?</label>
-            <div className="fsc-toggle-row"><label className="fsc-toggle"><input type="checkbox" checked={newDay.is_workday} onChange={(e) => setNewDay((p) => ({ ...p, is_workday: e.target.checked }))} /><div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" /></label><span className="fsc-toggle-label">{newDay.is_workday ? "Útil" : "Não útil"}</span></div></div>
-          <div className="fsc-field fsc-col-5"><label className="fsc-label">Descrição</label><input className="fsc-input" value={newDay.description} placeholder="Ex.: Feriado municipal" onChange={(e) => setNewDay((p) => ({ ...p, description: e.target.value }))} /></div>
-          <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void addDay()} disabled={busy}>Registrar dia</button></div>
-        </div></div></div>
+        <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Dia</label><input className="erp-input num" type="number" min={1} max={31} value={newDay.day} onChange={(e) => setNewDay((p) => ({ ...p, day: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Dia útil?</label>
+            <div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={newDay.is_workday} onChange={(e) => setNewDay((p) => ({ ...p, is_workday: e.target.checked }))} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{newDay.is_workday ? "Útil" : "Não útil"}</span></div></div>
+          <div className="erp-field erp-c5"><label className="erp-label">Descrição</label><input className="erp-input" value={newDay.description} placeholder="Ex.: Feriado municipal" onChange={(e) => setNewDay((p) => ({ ...p, description: e.target.value }))} /></div>
+          <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void addDay()} disabled={busy}>Registrar dia</button></div>
+        </div></div>
 
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th className="fsc-num">Dia</th><th>Data</th><th>Situação</th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Dia</th><th>Data</th><th>Situação</th></tr></thead>
             <tbody>
-              {days.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhum dia especial registrado neste mês (todos considerados úteis).</td></tr>}
+              {days.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhum dia especial registrado neste mês (todos considerados úteis).</td></tr>}
               {days.slice().sort((a, b) => a.day - b.day).map((d) => (
-                <tr key={d.day}><td className="fsc-num" style={{ fontWeight: 600 }}>{d.day}</td>
+                <tr key={d.day}><td style={{ fontWeight: 600 }}>{d.day}</td>
                   <td>{String(d.day).padStart(2, "0")}/{String(d.month).padStart(2, "0")}/{d.year}</td>
-                  <td>{d.is_workday ? <span className="fsc-pill fsc-pill-green">Útil</span> : <span className="fsc-pill fsc-pill-amber">Não útil</span>}</td></tr>
+                  <td>{d.is_workday ? <span className="erp-badge ok">Útil</span> : <span className="erp-badge warn">Não útil</span>}</td></tr>
               ))}
             </tbody>
           </table>
-        </div></div>
-      </div>
+        </div></div></div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Mês: <strong>{MONTHS[month - 1]}/{year}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Mês: <strong>{MONTHS[month - 1]}/{year}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

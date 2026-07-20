@@ -31,61 +31,61 @@ export function Vcon0202Page(): JSX.Element {
   const cancelar = () => { if (!contrato?.id) return; void run(async () => { const c = await updateContractStatus(contrato.id!, "CANCELLED"); setContrato(c); setFeedback({ type: "success", message: `Contrato ${c.contract_number} cancelado.` }); }); };
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCON0202 — Baixa de Saldo / Cancelamento do Contrato</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Suprimento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Baixa de Saldo / Cancelamento do Contrato</span><span className="erp-crumb-code">VCON0202</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Contrato (nº interno)</span>
-          <input className="fsc-input fsc-input-right" style={{ width: 90, height: 32 }} type="number" value={contractId} onChange={(e) => setContractId(e.target.value)} />
-          <button className="fsc-btn fsc-btn-primary" onClick={abrir} disabled={busy}>Abrir</button></div>
-        {contrato && <div className="fsc-action-group"><button className="fsc-btn fsc-btn-danger" onClick={cancelar} disabled={busy}>Cancelar contrato</button></div>}
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Contrato (nº interno)</span>
+          <input className="erp-input num" style={{ width: 90, height: 32 }} type="number" value={contractId} onChange={(e) => setContractId(e.target.value)} />
+          <button className="erp-btn erp-btn-primary" onClick={abrir} disabled={busy}>Abrir</button></div>
+        {contrato && <div className="erp-tgroup"><button className="erp-btn erp-btn-danger" onClick={cancelar} disabled={busy}>Cancelar contrato</button></div>}
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCON0202 — Baixa de Saldo do Contrato" filename="vcon0202" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-feedback info" style={{ marginBottom: 12 }}>A baixa de item é o <strong>consumo de saldo</strong> (só em contrato <strong>ACTIVE</strong>, sem exceder o saldo). O encerramento é feito pelo status (Cancelar contrato).</div>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Baixa de Saldo</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-feedback info" style={{ marginBottom: 12 }}>A baixa de item é o <strong>consumo de saldo</strong> (só em contrato <strong>ACTIVE</strong>, sem exceder o saldo). O encerramento é feito pelo status (Cancelar contrato).</div>
 
         {contrato && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">{contrato.contract_number} — {contrato.status}</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">fornecedor {contrato.supplier_code}</span></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th className="fsc-num">Item</th><th>Máscara</th><th className="fsc-num">Contratada</th><th className="fsc-num">Consumida</th><th className="fsc-num">Saldo</th><th></th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">{contrato.contract_number} — {contrato.status} — <span style={{fontWeight:400,opacity:0.65}}>fornecedor {contrato.supplier_code}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Item</th><th>Máscara</th><th>Contratada</th><th>Consumida</th><th>Saldo</th><th></th></tr></thead>
                 <tbody>
-                  {(contrato.items ?? []).length === 0 && <tr><td colSpan={6} className="fsc-empty">Sem linhas.</td></tr>}
+                  {(contrato.items ?? []).length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem linhas.</td></tr>}
                   {(contrato.items ?? []).map((it, i) => (
-                    <tr key={i} className={sel?.item_code === it.item_code && sel?.mask === (it.mask ?? "") ? "fsc-row-selected" : ""}>
-                      <td className="fsc-num">{it.item_code}</td><td>{it.mask || "—"}</td><td className="fsc-num">{num(it.contracted_qty)}</td><td className="fsc-num">{num(it.consumed_qty)}</td>
-                      <td className="fsc-num" style={{ fontWeight: 600 }}>{num(it.remaining_qty)}</td>
-                      <td><button className="fsc-btn fsc-btn-ghost" onClick={() => setSel({ item_code: it.item_code, mask: it.mask ?? "" })} disabled={busy}>Selecionar</button></td>
+                    <tr key={i} className={sel?.item_code === it.item_code && sel?.mask === (it.mask ?? "") ? "erp-row-sel" : ""}>
+                      <td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{num(it.contracted_qty)}</td><td>{num(it.consumed_qty)}</td>
+                      <td style={{ fontWeight: 600 }}>{num(it.remaining_qty)}</td>
+                      <td><button className="erp-btn" onClick={() => setSel({ item_code: it.item_code, mask: it.mask ?? "" })} disabled={busy}>Selecionar</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div></div>
+            </div></div></div>
 
             {sel && (
-              <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Item selecionado</label><input className="fsc-input" value={`${sel.item_code}${sel.mask ? ` / ${sel.mask}` : ""}`} readOnly /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Quantidade a baixar</label><input className="fsc-input fsc-input-right" type="number" value={qtd} onChange={(e) => setQtd(e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3" style={{ alignSelf: "end" }}><button className="fsc-btn fsc-btn-primary" onClick={baixar} disabled={busy}>Baixar saldo</button></div>
-              </div></div></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c3"><label className="erp-label">Item selecionado</label><input className="erp-input" value={`${sel.item_code}${sel.mask ? ` / ${sel.mask}` : ""}`} readOnly /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade a baixar</label><input className="erp-input num" type="number" value={qtd} onChange={(e) => setQtd(e.target.value)} /></div>
+                <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={baixar} disabled={busy}>Baixar saldo</button></div>
+              </div></div>
             )}
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Linhas: <strong>{contrato?.items?.length ?? 0}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Linhas: <strong>{contrato?.items?.length ?? 0}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

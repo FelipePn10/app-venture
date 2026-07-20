@@ -37,57 +37,57 @@ export function Vpro0300Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VPRO0300 — Custo Padrão</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Custo Padrão</span><span className="erp-crumb-code">VPRO0300</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Item</span>
-          <input className="fsc-input" style={{ width: 110, height: 32 }} type="number" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => void consultar()} disabled={busy}>Consultar</button>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Calcular"}</button></div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
+          <input className="erp-input" style={{ width: 110, height: 32 }} type="number" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
+          <button className="erp-btn" onClick={() => void consultar()} disabled={busy}>Consultar</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Calcular"}</button></div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0300 — Custo Padrão" filename="vpro0300" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Custo Padrão</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         {current && (
-          <div className="fsc-metrics">
-            <div className="fsc-metric"><div className="fsc-metric-label">Material</div><div className="fsc-metric-value">{money(current.material_cost)}</div></div>
-            <div className="fsc-metric"><div className="fsc-metric-label">Operação</div><div className="fsc-metric-value">{money(current.operation_cost)}</div></div>
-            <div className="fsc-metric"><div className="fsc-metric-label">Overhead</div><div className="fsc-metric-value">{money(current.overhead_cost)}</div></div>
-            <div className="fsc-metric"><div className="fsc-metric-label">Total (item {current.item_code})</div><div className="fsc-metric-value" style={{ color: "#1e6030" }}>{money(current.total_cost)}</div></div>
+          <div className="erp-metrics">
+            <div className="erp-metric"><div className="erp-metric-label">Material</div><div className="erp-metric-value">{money(current.material_cost)}</div></div>
+            <div className="erp-metric"><div className="erp-metric-label">Operação</div><div className="erp-metric-value">{money(current.operation_cost)}</div></div>
+            <div className="erp-metric"><div className="erp-metric-label">Overhead</div><div className="erp-metric-value">{money(current.overhead_cost)}</div></div>
+            <div className="erp-metric"><div className="erp-metric-label">Total (item {current.item_code})</div><div className="erp-metric-value" style={{ color: "#1e6030" }}>{money(current.total_cost)}</div></div>
           </div>
         )}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Custos padrão salvos</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{list.length}</span></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th>Item</th><th className="fsc-num">Material</th><th className="fsc-num">Operação</th><th className="fsc-num">Overhead</th><th className="fsc-num">Total</th></tr></thead>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Custos padrão salvos — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Item</th><th>Material</th><th>Operação</th><th>Overhead</th><th>Total</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhum custo padrão salvo.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum custo padrão salvo.</td></tr>}
               {list.map((c) => (
                 <tr key={c.item_code}>
-                  <td style={{ fontWeight: 600 }}>{c.item_code}</td><td className="fsc-num">{money(c.material_cost)}</td>
-                  <td className="fsc-num">{money(c.operation_cost)}</td><td className="fsc-num">{money(c.overhead_cost)}</td>
-                  <td className="fsc-num" style={{ fontWeight: 600 }}>{money(c.total_cost)}</td>
+                  <td style={{ fontWeight: 600 }}>{c.item_code}</td><td>{money(c.material_cost)}</td>
+                  <td>{money(c.operation_cost)}</td><td>{money(c.overhead_cost)}</td>
+                  <td style={{ fontWeight: 600 }}>{money(c.total_cost)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div></div>
-      </div>
+        </div></div></div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Itens: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Itens: <strong>{list.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

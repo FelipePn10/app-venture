@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseBool, parseStr, parseNum, unwrapObject, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/fiscal/config';
 const BRANDING_PATH = '/api/fiscal/config/branding';
@@ -27,6 +27,7 @@ export interface FiscalConfig {
   brand_color?: string;
   icms_interno_aliquota: number;
   icms_diferimento_percentual: number;
+  focus_nfe_configured: boolean;
   focus_nfe_token?: string;
   focus_nfe_ambiente: FocusAmbiente;
   juros_mes: number;
@@ -70,6 +71,7 @@ function parseConfig(raw: unknown): FiscalConfig {
     brand_color: parseStr(o, 'brand_color', 'BrandColor'),
     icms_interno_aliquota: parseNum(o, 'icms_interno_aliquota', 'IcmsInternoAliquota'),
     icms_diferimento_percentual: parseNum(o, 'icms_diferimento_percentual', 'IcmsDiferimentoPercentual'),
+    focus_nfe_configured: parseBool(o, 'focus_nfe_configured', 'FocusNfeConfigured'),
     focus_nfe_token: parseStr(o, 'focus_nfe_token', 'FocusNfeToken'),
     focus_nfe_ambiente: (amb === 'producao' ? 'producao' : 'homologacao') as FocusAmbiente,
     juros_mes: parseNum(o, 'juros_mes', 'JurosMes'),
@@ -88,7 +90,10 @@ export async function getFiscalConfig(): Promise<FiscalConfig> {
 }
 
 export async function updateFiscalConfig(cfg: FiscalConfig): Promise<FiscalConfig> {
-  const { data } = await httpClient.put(BASE, cfg);
+  const payload: Partial<FiscalConfig> = { ...cfg };
+  delete payload.focus_nfe_configured;
+  if (!payload.focus_nfe_token?.trim()) delete payload.focus_nfe_token;
+  const { data } = await httpClient.put(BASE, payload);
   return parseConfig(data);
 }
 

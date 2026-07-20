@@ -99,37 +99,32 @@ export function SupportCrud({ resource, fields, columns, title }: Props): JSX.El
   }
 
   return (
-    <div className="fsc-card-body">
-      {title && (
-        <div className="fsc-section-banner" style={{ marginBottom: 12 }}>
-          <span className="fsc-section-banner-pill">{title}</span>
-          <div className="fsc-section-banner-line" />
-        </div>
-      )}
-      {feedback && <div className={`fsc-feedback ${feedback.type}`} style={{ marginBottom: 12 }}>{feedback.message}</div>}
+    <div className="erp-fieldset">
+      {title && <div className="erp-fieldset-head">{title}</div>}
+      <div className="erp-fieldset-body">
+        {feedback && <div className="erp-field erp-c12"><div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div></div>}
 
-      <div className="fsc-grid">
         {fields.map((fs) => (
-          <div key={fs.key} className={`fsc-field fsc-col-${fs.col ?? 4}`}>
-            <label className={`fsc-label ${fs.required ? "fsc-label-req" : ""}`}>{fs.label}</label>
+          <div key={fs.key} className={`erp-field erp-c${fs.col ?? 4}`}>
+            <label className={`erp-label ${fs.required ? "erp-req" : ""}`}>{fs.label}</label>
             {fs.kind === "bool" ? (
-              <div className="fsc-toggle-row">
-                <label className="fsc-toggle">
+              <div className="erp-toggle-row">
+                <label className="erp-toggle">
                   <input type="checkbox" checked={!!form[fs.key]} onChange={(e) => set(fs.key, e.target.checked)} />
-                  <div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" />
+                  <div className="erp-toggle-track" /><div className="erp-toggle-thumb" />
                 </label>
-                <span className="fsc-toggle-label">{form[fs.key] ? "Sim" : "Não"}</span>
+                <span className="erp-toggle-label">{form[fs.key] ? "Sim" : "Não"}</span>
               </div>
             ) : fs.kind === "select" ? (
-              <select className="fsc-select" value={String(form[fs.key] ?? "")} onChange={(e) => set(fs.key, e.target.value)}>
+              <select className="erp-input" value={String(form[fs.key] ?? "")} onChange={(e) => set(fs.key, e.target.value)}>
                 <option value="">—</option>
                 {(fs.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             ) : fs.kind === "textarea" ? (
-              <textarea className="fsc-textarea" value={String(form[fs.key] ?? "")} placeholder={fs.placeholder} onChange={(e) => set(fs.key, e.target.value)} />
+              <textarea className="erp-textarea" value={String(form[fs.key] ?? "")} placeholder={fs.placeholder} onChange={(e) => set(fs.key, e.target.value)} />
             ) : (
               <input
-                className={`fsc-input ${fs.kind === "number" ? "fsc-input-right" : ""}`}
+                className={`erp-input ${fs.kind === "number" ? "num" : ""}`}
                 type={fs.kind === "number" ? "number" : "text"}
                 value={String(form[fs.key] ?? "")}
                 placeholder={fs.placeholder}
@@ -138,36 +133,36 @@ export function SupportCrud({ resource, fields, columns, title }: Props): JSX.El
             )}
           </div>
         ))}
-        <div className="fsc-field fsc-col-12" style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>
+        <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>
             {busy ? "..." : editingCode !== null ? "Atualizar" : "Adicionar"}
           </button>
-          {editingCode !== null && <button className="fsc-btn fsc-btn-ghost" onClick={novo} disabled={busy}>Cancelar edição</button>}
+          {editingCode !== null && <button className="erp-btn" onClick={novo} disabled={busy}>Cancelar edição</button>}
         </div>
-      </div>
 
-      <div className="fsc-results-wrap" style={{ marginTop: 16 }}>
-        <table className="fsc-table">
-          <thead>
-            <tr>
-              {columns.map((c) => <th key={c.key} className={c.kind === "number" ? "fsc-num" : undefined}>{c.label}</th>)}
-              <th style={{ width: 70 }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.length === 0 && <tr><td colSpan={columns.length + 1} className="fsc-empty">Nenhum registro cadastrado.</td></tr>}
-            {list.map((rec, i) => (
-              <tr key={i}>
-                {columns.map((c) => (
-                  <td key={c.key} className={c.kind === "number" ? "fsc-num" : undefined}>
-                    {c.kind === "bool" ? (parseBool(rec, c.key) ? "Sim" : "Não") : c.kind === "number" ? parseNum(rec, c.key) : parseStr(rec, c.key)}
-                  </td>
-                ))}
-                <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => edit(rec)}>Editar</button></td>
+        <div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead>
+              <tr>
+                {columns.map((c) => <th key={c.key}>{c.label}</th>)}
+                <th style={{ width: 70 }}>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {list.length === 0 && <tr><td colSpan={columns.length + 1} className="erp-grid-empty">Nenhum registro cadastrado.</td></tr>}
+              {list.map((rec, i) => (
+                <tr key={i}>
+                  {columns.map((c) => (
+                    <td key={c.key}>
+                      {c.kind === "bool" ? (parseBool(rec, c.key) ? "Sim" : "Não") : c.kind === "number" ? parseNum(rec, c.key) : parseStr(rec, c.key)}
+                    </td>
+                  ))}
+                  <td><button className="erp-btn erp-btn-sm" onClick={() => edit(rec)}>Editar</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

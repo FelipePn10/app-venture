@@ -578,31 +578,6 @@ export function LoginPage(): JSX.Element {
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* SSO */
-        .lp-sso {
-          width: 100%;
-          height: 46px;
-          background: #fff;
-          border: 1.5px solid #cde0d4;
-          border-radius: 11px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 13.5px;
-          font-weight: 500;
-          color: #2e5239;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 9px;
-          transition: border-color 0.18s, background 0.18s;
-          box-shadow: 0 1px 2px rgba(22, 46, 32, 0.04);
-        }
-
-        .lp-sso:hover {
-          border-color: #3e9654;
-          background: #f8fbf8;
-        }
-
         /* Footer */
         .lp-form-footer {
           display: flex;
@@ -809,9 +784,16 @@ export function LoginPage(): JSX.Element {
                         strokeWidth="1.3"
                         strokeLinejoin="round"
                       />
+                      <path
+                        d="M5.7 8l1.6 1.6L10.5 6.4"
+                        stroke="#3e9654"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   ),
-                  text: "Certificação ISO 27001",
+                  text: "Controle de acesso por perfil",
                 },
               ].map((f, i) => (
                 <div className="lp-feature" key={i}>
@@ -1095,49 +1077,6 @@ export function LoginPage(): JSX.Element {
                 ) : (
                   <span>Entrar na plataforma</span>
                 )}
-              </button>
-
-              {/* SSO */}
-              <button type="button" className="lp-sso">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect
-                    x="1"
-                    y="1"
-                    width="6.5"
-                    height="6.5"
-                    rx="1.2"
-                    fill="#3e9654"
-                    opacity="0.75"
-                  />
-                  <rect
-                    x="8.5"
-                    y="1"
-                    width="6.5"
-                    height="6.5"
-                    rx="1.2"
-                    fill="#162e20"
-                    opacity="0.5"
-                  />
-                  <rect
-                    x="1"
-                    y="8.5"
-                    width="6.5"
-                    height="6.5"
-                    rx="1.2"
-                    fill="#162e20"
-                    opacity="0.5"
-                  />
-                  <rect
-                    x="8.5"
-                    y="8.5"
-                    width="6.5"
-                    height="6.5"
-                    rx="1.2"
-                    fill="#3e9654"
-                    opacity="0.75"
-                  />
-                </svg>
-                Entrar com SSO corporativo
               </button>
             </form>
 

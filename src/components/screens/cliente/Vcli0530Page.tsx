@@ -38,32 +38,33 @@ const TAX_FIELDS: FieldSpec[] = [
 export function Vcli0530Page(): JSX.Element {
   const [tab, setTab] = useState<Tab>("nf");
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCLI0530 — Apoio de Cliente (Fiscal)</span>
-      </div></header>
-      <div className="fsc-actionbar"><div className="fsc-action-group"><span className="fsc-action-label">Tipos fiscais</span></div><div className="fsc-action-group"><span className="fsc-action-label">Relatório</span><ExportButton title="VCLI0530 — Apoio de Cliente (Fiscal)" filename="vcli0530" /></div></div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Cliente</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Apoio de Cliente (Fiscal)</span><span className="erp-crumb-code">VCLI0530</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
+      <div className="erp-toolbar"><div className="erp-tgroup"><span className="erp-tgroup-label">Tipos fiscais</span></div><div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span><ExportButton title="VCLI0530 — Apoio de Cliente (Fiscal)" filename="vcli0530" /></div></div>
 
-      <div className="fsc-body">
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "nf" ? "active" : ""}`} onClick={() => setTab("nf")}>Tipo de NF de Saída</button>
-            <button className={`fsc-tab ${tab === "imposto" ? "active" : ""}`} onClick={() => setTab("imposto")}>Tipo de Imposto</button>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Apoio de Cliente</button></div>
+          <div className="erp-detail-body">
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "nf" ? "active" : ""}`} onClick={() => setTab("nf")}>Tipo de NF de Saída</button>
+            <button className={`erp-tab ${tab === "imposto" ? "active" : ""}`} onClick={() => setTab("imposto")}>Tipo de Imposto</button>
           </div>
           {tab === "nf" && <SupportCrud resource="invoice-types" fields={NF_FIELDS}
             columns={[{ key: "description", label: "Descrição" }, { key: "type", label: "Natureza" }, { key: "model_nf", label: "Modelo" }, { key: "generates_revenue", label: "Receita", kind: "bool" }]} />}
           {tab === "imposto" && <SupportCrud resource="tax-types" fields={TAX_FIELDS}
             columns={[{ key: "description", label: "Descrição" }, { key: "is_consumer", label: "Consumidor", kind: "bool" }]} />}
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Apoio fiscal: <strong>{tab}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Apoio fiscal: <strong>{tab}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

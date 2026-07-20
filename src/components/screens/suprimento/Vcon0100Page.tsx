@@ -8,29 +8,29 @@ import { ExportButton } from "@/components/ui/ExportButton";
  */
 export function Vcon0100Page(): JSX.Element {
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VCON0100 — Tipos de Contratos</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Suprimento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Tipos de Contratos</span><span className="erp-crumb-code">VCON0100</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCON0100 — Tipos de Contratos" filename="vcon0100" /></div>
       </div>
 
-      <div className="fsc-body">
-        <div className="fsc-feedback info" style={{ marginBottom: 12 }}>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Tipos de Contratos</button></div>
+          <div className="erp-detail-body">
+        <div className="erp-feedback info" style={{ marginBottom: 12 }}>
           O ERP não mantém <strong>tipos de contrato</strong> como cadastro separado. Um contrato de fornecedor
           já descreve tudo na própria capa: <strong>status</strong> (DRAFT · ACTIVE · SUSPENDED · CLOSED · CANCELLED),
           <strong> vigência</strong>, <strong>moeda</strong> e <strong>índice de reajuste</strong>.
         </div>
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Onde cadastrar/consultar contratos</span><div className="fsc-section-banner-line" /></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <table className="fsc-table">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Onde cadastrar/consultar contratos</div><div className="erp-fieldset-body">
+          <table className="erp-grid">
             <thead><tr><th>Tela</th><th>Função</th></tr></thead>
             <tbody>
               <tr><td style={{ fontWeight: 600 }}>VCON0200</td><td>Cadastro de Contratos de Fornecedores (capa + linhas)</td></tr>
@@ -39,11 +39,11 @@ export function Vcon0100Page(): JSX.Element {
             </tbody>
           </table>
         </div></div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Contratos de fornecedores</div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Contratos de fornecedores</div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

@@ -73,87 +73,81 @@ export function Vfis0360Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIS0360 — Tipos de Operação de Entrada</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Tipos de Operação de Entrada</span><span className="erp-crumb-code">VFIS0360</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
+      <div className="erp-toolbar">
         {tab === "operacoes" && (
           <>
-            <div className="fsc-action-group">
-              <span className="fsc-action-label">Cadastro</span>
-              <button className="fsc-btn fsc-btn-new" onClick={novo} disabled={busy}>+ Novo Tipo</button>
+            <div className="erp-tgroup">
+              <span className="erp-tgroup-label">Cadastro</span>
+              <button className="erp-btn erp-btn-new" onClick={novo} disabled={busy}>+ Novo Tipo</button>
             </div>
-            <div className="fsc-action-group">
-              <span className="fsc-action-label">Ações</span>
-              <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editCode !== null ? "Atualizar" : "Salvar"}</button>
+            <div className="erp-tgroup">
+              <span className="erp-tgroup-label">Ações</span>
+              <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editCode !== null ? "Atualizar" : "Salvar"}</button>
             </div>
           </>
         )}
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VFIS0360 — Tipos de Operação de Entrada" filename="vfis0360" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Tipos de Operação de Entra</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "operacoes" ? "active" : ""}`} onClick={() => setTab("operacoes")}>Tipos de Operação</button>
-            <button className={`fsc-tab ${tab === "grupos" ? "active" : ""}`} onClick={() => setTab("grupos")}>Grupos de Estado</button>
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "operacoes" ? "active" : ""}`} onClick={() => setTab("operacoes")}>Tipos de Operação</button>
+            <button className={`erp-tab ${tab === "grupos" ? "active" : ""}`} onClick={() => setTab("grupos")}>Grupos de Estado</button>
           </div>
 
           {tab === "operacoes" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Código</label>
-                  <input className="fsc-input" value={form.code ?? ""} disabled={editCode !== null} onChange={(e) => setF("code", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-6"><label className="fsc-label fsc-label-req">Descrição</label>
-                  <input className="fsc-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Natureza Op.</label>
-                  <input className="fsc-input" value={form.nature_operation} placeholder="1xxx / 2xxx / 3xxx" onChange={(e) => setF("nature_operation", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Tipo Nota</label>
-                  <input className="fsc-input" value={form.invoice_type_code ?? ""} onChange={(e) => setF("invoice_type_code", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Grupo Estado</label>
-                  <input className="fsc-input" value={form.state_group_code ?? ""} onChange={(e) => setF("state_group_code", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Tipo Fornecedor</label>
-                  <input className="fsc-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Classif. (tipo)</label>
-                  <input className="fsc-input" value={form.classification_type ?? ""} onChange={(e) => setF("classification_type", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Classif. (código)</label>
-                  <input className="fsc-input" value={form.classification_code ?? ""} onChange={(e) => setF("classification_code", e.target.value)} /></div>
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c2"><label className="erp-label">Código</label>
+                  <input className="erp-input" value={form.code ?? ""} disabled={editCode !== null} onChange={(e) => setF("code", e.target.value)} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label>
+                  <input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Natureza Op.</label>
+                  <input className="erp-input" value={form.nature_operation} placeholder="1xxx / 2xxx / 3xxx" onChange={(e) => setF("nature_operation", e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Tipo Nota</label>
+                  <input className="erp-input" value={form.invoice_type_code ?? ""} onChange={(e) => setF("invoice_type_code", e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Grupo Estado</label>
+                  <input className="erp-input" value={form.state_group_code ?? ""} onChange={(e) => setF("state_group_code", e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Tipo Fornecedor</label>
+                  <input className="erp-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Classif. (tipo)</label>
+                  <input className="erp-input" value={form.classification_type ?? ""} onChange={(e) => setF("classification_type", e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Classif. (código)</label>
+                  <input className="erp-input" value={form.classification_code ?? ""} onChange={(e) => setF("classification_code", e.target.value)} /></div>
+              
+
+              <div className="erp-results-bar" style={{ marginTop: 12 }}>
+                <div className="erp-results-bar-left"><span className="erp-results-bar-label">Validar UF × Natureza</span></div>
+                <input className="erp-input" style={{ width: 90, height: 30 }} placeholder="código" value={validUf.code} onChange={(e) => setValidUf((p) => ({ ...p, code: e.target.value }))} />
+                <input className="erp-input" style={{ width: 60, height: 30 }} maxLength={2} placeholder="UF" value={validUf.uf} onChange={(e) => setValidUf((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
+                <button className="erp-btn" onClick={() => void validar()} disabled={busy}>Validar</button>
               </div>
 
-              <div className="fsc-results-bar" style={{ marginTop: 12 }}>
-                <div className="fsc-results-bar-left"><span className="fsc-results-bar-label">Validar UF × Natureza</span></div>
-                <input className="fsc-input" style={{ width: 90, height: 30 }} placeholder="código" value={validUf.code} onChange={(e) => setValidUf((p) => ({ ...p, code: e.target.value }))} />
-                <input className="fsc-input" style={{ width: 60, height: 30 }} maxLength={2} placeholder="UF" value={validUf.uf} onChange={(e) => setValidUf((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
-                <button className="fsc-btn fsc-btn-ghost" onClick={() => void validar()} disabled={busy}>Validar</button>
-              </div>
-
-              <div className="fsc-results-wrap" style={{ marginTop: 12 }}>
-                <table className="fsc-table">
+              <div className="erp-fieldset-body" style={{ marginTop: 12 }}>
+                <table className="erp-grid">
                   <thead><tr><th>Código</th><th>Descrição</th><th>Natureza</th><th>Grupo</th><th style={{ width: 80 }}>Ações</th></tr></thead>
                   <tbody>
-                    {list.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhum tipo de operação cadastrado.</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum tipo de operação cadastrado.</td></tr>}
                     {list.map((o) => (
                       <tr key={o.code}>
                         <td style={{ fontWeight: 600 }}>{o.code}</td><td>{o.description}</td><td>{o.nature_operation}</td><td>{o.state_group_code || "—"}</td>
-                        <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => edit(o)}>Editar</button></td>
+                        <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => edit(o)}>Editar</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -163,26 +157,26 @@ export function Vfis0360Page(): JSX.Element {
           )}
 
           {tab === "grupos" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código Grupo</label>
-                  <input className="fsc-input" value={groupForm.code} onChange={(e) => setGroupForm((p) => ({ ...p, code: e.target.value }))} /></div>
-                <div className="fsc-field fsc-col-6"><label className="fsc-label">Descrição</label>
-                  <input className="fsc-input" value={groupForm.description} onChange={(e) => setGroupForm((p) => ({ ...p, description: e.target.value }))} /></div>
-                <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}>
-                  <button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void salvarGrupo()} disabled={busy}>+ Grupo</button></div>
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Código Grupo</label>
+                  <input className="erp-input" value={groupForm.code} onChange={(e) => setGroupForm((p) => ({ ...p, code: e.target.value }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Descrição</label>
+                  <input className="erp-input" value={groupForm.description} onChange={(e) => setGroupForm((p) => ({ ...p, description: e.target.value }))} /></div>
+                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                  <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void salvarGrupo()} disabled={busy}>+ Grupo</button></div>
+              
+              <div className="erp-results-bar" style={{ marginTop: 12 }}>
+                <div className="erp-results-bar-left"><span className="erp-results-bar-label">Adicionar UF ao grupo</span></div>
+                <input className="erp-input" style={{ width: 90, height: 30 }} placeholder="grupo" value={ufAdd.code} onChange={(e) => setUfAdd((p) => ({ ...p, code: e.target.value }))} />
+                <input className="erp-input" style={{ width: 60, height: 30 }} maxLength={2} placeholder="UF" value={ufAdd.uf} onChange={(e) => setUfAdd((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
+                <button className="erp-btn" onClick={() => void addUf()} disabled={busy}>Adicionar</button>
               </div>
-              <div className="fsc-results-bar" style={{ marginTop: 12 }}>
-                <div className="fsc-results-bar-left"><span className="fsc-results-bar-label">Adicionar UF ao grupo</span></div>
-                <input className="fsc-input" style={{ width: 90, height: 30 }} placeholder="grupo" value={ufAdd.code} onChange={(e) => setUfAdd((p) => ({ ...p, code: e.target.value }))} />
-                <input className="fsc-input" style={{ width: 60, height: 30 }} maxLength={2} placeholder="UF" value={ufAdd.uf} onChange={(e) => setUfAdd((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
-                <button className="fsc-btn fsc-btn-ghost" onClick={() => void addUf()} disabled={busy}>Adicionar</button>
-              </div>
-              <div className="fsc-results-wrap" style={{ marginTop: 12 }}>
-                <table className="fsc-table">
+              <div className="erp-fieldset-body" style={{ marginTop: 12 }}>
+                <table className="erp-grid">
                   <thead><tr><th>Código</th><th>Descrição</th><th>UFs</th></tr></thead>
                   <tbody>
-                    {groups.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhum grupo de estado.</td></tr>}
+                    {groups.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhum grupo de estado.</td></tr>}
                     {groups.map((g) => (
                       <tr key={g.code}><td style={{ fontWeight: 600 }}>{g.code}</td><td>{g.description || "—"}</td><td>{g.ufs?.join(", ") || "—"}</td></tr>
                     ))}
@@ -192,14 +186,14 @@ export function Vfis0360Page(): JSX.Element {
             </div>
           )}
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left">
-          <div className="fsc-footer-stat">Tipos: <strong>{list.length}</strong></div>
-          <div className="fsc-footer-stat">Grupos: <strong>{groups.length}</strong></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}>
+          <div className="erp-status-item">Tipos: <strong>{list.length}</strong></div>
+          <div className="erp-status-item">Grupos: <strong>{groups.length}</strong></div>
         </div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

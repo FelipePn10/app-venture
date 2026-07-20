@@ -29,11 +29,11 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFraction
 
 function statusPill(status: string): JSX.Element {
   const s = status.toLowerCase();
-  const cls = s.includes("autoriz") ? "fsc-pill-green"
-    : s.includes("cancel") ? "fsc-pill-red"
-    : s.includes("rejeit") || s.includes("erro") ? "fsc-pill-amber"
-    : s.includes("process") ? "fsc-pill-blue" : "fsc-pill-gray";
-  return <span className={`fsc-pill ${cls}`}>{status || "—"}</span>;
+  const cls = s.includes("autoriz") ? "erp-badge-green"
+    : s.includes("cancel") ? "erp-badge-red"
+    : s.includes("rejeit") || s.includes("erro") ? "erp-badge-amber"
+    : s.includes("process") ? "erp-badge-blue" : "erp-badge-gray";
+  return <span className={`erp-badge ${cls}`}>{status || "—"}</span>;
 }
 
 export function Vfis0200Page(): JSX.Element {
@@ -148,70 +148,64 @@ export function Vfis0200Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIS0200 — NF-e de Saída</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">NF-e de Saída</span><span className="erp-crumb-code">VFIS0200</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-new" onClick={novo} disabled={busy}>+ Nova NF-e</button>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Cadastro</span>
+          <button className="erp-btn erp-btn-new" onClick={novo} disabled={busy}>+ Nova NF-e</button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Visão</span>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Visão</span>
+          <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
         </div>
         {mode === "create" && (
-          <div className="fsc-action-group">
-            <span className="fsc-action-label">Ações</span>
-            <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>
-              {busy ? <><div className="fsc-spinner" />Salvando...</> : "Criar Rascunho"}
+          <div className="erp-tgroup">
+            <span className="erp-tgroup-label">Ações</span>
+            <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>
+              {busy ? <><div className="erp-spin" />Salvando...</> : "Criar Rascunho"}
             </button>
           </div>
         )}
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VFIS0200 — NF-e de Saída" filename="vfis0200" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">NF-e de Saída</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {mode === "list" && (
           <>
             {lastCreated && (
-              <div className="fsc-metrics">
-                <div className="fsc-metric"><div className="fsc-metric-label">Última NF-e ({lastCreated.numero_nf})</div><div className="fsc-metric-value">{money(lastCreated.valor_total)}</div></div>
-                <div className="fsc-metric"><div className="fsc-metric-label">ICMS</div><div className="fsc-metric-value">{money(lastCreated.valor_icms)}</div></div>
-                <div className="fsc-metric"><div className="fsc-metric-label">IPI</div><div className="fsc-metric-value">{money(lastCreated.valor_ipi)}</div></div>
-                <div className="fsc-metric"><div className="fsc-metric-label">PIS</div><div className="fsc-metric-value">{money(lastCreated.valor_pis)}</div></div>
-                <div className="fsc-metric"><div className="fsc-metric-label">COFINS</div><div className="fsc-metric-value">{money(lastCreated.valor_cofins)}</div></div>
+              <div className="erp-metrics">
+                <div className="erp-metric"><div className="erp-metric-label">Última NF-e ({lastCreated.numero_nf})</div><div className="erp-metric-value">{money(lastCreated.valor_total)}</div></div>
+                <div className="erp-metric"><div className="erp-metric-label">ICMS</div><div className="erp-metric-value">{money(lastCreated.valor_icms)}</div></div>
+                <div className="erp-metric"><div className="erp-metric-label">IPI</div><div className="erp-metric-value">{money(lastCreated.valor_ipi)}</div></div>
+                <div className="erp-metric"><div className="erp-metric-label">PIS</div><div className="erp-metric-value">{money(lastCreated.valor_pis)}</div></div>
+                <div className="erp-metric"><div className="erp-metric-label">COFINS</div><div className="erp-metric-value">{money(lastCreated.valor_cofins)}</div></div>
               </div>
             )}
             {cceView && (
-              <div className="fsc-card" style={{ marginBottom: 12 }}>
-                <div className="fsc-card-header">
-                  <div className="fsc-card-header-left"><span className="fsc-card-title">CC-e da NF-e {cceView.id}</span></div>
-                  <button className="fsc-btn fsc-btn-ghost" onClick={() => setCceView(null)}>Fechar</button>
+              <div className="erp-fieldset" style={{ marginBottom: 12 }}>
+                <div className="erp-card-header">
+                  <div className="erp-card-header-left"><span className="erp-card-title">CC-e da NF-e {cceView.id}</span></div>
+                  <button className="erp-btn" onClick={() => setCceView(null)}>Fechar</button>
                 </div>
-                <div className="fsc-results-wrap">
-                  <table className="fsc-table">
+                <div className="erp-fieldset-body">
+                  <table className="erp-grid">
                     <thead><tr><th style={{ width: 50 }}>Seq</th><th>Texto da correção</th><th>Status</th><th>Data</th></tr></thead>
                     <tbody>
-                      {cceView.list.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma CC-e emitida para esta NF-e.</td></tr>}
+                      {cceView.list.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma CC-e emitida para esta NF-e.</td></tr>}
                       {cceView.list.map((c, i) => (
                         <tr key={i}>
                           <td>{parseNum(c, "numero_seq", "NumeroSeq") ?? i + 1}</td>
@@ -225,19 +219,13 @@ export function Vfis0200Page(): JSX.Element {
                 </div>
               </div>
             )}
-            <div className="fsc-section-banner">
-              <span className="fsc-section-banner-pill">Notas Fiscais</span>
-              <div className="fsc-section-banner-line" />
-              <span className="fsc-section-banner-hint">{list.length} NF-e</span>
-            </div>
-            <div className="fsc-card">
-              <div className="fsc-results-wrap">
-                <table className="fsc-table">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Notas Fiscais   — <span style={{fontWeight:400,opacity:0.65}}>{list.length} NF-e</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+                <table className="erp-grid">
                   <thead>
-                    <tr><th>#</th><th>Série</th><th>Destinatário</th><th>Status</th><th className="fsc-num">Total</th><th>Emissão</th><th style={{ width: 280 }}>Ações</th></tr>
+                    <tr><th>#</th><th>Série</th><th>Destinatário</th><th>Status</th><th>Total</th><th>Emissão</th><th style={{ width: 280 }}>Ações</th></tr>
                   </thead>
                   <tbody>
-                    {list.length === 0 && <tr><td colSpan={7} className="fsc-empty">Nenhuma NF-e de saída.</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma NF-e de saída.</td></tr>}
                     {list.map((nf) => {
                       const s = nf.status.toLowerCase();
                       const isDraft = s.includes("rascunho");
@@ -248,14 +236,14 @@ export function Vfis0200Page(): JSX.Element {
                           <td>{nf.serie}</td>
                           <td>{nf.razao_social_destinatario}<br /><small style={{ color: "#8aa894" }}>{nf.cnpj_destinatario}</small></td>
                           <td>{statusPill(nf.status)}</td>
-                          <td className="fsc-num">{money(nf.valor_total)}</td>
+                          <td>{money(nf.valor_total)}</td>
                           <td>{nf.data_emissao?.slice(0, 10) || "—"}</td>
                           <td>
-                            {isDraft && <button className="fsc-action-btn fsc-edit-btn" onClick={() => void autorizar(nf.id)}>Autorizar</button>}
-                            {isAuth && <button className="fsc-action-btn fsc-edit-btn" onClick={() => void cce(nf.id)}>Nova CC-e</button>}
-                            {isAuth && <button className="fsc-action-btn fsc-edit-btn" onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
-                            {isAuth && <button className="fsc-action-btn fsc-delete-btn" onClick={() => void cancelar(nf.id)}>Cancelar</button>}
-                            <button className="fsc-action-btn fsc-edit-btn" onClick={() => void consultarStatus(nf.id)}>Status</button>
+                            {isDraft && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void autorizar(nf.id)}>Autorizar</button>}
+                            {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void cce(nf.id)}>Nova CC-e</button>}
+                            {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
+                            {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelar(nf.id)}>Cancelar</button>}
+                            <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void consultarStatus(nf.id)}>Status</button>
                           </td>
                         </tr>
                       );
@@ -264,101 +252,91 @@ export function Vfis0200Page(): JSX.Element {
                 </table>
               </div>
             </div>
+            </div>
           </>
         )}
 
         {mode === "create" && (
           <>
-            <div className="fsc-section-banner">
-              <span className="fsc-section-banner-pill">Cabeçalho</span>
-              <div className="fsc-section-banner-line" />
-              <span className="fsc-section-banner-hint">Os impostos são calculados ao criar</span>
-            </div>
-            <div className="fsc-card">
-              <div className="fsc-card-body">
-                <div className="fsc-grid">
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Número NF</label>
-                    <input className="fsc-input fsc-input-right" type="number" value={form.numero_nf || ""} onChange={(e) => setF("numero_nf", Number(e.target.value))} /></div>
-                  <div className="fsc-field fsc-col-1"><label className="fsc-label fsc-label-req">Série</label>
-                    <input className="fsc-input" value={form.serie} onChange={(e) => setF("serie", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">CFOP</label>
-                    <input className="fsc-input" value={form.cfop} onChange={(e) => setF("cfop", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-3"><label className="fsc-label">Emissão</label>
-                    <input className="fsc-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-3"><label className="fsc-label">Saída</label>
-                    <input className="fsc-input" type="date" value={form.data_saida} onChange={(e) => setF("data_saida", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-1"><label className="fsc-label">Pessoa</label>
-                    <select className="fsc-select" value={form.tipo_pessoa} onChange={(e) => setF("tipo_pessoa", e.target.value as TipoPessoa)}>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Cabeçalho   — <span style={{fontWeight:400,opacity:0.65}}>Os impostos são calculados ao criar</span></div><div className="erp-fieldset-body">
+                
+                  <div className="erp-field erp-c2"><label className="erp-label erp-req">Número NF</label>
+                    <input className="erp-input num" type="number" value={form.numero_nf || ""} onChange={(e) => setF("numero_nf", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c1"><label className="erp-label erp-req">Série</label>
+                    <input className="erp-input" value={form.serie} onChange={(e) => setF("serie", e.target.value)} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label erp-req">CFOP</label>
+                    <input className="erp-input" value={form.cfop} onChange={(e) => setF("cfop", e.target.value)} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>
+                    <input className="erp-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Saída</label>
+                    <input className="erp-input" type="date" value={form.data_saida} onChange={(e) => setF("data_saida", e.target.value)} /></div>
+                  <div className="erp-field erp-c1"><label className="erp-label">Pessoa</label>
+                    <select className="erp-input" value={form.tipo_pessoa} onChange={(e) => setF("tipo_pessoa", e.target.value as TipoPessoa)}>
                       <option value="J">J</option><option value="F">F</option></select></div>
-                  <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">CNPJ/CPF Destinatário</label>
-                    <input className="fsc-input" value={form.cnpj_destinatario} onChange={(e) => setF("cnpj_destinatario", e.target.value)} />
+                  <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ/CPF Destinatário</label>
+                    <input className="erp-input" value={form.cnpj_destinatario} onChange={(e) => setF("cnpj_destinatario", e.target.value)} />
                     {form.cnpj_destinatario.trim() && (
-                      <span className="fsc-field-hint" style={{ color: validateCNPJOrCPF(form.cnpj_destinatario) ? "#1e6030" : "#b91c1c" }}>
+                      <span className="erp-field-hint" style={{ color: validateCNPJOrCPF(form.cnpj_destinatario) ? "#1e6030" : "#b91c1c" }}>
                         {validateCNPJOrCPF(form.cnpj_destinatario) ? "✓ válido" : "✗ inválido"}
                       </span>
                     )}</div>
-                  <div className="fsc-field fsc-col-5"><label className="fsc-label">Razão Social Destinatário</label>
-                    <input className="fsc-input" value={form.razao_social_destinatario} onChange={(e) => setF("razao_social_destinatario", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label">IE Destinatário</label>
-                    <input className="fsc-input" value={form.ie_destinatario ?? ""} placeholder="ISENTO se não-contrib." onChange={(e) => setF("ie_destinatario", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">UF Destino</label>
-                    <input className="fsc-input" maxLength={2} value={form.uf_destinatario} onChange={(e) => setF("uf_destinatario", e.target.value.toUpperCase())} /></div>
-                  <div className="fsc-field fsc-col-6"><label className="fsc-label">Natureza da Operação</label>
-                    <input className="fsc-input" value={form.natureza_operacao} onChange={(e) => setF("natureza_operacao", e.target.value)} /></div>
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label">Frete</label>
-                    <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.valor_frete} onChange={(e) => setF("valor_frete", Number(e.target.value))} /></div>
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label">Seguro</label>
-                    <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.valor_seguro} onChange={(e) => setF("valor_seguro", Number(e.target.value))} /></div>
-                  <div className="fsc-field fsc-col-2"><label className="fsc-label">Desconto</label>
-                    <input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.valor_desconto} onChange={(e) => setF("valor_desconto", Number(e.target.value))} /></div>
-                </div>
+                  <div className="erp-field erp-c5"><label className="erp-label">Razão Social Destinatário</label>
+                    <input className="erp-input" value={form.razao_social_destinatario} onChange={(e) => setF("razao_social_destinatario", e.target.value)} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label">IE Destinatário</label>
+                    <input className="erp-input" value={form.ie_destinatario ?? ""} placeholder="ISENTO se não-contrib." onChange={(e) => setF("ie_destinatario", e.target.value)} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label erp-req">UF Destino</label>
+                    <input className="erp-input" maxLength={2} value={form.uf_destinatario} onChange={(e) => setF("uf_destinatario", e.target.value.toUpperCase())} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Natureza da Operação</label>
+                    <input className="erp-input" value={form.natureza_operacao} onChange={(e) => setF("natureza_operacao", e.target.value)} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label">Frete</label>
+                    <input className="erp-input num" type="number" step="0.01" value={form.valor_frete} onChange={(e) => setF("valor_frete", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label">Seguro</label>
+                    <input className="erp-input num" type="number" step="0.01" value={form.valor_seguro} onChange={(e) => setF("valor_seguro", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label">Desconto</label>
+                    <input className="erp-input num" type="number" step="0.01" value={form.valor_desconto} onChange={(e) => setF("valor_desconto", Number(e.target.value))} /></div>
+                
               </div>
             </div>
 
-            <div className="fsc-section-banner">
-              <span className="fsc-section-banner-pill">Itens</span>
-              <div className="fsc-section-banner-line" />
-              <span className="fsc-section-banner-hint">Produtos: R$ {money(form.valor_produtos)}</span>
-            </div>
-            <div className="fsc-card">
-              <div className="fsc-results-wrap">
-                <table className="fsc-table">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Itens   — <span style={{fontWeight:400,opacity:0.65}}>Produtos: R$ {money(form.valor_produtos)}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+                <table className="erp-grid">
                   <thead>
                     <tr><th style={{ width: 40 }}>Seq</th><th>Cód. Item</th><th>NCM</th><th>CFOP</th><th>Origem</th><th>Descrição</th>
-                      <th className="fsc-num">Qtd</th><th className="fsc-num">Unit.</th><th className="fsc-num">Total</th><th style={{ width: 60 }}></th></tr>
+                      <th>Qtd</th><th>Unit.</th><th>Total</th><th style={{ width: 60 }}></th></tr>
                   </thead>
                   <tbody>
                     {form.itens.map((it, idx) => (
                       <tr key={idx}>
                         <td>{it.sequence}</td>
-                        <td><input className="fsc-input" style={{ height: 30, width: 80 }} type="number" value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: Number(e.target.value) })} /></td>
-                        <td><input className="fsc-input" style={{ height: 30, width: 100 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
-                        <td><input className="fsc-input" style={{ height: 30, width: 70 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
-                        <td><input className="fsc-input" style={{ height: 30, width: 50 }} value={it.origem_mercadoria} onChange={(e) => setItem(idx, { origem_mercadoria: e.target.value })} /></td>
-                        <td><input className="fsc-input" style={{ height: 30, minWidth: 140 }} value={it.description} onChange={(e) => setItem(idx, { description: e.target.value })} /></td>
-                        <td><input className="fsc-input fsc-input-right" style={{ height: 30, width: 70 }} type="number" value={it.quantidade} onChange={(e) => setItem(idx, { quantidade: Number(e.target.value) })} /></td>
-                        <td><input className="fsc-input fsc-input-right" style={{ height: 30, width: 90 }} type="number" step="0.01" value={it.unit_price} onChange={(e) => setItem(idx, { unit_price: Number(e.target.value) })} /></td>
-                        <td className="fsc-num">{money(it.total_price)}</td>
-                        <td><button className="fsc-action-btn fsc-delete-btn" onClick={() => removeItem(idx)} disabled={form.itens.length === 1}>✕</button></td>
+                        <td><input className="erp-input" style={{ height: 30, width: 80 }} type="number" value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: Number(e.target.value) })} /></td>
+                        <td><input className="erp-input" style={{ height: 30, width: 100 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
+                        <td><input className="erp-input" style={{ height: 30, width: 70 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
+                        <td><input className="erp-input" style={{ height: 30, width: 50 }} value={it.origem_mercadoria} onChange={(e) => setItem(idx, { origem_mercadoria: e.target.value })} /></td>
+                        <td><input className="erp-input" style={{ height: 30, minWidth: 140 }} value={it.description} onChange={(e) => setItem(idx, { description: e.target.value })} /></td>
+                        <td><input className="erp-input num" style={{ height: 30, width: 70 }} type="number" value={it.quantidade} onChange={(e) => setItem(idx, { quantidade: Number(e.target.value) })} /></td>
+                        <td><input className="erp-input num" style={{ height: 30, width: 90 }} type="number" step="0.01" value={it.unit_price} onChange={(e) => setItem(idx, { unit_price: Number(e.target.value) })} /></td>
+                        <td>{money(it.total_price)}</td>
+                        <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeItem(idx)} disabled={form.itens.length === 1}>✕</button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="fsc-card-body" style={{ paddingTop: 12 }}>
-                <button className="fsc-btn fsc-btn-ghost" onClick={addItem}>+ Adicionar item</button>
+              <div className="erp-fieldset-body" style={{ paddingTop: 12 }}>
+                <button className="erp-btn" onClick={addItem}>+ Adicionar item</button>
               </div>
+            </div>
             </div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left">
-          <div className="fsc-footer-stat">NF-e: <strong>{list.length}</strong></div>
-          <div className="fsc-footer-stat">Autorizadas: <strong>{list.filter((n) => n.status.toLowerCase().includes("autoriz")).length}</strong></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}>
+          <div className="erp-status-item">NF-e: <strong>{list.length}</strong></div>
+          <div className="erp-status-item">Autorizadas: <strong>{list.filter((n) => n.status.toLowerCase().includes("autoriz")).length}</strong></div>
         </div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

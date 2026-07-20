@@ -45,88 +45,56 @@ export function Vfis0300Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIS0300 — CFOPs / Naturezas de Operação</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">CFOPs / Naturezas de Operação</span><span className="erp-crumb-code">VFIS0300</span></nav>
+        <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">{list.length} CFOP(s)</span>
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-new" onClick={novo} disabled={busy}>+ Novo CFOP</button>
-        </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Ações</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button>
-        </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
-          <ExportButton title="VFIS0300 — CFOPs / Naturezas de Operação" filename="vfis0300" />
-        </div>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span><button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy}>+ Novo CFOP</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Ações</span><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button></div>
+        <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VFIS0300 — CFOPs / Naturezas de Operação" filename="vfis0300" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Dados</span><div className="fsc-section-banner-line" />
-          <span className="fsc-section-banner-hint">{editing ? `Editando CFOP ${form.code}` : "Novo"}</span></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <div className="fsc-grid">
-            <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código</label>
-              <input className="fsc-input fsc-input-right" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setF("code", Number(e.target.value))} /></div>
-            <div className="fsc-field fsc-col-10"><label className="fsc-label fsc-label-req">Descrição</label>
-              <input className="fsc-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Utilização</label>
-              <select className="fsc-select" value={form.utilization} onChange={(e) => setF("utilization", e.target.value as CfopUtilization)}>
-                {UTIL.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Ind. Operação</label>
-              <select className="fsc-select" value={form.ind_operacao} onChange={(e) => setF("ind_operacao", e.target.value as CfopIndOperacao)}>
-                {IND.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
-            <div className="fsc-field fsc-col-4"><label className="fsc-label">Tipo Utilização</label>
-              <select className="fsc-select" value={form.tipo_utilizacao} onChange={(e) => setF("tipo_utilizacao", e.target.value as CfopTipoUtil)}>
-                {TIPO.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">DIFAL</label>
-              <div className="fsc-toggle-row">
-                <label className="fsc-toggle"><input type="checkbox" checked={form.difal} onChange={(e) => setF("difal", e.target.checked)} /><div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" /></label>
-                <span className="fsc-toggle-label">{form.difal ? "Sim" : "Não"}</span></div></div>
-            <div className="fsc-field fsc-col-3"><label className="fsc-label">Doação</label>
-              <div className="fsc-toggle-row">
-                <label className="fsc-toggle"><input type="checkbox" checked={form.doacao} onChange={(e) => setF("doacao", e.target.checked)} /><div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" /></label>
-                <span className="fsc-toggle-label">{form.doacao ? "Sim" : "Não"}</span></div></div>
+      <div className="erp-content">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">CFOPs</button></div>
+          <div className="erp-detail-body">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">{editing ? `Editando CFOP ${form.code}` : "Novo CFOP"}</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setF("code", Number(e.target.value))} /></div>
+              <div className="erp-field erp-c10"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Utilização</label><select className="erp-input" value={form.utilization} onChange={(e) => setF("utilization", e.target.value as CfopUtilization)}>{UTIL.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Ind. Operação</label><select className="erp-input" value={form.ind_operacao} onChange={(e) => setF("ind_operacao", e.target.value as CfopIndOperacao)}>{IND.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Tipo Utilização</label><select className="erp-input" value={form.tipo_utilizacao} onChange={(e) => setF("tipo_utilizacao", e.target.value as CfopTipoUtil)}>{TIPO.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
+              <div className="erp-field erp-c3"><label className="erp-label">DIFAL</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.difal} onChange={(e) => setF("difal", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.difal ? "Sim" : "Não"}</span></div></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Doação</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.doacao} onChange={(e) => setF("doacao", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.doacao ? "Sim" : "Não"}</span></div></div>
+            </div></div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">CFOPs ({list.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th style={{ width: 80 }}>Código</th><th>Descrição</th><th>Utilização</th><th>DIFAL</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                <tbody>
+                  {list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum CFOP cadastrado.</td></tr>}
+                  {list.map((c) => (
+                    <tr key={c.code}>
+                      <td style={{ fontWeight: 600 }}>{c.code}</td><td>{c.description}</td><td>{c.utilization}</td>
+                      <td>{c.difal ? <span className="erp-badge info">Sim</span> : <span className="erp-badge">Não</span>}</td>
+                      <td><button className="erp-btn erp-btn-sm" onClick={() => edit(c)}>Editar</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div></div></div>
           </div>
-        </div></div>
-
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">CFOPs</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{list.length}</span></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
-            <thead><tr><th style={{ width: 80 }}>Código</th><th>Descrição</th><th>Utilização</th><th>DIFAL</th><th style={{ width: 80 }}>Ações</th></tr></thead>
-            <tbody>
-              {list.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhum CFOP cadastrado.</td></tr>}
-              {list.map((c) => (
-                <tr key={c.code}>
-                  <td style={{ fontWeight: 600 }}>{c.code}</td><td>{c.description}</td><td>{c.utilization}</td>
-                  <td>{c.difal ? <span className="fsc-pill fsc-pill-blue">Sim</span> : <span className="fsc-pill fsc-pill-gray">Não</span>}</td>
-                  <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => edit(c)}>Editar</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div></div>
+        </section>
       </div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">CFOPs: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div className="erp-status-item">CFOPs: <strong>{list.length}</strong></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

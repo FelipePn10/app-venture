@@ -37,71 +37,60 @@ export function Vfin0400Page(): JSX.Element {
   ] : [];
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIN0400 — Apuração de Impostos</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Apuração de Impostos</span><span className="erp-crumb-code">VFIN0400</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Competência</span>
-          <input className="fsc-input" style={{ width: 120, height: 32 }} value={competencia} placeholder="2024-05"
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Competência</span>
+          <input className="erp-input" style={{ width: 120, height: 32 }} value={competencia} placeholder="2024-05"
             onChange={(e) => { setCompetencia(e.target.value); setFeedback(null); }} />
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Ações</span>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => void consultar()} disabled={busy}>Consultar</button>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void apurar()} disabled={busy}>{busy ? "Apurando..." : "Apurar"}</button>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Ações</span>
+          <button className="erp-btn" onClick={() => void consultar()} disabled={busy}>Consultar</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => void apurar()} disabled={busy}>{busy ? "Apurando..." : "Apurar"}</button>
           <ExportButton title="VFIN0400 — Apuração de Impostos" filename="apuracao-impostos" disabled={busy || !result}
             subtitle={`Competência: ${competencia}`} meta={{ competencia }} />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Apuração de Impostos</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {!result ? (
-          <div className="fsc-card"><div className="fsc-empty">Informe uma competência (YYYY-MM) e clique em Apurar ou Consultar.</div></div>
+          <div className="erp-fieldset"><div className="erp-grid-empty">Informe uma competência (YYYY-MM) e clique em Apurar ou Consultar.</div></div>
         ) : (
           <>
-            <div className="fsc-section-banner">
-              <span className="fsc-section-banner-pill">Competência {result.competencia}</span>
-              <div className="fsc-section-banner-line" />
-              <span className="fsc-section-banner-hint">Status: {result.status || "—"}</span>
-            </div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th>Imposto</th><th className="fsc-num">Saídas (débito)</th><th className="fsc-num">Entradas (crédito)</th><th className="fsc-num">Saldo a recolher</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Competência {result.competencia}   — <span style={{fontWeight:400,opacity:0.65}}>Status: {result.status || "—"}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Imposto</th><th>Saídas (débito)</th><th>Entradas (crédito)</th><th>Saldo a recolher</th></tr></thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.imposto}>
                       <td style={{ fontWeight: 600 }}>{r.imposto}</td>
-                      <td className="fsc-num">{money(r.saidas)}</td>
-                      <td className="fsc-num">{money(r.entradas)}</td>
-                      <td className="fsc-num" style={{ fontWeight: 600, color: r.saldo > 0 ? "#b91c1c" : "#1e6030" }}>{money(r.saldo)}</td>
+                      <td>{money(r.saidas)}</td>
+                      <td>{money(r.entradas)}</td>
+                      <td style={{ fontWeight: 600, color: r.saldo > 0 ? "#b91c1c" : "#1e6030" }}>{money(r.saldo)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div></div>
+            </div></div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Competência: <strong>{competencia}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Competência: <strong>{competencia}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

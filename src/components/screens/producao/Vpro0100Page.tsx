@@ -22,8 +22,8 @@ const EMPTY_RO: RouteOperationDTO = { operation_id: 0, sequence: 10, work_center
 const EMPTY_EDGE: EdgeDTO = { predecessor_id: 0, successor_id: 0, overlap_pct: 0 };
 
 function originPill(o: string): JSX.Element {
-  const cls = o === "INTERNA" ? "fsc-pill-green" : o === "EXTERNA" ? "fsc-pill-amber" : "fsc-pill-blue";
-  return <span className={`fsc-pill ${cls}`}>{o}</span>;
+  const cls = o === "INTERNA" ? "erp-badge-green" : o === "EXTERNA" ? "erp-badge-amber" : "erp-badge-blue";
+  return <span className={`erp-badge ${cls}`}>{o}</span>;
 }
 
 export function Vpro0100Page(): JSX.Element {
@@ -204,122 +204,112 @@ export function Vpro0100Page(): JSX.Element {
   const roLabel = (ro: RouteOperationDTO) => `seq ${ro.sequence} · ${opName(ro.operation_id)}`;
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VPRO0100 — Roteiro de Fabricação</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Roteiro de Fabricação</span><span className="erp-crumb-code">VPRO0100</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Visão</span>
-          <button className={`fsc-btn ${tab === "operacoes" ? "fsc-btn-primary" : "fsc-btn-ghost"}`} onClick={() => setTab("operacoes")}>Operações</button>
-          <button className={`fsc-btn ${tab === "roteiros" ? "fsc-btn-primary" : "fsc-btn-ghost"}`} onClick={() => setTab("roteiros")}>Roteiros</button>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Visão</span>
+          <button className={`erp-btn ${tab === "operacoes" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setTab("operacoes")}>Operações</button>
+          <button className={`erp-btn ${tab === "roteiros" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setTab("roteiros")}>Roteiros</button>
         </div>
         {tab === "operacoes" && (
-          <div className="fsc-action-group">
-            <span className="fsc-action-label">Ações</span>
-            <button className="fsc-btn fsc-btn-new" onClick={novaOp} disabled={busy}>+ Nova Operação</button>
-            <button className="fsc-btn fsc-btn-primary" onClick={() => void salvarOp()} disabled={busy}>{busy ? "..." : opEditId !== null ? "Atualizar" : "Salvar"}</button>
+          <div className="erp-tgroup">
+            <span className="erp-tgroup-label">Ações</span>
+            <button className="erp-btn erp-btn-new" onClick={novaOp} disabled={busy}>+ Nova Operação</button>
+            <button className="erp-btn erp-btn-primary" onClick={() => void salvarOp()} disabled={busy}>{busy ? "..." : opEditId !== null ? "Atualizar" : "Salvar"}</button>
           </div>
         )}
         {tab === "roteiros" && (
-          <div className="fsc-action-group">
-            <span className="fsc-action-label">Item</span>
-            <input className="fsc-input" style={{ width: 110, height: 32 }} type="number" value={itemCode} placeholder="cód. item" onChange={(e) => setItemCode(e.target.value)} />
-            <button className="fsc-btn fsc-btn-primary" onClick={() => void carregarRoteiros()} disabled={busy}>Carregar</button>
+          <div className="erp-tgroup">
+            <span className="erp-tgroup-label">Item</span>
+            <input className="erp-input" style={{ width: 110, height: 32 }} type="number" value={itemCode} placeholder="cód. item" onChange={(e) => setItemCode(e.target.value)} />
+            <button className="erp-btn erp-btn-primary" onClick={() => void carregarRoteiros()} disabled={busy}>Carregar</button>
           </div>
         )}
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VPRO0100 — Roteiro de Fabricação" filename="vpro0100" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Roteiro de Fabricação</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {tab === "operacoes" && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Operação</span><div className="fsc-section-banner-line" />
-              <span className="fsc-section-banner-hint">{opEditId !== null ? `Editando #${opEditId}` : "Biblioteca reutilizável"}</span></div>
-            <div className="fsc-card"><div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-6"><label className="fsc-label fsc-label-req">Nome</label>
-                  <input className="fsc-input" value={opForm.name} placeholder="Corte a laser" onChange={(e) => setOpF("name", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Origem</label>
-                  <select className="fsc-select" value={opForm.origin} onChange={(e) => setOpF("origin", e.target.value as OpOrigin)}>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Operação  — <span style={{fontWeight:400,opacity:0.65}}>{opEditId !== null ? `Editando #${opEditId}` : "Biblioteca reutilizável"}</span></div><div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c6"><label className="erp-label erp-req">Nome</label>
+                  <input className="erp-input" value={opForm.name} placeholder="Corte a laser" onChange={(e) => setOpF("name", e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Origem</label>
+                  <select className="erp-input" value={opForm.origin} onChange={(e) => setOpF("origin", e.target.value as OpOrigin)}>
                     {OP_ORIGINS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
-                <div className="fsc-field fsc-col-3"><label className="fsc-label">Tempo padrão (h)</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.01" value={opForm.standard_time} onChange={(e) => setOpF("standard_time", Number(e.target.value))} /></div>
-              </div>
-              <span className="fsc-field-hint">Origem define o tipo de ordem do MRP: INTERNA → OF · EXTERNA/TERCEIROS → OS.</span>
+                <div className="erp-field erp-c3"><label className="erp-label">Tempo padrão (h)</label>
+                  <input className="erp-input num" type="number" step="0.01" value={opForm.standard_time} onChange={(e) => setOpF("standard_time", Number(e.target.value))} /></div>
+              
+              <span className="erp-field-hint">Origem define o tipo de ordem do MRP: INTERNA → OF · EXTERNA/TERCEIROS → OS.</span>
             </div></div>
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Biblioteca</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{ops.length}</span></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th style={{ width: 60 }}>#</th><th>Nome</th><th>Origem</th><th className="fsc-num">Tempo (h)</th><th style={{ width: 140 }}>Ações</th></tr></thead>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Biblioteca — <span style={{fontWeight:400,opacity:0.65}}>{ops.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th style={{ width: 60 }}>#</th><th>Nome</th><th>Origem</th><th>Tempo (h)</th><th style={{ width: 140 }}>Ações</th></tr></thead>
                 <tbody>
-                  {ops.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhuma operação cadastrada.</td></tr>}
+                  {ops.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma operação cadastrada.</td></tr>}
                   {ops.map((o) => (
                     <tr key={o.id}>
-                      <td>{o.id}</td><td style={{ fontWeight: 600 }}>{o.name}</td><td>{originPill(o.origin)}</td><td className="fsc-num">{o.standard_time}</td>
+                      <td>{o.id}</td><td style={{ fontWeight: 600 }}>{o.name}</td><td>{originPill(o.origin)}</td><td>{o.standard_time}</td>
                       <td>
-                        <button className="fsc-action-btn fsc-edit-btn" onClick={() => editOp(o)}>Editar</button>
-                        <button className="fsc-action-btn fsc-delete-btn" onClick={() => o.id && void removerOp(o.id)}>Desativar</button>
+                        <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => editOp(o)}>Editar</button>
+                        <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => o.id && void removerOp(o.id)}>Desativar</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div></div>
+            </div>
           </>
         )}
 
         {tab === "roteiros" && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Novo roteiro</span><div className="fsc-section-banner-line" />
-              <span className="fsc-section-banner-hint">{itemCode ? `Item ${itemCode}` : "Informe o item na barra acima"}</span></div>
-            <div className="fsc-card"><div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-6"><label className="fsc-label">Descrição</label>
-                  <input className="fsc-input" value={routeForm.description ?? ""} placeholder="Roteiro Padrão – Produto X" onChange={(e) => setRF("description", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Alternativa</label>
-                  <input className="fsc-input fsc-input-right" type="number" value={routeForm.alternative} onChange={(e) => setRF("alternative", Number(e.target.value))} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Máscara</label>
-                  <input className="fsc-input" value={routeForm.mask ?? ""} onChange={(e) => setRF("mask", e.target.value)} /></div>
-                <div className="fsc-field fsc-col-2"><label className="fsc-label">Padrão (MRP/CRP)</label>
-                  <div className="fsc-toggle-row">
-                    <label className="fsc-toggle"><input type="checkbox" checked={routeForm.is_standard} onChange={(e) => setRF("is_standard", e.target.checked)} /><div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" /></label>
-                    <span className="fsc-toggle-label">{routeForm.is_standard ? "Sim" : "Não"}</span></div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Novo roteiro  — <span style={{fontWeight:400,opacity:0.65}}>{itemCode ? `Item ${itemCode}` : "Informe o item na barra acima"}</span></div><div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c6"><label className="erp-label">Descrição</label>
+                  <input className="erp-input" value={routeForm.description ?? ""} placeholder="Roteiro Padrão – Produto X" onChange={(e) => setRF("description", e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Alternativa</label>
+                  <input className="erp-input num" type="number" value={routeForm.alternative} onChange={(e) => setRF("alternative", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Máscara</label>
+                  <input className="erp-input" value={routeForm.mask ?? ""} onChange={(e) => setRF("mask", e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Padrão (MRP/CRP)</label>
+                  <div className="erp-toggle-row">
+                    <label className="erp-toggle"><input type="checkbox" checked={routeForm.is_standard} onChange={(e) => setRF("is_standard", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>
+                    <span className="erp-toggle-label">{routeForm.is_standard ? "Sim" : "Não"}</span></div></div>
               </div>
-              <button className="fsc-btn fsc-btn-new" style={{ marginTop: 10 }} onClick={() => void salvarRoteiro()} disabled={busy}>+ Criar roteiro</button>
-            </div></div>
+              <button className="erp-btn erp-btn-new" style={{ marginTop: 10 }} onClick={() => void salvarRoteiro()} disabled={busy}>+ Criar roteiro</button>
+            </div>
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Roteiros do item</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{routes.length}</span></div>
-            <div className="fsc-card"><div className="fsc-results-wrap">
-              <table className="fsc-table">
-                <thead><tr><th style={{ width: 60 }}>#</th><th>Descrição</th><th className="fsc-num">Alt.</th><th>Padrão</th><th style={{ width: 170 }}>Ações</th></tr></thead>
+            <div className="erp-fieldset-head">Roteiros do item — <span style={{fontWeight:400,opacity:0.65}}>{routes.length}</span></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-body">
+              <table className="erp-grid">
+                <thead><tr><th style={{ width: 60 }}>#</th><th>Descrição</th><th>Alt.</th><th>Padrão</th><th style={{ width: 170 }}>Ações</th></tr></thead>
                 <tbody>
-                  {routes.length === 0 && <tr><td colSpan={5} className="fsc-empty">Nenhum roteiro. Carregue um item.</td></tr>}
+                  {routes.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum roteiro. Carregue um item.</td></tr>}
                   {routes.map((r) => (
                     <tr key={r.id}>
-                      <td>{r.id}</td><td style={{ fontWeight: 600 }}>{r.description || "—"}</td><td className="fsc-num">{r.alternative}</td>
-                      <td>{r.is_standard ? <span className="fsc-pill fsc-pill-green">Sim</span> : <span className="fsc-pill fsc-pill-gray">Não</span>}</td>
+                      <td>{r.id}</td><td style={{ fontWeight: 600 }}>{r.description || "—"}</td><td>{r.alternative}</td>
+                      <td>{r.is_standard ? <span className="erp-badge ok">Sim</span> : <span className="erp-badge erp-badge-gray">Não</span>}</td>
                       <td>
-                        <button className="fsc-action-btn fsc-edit-btn" onClick={() => void abrirRoteiro(r)}>Abrir</button>
-                        <button className="fsc-action-btn fsc-delete-btn" onClick={() => r.id && void removerRoteiro(r.id)}>Desativar</button>
+                        <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void abrirRoteiro(r)}>Abrir</button>
+                        <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => r.id && void removerRoteiro(r.id)}>Desativar</button>
                       </td>
                     </tr>
                   ))}
@@ -329,38 +319,35 @@ export function Vpro0100Page(): JSX.Element {
 
             {detail?.route && (
               <>
-                <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Operações do roteiro {detail.route.id}</span><div className="fsc-section-banner-line" />
-                  <button className="fsc-btn fsc-btn-ghost" onClick={() => void calcularLeadTime()} disabled={busy}>Calcular Lead Time (CPM)</button>
-                  {leadTime !== null && <span className="fsc-section-banner-hint" style={{ fontWeight: 700 }}>Lead time: {leadTime} h</span>}
-                  <button className="fsc-btn fsc-btn-ghost" onClick={() => setDetail(null)}>Fechar</button></div>
-                <div className="fsc-card"><div className="fsc-card-body">
-                  <div className="fsc-grid">
-                    <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Operação</label>
-                      <select className="fsc-select" value={roForm.operation_id} onChange={(e) => setRoF("operation_id", Number(e.target.value))}>
+                <div className="erp-fieldset-head" style={{display:"flex",alignItems:"center",gap:8}}><span>Operações do roteiro {detail.route.id}</span><span style={{flex:1}} /> <button className="erp-btn" onClick={() => void calcularLeadTime()} disabled={busy}>Calcular Lead Time (CPM)</button> {leadTime !== null && <span className="erp-status-item" style={{ fontWeight: 700 }}>Lead time: {leadTime} h</span>} <button className="erp-btn" onClick={() => setDetail(null)}>Fechar</button></div>
+                <div className="erp-fieldset"><div className="erp-fieldset-body">
+                  
+                    <div className="erp-field erp-c4"><label className="erp-label erp-req">Operação</label>
+                      <select className="erp-input" value={roForm.operation_id} onChange={(e) => setRoF("operation_id", Number(e.target.value))}>
                         <option value={0}>— selecione —</option>
                         {ops.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.origin})</option>)}</select></div>
-                    <div className="fsc-field fsc-col-1"><label className="fsc-label">Seq</label>
-                      <input className="fsc-input fsc-input-right" type="number" value={roForm.sequence} onChange={(e) => setRoF("sequence", Number(e.target.value))} /></div>
-                    <div className="fsc-field fsc-col-2"><label className="fsc-label">Centro (ID)</label>
-                      <input className="fsc-input fsc-input-right" type="number" value={roForm.work_center_id ?? ""} onChange={(e) => setRoF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
-                    <div className="fsc-field fsc-col-2"><label className="fsc-label">Tempo (h)</label>
-                      <input className="fsc-input fsc-input-right" type="number" step="0.01" value={roForm.standard_time ?? ""} onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
-                    <div className="fsc-field fsc-col-2"><label className="fsc-label">Setup (h)</label>
-                      <input className="fsc-input fsc-input-right" type="number" step="0.01" value={roForm.setup_time ?? ""} onChange={(e) => setRoF("setup_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
-                    <div className="fsc-field fsc-col-1" style={{ justifyContent: "flex-end" }}>
-                      <button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void addRO()} disabled={busy}>+ Op</button></div>
-                  </div>
+                    <div className="erp-field erp-c1"><label className="erp-label">Seq</label>
+                      <input className="erp-input num" type="number" value={roForm.sequence} onChange={(e) => setRoF("sequence", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Centro (ID)</label>
+                      <input className="erp-input num" type="number" value={roForm.work_center_id ?? ""} onChange={(e) => setRoF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Tempo (h)</label>
+                      <input className="erp-input num" type="number" step="0.01" value={roForm.standard_time ?? ""} onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Setup (h)</label>
+                      <input className="erp-input num" type="number" step="0.01" value={roForm.setup_time ?? ""} onChange={(e) => setRoF("setup_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
+                      <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void addRO()} disabled={busy}>+ Op</button></div>
+                  
                 </div>
-                  <div className="fsc-results-wrap">
-                    <table className="fsc-table">
-                      <thead><tr><th style={{ width: 50 }}>Seq</th><th>Operação</th><th className="fsc-num">Centro</th><th className="fsc-num">Tempo (h)</th><th className="fsc-num">Setup (h)</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                  <div className="erp-fieldset-body">
+                    <table className="erp-grid">
+                      <thead><tr><th style={{ width: 50 }}>Seq</th><th>Operação</th><th>Centro</th><th>Tempo (h)</th><th>Setup (h)</th><th style={{ width: 80 }}>Ações</th></tr></thead>
                       <tbody>
-                        {detail.operations.length === 0 && <tr><td colSpan={6} className="fsc-empty">Nenhuma operação no roteiro.</td></tr>}
+                        {detail.operations.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma operação no roteiro.</td></tr>}
                         {[...detail.operations].sort((a, b) => a.sequence - b.sequence).map((ro) => (
                           <tr key={ro.id ?? `${ro.sequence}-${ro.operation_id}`}>
                             <td style={{ fontWeight: 600 }}>{ro.sequence}</td><td>{opName(ro.operation_id)}</td>
-                            <td className="fsc-num">{ro.work_center_id ?? "—"}</td><td className="fsc-num">{ro.standard_time ?? "—"}</td><td className="fsc-num">{ro.setup_time ?? "—"}</td>
-                            <td><button className="fsc-action-btn" onClick={() => abrirRecursos(ro.id)} disabled={!ro.id}>Rec/Ferr</button> <button className="fsc-action-btn fsc-delete-btn" onClick={() => ro.id && void removeRO(ro.id)} disabled={!ro.id}>Remover</button></td>
+                            <td>{ro.work_center_id ?? "—"}</td><td>{ro.standard_time ?? "—"}</td><td>{ro.setup_time ?? "—"}</td>
+                            <td><button className="erp-btn erp-btn-sm" onClick={() => abrirRecursos(ro.id)} disabled={!ro.id}>Rec/Ferr</button> <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => ro.id && void removeRO(ro.id)} disabled={!ro.id}>Remover</button></td>
                           </tr>
                         ))}
                       </tbody>
@@ -370,39 +357,38 @@ export function Vpro0100Page(): JSX.Element {
 
                 {selOpId && (
                   <>
-                    <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Recursos &amp; Ferramentas — operação {selOpId}</span><div className="fsc-section-banner-line" />
-                      <button className="fsc-btn fsc-btn-ghost" onClick={() => setSelOpId(null)}>Fechar</button></div>
-                    <div className="fsc-card"><div className="fsc-card-body">
-                      <div className="fsc-grid">
-                        <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Centro (recurso alt.)</label><input className="fsc-input fsc-input-right" type="number" value={resForm.work_center_id} onChange={(e) => setResForm((r) => ({ ...r, work_center_id: e.target.value }))} /></div>
-                        <div className="fsc-field fsc-col-2"><label className="fsc-label">Prioridade</label><input className="fsc-input fsc-input-right" type="number" value={resForm.priority} onChange={(e) => setResForm((r) => ({ ...r, priority: e.target.value }))} /></div>
-                        <div className="fsc-field fsc-col-2"><label className="fsc-label">Fator tempo</label><input className="fsc-input fsc-input-right" type="number" step="0.1" value={resForm.time_factor} onChange={(e) => setResForm((r) => ({ ...r, time_factor: e.target.value }))} /></div>
-                        <div className="fsc-field fsc-col-3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}><label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={resForm.is_primary} onChange={(e) => setResForm((r) => ({ ...r, is_primary: e.target.checked }))} />primário</label><button className="fsc-btn fsc-btn-primary" onClick={addResource} disabled={busy}>+ Recurso</button></div>
-                      </div>
-                      <div className="fsc-results-wrap">
-                        <table className="fsc-table">
-                          <thead><tr><th className="fsc-num">Centro</th><th className="fsc-num">Prioridade</th><th className="fsc-num">Fator</th><th>Primário</th><th style={{ width: 150 }}>Ações</th></tr></thead>
+                    <div className="erp-fieldset-head" style={{display:"flex",alignItems:"center",gap:8}}><span>Recursos &amp; Ferramentas — operação {selOpId}</span><span style={{flex:1}} /> <button className="erp-btn" onClick={() => setSelOpId(null)}>Fechar</button></div>
+                    <div className="erp-fieldset"><div className="erp-fieldset-body">
+                      
+                        <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro (recurso alt.)</label><input className="erp-input num" type="number" value={resForm.work_center_id} onChange={(e) => setResForm((r) => ({ ...r, work_center_id: e.target.value }))} /></div>
+                        <div className="erp-field erp-c2"><label className="erp-label">Prioridade</label><input className="erp-input num" type="number" value={resForm.priority} onChange={(e) => setResForm((r) => ({ ...r, priority: e.target.value }))} /></div>
+                        <div className="erp-field erp-c2"><label className="erp-label">Fator tempo</label><input className="erp-input num" type="number" step="0.1" value={resForm.time_factor} onChange={(e) => setResForm((r) => ({ ...r, time_factor: e.target.value }))} /></div>
+                        <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}><label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={resForm.is_primary} onChange={(e) => setResForm((r) => ({ ...r, is_primary: e.target.checked }))} />primário</label><button className="erp-btn erp-btn-primary" onClick={addResource} disabled={busy}>+ Recurso</button></div>
+                      
+                      <div className="erp-fieldset-body">
+                        <table className="erp-grid">
+                          <thead><tr><th>Centro</th><th>Prioridade</th><th>Fator</th><th>Primário</th><th style={{ width: 150 }}>Ações</th></tr></thead>
                           <tbody>
-                            {resources.length === 0 && <tr><td colSpan={5} className="fsc-empty">Sem recursos alternativos (usa o centro da operação).</td></tr>}
+                            {resources.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem recursos alternativos (usa o centro da operação).</td></tr>}
                             {resources.map((r) => (
-                              <tr key={r.id}><td className="fsc-num">{r.work_center_id}</td><td className="fsc-num">{r.priority}</td><td className="fsc-num">{r.time_factor ?? 1}</td><td>{r.is_primary ? "✓" : ""}</td>
-                                <td>{!r.is_primary && <button className="fsc-action-btn" onClick={() => tornarPrimario(r)}>Primário</button>} <button className="fsc-action-btn fsc-delete-btn" onClick={() => removeResource(r)}>Remover</button></td></tr>
+                              <tr key={r.id}><td>{r.work_center_id}</td><td>{r.priority}</td><td>{r.time_factor ?? 1}</td><td>{r.is_primary ? "✓" : ""}</td>
+                                <td>{!r.is_primary && <button className="erp-btn erp-btn-sm" onClick={() => tornarPrimario(r)}>Primário</button>} <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeResource(r)}>Remover</button></td></tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      <div className="fsc-grid" style={{ marginTop: 10 }}>
-                        <div className="fsc-field fsc-col-3"><label className="fsc-label">Ferramenta (ID)</label><input className="fsc-input fsc-input-right" type="number" value={toolIdInput} onChange={(e) => setToolIdInput(e.target.value)} /></div>
-                        <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}><button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={addTool} disabled={busy}>+ Ferramenta</button></div>
+                      <div className="erp-fieldset-body" style={{ marginTop: 10 }}>
+                        <div className="erp-field erp-c3"><label className="erp-label">Ferramenta (ID)</label><input className="erp-input num" type="number" value={toolIdInput} onChange={(e) => setToolIdInput(e.target.value)} /></div>
+                        <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={addTool} disabled={busy}>+ Ferramenta</button></div>
                       </div>
-                      <div className="fsc-results-wrap">
-                        <table className="fsc-table">
-                          <thead><tr><th className="fsc-num">Vínculo</th><th className="fsc-num">Ferramenta</th><th>Descrição</th><th style={{ width: 90 }}>Ações</th></tr></thead>
+                      <div className="erp-fieldset-body">
+                        <table className="erp-grid">
+                          <thead><tr><th>Vínculo</th><th>Ferramenta</th><th>Descrição</th><th style={{ width: 90 }}>Ações</th></tr></thead>
                           <tbody>
-                            {opTools.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma ferramenta vinculada.</td></tr>}
+                            {opTools.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma ferramenta vinculada.</td></tr>}
                             {opTools.map((t, i) => { const lid = Number(t.id ?? t.ID ?? 0); return (
-                              <tr key={i}><td className="fsc-num">{lid || "—"}</td><td className="fsc-num">{String(t.tool_id ?? t.ToolID ?? "—")}</td><td>{String(t.tool_name ?? t.name ?? "—")}</td>
-                                <td>{lid ? <button className="fsc-action-btn fsc-delete-btn" onClick={() => removeTool(lid)}>Remover</button> : "—"}</td></tr>
+                              <tr key={i}><td>{lid || "—"}</td><td>{String(t.tool_id ?? t.ToolID ?? "—")}</td><td>{String(t.tool_name ?? t.name ?? "—")}</td>
+                                <td>{lid ? <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeTool(lid)}>Remover</button> : "—"}</td></tr>
                             ); })}
                           </tbody>
                         </table>
@@ -411,37 +397,36 @@ export function Vpro0100Page(): JSX.Element {
                   </>
                 )}
 
-                <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Rede de dependências</span><div className="fsc-section-banner-line" />
-                  <span className="fsc-section-banner-hint">overlap só vale em centro automático (requires_operator=false)</span></div>
-                <div className="fsc-card"><div className="fsc-card-body">
-                  <div className="fsc-grid">
-                    <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Predecessora</label>
-                      <select className="fsc-select" value={edgeForm.predecessor_id} onChange={(e) => setEF("predecessor_id", Number(e.target.value))}>
+                <div className="erp-fieldset-head">Rede de dependências — <span style={{fontWeight:400,opacity:0.65}}>overlap só vale em centro automático (requires_operator=false)</span></div>
+                <div className="erp-fieldset"><div className="erp-fieldset-body">
+                  
+                    <div className="erp-field erp-c4"><label className="erp-label erp-req">Predecessora</label>
+                      <select className="erp-input" value={edgeForm.predecessor_id} onChange={(e) => setEF("predecessor_id", Number(e.target.value))}>
                         <option value={0}>— selecione —</option>
                         {detail.operations.map((ro) => <option key={ro.id} value={ro.id}>{roLabel(ro)}</option>)}</select></div>
-                    <div className="fsc-field fsc-col-4"><label className="fsc-label fsc-label-req">Sucessora</label>
-                      <select className="fsc-select" value={edgeForm.successor_id} onChange={(e) => setEF("successor_id", Number(e.target.value))}>
+                    <div className="erp-field erp-c4"><label className="erp-label erp-req">Sucessora</label>
+                      <select className="erp-input" value={edgeForm.successor_id} onChange={(e) => setEF("successor_id", Number(e.target.value))}>
                         <option value={0}>— selecione —</option>
                         {detail.operations.map((ro) => <option key={ro.id} value={ro.id}>{roLabel(ro)}</option>)}</select></div>
-                    <div className="fsc-field fsc-col-3"><label className="fsc-label">Overlap (%)</label>
-                      <input className="fsc-input fsc-input-right" type="number" min={0} max={100} value={edgeForm.overlap_pct} onChange={(e) => setEF("overlap_pct", Number(e.target.value))} /></div>
-                    <div className="fsc-field fsc-col-1" style={{ justifyContent: "flex-end" }}>
-                      <button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void addEdgeFn()} disabled={busy}>+</button></div>
-                  </div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Overlap (%)</label>
+                      <input className="erp-input num" type="number" min={0} max={100} value={edgeForm.overlap_pct} onChange={(e) => setEF("overlap_pct", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
+                      <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void addEdgeFn()} disabled={busy}>+</button></div>
+                  
                 </div>
-                  <div className="fsc-results-wrap">
-                    <table className="fsc-table">
-                      <thead><tr><th>Predecessora</th><th>Sucessora</th><th className="fsc-num">Overlap %</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                  <div className="erp-fieldset-body">
+                    <table className="erp-grid">
+                      <thead><tr><th>Predecessora</th><th>Sucessora</th><th>Overlap %</th><th style={{ width: 80 }}>Ações</th></tr></thead>
                       <tbody>
-                        {detail.edges.length === 0 && <tr><td colSpan={4} className="fsc-empty">Nenhuma dependência (sequência livre / paralela).</td></tr>}
+                        {detail.edges.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma dependência (sequência livre / paralela).</td></tr>}
                         {detail.edges.map((ed, i) => {
                           const p = detail.operations.find((o) => o.id === ed.predecessor_id);
                           const s = detail.operations.find((o) => o.id === ed.successor_id);
                           return (
                             <tr key={ed.id ?? i}>
                               <td>{p ? roLabel(p) : ed.predecessor_id}</td><td>{s ? roLabel(s) : ed.successor_id}</td>
-                              <td className="fsc-num">{ed.overlap_pct}</td>
-                              <td><button className="fsc-action-btn fsc-delete-btn" onClick={() => void removeEdgeFn(ed)}>Remover</button></td>
+                              <td>{ed.overlap_pct}</td>
+                              <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void removeEdgeFn(ed)}>Remover</button></td>
                             </tr>
                           );
                         })}
@@ -453,14 +438,14 @@ export function Vpro0100Page(): JSX.Element {
             )}
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left">
-          <div className="fsc-footer-stat">Operações: <strong>{ops.length}</strong></div>
-          {tab === "roteiros" && <div className="fsc-footer-stat">Roteiros: <strong>{routes.length}</strong></div>}
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}>
+          <div className="erp-status-item">Operações: <strong>{ops.length}</strong></div>
+          {tab === "roteiros" && <div className="erp-status-item">Roteiros: <strong>{routes.length}</strong></div>}
         </div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

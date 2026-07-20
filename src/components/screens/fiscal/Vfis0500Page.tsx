@@ -40,76 +40,67 @@ export function Vfis0500Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIS0500 — Motivos de Transferência DAPI</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Motivos de Transferência DAPI</span><span className="erp-crumb-code">VFIS0500</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Cadastro</span>
-          <button className="fsc-btn fsc-btn-new" onClick={novo} disabled={busy}>+ Novo Motivo</button>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Cadastro</span>
+          <button className="erp-btn erp-btn-new" onClick={novo} disabled={busy}>+ Novo Motivo</button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Ações</span>
-          <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Ações</span>
+          <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VFIS0500 — Motivos de Transferência DAPI" filename="vfis0500" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Dados</span><div className="fsc-section-banner-line" />
-          <span className="fsc-section-banner-hint">{editing ? `Editando ${form.code}` : "Novo"}</span></div>
-        <div className="fsc-card"><div className="fsc-card-body">
-          <div className="fsc-grid">
-            <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Código</label>
-              <input className="fsc-input" value={form.code} disabled={editing} placeholder="01" onChange={(e) => setF("code", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-6"><label className="fsc-label fsc-label-req">Motivo</label>
-              <input className="fsc-input" value={form.reason} onChange={(e) => setF("reason", e.target.value)} /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Destino (UF)</label>
-              <input className="fsc-input" maxLength={2} value={form.destination ?? ""} onChange={(e) => setF("destination", e.target.value.toUpperCase())} /></div>
-            <div className="fsc-field fsc-col-2"><label className="fsc-label">Vigência</label>
-              <input className="fsc-input" type="date" value={(form.valid_from ?? "").slice(0, 10)} onChange={(e) => setF("valid_from", e.target.value)} /></div>
-          </div>
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Motivos de Transferência D</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Dados  — <span style={{fontWeight:400,opacity:0.65}}>{editing ? `Editando ${form.code}` : "Novo"}</span></div><div className="erp-fieldset-body">
+          
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label>
+              <input className="erp-input" value={form.code} disabled={editing} placeholder="01" onChange={(e) => setF("code", e.target.value)} /></div>
+            <div className="erp-field erp-c6"><label className="erp-label erp-req">Motivo</label>
+              <input className="erp-input" value={form.reason} onChange={(e) => setF("reason", e.target.value)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Destino (UF)</label>
+              <input className="erp-input" maxLength={2} value={form.destination ?? ""} onChange={(e) => setF("destination", e.target.value.toUpperCase())} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Vigência</label>
+              <input className="erp-input" type="date" value={(form.valid_from ?? "").slice(0, 10)} onChange={(e) => setF("valid_from", e.target.value)} /></div>
+          
         </div></div>
 
-        <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Motivos</span><div className="fsc-section-banner-line" /><span className="fsc-section-banner-hint">{list.length}</span></div>
-        <div className="fsc-card"><div className="fsc-results-wrap">
-          <table className="fsc-table">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Motivos — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
             <thead><tr><th style={{ width: 80 }}>Código</th><th>Motivo</th><th>Destino</th><th>Vigência</th><th>Ativo</th><th style={{ width: 80 }}>Ações</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={6} className="fsc-empty">Nenhum motivo cadastrado.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum motivo cadastrado.</td></tr>}
               {list.map((m) => (
                 <tr key={m.code}>
                   <td style={{ fontWeight: 600 }}>{m.code}</td><td>{m.reason}</td><td>{m.destination || "—"}</td>
                   <td>{(m.valid_from ?? "").slice(0, 10) || "—"}</td>
-                  <td>{m.is_active === false ? <span className="fsc-pill fsc-pill-red">Não</span> : <span className="fsc-pill fsc-pill-green">Sim</span>}</td>
-                  <td><button className="fsc-action-btn fsc-edit-btn" onClick={() => edit(m)}>Editar</button></td>
+                  <td>{m.is_active === false ? <span className="erp-badge err">Não</span> : <span className="erp-badge ok">Sim</span>}</td>
+                  <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => edit(m)}>Editar</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div></div>
-      </div>
+        </div></div></div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">Motivos: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">Motivos: <strong>{list.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

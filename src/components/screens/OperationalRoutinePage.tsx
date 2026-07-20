@@ -80,27 +80,27 @@ function updateNested(root: unknown, path: Array<string | number>, value: unknow
 }
 
 function PayloadNode({ name, value, path, root, onChange }: { name: string; value: unknown; path: Array<string | number>; root: unknown; onChange: (next: unknown) => void }): JSX.Element {
-  if (Array.isArray(value)) return <div className="fsc-col-12" style={{ border: "1px solid #dbe5df", borderRadius: 6, padding: 10 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><strong className="fsc-label">{humanLabel(name)} ({value.length})</strong>
-      <button type="button" className="fsc-btn fsc-btn-ghost fsc-btn-sm" onClick={() => onChange(updateNested(root, path, [...value, value.length ? clone(value[0]) : {}]))}>+ Adicionar</button></div>
-    {value.length === 0 && <div className="fsc-empty">Nenhum registro. Clique em Adicionar.</div>}
-    {value.map((item, index) => <div key={index} className="fsc-card" style={{ marginBottom: 8 }}><div className="fsc-card-body">
-      <div style={{ display: "flex", justifyContent: "space-between" }}><span className="fsc-action-label">{humanLabel(name)} {index + 1}</span><button type="button" className="fsc-btn fsc-btn-ghost fsc-btn-sm" onClick={() => onChange(updateNested(root, path, value.filter((_, itemIndex) => itemIndex !== index)))}>Remover</button></div>
+  if (Array.isArray(value)) return <div className="erp-field erp-c12" style={{ border: "1px solid #dbe5df", borderRadius: 6, padding: 10 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><strong className="erp-label">{humanLabel(name)} ({value.length})</strong>
+      <button type="button" className="erp-btn erp-btn-sm" onClick={() => onChange(updateNested(root, path, [...value, value.length ? clone(value[0]) : {}]))}>+ Adicionar</button></div>
+    {value.length === 0 && <div className="erp-grid-empty">Nenhum registro. Clique em Adicionar.</div>}
+    {value.map((item, index) => <div key={index} className="erp-fieldset" style={{ marginBottom: 8 }}><div className="erp-fieldset-body">
+      <div className="erp-field erp-c12" style={{ flexDirection: "row", justifyContent: "space-between" }}><span className="erp-tgroup-label">{humanLabel(name)} {index + 1}</span><button type="button" className="erp-btn erp-btn-sm" onClick={() => onChange(updateNested(root, path, value.filter((_, itemIndex) => itemIndex !== index)))}>Remover</button></div>
       <PayloadNode name={String(index)} value={item} path={[...path, index]} root={root} onChange={onChange}/>
     </div></div>)}
   </div>;
-  if (value && typeof value === "object") return <div className="fsc-grid" style={{ width: "100%" }}>{Object.entries(value as Obj).map(([key, child]) => <PayloadNode key={key} name={key} value={child} path={[...path, key]} root={root} onChange={onChange}/>)}</div>;
+  if (value && typeof value === "object") return <div className="erp-field erp-c12" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 10 }}>{Object.entries(value as Obj).map(([key, child]) => <PayloadNode key={key} name={key} value={child} path={[...path, key]} root={root} onChange={onChange}/>)}</div>;
   const options = ENUM_OPTIONS[name];
-  return <div className="fsc-field fsc-col-3"><label className="fsc-label">{humanLabel(name)}</label>
-    {typeof value === "boolean" ? <label className="fsc-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={value} onChange={(event) => onChange(updateNested(root, path, event.target.checked))}/> Sim</label>
-      : options ? <select className="fsc-input" value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, event.target.value))}><option value="">Selecione…</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>
-      : <input className={`fsc-input ${typeof value === "number" ? "fsc-input-right" : ""}`} type={typeof value === "number" ? "number" : name.includes("date") || name.endsWith("_on") ? "date" : "text"} value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, typeof value === "number" ? Number(event.target.value) : event.target.value))}/>} 
+  return <div className="erp-field erp-c3"><label className="erp-label">{humanLabel(name)}</label>
+    {typeof value === "boolean" ? <label className="erp-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={value} onChange={(event) => onChange(updateNested(root, path, event.target.checked))}/> Sim</label>
+      : options ? <select className="erp-input" value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, event.target.value))}><option value="">Selecione…</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>
+      : <input className={`erp-input ${typeof value === "number" ? "num" : ""}`} type={typeof value === "number" ? "number" : name.includes("date") || name.endsWith("_on") ? "date" : "text"} value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, typeof value === "number" ? Number(event.target.value) : event.target.value))}/>}
   </div>;
 }
 
 function StructuredPayloadEditor({ raw, onChange }: { raw: string; onChange: (raw: string) => void }): JSX.Element {
   let parsed: unknown;
-  try { parsed = JSON.parse(raw || "{}"); } catch { return <div className="fsc-feedback error">O modelo desta operação contém dados inválidos.</div>; }
+  try { parsed = JSON.parse(raw || "{}"); } catch { return <div className="erp-feedback error">O modelo desta operação contém dados inválidos.</div>; }
   return <PayloadNode name="dados" value={parsed} path={[]} root={parsed} onChange={(next) => onChange(JSON.stringify(next))}/>;
 }
 
@@ -199,31 +199,33 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
     } finally { setBusy(false); }
   };
 
-  return <div className="fsc-root">
-    <header className="fsc-topbar"><div className="fsc-topbar-left">
-      <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18"><rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,.9)"/><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,.4)"/><rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,.4)"/><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,.7)"/></svg></div>
-      <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-      <span className="fsc-screen-title">{routine.code} — {routine.title}</span>
-    </div></header>
-    <div className="fsc-actionbar">
-      <div className="fsc-action-group"><span className="fsc-action-label">Operação</span>
-        <select className="fsc-input" value={operationIndex} onChange={(event) => { setOperationIndex(Number(event.target.value)); setResult(null); setFeedback(null); }}>
+  return <div className="erp-screen">
+    <header className="erp-titlebar">
+      <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+      <nav className="erp-crumbs"><span className="erp-crumb-mut">Rotinas</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">{routine.title}</span><span className="erp-crumb-code">{routine.code}</span></nav>
+      <div className="erp-titlebar-spacer"/><span className="erp-titlebar-meta">{rows.length} registro(s)</span>
+    </header>
+    <div className="erp-toolbar">
+      <div className="erp-tgroup"><span className="erp-tgroup-label">Operação</span>
+        <select className="erp-tselect" value={operationIndex} onChange={(event) => { setOperationIndex(Number(event.target.value)); setResult(null); setFeedback(null); }}>
           {routine.operations.map((item, index) => <option key={`${item.method}-${item.path}`} value={index}>{item.label}</option>)}
         </select>
       </div>
-      <div className="fsc-action-group"><button className="fsc-btn fsc-btn-primary" onClick={execute} disabled={busy || (operation.adminOnly && userRole !== "ADMIN")} title={operation.adminOnly && userRole !== "ADMIN" ? "Operação exclusiva do perfil ADMIN" : undefined}>{busy ? "Processando…" : operation.submitLabel ?? operation.label}</button></div>
-      <div className="fsc-action-group"><ExportButton title={`${routine.code} — ${routine.title}`} filename={routine.code.toLowerCase()} /></div>
+      <div className="erp-tgroup"><button className="erp-btn erp-btn-primary" onClick={execute} disabled={busy || (operation.adminOnly && userRole !== "ADMIN")} title={operation.adminOnly && userRole !== "ADMIN" ? "Operação exclusiva do perfil ADMIN" : undefined}>{busy ? "Processando…" : operation.submitLabel ?? operation.label}</button></div>
+      <div className="erp-tspacer"/><div className="erp-tgroup"><ExportButton title={`${routine.code} — ${routine.title}`} filename={routine.code.toLowerCase()} /></div>
     </div>
-    <div className="fsc-body">
-      {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
-      <div className="fsc-section-banner"><span className="fsc-section-banner-pill">{operation.label}</span><div className="fsc-section-banner-line"/><span className="fsc-section-banner-hint">{operation.method} {operation.path}{operation.adminOnly ? " · requer administrador" : ""}</span></div>
-      <div className="fsc-card"><div className="fsc-card-body">
-        <p style={{ marginTop: 0, color: "var(--fsc-text-muted, #64748b)", fontSize: 12 }}>{routine.description} {routine.guidance}</p>
-        <div className="fsc-grid">{(operation.fields ?? []).map((field) => <div className={`fsc-field ${field.type === "textarea" || field.type === "json" || field.type === "file-text" || field.type === "file-base64" ? "fsc-col-12" : "fsc-col-3"}`} key={field.name}>
-          <label className={`fsc-label ${field.required ? "fsc-label-req" : ""}`}>{field.label}</label>
-          {field.type === "checkbox" ? <label className="fsc-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={Boolean(values[field.name])} onChange={(event) => setValue(field.name, event.target.checked)}/> Sim</label>
+    <div className="erp-content">
+      <section className="erp-detail-panel">
+        <div className="erp-tabs"><button className="erp-tab active">{operation.label}</button></div>
+        <div className="erp-detail-body">
+      {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-fieldset"><div className="erp-fieldset-head">{operation.label} — <span style={{ fontWeight: 400, opacity: 0.7 }}>{operation.method} {operation.path}{operation.adminOnly ? " · requer administrador" : ""}</span></div><div className="erp-fieldset-body">
+        <div className="erp-field erp-c12"><p style={{ margin: 0, color: "var(--v-muted, #64748b)", fontSize: 12 }}>{routine.description} {routine.guidance}</p></div>
+        {(operation.fields ?? []).map((field) => <div className={`erp-field ${field.type === "textarea" || field.type === "json" || field.type === "file-text" || field.type === "file-base64" ? "erp-c12" : "erp-c3"}`} key={field.name}>
+          <label className={`erp-label ${field.required ? "erp-req" : ""}`}>{field.label}</label>
+          {field.type === "checkbox" ? <label className="erp-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={Boolean(values[field.name])} onChange={(event) => setValue(field.name, event.target.checked)}/> Sim</label>
             : field.type === "json" ? <StructuredPayloadEditor raw={String(values[field.name] || field.placeholder || "{}")} onChange={(next) => setValue(field.name, next)}/>
-            : field.type === "file-text" ? <input className="fsc-input" type="file" accept={field.accept} onChange={(event) => {
+            : field.type === "file-text" ? <input className="erp-input" type="file" accept={field.accept} onChange={(event) => {
               const file = event.target.files?.[0];
               if (!file) { setValue(field.name, ""); return; }
               const reader = new FileReader();
@@ -231,7 +233,7 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
               reader.onerror = () => setFeedback({ type: "error", message: `Não foi possível ler o arquivo ${file.name}.` });
               reader.readAsText(file);
             }}/>
-            : field.type === "file-base64" ? <input className="fsc-input" type="file" accept={field.accept} onChange={(event) => {
+            : field.type === "file-base64" ? <input className="erp-input" type="file" accept={field.accept} onChange={(event) => {
               const file = event.target.files?.[0];
               if (!file) { setValue(field.name, ""); return; }
               const reader = new FileReader();
@@ -239,18 +241,19 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
               reader.onerror = () => setFeedback({ type: "error", message: `Não foi possível ler o arquivo ${file.name}.` });
               reader.readAsDataURL(file);
             }}/>
-            : field.type === "textarea" ? <textarea className="fsc-input" rows={3} value={String(values[field.name] ?? "")} placeholder={field.placeholder} onChange={(event) => setValue(field.name, event.target.value)}/>
-            : <input className={`fsc-input ${field.type === "number" ? "fsc-input-right" : ""}`} type={field.type ?? "text"} value={String(values[field.name] ?? "")} placeholder={field.placeholder} onChange={(event) => setValue(field.name, event.target.value)}/>} 
-          {field.help && <span style={{ fontSize: 10, color: "#64748b" }}>{field.help}</span>}
-        </div>)}</div>
-        {(operation.fields ?? []).length === 0 && <div className="fsc-empty">Esta operação não exige parâmetros.</div>}
+            : field.type === "textarea" ? <textarea className="erp-input" rows={3} value={String(values[field.name] ?? "")} placeholder={field.placeholder} onChange={(event) => setValue(field.name, event.target.value)}/>
+            : <input className={`erp-input ${field.type === "number" ? "num" : ""}`} type={field.type ?? "text"} value={String(values[field.name] ?? "")} placeholder={field.placeholder} onChange={(event) => setValue(field.name, event.target.value)}/>}
+          {field.help && <span className="erp-field-hint">{field.help}</span>}
+        </div>)}
+        {(operation.fields ?? []).length === 0 && <div className="erp-field erp-c12"><div className="erp-grid-empty">Esta operação não exige parâmetros.</div></div>}
       </div></div>
-      <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Resultado ({rows.length})</span><div className="fsc-section-banner-line"/></div>
-      <div className="fsc-card"><div className="fsc-results-wrap"><table className="fsc-table"><thead><tr>{columns.map((column) => <th key={column}>{column.split("_").join(" ")}</th>)}</tr></thead><tbody>
-        {rows.length === 0 && <tr><td className="fsc-empty">Execute uma operação para visualizar o resultado.</td></tr>}
+      <div className="erp-fieldset"><div className="erp-fieldset-head">Resultado ({rows.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12"><table className="erp-grid"><thead><tr>{columns.map((column) => <th key={column}>{column.split("_").join(" ")}</th>)}</tr></thead><tbody>
+        {rows.length === 0 && <tr><td className="erp-grid-empty">Execute uma operação para visualizar o resultado.</td></tr>}
         {rows.map((row, index) => <tr key={String(row.id ?? row.code ?? index)}>{columns.map((column) => <td key={column} title={cell(row[column])}>{cell(row[column]).slice(0, 100)}</td>)}</tr>)}
-      </tbody></table></div></div>
+      </tbody></table></div></div></div>
+        </div>
+      </section>
     </div>
-    <footer className="fsc-footer"><div className="fsc-footer-left"><div className="fsc-footer-stat">Registros: <strong>{rows.length}</strong></div></div><div className="fsc-footer-stat">GRUPO VENTURE LTDA</div></footer>
+    <footer className="erp-statusbar"><div className="erp-status-item">Registros: <strong>{rows.length}</strong></div><div className="erp-status-spacer"/><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span></footer>
   </div>;
 }

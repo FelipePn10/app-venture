@@ -17,9 +17,9 @@ const EMPTY: NfseDTO = {
 
 function statusPill(s?: string) {
   const v = (s || "").toUpperCase();
-  if (v.includes("AUTORIZ")) return <span className="fsc-pill fsc-pill-green">Autorizada</span>;
-  if (v.includes("CANCEL")) return <span className="fsc-pill fsc-pill-red">Cancelada</span>;
-  return <span className="fsc-pill fsc-pill-gray">{s || "Rascunho"}</span>;
+  if (v.includes("AUTORIZ")) return <span className="erp-badge ok">Autorizada</span>;
+  if (v.includes("CANCEL")) return <span className="erp-badge err">Cancelada</span>;
+  return <span className="erp-badge erp-badge-gray">{s || "Rascunho"}</span>;
 }
 
 export function Vnfs0100Page(): JSX.Element {
@@ -61,82 +61,80 @@ export function Vnfs0100Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar"><div className="fsc-topbar-left">
-        <div className="fsc-logo"><svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-          <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" /><rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-          <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" /><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" /></svg></div>
-        <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-        <span className="fsc-screen-title">VNFS0100 — NFS-e (Nota Fiscal de Serviço)</span>
-      </div></header>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">NFS-e (Nota Fiscal de Serviço)</span><span className="erp-crumb-code">VNFS0100</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group"><span className="fsc-action-label">NFS-e</span>
-          <button className="fsc-btn fsc-btn-new" onClick={() => { setMode("create"); setForm(EMPTY); }} disabled={busy}>+ Nova</button>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
-          {mode === "create" && <button className="fsc-btn fsc-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Emitir (rascunho)"}</button>}</div>
-        <div className="fsc-action-group"><span className="fsc-action-label">Relatório</span>
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">NFS-e</span>
+          <button className="erp-btn erp-btn-new" onClick={() => { setMode("create"); setForm(EMPTY); }} disabled={busy}>+ Nova</button>
+          <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
+          {mode === "create" && <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Emitir (rascunho)"}</button>}</div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VNFS0100 — NFS-e" filename="vnfs0100" /></div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">NFS-e</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {mode === "list" && (
-          <div className="fsc-card"><div className="fsc-results-wrap">
-            <table className="fsc-table">
-              <thead><tr><th className="fsc-num">RPS</th><th>Tomador</th><th className="fsc-num">Serviços</th><th className="fsc-num">ISS</th><th>Status</th><th style={{ width: 160 }}>Ações</th></tr></thead>
+          <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <table className="erp-grid">
+              <thead><tr><th>RPS</th><th>Tomador</th><th>Serviços</th><th>ISS</th><th>Status</th><th style={{ width: 160 }}>Ações</th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={6} className="fsc-empty">Nenhuma NFS-e.</td></tr>}
+                {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma NFS-e.</td></tr>}
                 {list.map((n) => (
-                  <tr key={n.id}><td className="fsc-num" style={{ fontWeight: 600 }}>{n.numero_rps}</td><td>{n.tomador_razao_social}</td>
-                    <td className="fsc-num">{money(n.valor_servicos)}</td><td className="fsc-num">{money(n.valor_iss)}</td><td>{statusPill(n.status)}</td>
+                  <tr key={n.id}><td style={{ fontWeight: 600 }}>{n.numero_rps}</td><td>{n.tomador_razao_social}</td>
+                    <td>{money(n.valor_servicos)}</td><td>{money(n.valor_iss)}</td><td>{statusPill(n.status)}</td>
                     <td>{n.id && <>
-                      <button className="fsc-action-btn fsc-edit-btn" onClick={() => void autorizar(n.id!)}>Autorizar</button>
-                      <button className="fsc-action-btn fsc-delete-btn" onClick={() => void cancelar(n.id!)}>Cancelar</button></>}</td></tr>
+                      <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void autorizar(n.id!)}>Autorizar</button>
+                      <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelar(n.id!)}>Cancelar</button></>}</td></tr>
                 ))}
               </tbody>
             </table>
-          </div></div>
+          </div></div></div>
         )}
 
         {mode === "create" && (
           <>
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">RPS</span><div className="fsc-section-banner-line" /></div>
-            <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-              <div className="fsc-field fsc-col-2"><label className="fsc-label fsc-label-req">Nº RPS</label><input className="fsc-input fsc-input-right" type="number" value={form.numero_rps || ""} onChange={(e) => setF("numero_rps", Number(e.target.value))} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Série</label><input className="fsc-input" value={form.serie_rps} onChange={(e) => setF("serie_rps", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Emissão</label><input className="fsc-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label">Optante Simples</label><div className="fsc-toggle-row"><label className="fsc-toggle"><input type="checkbox" checked={form.optante_simples} onChange={(e) => setF("optante_simples", e.target.checked)} /><div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" /></label><span className="fsc-toggle-label">{form.optante_simples ? "Sim" : "Não"}</span></div></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label">Cód. município (prestador)</label><input className="fsc-input" value={form.codigo_municipio} placeholder="4106902" onChange={(e) => setF("codigo_municipio", e.target.value)} /></div>
-            </div></div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">RPS</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Nº RPS</label><input className="erp-input num" type="number" value={form.numero_rps || ""} onChange={(e) => setF("numero_rps", Number(e.target.value))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Série</label><input className="erp-input" value={form.serie_rps} onChange={(e) => setF("serie_rps", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Emissão</label><input className="erp-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Optante Simples</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.optante_simples} onChange={(e) => setF("optante_simples", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.optante_simples ? "Sim" : "Não"}</span></div></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Cód. município (prestador)</label><input className="erp-input" value={form.codigo_municipio} placeholder="4106902" onChange={(e) => setF("codigo_municipio", e.target.value)} /></div>
+            </div></div>
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Tomador</span><div className="fsc-section-banner-line" /></div>
-            <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-              <div className="fsc-field fsc-col-3"><label className="fsc-label">CNPJ/CPF</label><input className="fsc-input" value={form.tomador_cnpj_cpf} onChange={(e) => setF("tomador_cnpj_cpf", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-5"><label className="fsc-label fsc-label-req">Razão social</label><input className="fsc-input" value={form.tomador_razao_social} onChange={(e) => setF("tomador_razao_social", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Cód. município</label><input className="fsc-input" value={form.tomador_codigo_municipio} onChange={(e) => setF("tomador_codigo_municipio", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">UF</label><input className="fsc-input" maxLength={2} value={form.tomador_uf} onChange={(e) => setF("tomador_uf", e.target.value.toUpperCase())} /></div>
-              <div className="fsc-field fsc-col-6"><label className="fsc-label">E-mail</label><input className="fsc-input" value={form.tomador_email ?? ""} onChange={(e) => setF("tomador_email", e.target.value)} /></div>
-            </div></div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Tomador</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label">CNPJ/CPF</label><input className="erp-input" value={form.tomador_cnpj_cpf} onChange={(e) => setF("tomador_cnpj_cpf", e.target.value)} /></div>
+              <div className="erp-field erp-c5"><label className="erp-label erp-req">Razão social</label><input className="erp-input" value={form.tomador_razao_social} onChange={(e) => setF("tomador_razao_social", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Cód. município</label><input className="erp-input" value={form.tomador_codigo_municipio} onChange={(e) => setF("tomador_codigo_municipio", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">UF</label><input className="erp-input" maxLength={2} value={form.tomador_uf} onChange={(e) => setF("tomador_uf", e.target.value.toUpperCase())} /></div>
+              <div className="erp-field erp-c6"><label className="erp-label">E-mail</label><input className="erp-input" value={form.tomador_email ?? ""} onChange={(e) => setF("tomador_email", e.target.value)} /></div>
+            </div></div>
 
-            <div className="fsc-section-banner"><span className="fsc-section-banner-pill">Serviço</span><div className="fsc-section-banner-line" /></div>
-            <div className="fsc-card"><div className="fsc-card-body"><div className="fsc-grid">
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Item lista serviço</label><input className="fsc-input" value={form.item_lista_servico} placeholder="14.01" onChange={(e) => setF("item_lista_servico", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-2"><label className="fsc-label">Cód. trib. município</label><input className="fsc-input" value={form.codigo_tributario_municipio} onChange={(e) => setF("codigo_tributario_municipio", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-8"><label className="fsc-label">Discriminação</label><input className="fsc-input" value={form.discriminacao} onChange={(e) => setF("discriminacao", e.target.value)} /></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label fsc-label-req">Valor serviços</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.valor_servicos || ""} onChange={(e) => setF("valor_servicos", Number(e.target.value))} /></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label">Deduções</label><input className="fsc-input fsc-input-right" type="number" step="0.01" value={form.valor_deducoes || ""} onChange={(e) => setF("valor_deducoes", Number(e.target.value))} /></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label">Alíquota ISS (ratio)</label><input className="fsc-input fsc-input-right" type="number" step="0.0001" value={form.aliquota_iss} onChange={(e) => setF("aliquota_iss", Number(e.target.value))} /></div>
-              <div className="fsc-field fsc-col-3"><label className="fsc-label">ISS retido</label><div className="fsc-toggle-row"><label className="fsc-toggle"><input type="checkbox" checked={form.iss_retido} onChange={(e) => setF("iss_retido", e.target.checked)} /><div className="fsc-toggle-track" /><div className="fsc-toggle-thumb" /></label><span className="fsc-toggle-label">{form.iss_retido ? "Sim" : "Não"}</span></div></div>
-            </div></div></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Serviço</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label">Item lista serviço</label><input className="erp-input" value={form.item_lista_servico} placeholder="14.01" onChange={(e) => setF("item_lista_servico", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Cód. trib. município</label><input className="erp-input" value={form.codigo_tributario_municipio} onChange={(e) => setF("codigo_tributario_municipio", e.target.value)} /></div>
+              <div className="erp-field erp-c8"><label className="erp-label">Discriminação</label><input className="erp-input" value={form.discriminacao} onChange={(e) => setF("discriminacao", e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Valor serviços</label><input className="erp-input num" type="number" step="0.01" value={form.valor_servicos || ""} onChange={(e) => setF("valor_servicos", Number(e.target.value))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Deduções</label><input className="erp-input num" type="number" step="0.01" value={form.valor_deducoes || ""} onChange={(e) => setF("valor_deducoes", Number(e.target.value))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Alíquota ISS (ratio)</label><input className="erp-input num" type="number" step="0.0001" value={form.aliquota_iss} onChange={(e) => setF("aliquota_iss", Number(e.target.value))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">ISS retido</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.iss_retido} onChange={(e) => setF("iss_retido", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.iss_retido ? "Sim" : "Não"}</span></div></div>
+            </div></div>
           </>
         )}
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left"><div className="fsc-footer-stat">NFS-e: <strong>{list.length}</strong></div></div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}><div className="erp-status-item">NFS-e: <strong>{list.length}</strong></div></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );

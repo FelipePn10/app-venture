@@ -84,6 +84,10 @@
 .erp-btn-danger { color: var(--v-err); border-color: var(--v-err-bd); }
 .erp-btn-danger:hover:not(:disabled) { background: var(--v-err-bg); border-color: #d99; color: var(--v-err); }
 .erp-btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.erp-btn-new { background: var(--v-green); border-color: var(--v-green); color: #fff; box-shadow: var(--v-shadow-sm); }
+.erp-btn-new:hover:not(:disabled) { background: var(--v-green-hover); border-color: var(--v-green-hover); color: #fff; }
+.erp-btn-ghost { background: transparent; border-color: transparent; color: var(--v-text-2); }
+.erp-btn-ghost:hover:not(:disabled) { background: var(--v-surface-3); border-color: var(--v-border-strong); color: var(--v-text); }
 
 .erp-tinput, .erp-tselect {
   height: 32px; border: 1px solid var(--v-border-strong); border-radius: var(--v-r-sm);
@@ -253,6 +257,13 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-badge.info { color: var(--v-info); background: var(--v-info-bg); border-color: var(--v-info-bd); }
 .erp-badge.warn { color: var(--v-warn); background: var(--v-warn-bg); border-color: var(--v-warn-bd); }
 .erp-badge.err { color: var(--v-err); background: var(--v-err-bg); border-color: var(--v-err-bd); }
+/* Variantes por cor (equivalentes aos estados semânticos) usadas por telas que
+   mapeiam status → cor diretamente (financeiro, fiscal, cadastros). */
+.erp-badge-green { color: var(--v-ok); background: var(--v-ok-bg); border-color: var(--v-ok-bd); }
+.erp-badge-red { color: var(--v-err); background: var(--v-err-bg); border-color: var(--v-err-bd); }
+.erp-badge-amber { color: var(--v-warn); background: var(--v-warn-bg); border-color: var(--v-warn-bd); }
+.erp-badge-blue { color: var(--v-info); background: var(--v-info-bg); border-color: var(--v-info-bd); }
+.erp-badge-gray { color: var(--v-text-2); background: var(--v-surface-3); border-color: var(--v-border-strong); }
 
 /* ── DETAIL EMPTY (no selection) ──────────────────────────────────────────── */
 .erp-detail-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--v-text-muted); text-align: center; padding: 40px; }
@@ -332,3 +343,36 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
   .erp-grid-wrap { max-width: 100%; overflow-x: auto; }
   .erp-grid { min-width: 560px; }
 }
+
+/* ══ Componentes migrados do fsc- (equivalentes erp-, mesmos estilos) ══ */
+.erp-metrics { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 4px; }
+.erp-metric { flex: 1; min-width: 150px; background: var(--v-surface); border: 1px solid var(--v-border); border-radius: var(--v-r-lg, 10px); padding: 14px 17px; box-shadow: var(--v-shadow-sm); position: relative; overflow: hidden; }
+.erp-metric::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--v-green); }
+.erp-metric-label { font-size: 10px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; color: var(--v-text-muted); margin-bottom: 5px; }
+.erp-metric-value { font-size: 24px; font-weight: 700; color: var(--v-text); line-height: 1.05; font-variant-numeric: tabular-nums; }
+
+.erp-toggle-row { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
+.erp-toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; cursor: pointer; }
+.erp-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.erp-toggle-track { position: absolute; inset: 0; background: var(--v-border-strong); border-radius: 22px; transition: background 0.2s; }
+.erp-toggle input:checked ~ .erp-toggle-track { background: var(--v-green); }
+.erp-toggle input:focus-visible ~ .erp-toggle-track { box-shadow: var(--v-focus); }
+.erp-toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.erp-toggle input:checked ~ .erp-toggle-thumb { transform: translateX(18px); }
+.erp-toggle-label { font-size: 13px; color: var(--v-text-2); font-weight: 500; }
+
+.erp-field-hint { font-size: 11px; color: var(--v-text-3); margin-top: 1px; }
+.erp-text-muted { color: var(--v-text-muted); }
+
+.erp-results-bar { display: flex; align-items: center; justify-content: space-between; padding: 9px 15px; background: var(--v-surface); border: 1px solid var(--v-border); border-radius: var(--v-r-md, 8px); box-shadow: var(--v-shadow-sm); }
+.erp-results-bar-left { display: flex; align-items: center; gap: 10px; }
+.erp-results-bar-label { font-size: 12px; color: var(--v-text-2); font-weight: 500; }
+
+.erp-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--v-border); background: linear-gradient(var(--v-surface-2), var(--v-surface-3)); }
+.erp-card-header-left { display: flex; align-items: center; gap: 9px; }
+.erp-card-title { position: relative; padding-left: 11px; font-size: 11.5px; font-weight: 700; color: var(--v-text); text-transform: uppercase; letter-spacing: 0.7px; }
+.erp-card-title::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 13px; border-radius: 2px; background: var(--v-green); }
+
+.erp-textarea { width: 100%; background: var(--v-surface); border: 1px solid var(--v-border-strong); border-radius: var(--v-r-md, 8px); font-family: var(--v-font); font-size: 13px; color: var(--v-text); outline: none; min-height: 72px; padding: 9px 11px; resize: vertical; line-height: 1.5; transition: border-color 0.13s, box-shadow 0.13s; }
+.erp-textarea:hover:not(:disabled) { border-color: var(--v-text-muted); }
+.erp-textarea:focus { border-color: var(--v-green); box-shadow: var(--v-focus); }

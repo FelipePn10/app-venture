@@ -92,110 +92,104 @@ export function Vfis0110Page(): JSX.Element {
   }
 
   return (
-    <div className="fsc-root">
-      <header className="fsc-topbar">
-        <div className="fsc-topbar-left">
-          <div className="fsc-logo">
-            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-              <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-              <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-            </svg>
-          </div>
-          <span className="fsc-app-name">Venture<span className="fsc-app-sub">ERP &amp; Soluções</span></span>
-          <span className="fsc-screen-title">VFIS0110 — Tabelas Tributárias</span>
-        </div>
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Tabelas Tributárias</span><span className="erp-crumb-code">VFIS0110</span></nav>
+        <div className="erp-titlebar-spacer" />
       </header>
 
-      <div className="fsc-actionbar">
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Dados</span>
-          <button className="fsc-btn fsc-btn-ghost" onClick={() => void reload()} disabled={busy}>
-            {busy ? <><div className="fsc-spinner-dark" />Carregando...</> : "Recarregar"}
+      <div className="erp-toolbar">
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Dados</span>
+          <button className="erp-btn" onClick={() => void reload()} disabled={busy}>
+            {busy ? <><div className="erp-spin" />Carregando...</> : "Recarregar"}
           </button>
         </div>
-        <div className="fsc-action-group">
-          <span className="fsc-action-label">Relatório</span>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VFIS0110 — Tabelas Tributárias" filename="vfis0110" />
         </div>
       </div>
 
-      <div className="fsc-body">
-        {feedback && <div className={`fsc-feedback ${feedback.type}`}>{feedback.message}</div>}
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-tabs"><button className="erp-tab active">Tabelas Tributárias</button></div>
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="fsc-card">
-          <div className="fsc-tabs">
-            <button className={`fsc-tab ${tab === "ncm" ? "active" : ""}`} onClick={() => setTab("ncm")}>NCM (IPI/PIS/COFINS)</button>
-            <button className={`fsc-tab ${tab === "interno" ? "active" : ""}`} onClick={() => setTab("interno")}>ICMS Interno</button>
-            <button className={`fsc-tab ${tab === "interestadual" ? "active" : ""}`} onClick={() => setTab("interestadual")}>ICMS Interestadual</button>
+        <div className="erp-fieldset">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "ncm" ? "active" : ""}`} onClick={() => setTab("ncm")}>NCM (IPI/PIS/COFINS)</button>
+            <button className={`erp-tab ${tab === "interno" ? "active" : ""}`} onClick={() => setTab("interno")}>ICMS Interno</button>
+            <button className={`erp-tab ${tab === "interestadual" ? "active" : ""}`} onClick={() => setTab("interestadual")}>ICMS Interestadual</button>
           </div>
 
           {tab === "ncm" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label fsc-label-req">NCM</label>
-                  <input className="fsc-input" value={ncmForm.ncm} placeholder="84714900"
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c2">
+                  <label className="erp-label erp-req">NCM</label>
+                  <input className="erp-input" value={ncmForm.ncm} placeholder="84714900"
                     onChange={(e) => setNcmForm((p) => ({ ...p, ncm: e.target.value }))} />
                 </div>
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label">Alíq. IPI</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.0001" value={ncmForm.aliq_ipi}
+                <div className="erp-field erp-c2">
+                  <label className="erp-label">Alíq. IPI</label>
+                  <input className="erp-input num" type="number" step="0.0001" value={ncmForm.aliq_ipi}
                     onChange={(e) => setNcmForm((p) => ({ ...p, aliq_ipi: Number(e.target.value) }))} />
                 </div>
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label">Alíq. PIS</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.0001" value={ncmForm.aliq_pis}
+                <div className="erp-field erp-c2">
+                  <label className="erp-label">Alíq. PIS</label>
+                  <input className="erp-input num" type="number" step="0.0001" value={ncmForm.aliq_pis}
                     onChange={(e) => setNcmForm((p) => ({ ...p, aliq_pis: Number(e.target.value) }))} />
                 </div>
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label">Alíq. COFINS</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.0001" value={ncmForm.aliq_cofins}
+                <div className="erp-field erp-c2">
+                  <label className="erp-label">Alíq. COFINS</label>
+                  <input className="erp-input num" type="number" step="0.0001" value={ncmForm.aliq_cofins}
                     onChange={(e) => setNcmForm((p) => ({ ...p, aliq_cofins: Number(e.target.value) }))} />
                 </div>
-                <div className="fsc-field fsc-col-1">
-                  <label className="fsc-label">CST IPI</label>
-                  <input className="fsc-input" value={ncmForm.cst_ipi}
+                <div className="erp-field erp-c1">
+                  <label className="erp-label">CST IPI</label>
+                  <input className="erp-input" value={ncmForm.cst_ipi}
                     onChange={(e) => setNcmForm((p) => ({ ...p, cst_ipi: e.target.value }))} />
                 </div>
-                <div className="fsc-field fsc-col-1">
-                  <label className="fsc-label">CST PIS</label>
-                  <input className="fsc-input" value={ncmForm.cst_pis}
+                <div className="erp-field erp-c1">
+                  <label className="erp-label">CST PIS</label>
+                  <input className="erp-input" value={ncmForm.cst_pis}
                     onChange={(e) => setNcmForm((p) => ({ ...p, cst_pis: e.target.value }))} />
                 </div>
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label">CST COFINS</label>
-                  <input className="fsc-input" value={ncmForm.cst_cofins}
+                <div className="erp-field erp-c2">
+                  <label className="erp-label">CST COFINS</label>
+                  <input className="erp-input" value={ncmForm.cst_cofins}
                     onChange={(e) => setNcmForm((p) => ({ ...p, cst_cofins: e.target.value }))} />
                 </div>
-                <div className="fsc-field fsc-col-10">
-                  <label className="fsc-label">Descrição</label>
-                  <input className="fsc-input" value={ncmForm.description ?? ""}
+                <div className="erp-field erp-c10">
+                  <label className="erp-label">Descrição</label>
+                  <input className="erp-input" value={ncmForm.description ?? ""}
                     onChange={(e) => setNcmForm((p) => ({ ...p, description: e.target.value }))} />
                 </div>
-                <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}>
-                  <button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void saveNcm()} disabled={busy}>Salvar NCM</button>
+                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                  <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveNcm()} disabled={busy}>Salvar NCM</button>
                 </div>
-              </div>
+              
 
-              <div className="fsc-results-wrap" style={{ marginTop: 16 }}>
-                <table className="fsc-table">
+              <div className="erp-fieldset-body" style={{ marginTop: 16 }}>
+                <table className="erp-grid">
                   <thead>
-                    <tr><th>NCM</th><th className="fsc-num">IPI</th><th className="fsc-num">PIS</th><th className="fsc-num">COFINS</th>
+                    <tr><th>NCM</th><th>IPI</th><th>PIS</th><th>COFINS</th>
                       <th>CST IPI/PIS/COF</th><th>Descrição</th><th style={{ width: 90 }}>Ações</th></tr>
                   </thead>
                   <tbody>
-                    {ncms.length === 0 && <tr><td colSpan={7} className="fsc-empty">Nenhum NCM cadastrado.</td></tr>}
+                    {ncms.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum NCM cadastrado.</td></tr>}
                     {ncms.map((n) => (
                       <tr key={n.ncm}>
                         <td style={{ fontWeight: 600 }}>{n.ncm}</td>
-                        <td className="fsc-num">{n.aliq_ipi}</td>
-                        <td className="fsc-num">{n.aliq_pis}</td>
-                        <td className="fsc-num">{n.aliq_cofins}</td>
+                        <td>{n.aliq_ipi}</td>
+                        <td>{n.aliq_pis}</td>
+                        <td>{n.aliq_cofins}</td>
                         <td>{n.cst_ipi}/{n.cst_pis}/{n.cst_cofins}</td>
                         <td>{n.description || "—"}</td>
-                        <td><button className="fsc-action-btn fsc-delete-btn" onClick={() => void removeNcm(n.ncm)}>Desativar</button></td>
+                        <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void removeNcm(n.ncm)}>Desativar</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -205,34 +199,34 @@ export function Vfis0110Page(): JSX.Element {
           )}
 
           {tab === "interno" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label fsc-label-req">UF</label>
-                  <input className="fsc-input" maxLength={2} value={internoForm.uf}
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c2">
+                  <label className="erp-label erp-req">UF</label>
+                  <input className="erp-input" maxLength={2} value={internoForm.uf}
                     onChange={(e) => setInternoForm((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
                 </div>
-                <div className="fsc-field fsc-col-3">
-                  <label className="fsc-label">Alíq. ICMS</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.0001" value={internoForm.aliq_icms}
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Alíq. ICMS</label>
+                  <input className="erp-input num" type="number" step="0.0001" value={internoForm.aliq_icms}
                     onChange={(e) => setInternoForm((p) => ({ ...p, aliq_icms: Number(e.target.value) }))} />
                 </div>
-                <div className="fsc-field fsc-col-3">
-                  <label className="fsc-label">Alíq. FCP</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.0001" value={internoForm.aliq_fcp}
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Alíq. FCP</label>
+                  <input className="erp-input num" type="number" step="0.0001" value={internoForm.aliq_fcp}
                     onChange={(e) => setInternoForm((p) => ({ ...p, aliq_fcp: Number(e.target.value) }))} />
                 </div>
-                <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}>
-                  <button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void saveInterno()} disabled={busy}>Salvar UF</button>
+                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                  <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveInterno()} disabled={busy}>Salvar UF</button>
                 </div>
-              </div>
-              <div className="fsc-results-wrap" style={{ marginTop: 16 }}>
-                <table className="fsc-table">
-                  <thead><tr><th>UF</th><th className="fsc-num">ICMS</th><th className="fsc-num">FCP</th></tr></thead>
+              
+              <div className="erp-fieldset-body" style={{ marginTop: 16 }}>
+                <table className="erp-grid">
+                  <thead><tr><th>UF</th><th>ICMS</th><th>FCP</th></tr></thead>
                   <tbody>
-                    {internos.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhuma UF cadastrada.</td></tr>}
+                    {internos.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhuma UF cadastrada.</td></tr>}
                     {internos.map((i) => (
-                      <tr key={i.uf}><td style={{ fontWeight: 600 }}>{i.uf}</td><td className="fsc-num">{i.aliq_icms}</td><td className="fsc-num">{i.aliq_fcp}</td></tr>
+                      <tr key={i.uf}><td style={{ fontWeight: 600 }}>{i.uf}</td><td>{i.aliq_icms}</td><td>{i.aliq_fcp}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -241,35 +235,35 @@ export function Vfis0110Page(): JSX.Element {
           )}
 
           {tab === "interestadual" && (
-            <div className="fsc-card-body">
-              <div className="fsc-grid">
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label fsc-label-req">UF Origem</label>
-                  <input className="fsc-input" maxLength={2} value={interForm.origin_uf}
+            <div className="erp-fieldset-body">
+              
+                <div className="erp-field erp-c2">
+                  <label className="erp-label erp-req">UF Origem</label>
+                  <input className="erp-input" maxLength={2} value={interForm.origin_uf}
                     onChange={(e) => setInterForm((p) => ({ ...p, origin_uf: e.target.value.toUpperCase() }))} />
                 </div>
-                <div className="fsc-field fsc-col-2">
-                  <label className="fsc-label fsc-label-req">UF Destino</label>
-                  <input className="fsc-input" maxLength={2} value={interForm.destination_uf}
+                <div className="erp-field erp-c2">
+                  <label className="erp-label erp-req">UF Destino</label>
+                  <input className="erp-input" maxLength={2} value={interForm.destination_uf}
                     onChange={(e) => setInterForm((p) => ({ ...p, destination_uf: e.target.value.toUpperCase() }))} />
                 </div>
-                <div className="fsc-field fsc-col-3">
-                  <label className="fsc-label">Alíq. ICMS</label>
-                  <input className="fsc-input fsc-input-right" type="number" step="0.0001" value={interForm.aliq_icms}
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Alíq. ICMS</label>
+                  <input className="erp-input num" type="number" step="0.0001" value={interForm.aliq_icms}
                     onChange={(e) => setInterForm((p) => ({ ...p, aliq_icms: Number(e.target.value) }))} />
                 </div>
-                <div className="fsc-field fsc-col-2" style={{ justifyContent: "flex-end" }}>
-                  <button className="fsc-btn fsc-btn-primary" style={{ width: "100%" }} onClick={() => void saveInter()} disabled={busy}>Salvar</button>
+                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                  <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveInter()} disabled={busy}>Salvar</button>
                 </div>
-              </div>
-              <div className="fsc-results-wrap" style={{ marginTop: 16 }}>
-                <table className="fsc-table">
-                  <thead><tr><th>Origem</th><th>Destino</th><th className="fsc-num">Alíq. ICMS</th></tr></thead>
+              
+              <div className="erp-fieldset-body" style={{ marginTop: 16 }}>
+                <table className="erp-grid">
+                  <thead><tr><th>Origem</th><th>Destino</th><th>Alíq. ICMS</th></tr></thead>
                   <tbody>
-                    {inters.length === 0 && <tr><td colSpan={3} className="fsc-empty">Nenhuma alíquota cadastrada.</td></tr>}
+                    {inters.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhuma alíquota cadastrada.</td></tr>}
                     {inters.map((i) => (
                       <tr key={`${i.origin_uf}_${i.destination_uf}`}>
-                        <td style={{ fontWeight: 600 }}>{i.origin_uf}</td><td>{i.destination_uf}</td><td className="fsc-num">{i.aliq_icms}</td>
+                        <td style={{ fontWeight: 600 }}>{i.origin_uf}</td><td>{i.destination_uf}</td><td>{i.aliq_icms}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -278,15 +272,15 @@ export function Vfis0110Page(): JSX.Element {
             </div>
           )}
         </div>
-      </div>
+      </div></section></div>
 
-      <footer className="fsc-footer">
-        <div className="fsc-footer-left">
-          <div className="fsc-footer-stat">NCMs: <strong>{ncms.length}</strong></div>
-          <div className="fsc-footer-stat">UFs internas: <strong>{internos.length}</strong></div>
-          <div className="fsc-footer-stat">Interestaduais: <strong>{inters.length}</strong></div>
+      <footer className="erp-statusbar">
+        <div style={{display:"contents"}}>
+          <div className="erp-status-item">NCMs: <strong>{ncms.length}</strong></div>
+          <div className="erp-status-item">UFs internas: <strong>{internos.length}</strong></div>
+          <div className="erp-status-item">Interestaduais: <strong>{inters.length}</strong></div>
         </div>
-        <div className="fsc-footer-stat"><span style={{ color: "#b0c8b8", fontSize: 11 }}>GRUPO VENTURE LTDA</span></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
     </div>
   );
