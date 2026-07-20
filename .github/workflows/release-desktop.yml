@@ -47,6 +47,16 @@ jobs:
         working-directory: src-tauri
         run: cargo test --locked
 
+      - name: Extract release notes from CHANGELOG
+        id: relnotes
+        shell: bash
+        run: |
+          {
+            echo 'body<<CHANGELOG_NOTES_EOF'
+            node scripts/changelog-notes.mjs "${{ github.ref_name }}"
+            echo 'CHANGELOG_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build signed installers and publish release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -56,7 +66,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ERP Venture ${{ github.ref_name }}
-          releaseBody: Consulte o CHANGELOG e a documentação da versão antes de instalar.
+          releaseBody: ${{ steps.relnotes.outputs.body }}
           releaseDraft: false
           prerelease: false
           args: --bundles nsis,msi
