@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { currentUserId, errMessage, httpClient, unwrapObject, type Obj } from "@/services/fiscalShared";
+import { downloadBlob } from "@/services/fileDownload";
 import { useAuthStore } from "@/store/authStore";
 
 export type RoutineField = {
@@ -185,11 +186,10 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
       const response = await httpClient.request({ method: operation.method, url: path, params, data: operation.method === "GET" ? undefined : body, responseType: operation.downloadFilename ? "blob" : "json" });
       if (operation.downloadFilename) {
         const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a"); anchor.href = url; anchor.download = operation.downloadFilename; anchor.click();
-        URL.revokeObjectURL(url);
+        // A confirmação do download é global (<DownloadNotice>); aqui fica só o
+        // resultado com nome e tamanho, que é informação, não aviso.
+        downloadBlob(blob, operation.downloadFilename);
         setResult({ arquivo: operation.downloadFilename, tamanho_bytes: blob.size });
-        setFeedback({ type: "success", message: `${operation.label} concluída; arquivo gerado.` });
         return;
       }
       setResult(response.data);

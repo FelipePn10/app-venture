@@ -87,6 +87,7 @@ import { Vexp0100Page } from "./almoxarifado/Vexp0100Page";
 import { Vvnd0100Page } from "./comercial/Vvnd0100Page";
 import { Vvnd0200Page } from "./comercial/Vvnd0200Page";
 import { Vvnd0300Page } from "./comercial/Vvnd0300Page";
+import { Vvnd0310Page } from "./comercial/Vvnd0310Page";
 import { Vvnd0400Page } from "./comercial/Vvnd0400Page";
 import { Vvnd0500Page } from "./comercial/Vvnd0500Page";
 import { Vsac0100Page } from "./comercial/Vsac0100Page";
@@ -185,6 +186,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VVND0100: <Vvnd0100Page />,
   VVND0200: <Vvnd0200Page />,
   VVND0300: <Vvnd0300Page />,
+  VVND0310: <Vvnd0310Page />,
   VVND0400: <Vvnd0400Page />,
   VVND0500: <Vvnd0500Page />,
   VSAC0100: <Vsac0100Page />,

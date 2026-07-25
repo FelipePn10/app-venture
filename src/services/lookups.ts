@@ -49,7 +49,7 @@ async function loadEndpoint(
   for (const raw of unwrapArray(data)) {
     const o = unwrapObject(raw);
     if (!o) continue;
-    const code = parseNum(o, 'code', 'codigo', 'id');
+    const code = parseNum(o, 'code', 'codigo', 'Code', 'id', 'ID');
     if (code === undefined) continue;
     const label = parseStr(o, ...labelKeys) || `#${code}`;
     const sub = subKeys.length ? parseStr(o, ...subKeys) || undefined : undefined;
@@ -96,6 +96,26 @@ export const loadRepresentatives = cached(async () =>
     label: r.name || `Representante ${r.code}`,
     sub: r.document_number || r.state || undefined,
   })).filter((o) => o.code),
+);
+
+/**
+ * Cadastros de apoio comerciais (`/api/customers/support/*`). O backend serializa
+ * essas entidades sem tags JSON, por isso os campos chegam em PascalCase.
+ */
+export const loadCarriers = cached(() =>
+  loadEndpoint('/api/customers/support/carriers', ['Description', 'description'], ['BillingType', 'billing_type']),
+);
+
+export const loadPaymentConditions = cached(() =>
+  loadEndpoint('/api/customers/support/payment-conditions', ['Description', 'description'], ['AnalysisType', 'analysis_type']),
+);
+
+export const loadSalesTables = cached(() =>
+  loadEndpoint('/api/customers/support/sales-tables', ['Description', 'description'], ['TableType', 'table_type']),
+);
+
+export const loadSalesDivisions = cached(() =>
+  loadEndpoint('/api/sales-division/list', ['description', 'Description']),
 );
 
 export const loadSalesOrders = cached(async () =>

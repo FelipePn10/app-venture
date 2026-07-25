@@ -89,7 +89,8 @@ export function ExportButton({
   formats,
   label = 'Exportar',
 }: ExportButtonProps): JSX.Element | null {
-  const { exporting, toast, clearToast, run } = useReportExport();
+  // O aviso de conclusão é global (<DownloadNotice>); aqui só o estado de "exportando".
+  const { exporting, run } = useReportExport();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -125,13 +126,6 @@ export function ExportButton({
     };
   }, [open, reposition]);
 
-  // Auto-dismiss do toast.
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(clearToast, 4000);
-    return () => clearTimeout(t);
-  }, [toast, clearToast]);
-
   if (!canExport()) return null;
 
   const items = (formats ?? EXPORT_FORMATS.map((f) => f.format))
@@ -143,7 +137,7 @@ export function ExportButton({
     const scope = wrapRef.current?.closest('.erp-screen') ?? document;
     const table = build ? build() : scrapeTable(scope);
     if (!table || !table.rows.length) {
-      // useReportExport já emite o toast de "nada para exportar".
+      // useReportExport já emite o aviso de "nada para exportar".
       await run(format, { title, filename, columns: table?.columns ?? [], rows: table?.rows ?? [] });
       return;
     }
@@ -208,21 +202,6 @@ export function ExportButton({
         document.body,
       )}
 
-      {toast && createPortal(
-        <div
-          style={{
-            position: 'fixed', bottom: 20, right: 20, zIndex: 10000,
-            background: toast.type === 'success' ? '#13351f' : '#3a1414',
-            border: `1px solid ${toast.type === 'success' ? '#2e7d4f' : '#a13b3b'}`,
-            color: '#eaf3ee', borderRadius: 10, padding: '12px 16px', fontSize: 13,
-            maxWidth: 340, boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-          }}
-          role="status"
-        >
-          {toast.message}
-        </div>,
-        document.body,
-      )}
     </div>
   );
 }

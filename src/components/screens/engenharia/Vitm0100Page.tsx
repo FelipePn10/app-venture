@@ -11,7 +11,15 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
 const NATURE_LABEL: Record<number, string> = { 0: "Genérico", 1: "Configurado", 2: "Item Base" };
 const TYPE_MRP = [{ value: 0, label: "NORMAL_MRP" }, { value: 1, label: "PROJETO" }];
-const ENG_TYPES = [{ value: 0, label: "FABRICADO" }, { value: 1, label: "COMPRADO" }, { value: 2, label: "DE_TERCEIRO" }];
+/**
+ * `TypeItem` do backend. `SERVICO` entrou na v1.1.0: não gera ordem de material e
+ * é o tipo exigido para item de serviço em NFC-e (ver VVND0310 → "itens de
+ * serviço na NFC-e" e a regra de `delivery_with_receipt` no VVND0300).
+ */
+const ENG_TYPES = [
+  { value: 0, label: "FABRICADO" }, { value: 1, label: "COMPRADO" },
+  { value: 2, label: "DE_TERCEIRO" }, { value: 3, label: "SERVICO" },
+];
 const STRUCTS = [{ value: 0, label: "INDUSTRIAL" }, { value: 1, label: "COMERCIAL" }];
 const USE_TYPES = [{ value: 0, label: "INDUSTRIALIZAÇÃO" }, { value: 1, label: "CONSUMO" }, { value: 2, label: "IMOBILIZADO" }];
 

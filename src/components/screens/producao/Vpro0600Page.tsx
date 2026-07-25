@@ -30,8 +30,8 @@ export function Vpro0600Page(): JSX.Element {
     if (hist.length < 2) { setFeedback({ type: "error", message: "Informe ao menos 2 períodos de histórico." }); return; }
     setBusy(true); setFeedback(null);
     try {
-      const r = await statisticalForecast({ item_code: c, history: hist, periods_ahead: pa || 1 });
-      setResult(r); setFeedback({ type: "success", message: `Modelo selecionado: ${r.model_used} (MAPE ${num(r.mape)}%).` });
+      const r = await statisticalForecast({ item_code: c, history: hist, periods: pa || 1 });
+      setResult(r); setFeedback({ type: "success", message: `Modelo selecionado: ${r.model} (MAPE ${num(r.mape_pct)}%).` });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -78,15 +78,15 @@ export function Vpro0600Page(): JSX.Element {
         {result && (
           <>
             <div className="erp-metrics">
-              <div className="erp-metric"><div className="erp-metric-label">Modelo</div><div className="erp-metric-value" style={{ fontSize: 15 }}>{result.model_used}</div></div>
-              <div className="erp-metric"><div className="erp-metric-label">MAPE</div><div className="erp-metric-value">{num(result.mape)}%</div></div>
+              <div className="erp-metric"><div className="erp-metric-label">Modelo</div><div className="erp-metric-value" style={{ fontSize: 15 }}>{result.model}</div></div>
+              <div className="erp-metric"><div className="erp-metric-label">MAPE</div><div className="erp-metric-value">{num(result.mape_pct)}%</div></div>
               <div className="erp-metric"><div className="erp-metric-label">Item</div><div className="erp-metric-value">{result.item_code}</div></div>
             </div>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Previsão — <span style={{fontWeight:400,opacity:0.65}}>{result.forecasts.length} período(s)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
-                <thead><tr><th>Período</th><th>Quantidade prevista</th></tr></thead>
+                <thead><tr><th>Período futuro</th><th>Quantidade prevista</th></tr></thead>
                 <tbody>
-                  {result.forecasts.map((f, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{f.period}</td><td>{num(f.quantity)}</td></tr>)}
+                  {result.forecasts.map((qty, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{`+${i + 1}`}</td><td>{num(qty)}</td></tr>)}
                 </tbody>
               </table>
             </div></div></div>

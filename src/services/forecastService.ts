@@ -14,28 +14,52 @@ export interface HistoryPoint {
 
 export interface ForecastResult {
   item_code: number;
-  model_used: string;
-  mape: number;
-  forecasts: HistoryPoint[];
+  /** Modelo escolhido: AUTO, MOVING_AVERAGE, EXP_SMOOTHING ou HOLT_WINTERS. */
+  model: string;
+  /** Erro percentual absoluto médio (`mape_pct` no backend). */
+  mape_pct: number;
+  /** Quantidade prevista por período futuro, na ordem. */
+  forecasts: number[];
+  /** Resultado de cada modelo — o backend só preenche quando `model` é AUTO. */
+  all_models: { model: string; mape_pct: number; forecasts: number[] }[];
 }
 
 export interface ForecastRequest {
   item_code: number;
   history: HistoryPoint[];
-  periods_ahead: number;
+  /** Quantos períodos futuros prever (`periods` no backend). */
+  periods: number;
+  model?: 'AUTO' | 'MOVING_AVERAGE' | 'EXP_SMOOTHING' | 'HOLT_WINTERS';
+  ma_window?: number;
+  alpha?: number;
+  beta?: number;
+  gamma?: number;
+  season_len?: number;
 }
 
+/**
+ * `POST /api/forecast/statistical`.
+ *
+ * A resposta é `{ item_code, result: {model, mape_pct, forecasts}, all_models }`
+ * — o resultado vem ANINHADO em `result` e `forecasts` é uma lista de números
+ * (uma quantidade por período futuro), não de objetos. `unwrapObject` não serve
+ * aqui: ele trataria `result` como envelope e descartaria `item_code`.
+ */
 export async function statisticalForecast(req: ForecastRequest): Promise<ForecastResult> {
   const { data } = await httpClient.post(`${BASE}/statistical`, req);
-  const o = unwrapObject(data);
-  const fc = unwrapArray(o['forecasts'] ?? o['Forecasts']).map((raw) => {
-    const p = unwrapObject(raw);
-    return { period: parseStr(p, 'period', 'Period'), quantity: parseNum(p, 'quantity', 'Quantity') };
-  });
+  const root = (data ?? {}) as Record<string, unknown>;
+  const parseModel = (raw: unknown) => {
+    const r = unwrapObject(raw);
+    return {
+      model: parseStr(r, 'model', 'Model'),
+      mape_pct: parseNum(r, 'mape_pct', 'MAPE', 'Mape'),
+      forecasts: unwrapArray(r['forecasts'] ?? r['Forecasts']).map((v) => Number(v) || 0),
+    };
+  };
+  const result = parseModel(root['result'] ?? root['Result']);
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
-    model_used: parseStr(o, 'model_used', 'ModelUsed'),
-    mape: parseNum(o, 'mape', 'Mape', 'MAPE'),
-    forecasts: fc,
+    item_code: parseNum(root, 'item_code', 'ItemCode'),
+    ...result,
+    all_models: unwrapArray(root['all_models'] ?? root['All']).map(parseModel),
   };
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type ApuracaoImpostos, apurarImpostos, getApuracao } from "@/services/financialService";
+import { type ApuracaoImposto, apurarImpostos, getApuracao } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -9,7 +9,7 @@ const currentCompetencia = () => new Date().toISOString().slice(0, 7);
 
 export function Vfin0400Page(): JSX.Element {
   const [competencia, setCompetencia] = useState(currentCompetencia());
-  const [result, setResult] = useState<ApuracaoImpostos | null>(null);
+  const [result, setResult] = useState<ApuracaoImposto[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,12 +29,15 @@ export function Vfin0400Page(): JSX.Element {
     catch (e) { setFeedback({ type: "error", message: errMessage(e, "Apuração não encontrada para a competência.") }); } finally { setBusy(false); }
   }
 
-  const rows: { imposto: string; saidas: number; entradas: number; saldo: number }[] = result ? [
-    { imposto: "ICMS", saidas: result.valor_icms_saidas, entradas: result.valor_icms_entradas, saldo: result.saldo_icms },
-    { imposto: "IPI", saidas: result.valor_ipi_saidas, entradas: result.valor_ipi_entradas, saldo: result.saldo_ipi },
-    { imposto: "PIS", saidas: result.valor_pis_saidas, entradas: result.valor_pis_entradas, saldo: result.saldo_pis },
-    { imposto: "COFINS", saidas: result.valor_cofins_saidas, entradas: result.valor_cofins_entradas, saldo: result.saldo_cofins },
-  ] : [];
+  /** Uma linha por imposto — o backend já apura assim (débitos = saídas, créditos = entradas). */
+  const rows = result.map((r) => ({
+    imposto: r.imposto,
+    saidas: r.debitos,
+    entradas: r.creditos,
+    saldo: r.saldo_devedor - r.saldo_credor,
+  }));
+  const competenciaApurada = result[0]?.competencia ?? competencia;
+  const statusApuracao = result[0]?.status ?? "";
 
   return (
     <div className="erp-screen">
@@ -65,11 +68,11 @@ export function Vfin0400Page(): JSX.Element {
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        {!result ? (
+        {result.length === 0 ? (
           <div className="erp-fieldset"><div className="erp-grid-empty">Informe uma competência (YYYY-MM) e clique em Apurar ou Consultar.</div></div>
         ) : (
           <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Competência {result.competencia}   — <span style={{fontWeight:400,opacity:0.65}}>Status: {result.status || "—"}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Competência {competenciaApurada}   — <span style={{fontWeight:400,opacity:0.65}}>Status: {statusApuracao || "—"}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Imposto</th><th>Saídas (débito)</th><th>Entradas (crédito)</th><th>Saldo a recolher</th></tr></thead>
                 <tbody>

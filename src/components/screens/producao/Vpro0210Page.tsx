@@ -4,6 +4,7 @@ import {
   sequenceAps, ganttByOrder, ganttByWorkCenter,
   ganttMonth, rescheduleGantt, exportGanttMonth,
 } from "@/services/apsService";
+import { downloadBlob } from "@/services/fileDownload";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -47,11 +48,7 @@ export function Vpro0210Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       const blob = await exportGanttMonth(Number(year), Number(month), format, groupBy);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `aps-gantt-${year}-${month}.${format}`;
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `aps-gantt-${year}-${month}.${format}`);
       setFeedback({ type: "success", message: `Quadro exportado (${format.toUpperCase()}).` });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }

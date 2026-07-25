@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import {
-  type ContaPagar, type ContaPagarDTO, type Aging, type ContaBancaria, type BaixaPagamentoDTO,
-  listContasPagar, createContaPagar, baixarContaPagar, cancelContaPagar, agingPagar, approveContaPagar, listContasBancarias,
+  type ContaPagar, type ContaPagarDTO, type AgingBucket, type ContaBancaria, type BaixaPagamentoDTO,
+  listContasPagar, createContaPagar, baixarContaPagar, cancelContaPagar, agingPagar, approveContaPagar, listContasBancarias, agingTotal,
 } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -27,7 +27,7 @@ export function Vfin0200Page(): JSX.Element {
   const [mode, setMode] = useState<"list" | "create">("list");
   const [form, setForm] = useState<ContaPagarDTO>(EMPTY);
   const [list, setList] = useState<ContaPagar[]>([]);
-  const [aging, setAging] = useState<Aging | null>(null);
+  const [aging, setAging] = useState<AgingBucket[]>([]);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [baixa, setBaixa] = useState<{ alvo: ContaPagar; dto: BaixaPagamentoDTO } | null>(null);
@@ -43,7 +43,7 @@ export function Vfin0200Page(): JSX.Element {
         agingPagar().catch(() => null),
         listContasBancarias().catch(() => [] as ContaBancaria[]),
       ]);
-      setList(items); if (ag) setAging(ag); setContas(cbs);
+      setList(items); setAging(ag ?? []); setContas(cbs);
     } catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao listar contas a pagar.") }); }
     finally { setBusy(false); }
   }, []);
@@ -143,14 +143,15 @@ export function Vfin0200Page(): JSX.Element {
 
         {mode === "list" ? (
           <>
-            {aging && (
+            {aging.length > 0 && (
               <div className="erp-metrics">
-                <div className="erp-metric"><div className="erp-metric-label">A Vencer</div><div className="erp-metric-value">{money(aging.a_vencer)}</div></div>
-                <div className="erp-metric"><div className="erp-metric-label">Venc. até 30d</div><div className="erp-metric-value">{money(aging.vencido_ate_30)}</div></div>
-                <div className="erp-metric"><div className="erp-metric-label">Venc. 31-60</div><div className="erp-metric-value">{money(aging.vencido_31_60)}</div></div>
-                <div className="erp-metric"><div className="erp-metric-label">Venc. 61-90</div><div className="erp-metric-value">{money(aging.vencido_61_90)}</div></div>
-                <div className="erp-metric"><div className="erp-metric-label">Venc. +90</div><div className="erp-metric-value">{money(aging.vencido_acima_90)}</div></div>
-                <div className="erp-metric"><div className="erp-metric-label">Total</div><div className="erp-metric-value">{money(aging.total)}</div></div>
+                {aging.map((b) => (
+                  <div className="erp-metric" key={b.period}>
+                    <div className="erp-metric-label">{b.period}</div>
+                    <div className="erp-metric-value">{money(b.total)}</div>
+                  </div>
+                ))}
+                <div className="erp-metric"><div className="erp-metric-label">Total</div><div className="erp-metric-value">{money(agingTotal(aging))}</div></div>
               </div>
             )}
             {baixa && (
@@ -249,7 +250,7 @@ export function Vfin0200Page(): JSX.Element {
       <footer className="erp-statusbar">
         <div style={{display:"contents"}}>
           <div className="erp-status-item">Títulos: <strong>{list.length}</strong></div>
-          {aging && <div className="erp-status-item">Total: <strong>{money(aging.total)}</strong></div>}
+          {aging.length > 0 && <div className="erp-status-item">Total: <strong>{money(agingTotal(aging))}</strong></div>}
         </div>
         <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>

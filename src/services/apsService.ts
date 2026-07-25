@@ -111,7 +111,7 @@ function parseBoard(data: unknown): GanttBoard {
   return {
     rows: pickArray(o, ['rows', 'Rows', 'lines', 'Lines']).map(parseRow),
     load: pickArray(o, ['load', 'Load', 'loads', 'Loads']).map((l) => { const x = unwrapObject(l); return { work_center_id: parseNum(x, 'work_center_id', 'WorkCenterID'), date: parseStr(x, 'date', 'Date', 'req_date'), load_pct: parseNum(x, 'load_pct', 'LoadPct') }; }),
-    days: pickArray(o, ['days', 'Days']).map((d) => { const x = unwrapObject(d); return { date: parseStr(x, 'date', 'Date'), is_working: parseBool(x, 'is_working', 'IsWorking'), is_today: parseBool(x, 'is_today', 'IsToday') }; }),
+    days: pickArray(o, ['days', 'Days']).map((d) => { const x = unwrapObject(d); return { date: parseStr(x, 'date', 'Date'), is_working: parseBool(x, 'IsWorkday', 'is_workday'), is_today: parseBool(x, 'is_today', 'IsToday') }; }),
     dependencies: pickArray(o, ['dependencies', 'Dependencies']).map((e) => { const x = unwrapObject(e); return { predecessor_id: parseNum(x, 'predecessor_id', 'PredecessorID'), successor_id: parseNum(x, 'successor_id', 'SuccessorID'), overlap_pct: parseNum(x, 'overlap_pct', 'OverlapPct'), implicit: parseBool(x, 'implicit', 'Implicit') }; }),
     overloaded_days: parseNum(summary, 'overloaded_days', 'OverloadedDays'),
     late_bars: parseNum(summary, 'late_bars', 'LateBars'),

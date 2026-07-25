@@ -1,4 +1,5 @@
 import { httpClient, parseStr, parseNum, parseBool, currentUserId, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { downloadBlob } from '@/services/fileDownload';
 
 const BASE = '/api/suppliers';
 const SUPPORT = `${BASE}/support`;
@@ -148,7 +149,7 @@ function parseEnterprise(raw: unknown): EnterpriseLinkDTO {
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode') || undefined,
     enterprise_code: parseNum(o, 'enterprise_code', 'EnterpriseCode'),
     financial_account: parseNum(o, 'financial_account', 'FinancialAccount') || undefined,
-    ipi: parseBool(o, 'ipi', 'calculates_ipi', 'Ipi'),
+    ipi: parseBool(o, 'applies_ipi', 'AppliesIPI'),
     default_invoice_type_id: parseNum(o, 'default_invoice_type_id', 'DefaultInvoiceTypeID') || undefined,
     purchase_price_table_id: parseNum(o, 'purchase_price_table_id', 'PurchasePriceTableID') || undefined,
   };
@@ -270,9 +271,5 @@ export async function getPurchasingDefaults(code: number, enterpriseCode: number
 // ── Exportação ──
 export async function exportSuppliers(fmt: 'xlsx' | 'pdf' | 'csv'): Promise<void> {
   const { data } = await httpClient.get(BASE, { params: { format: fmt }, responseType: 'blob' });
-  const url = URL.createObjectURL(data as Blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `fornecedores.${fmt}`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(data as Blob, `fornecedores.${fmt}`);
 }

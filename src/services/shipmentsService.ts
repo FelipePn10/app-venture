@@ -1,4 +1,5 @@
 import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { downloadBlob } from '@/services/fileDownload';
 
 const BASE = '/api/shipments';
 
@@ -261,14 +262,7 @@ export async function autoFillProductionOrder(productionOrderCode: number): Prom
 // ── Exportação (download binário autenticado) ──
 async function downloadExport(code: number, fmt: 'pdf' | 'xlsx'): Promise<void> {
   const { data } = await httpClient.get(`${BASE}/${code}/export/${fmt}`, { responseType: 'blob' });
-  const url = URL.createObjectURL(data as Blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `romaneio_${code}.${fmt}`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(data as Blob, `romaneio_${code}.${fmt}`);
 }
 export const exportShipmentPdf = (code: number) => downloadExport(code, 'pdf');
 export const exportShipmentXlsx = (code: number) => downloadExport(code, 'xlsx');

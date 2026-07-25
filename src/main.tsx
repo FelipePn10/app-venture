@@ -7,6 +7,7 @@ import '@/styles/fiscal-screens.css';
 import '@/styles/erp-workbench.css';
 import '@/styles/system-update.css';
 import { SystemUpdateGate } from '@/components/system/SystemUpdateGate';
+import { DownloadNotice } from '@/components/ui/DownloadNotice';
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <SystemUpdateGate>
         <AppRouter />
       </SystemUpdateGate>
+      {/* Confirmação de download — irmão da árvore, não a envolve: nada re-renderiza por causa dele. */}
+      <DownloadNotice />
     </QueryClientProvider>
   </React.StrictMode>
 );

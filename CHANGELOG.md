@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Orçamento de Venda renovado (VVND0300)**: agora dá para editar o orçamento depois de criado, anexar documentos (até 10 MB), acompanhar todo o histórico do pedido, bloquear/liberar comercialmente e gerar o DAV/Pré-Venda. O cancelamento passa a exigir um motivo cadastrado, e o descancelamento reabre a proposta com o mesmo motivo.
+- **Nova tela: Parâmetros de Orçamento (VVND0310)** — cadastre aqui os motivos de cancelamento, os padrões de comissão e as regras de frete e NFC-e da empresa. É pré-requisito para cancelar orçamentos.
+- **Divisão de Vendas (VVND0100)**: novo indicador "permite condição livre", que autoriza usar no orçamento uma condição de pagamento diferente da cadastrada no cliente. Prazos, PIS e COFINS também passaram a ser editáveis — antes eram zerados sem aviso ao salvar.
+- **Cadastro de Item (VITM0100)**: novo tipo **Serviço**, necessário para vender serviço com NFC-e.
+- **Confirmação de download**: ao exportar um relatório ou baixar um arquivo, o sistema agora avisa que o download terminou e mostra o nome do arquivo. Antes o arquivo era salvo em silêncio.
+- **Correção — Contas a Pagar e a Receber**: o painel de vencimentos mostrava R$ 0,00 em todas as faixas; agora exibe os valores reais por faixa, com o total.
+- **Correção — Apuração de Impostos**: a tabela de ICMS, IPI, PIS e COFINS aparecia zerada; agora traz os valores apurados de cada imposto.
+- **Correção — Previsão Estatística**: o modelo, o erro (MAPE) e as quantidades previstas não apareciam.
+- **Correção — Perfil do MRP**: as colunas de ordens planejadas, ordens firmes e estoque projetado apareciam zeradas.
+- **Correção — Contas Bancárias**: a coluna de saldo mostrava R$ 0,00; passa a exibir o saldo inicial (o saldo movimentado continua no Fluxo de Caixa).
+- **Correções menores**: descrição e unidade do item do fornecedor, indicador de IPI do fornecedor, quantidade alocada na ordem de produção e marcação de dia útil no quadro do APS voltaram a aparecer.
+- **Downloads mais confiáveis**: corrigido um problema que podia interromper o download do arquivo logo após iniciar.
+
 ## [v1.0.3] — 2026-07-20
 
 - Visual renovado: todas as telas do sistema adotaram o novo padrão, mais organizado, consistente e fácil de ler.

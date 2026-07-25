@@ -8,7 +8,12 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const EMPTY: SalesDivisionDTO = { code: 0, description: "", commercial_analysis: "FREE", financial_analysis: "FREE", consider_mrp: true };
+const EMPTY: SalesDivisionDTO = {
+  code: 0, description: "", commercial_analysis: "FREE", financial_analysis: "FREE",
+  consider_mrp: true, consider_delivery_promise: false, is_technical_assistance: false,
+  allow_outside_limits: false, allow_free_payment_terms: false,
+  minimum_delivery_days: 0, financial_delay_days: 0, pis_percentage: 0, cofins_percentage: 0,
+};
 const analysisLabel = (v?: string) => DIVISION_ANALYSIS.find((a) => a.value === v)?.label ?? v ?? "—";
 
 export function Vvnd0100Page(): JSX.Element {
@@ -103,6 +108,7 @@ export function Vvnd0100Page(): JSX.Element {
                 <div className="erp-list-meta">
                   <span className="erp-badge draft">{analysisLabel(d.commercial_analysis)}</span>
                   {d.consider_mrp && <span className="erp-badge ok">MRP</span>}
+                  {d.allow_free_payment_terms && <span className="erp-badge info">Cond. livre</span>}
                 </div>
               </div>
             ))}
@@ -130,6 +136,32 @@ export function Vvnd0100Page(): JSX.Element {
                   <label className="erp-label">Planejamento</label>
                   <label className="erp-check"><input type="checkbox" checked={!!form.consider_mrp} onChange={(e) => set("consider_mrp", e.target.checked)} /><span>Considera MRP</span></label>
                 </div>
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Promessa de entrega</label>
+                  <label className="erp-check"><input type="checkbox" checked={!!form.consider_delivery_promise} onChange={(e) => set("consider_delivery_promise", e.target.checked)} /><span>Considera promessa</span></label>
+                </div>
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Assistência técnica</label>
+                  <label className="erp-check"><input type="checkbox" checked={!!form.is_technical_assistance} onChange={(e) => set("is_technical_assistance", e.target.checked)} /><span>Divisão de assistência</span></label>
+                </div>
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Limites de crédito</label>
+                  <label className="erp-check"><input type="checkbox" checked={!!form.allow_outside_limits} onChange={(e) => set("allow_outside_limits", e.target.checked)} /><span>Permite fora dos limites</span></label>
+                </div>
+                <div className="erp-field erp-c3">
+                  <label className="erp-label">Condição de pagamento</label>
+                  <label className="erp-check"><input type="checkbox" checked={!!form.allow_free_payment_terms} onChange={(e) => set("allow_free_payment_terms", e.target.checked)} /><span>Permite condição livre</span></label>
+                  <span className="erp-field-hint">Sem este indicador o orçamento (VVND0300) recusa condição diferente da cadastrada no cliente.</span>
+                </div>
+              </div>
+            </div>
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Prazos e tributos</div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c3"><label className="erp-label">Prazo mínimo de entrega (dias)</label><input className="erp-input num" type="number" min={0} value={form.minimum_delivery_days ?? 0} onChange={(e) => set("minimum_delivery_days", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Atraso financeiro tolerado (dias)</label><input className="erp-input num" type="number" min={0} value={form.financial_delay_days ?? 0} onChange={(e) => set("financial_delay_days", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">PIS %</label><input className="erp-input num" type="number" step="0.01" min={0} value={form.pis_percentage ?? 0} onChange={(e) => set("pis_percentage", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">COFINS %</label><input className="erp-input num" type="number" step="0.01" min={0} value={form.cofins_percentage ?? 0} onChange={(e) => set("cofins_percentage", Number(e.target.value))} /></div>
               </div>
             </div>
           </div>
