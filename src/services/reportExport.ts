@@ -1,5 +1,6 @@
 import { httpClient } from '@/services/httpClient';
 import { useAuthStore } from '@/store/authStore';
+import { downloadResponse } from '@/services/fileDownload';
 
 /**
  * Exportação genérica de relatórios/listagens.
@@ -63,33 +64,11 @@ export function canExport(): boolean {
   return ALLOWED_ROLES.includes(role);
 }
 
-/** Extrai o nome do arquivo do header Content-Disposition, com fallback. */
-function filenameFromDisposition(disposition: string | undefined, fallback: string): string {
-  if (!disposition) return fallback;
-  const star = /filename\*=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(disposition);
-  if (star?.[1]) return decodeURIComponent(star[1]);
-  const plain = /filename=["']?([^"';]+)["']?/i.exec(disposition);
-  return plain?.[1] ?? fallback;
-}
-
-/** Dispara o download de um Blob no navegador. */
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // Revoga após o tick para garantir que o download iniciou.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 /**
  * Envia a tabela para o backend, recebe o arquivo e dispara o download.
- * Lança em caso de 4xx/5xx (o chamador trata com toast).
+ * Devolve o nome do arquivo salvo. Lança em caso de 4xx/5xx (o chamador trata com toast).
  */
-export async function exportReport(format: ExportFormat, payload: ExportPayload): Promise<void> {
+export async function exportReport(format: ExportFormat, payload: ExportPayload): Promise<string> {
   const ext = EXPORT_FORMATS.find((f) => f.format === format)?.ext ?? format;
   const fallbackName = `${payload.filename || 'relatorio'}.${ext}`;
 
@@ -114,9 +93,7 @@ export async function exportReport(format: ExportFormat, payload: ExportPayload)
     throw e instanceof Error ? e : new Error('Falha ao exportar o relatório.');
   }
 
-  const filename = filenameFromDisposition(
-    response.headers?.['content-disposition'] as string | undefined,
-    fallbackName,
-  );
-  triggerDownload(response.data as Blob, filename);
+  // `notify: false`: o toast de conclusão é emitido pelo chamador (useReportExport),
+  // que já sabe o formato escolhido — evita dois avisos para a mesma exportação.
+  return downloadResponse(response.data as Blob, response.headers as Record<string, unknown> | undefined, fallbackName, { notify: false });
 }

@@ -1,4 +1,5 @@
 import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { downloadBlob } from '@/services/fileDownload';
 
 const BASE = '/api/customers';
 const SUPPORT = `${BASE}/support`;
@@ -198,9 +199,5 @@ export async function lookupCnpj(cnpj: string): Promise<CnpjLookup> {
 /** Exporta a lista de clientes como arquivo (xlsx/pdf/csv), com download no navegador. */
 export async function exportCustomers(fmt: 'xlsx' | 'pdf' | 'csv'): Promise<void> {
   const { data } = await httpClient.get(BASE, { params: { format: fmt }, responseType: 'blob' });
-  const url = URL.createObjectURL(data as Blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `clientes.${fmt}`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(data as Blob, `clientes.${fmt}`);
 }

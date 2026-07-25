@@ -1,4 +1,5 @@
 import { httpClient, parseStr, parseNum, parseBool, currentUserId, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { downloadBlob } from '@/services/fileDownload';
 
 const BASE = '/api/cutting-plans';
 
@@ -260,11 +261,7 @@ export async function getOrderCosts(id: number): Promise<Obj[]> {
 // ── Export (download binário) ──
 export async function exportCuttingMap(id: number, fmt: 'svg' | 'dxf' | 'pdf'): Promise<void> {
   const { data } = await httpClient.get(`${BASE}/${id}/export`, { params: { format: fmt }, responseType: 'blob' });
-  const url = URL.createObjectURL(data as Blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `plano_corte_${id}.${fmt}`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(data as Blob, `plano_corte_${id}.${fmt}`);
 }
 
 // ── Settings + retalhos ──

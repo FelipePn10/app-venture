@@ -121,8 +121,8 @@ function parseItemSupplier(raw: unknown): ItemSupplierDTO {
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode'),
     ranking: parseNum(o, 'ranking', 'Ranking'),
     supplier_item_code: parseStr(o, 'supplier_item_code', 'SupplierItemCode') || undefined,
-    supplier_item_desc: parseStr(o, 'supplier_item_desc', 'SupplierItemDesc') || undefined,
-    supplier_uom: parseStr(o, 'supplier_uom', 'SupplierUom') || undefined,
+    supplier_item_desc: parseStr(o, 'supplier_description', 'SupplierDescription') || undefined,
+    supplier_uom: parseStr(o, 'uom', 'UOM') || undefined,
     lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
   };
 }

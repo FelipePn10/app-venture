@@ -498,7 +498,7 @@ Cadastrar e manter os centros de custo da empresa, que permitem classificar e ra
 
 ##### Objetivo
 
-Gerenciar o ciclo de vida completo dos títulos a pagar: criação, aprovação/rejeição, baixa (pagamento parcial ou total) e cancelamento. A tela oferece um dashboard de aging com faixas de vencimento (a vencer, vencido 30, 60, 90 e +90 dias) e status visuais (âmbar = pendente, azul = aprovado, verde = pago, vermelho = cancelado).
+Gerenciar o ciclo de vida completo dos títulos a pagar: criação, aprovação/rejeição, baixa (pagamento parcial ou total) e cancelamento. A tela oferece um dashboard de aging cujas faixas de vencimento vêm agrupadas do backend (**Vencido**, **7 dias**, **15 dias**, **30 dias**, **60 dias** e **Acima de 60 dias**), mais o total somado, e status visuais (âmbar = pendente, azul = aprovado, verde = pago, vermelho = cancelado).
 
 **INTEGRAÇÃO CRÍTICA**: Quando uma NF-e de Entrada é aprovada no módulo Fiscal (VFIS0210), o sistema gera automaticamente uma conta a pagar nesta tela.
 
@@ -597,7 +597,7 @@ Gerenciar o ciclo de vida completo dos títulos a pagar: criação, aprovação/
 - **Baixa parcial**: o sistema suporta nativamente pagamentos parciais. Enquanto houver saldo em aberto, o título permanece disponível para novas baixas.
 - **Status e cores**: pendente (âmbar/laranja) → aprovado (azul) → pago (verde) ou cancelado (vermelho).
 - **Geração automática**: ao aprovar uma NF-e de Entrada no VFIS0210, o sistema cria automaticamente uma conta a pagar nesta tela com os dados da nota.
-- **Dashboard de aging**: exibe totais de a vencer, vencido até 30d, 31–60d, 61–90d e +90d. Clique nas faixas para filtrar a tabela.
+- **Dashboard de aging**: exibe um cartão por faixa devolvida pelo backend (Vencido, 7, 15, 30 e 60 dias, e Acima de 60 dias) mais o total somado. Os cartões são informativos — para filtrar a tabela use o seletor de status da barra.
 - **Filtro por status**: use o seletor de status (Todos / pendente / aprovado / pago / cancelado) para refinar a listagem.
 
 ##### Telas Relacionadas
@@ -695,7 +695,7 @@ Gerenciar o ciclo de vida dos títulos a receber: criação, baixa (recebimento 
 - **Sem fluxo de aprovação**: diferentemente do VFIN0200, títulos a receber não passam por aprovação. São criados como pendentes e podem ser baixados imediatamente.
 - **Status possíveis**: pendente (âmbar), parcial (azul), pago (verde), cancelado (vermelho).
 - **Recebimento parcial**: suportado nativamente. O hint no painel de baixa exibe o saldo restante.
-- **Dashboard de aging**: idêntico ao VFIN0200, com faixas de a vencer, vencido 30d, 31–60d, 61–90d e +90d.
+- **Dashboard de aging**: idêntico ao VFIN0200 — as faixas vêm agrupadas do backend (Vencido, 7, 15, 30 e 60 dias, e Acima de 60 dias), mais o total somado.
 - **Integração fiscal**: títulos podem ser vinculados a NF-e de Saída (VFIS0200) para rastreabilidade.
 
 ##### Telas Relacionadas
@@ -795,14 +795,17 @@ Processar e exibir a apuração de impostos indiretos (ICMS, IPI, PIS, COFINS) p
 3. Escolha uma das duas ações:
    - **Consultar**: recupera uma apuração já processada anteriormente para esta competência.
    - **Apurar**: executa o cálculo dos impostos com base nos dados fiscais do período. O botão muda para "Apurando..." e fica desabilitado durante o processamento.
-4. Após o processamento, a tabela de resultado exibe:
+4. Após o processamento, a tabela de resultado exibe **uma linha por imposto apurado**
+   no período (tipicamente ICMS, IPI, PIS e COFINS — mas quem define a lista é o
+   backend; imposto sem movimento no período não aparece):
 
 | Imposto | Saídas (Débito) | Entradas (Crédito) | Saldo a Recolher |
 |---------|----------------|--------------------|--------------------|
 | ICMS | R$ X.XXX,XX | R$ X.XXX,XX | R$ X.XXX,XX (cor) |
-| IPI | R$ X.XXX,XX | R$ X.XXX,XX | R$ X.XXX,XX (cor) |
-| PIS | R$ X.XXX,XX | R$ X.XXX,XX | R$ X.XXX,XX (cor) |
-| COFINS | R$ X.XXX,XX | R$ X.XXX,XX | R$ X.XXX,XX (cor) |
+| … | … | … | … |
+
+   O **Saldo a Recolher** é o saldo devedor menos o saldo credor da linha. A
+   **competência** e o **status** exibidos no cabeçalho vêm da apuração retornada.
 
 5. O **Saldo a Recolher** é formatado com cor condicional:
    - **Vermelho**: saldo positivo (valor a recolher/pagar).
@@ -821,6 +824,8 @@ Processar e exibir a apuração de impostos indiretos (ICMS, IPI, PIS, COFINS) p
 - O botão **Apurar** processa os cálculos assincronamente. Durante o processamento, ambos os botões (Consultar e Apurar) ficam desabilitados.
 - Se a apuração já tiver sido processada anteriormente, use **Consultar** para recuperar os resultados sem recalcular.
 - Os dados vêm exclusivamente das notas fiscais (entrada e saída). Certifique-se de que as notas do período estejam devidamente emitidas/aprovadas.
+- A apuração é gravada por imposto: cada linha tem seu próprio status e pode gerar
+  título a pagar (`cp_id`) com data de vencimento própria.
 - Similar ao VFIS0340 (Apuração Simples Nacional) para empresas do regime Simples.
 
 ##### Telas Relacionadas
@@ -1458,7 +1463,7 @@ Definir níveis de prioridade para ordens de produção, utilizados pelo sistema
 
 | Termo | Definição |
 |-------|-----------|
-| **Aging** | Análise de vencimentos agrupados por faixa de dias (a vencer, vencido 30, 60, 90, +90 dias). |
+| **Aging** | Análise de vencimentos agrupados por faixa de dias. As faixas são definidas pelo backend: Vencido, 7, 15, 30 e 60 dias, e Acima de 60 dias. |
 | **APS** | Advanced Planning and Scheduling — sistema de sequenciamento e planejamento avançado da produção. |
 | **Baixa** | Registro do pagamento (Contas a Pagar) ou recebimento (Contas a Receber) de um título financeiro. |
 | **Baixa Parcial** | Pagamento ou recebimento de valor inferior ao saldo total do título, mantendo-o em aberto pelo restante. |
@@ -1488,8 +1493,8 @@ R: No VFIN0200, localize o título aprovado, clique em **Baixar** e informe um *
 **P: Uma NF-e de Entrada aprovada gera automaticamente conta a pagar?**
 R: Sim. Quando uma NF-e de Entrada é aprovada no VFIS0210, o sistema automaticamente cria um título a pagar no VFIN0200 com os dados da nota. Esta é uma integração crítica entre os módulos Fiscal e Financeiro.
 
-**P: O que significam as cores no dashboard de aging?**
-R: As cores são informativas por faixa — tons de verde para títulos a vencer, amarelo/âmbar para vencidos recentes (até 30d), laranja para 31–60d e vermelho para vencidos há mais de 60 dias. Não são os status dos títulos individuais.
+**P: Quais faixas aparecem no dashboard de aging?**
+R: As faixas são agrupadas pelo backend a partir da data de vencimento: **Vencido** (já vencidos), **7 dias**, **15 dias**, **30 dias**, **60 dias** e **Acima de 60 dias**, mais o **Total** somado. Só aparecem as faixas que têm título no período — se nenhum título vence em 7 dias, o cartão não é exibido. As cores da tabela abaixo indicam o status do título (pendente/aprovado/pago/cancelado), não a faixa de aging.
 
 **P: Qual a diferença entre VFIN0130 e VCTB0102?**
 R: Ambas cadastram centros de custo. O VFIN0130 é do módulo financeiro (código + descrição + tipo). O VCTB0102 é do módulo contábil e adiciona vínculo com empresa e controle de Ativo/Inativo. São complementares.
@@ -4118,6 +4123,12 @@ Cadastrar e gerenciar as **Divisões de Vendas** da empresa — estruturas organ
    - **Análise comercial** e **Análise financeira**: definem se pedidos desta divisão
      passam por análise/bloqueio (ver tabela abaixo). Padrão: **Livre**.
    - **Considera MRP**: quando marcado, a demanda desta divisão entra no cálculo do MRP.
+   - **Permite condição livre**: libera o orçamento (VVND0300) a usar condição de
+     pagamento diferente da cadastrada no cliente. Sem esse indicador o backend recusa
+     a troca.
+   - Demais indicadores e parâmetros: **Considera promessa** de entrega, **Divisão de
+     assistência**, **Permite fora dos limites** de crédito, **prazo mínimo de entrega**,
+     **atraso financeiro tolerado**, **PIS %** e **COFINS %**.
 4. Clique em **Salvar** para persistir o registro.
 5. Para editar uma divisão existente, selecione-a na tabela de listagem, altere os campos e salve novamente.
 6. Utilize **Exportar** para gerar um relatório das divisões cadastradas.
@@ -4131,6 +4142,17 @@ Cadastrar e gerenciar as **Divisões de Vendas** da empresa — estruturas organ
 | Análise comercial | seleção | Não | Livre / Bloqueia sempre / Sempre analisa | Regra de análise comercial do pedido (default: Livre) |
 | Análise financeira | seleção | Não | Livre / Bloqueia sempre / Sempre analisa | Regra de análise financeira do pedido (default: Livre) |
 | Considera MRP | toggle | Não | — | Inclui a demanda da divisão no cálculo do MRP |
+| Considera promessa | toggle | Não | — | Divisão participa da promessa de entrega |
+| Divisão de assistência | toggle | Não | — | Marca a divisão como de assistência técnica |
+| Permite fora dos limites | toggle | Não | — | Aceita pedido fora dos limites de crédito |
+| Permite condição livre | toggle | Não | — | Libera condição de pagamento diferente da do cliente no orçamento (VVND0300) |
+| Prazo mínimo de entrega | número | Não | — | Dias mínimos entre pedido e entrega |
+| Atraso financeiro tolerado | número | Não | — | Dias de atraso aceitos na análise financeira |
+| PIS % / COFINS % | número | Não | — | Alíquotas aplicadas nos cálculos da divisão |
+
+> **Atenção ao editar:** o backend regrava a divisão inteira a cada gravação. A tela
+> sempre envia o registro completo — se integrar por API, mande todos os campos, senão
+> os ausentes voltam ao valor zero.
 
 **Valores de análise:**
 
@@ -7499,6 +7521,11 @@ precisa para participar do planejamento e da produção:
 - Item **comprado** → precisa de **fornecedor preferencial** e recebe um alerta se
   faltar a **conversão de unidade de medida** (necessária quando a UM de compra é
   diferente da UM de estoque).
+- Item **de terceiro** → material de terceiro em poder da empresa; não gera ordem.
+- Item **serviço** → serviço comercial/fiscal; **não gera ordem de material**. É o
+  tipo exigido para vender serviço em NFC-e: além dele, o parâmetro "itens de serviço
+  na NFC-e" (VVND0310) precisa estar ligado e o orçamento precisa estar marcado como
+  "entrega com recibo" (VVND0300).
 
 A verificação **apenas informa** o que está pronto ou pendente — ela **não altera** o
 item. Use-a como uma conferência final antes de colocar o item para operar.
@@ -7697,51 +7724,140 @@ acompanhamento de oportunidades da carteira.
 
 ##### Pré-requisitos
 
+- **Motivos de cancelamento** cadastrados em **VVND0310** — sem ao menos um motivo
+  o sistema não deixa cancelar orçamento nem item.
 - **Cliente** cadastrado (VCLI0500).
 - **Itens** cadastrados (VENT0200).
-- **Condição de pagamento** (VFIN0110), quando aplicável.
+- **Condição de pagamento** (VFIN0110), quando aplicável. Para usar uma condição
+  diferente da cadastrada no cliente, a **divisão de vendas** (VVND0100) precisa
+  estar marcada como "permite condição livre".
 
 ##### Passo a passo
 
 1. Acesse **VVND0300 — Orçamento de Venda** e clique em **Novo orçamento**.
-2. Informe **Estabelecimento**, **Cliente**, **Tipo** (VENDA, NEGOCIACAO, CONSULTA…),
-   **Validade**, **Probabilidade %** e demais condições; clique em **Criar orçamento**
-   (nasce como **Rascunho / R**).
+2. Informe **Cliente**, **Tipo** (VENDA, NEGOCIACAO, CONSULTA…), **Validade**,
+   **Probabilidade %** e demais condições; clique em **Criar orçamento** (nasce como
+   **Orçam. VentureERP / OV**). O estabelecimento pode ficar em branco — assume a
+   empresa do seu login. Transportadora, tabela de preço e condição de pagamento
+   ficam em branco para herdar o cadastro do cliente.
 3. Abra o orçamento na lista e adicione **itens** (item, quantidade, preço, desconto,
-   data de entrega). Os totais e o **valor ponderado** pela probabilidade são
-   calculados pelo sistema.
-4. Quando aprovado, clique em **Converter em pedido**. O sistema cria o pedido de
-   venda com o **saldo aberto** e registra o vínculo (**→ Pedido N**). O ciclo segue
-   no **VVND0200** (crédito, reserva, MRP, faturamento).
-5. Alternativas: **Atender** encerra a proposta sem gerar pedido; **Cancelar** (exige
-   motivo) mantém o registro consultável; **Descancelar** reabre a proposta.
+   IPI, ST, depósito, data de entrega). Os totais são recalculados a cada alteração
+   e as **políticas comerciais** são reavaliadas — uma política que exija aprovação
+   bloqueia o orçamento automaticamente.
+4. Ajuste a capa quando precisar e clique em **Salvar capa**. Enquanto houver
+   alteração não salva, a troca de status e o bloqueio/liberação ficam travados.
+5. Quando aprovado, clique em **Converter em pedido**. O sistema cria o pedido de
+   venda com o **saldo aberto** — pedido, itens, vínculo e evento são gravados na
+   mesma transação. O ciclo segue no **VVND0200** (crédito, reserva, MRP, faturamento).
+6. Alternativas: **Atender** encerra a proposta sem gerar pedido; **Cancelar** exige
+   um motivo cadastrado e mantém o registro consultável; **Descancelar** reabre a
+   proposta; **Gerar DAV** registra o DAV/Pré-Venda.
 
 ##### Campos principais
 
 | Campo | Obrigatório | Função |
 |-------|-------------|--------|
-| Estabelecimento | Sim | Empresa emissora |
 | Cliente | Sim | Destinatário da proposta |
+| Estabelecimento | Não | Em branco assume a empresa do login |
 | Tipo | Não | VENDA, NEGOCIACAO, CONSULTA, API_TERCEIROS, FOCCOPORTAL, IMPORTADO |
 | Válido até | Não | Prazo de validade (expira depois) |
 | Probabilidade % | Não | Peso do valor ponderado da carteira |
+| Divisão de vendas | Não | Necessária para trocar a condição de pagamento do cliente |
+| Tipo de frete | Não | Lista fechada; FOB/cortesia/retira/sem frete/terceiros zeram frete e seguro |
+| Entrega com recibo | Não | Força NFC-e e zera o IPI dos itens novos |
 | Item / Qtd / Preço | Sim (por item) | Linha do orçamento |
+
+##### Abas
+
+- **Dados gerais**: identificação, condições comerciais, transporte, valores e
+  observações. Mostra os totais, o saldo aberto e os motivos de bloqueio,
+  cancelamento e atendimento.
+- **Itens**: inclusão, edição (quantidade solicitada/atendida/cancelada, preço,
+  descontos, IPI, ST) e cancelamento com motivo.
+- **Anexos**: documentos de até **10 MB** por arquivo — incluir, baixar e excluir.
+- **Histórico**: todos os eventos do orçamento (cancelamento, descancelamento,
+  bloqueio, liberação, atendimento, conversão), do mais recente ao mais antigo.
 
 ##### Observações importantes
 
 - **Não** emite NF-e nem autoriza documento fiscal — o campo **Venda NFC-e** apenas
   prepara a intenção fiscal que o pedido/faturamento consome depois.
 - A **conversão é bloqueada** para orçamentos cancelados, expirados, atendidos, do
-  tipo **CONSULTA**, bloqueados comercialmente ou já convertidos.
+  tipo **CONSULTA**, bloqueados comercialmente, sem itens ou já convertidos.
+- **Cancelamento e cancelamento de item exigem um motivo cadastrado.** Motivos
+  marcados com "exige complemento" recusam complemento em branco.
+- **Descancelar só funciona com o mesmo motivo do cancelamento**, e apenas se esse
+  motivo permitir descancelamento — por isso a tela apresenta o motivo travado.
+- Depois de **Gerar DAV**, o orçamento libera **apenas o relatório DAV**: cupom
+  fiscal, impressão de pedido e envio por e-mail ficam indisponíveis. A geração é
+  idempetente (gerar de novo não muda a data).
+- **Status** muda somente pela caixa "Alterar status" (as transições disponíveis
+  dependem do status atual); cancelar, atender e expirar têm ações próprias.
 - Use **Relatório** para consolidar totais, retenções e valor ponderado por
-  probabilidade da carteira filtrada.
-- Itens só podem ser adicionados/cancelados enquanto o orçamento está em **Rascunho**.
+  probabilidade da carteira filtrada. A listagem traz até 100 orçamentos por página.
 
 ##### Telas relacionadas
 
+- **VVND0310 (Parâmetros de Orçamento)**: motivos de cancelamento, padrões de
+  comissão e parâmetros da empresa — pré-requisito desta tela.
 - **VVND0200 (Pedido de Venda)**: destino da conversão do orçamento.
-- **VVND0100 (Divisão de Vendas)**: organização comercial associável.
+- **VVND0100 (Divisão de Vendas)**: organização comercial associável e indicador de
+  condição de pagamento livre.
 - **VCLI0500 (Cadastro de Cliente)**: origem do cliente da proposta.
+
+---
+
+#### VVND0310 — Parâmetros de Orçamento
+
+##### Objetivo
+
+Configurar, **por empresa**, o comportamento do orçamento de venda: os rótulos dos
+campos comerciais, o cliente consumidor final, o padrão de NFC-e, as regras de
+frete e os dois cadastros de apoio que o VVND0300 consome — **padrões de comissão**
+e **motivos de cancelamento**.
+
+##### Pré-requisitos
+
+- Perfil **ADMIN** para gravar (qualquer perfil pode consultar).
+- **Cliente** cadastrado (VCLI0500), quando for definir o consumidor final.
+
+##### Passo a passo
+
+1. Acesse **VVND0310 — Parâmetros de Orçamento**.
+2. Na aba **Parâmetros**, ajuste os rótulos, o consumidor final, o padrão NFC-e, o
+   **frete CIF mínimo** e o tratamento do **redespacho**; clique em **Salvar parâmetros**.
+3. Na aba **Padrões de comissão**, informe descrição e os percentuais. O **código
+   pode ficar em branco** (o sistema gera o próximo). Clique em **Gravar padrão**.
+4. Na aba **Motivos de cancelamento**, cadastre ao menos um motivo antes de operar o
+   VVND0300. Marque **Indicador D** para permitir descancelamento e **Indicador C**
+   para exigir complemento no cancelamento. Clique em **Gravar motivo**.
+
+##### Campos principais
+
+| Campo | Obrigatório | Função |
+|-------|-------------|--------|
+| Campo "ordem de compra" | Sim | Rótulo exibido no orçamento |
+| Campo "autorização de entrega" | Sim | Rótulo exibido no orçamento |
+| Cliente consumidor final | Não | Único cliente que aceita documento estrangeiro |
+| Padrão NFC-e | Não | Novos orçamentos já nascem como NFC-e |
+| Itens de serviço na NFC-e | Não | Libera item de serviço (ainda exige "entrega com recibo") |
+| Frete CIF mínimo | Não | Piso aplicado nos tipos CIF/DAF com "conferir frete" |
+| Somar redespacho ao frete | Não | Soma o redespacho ao frete e zera o campo na gravação |
+| Comissão / Faturamento / Pagamento % | Sim (por padrão) | Faturamento + pagamento tem de somar a comissão |
+| Indicador D / Indicador C | Não | Permite descancelar / exige complemento |
+
+##### Observações importantes
+
+- **Sem motivo de cancelamento cadastrado o VVND0300 não cancela nada** — nem o
+  orçamento, nem itens.
+- Gravar com um **código já existente atualiza** o registro (padrões e motivos).
+- As listas mostram apenas registros **ativos**.
+- A gravação é restrita a **ADMIN**; para os demais perfis a tela abre em consulta.
+
+##### Telas relacionadas
+
+- **VVND0300 (Orçamento de Venda)**: consome todos os cadastros desta tela.
+- **VCLI0500 (Cadastro de Cliente)**: origem do cliente consumidor final.
 
 ---
 
@@ -8400,8 +8516,9 @@ Exponencial, Média Móvel (k=3) ou Média Móvel (k=6).
 
 1. Informe o **item** e a **quantidade de períodos à frente**.
 2. Preencha o **histórico** (período e quantidade).
-3. Calcule. O sistema retorna o **modelo usado**, o **MAPE** (erro %) e a previsão por
-   período.
+3. Calcule. O sistema retorna o **modelo escolhido**, o **MAPE** (erro %) e uma
+   **quantidade prevista por período futuro** — a tabela numera os períodos como
+   `+1`, `+2`, … a partir do fim do histórico, na mesma ordem em que ele foi enviado.
 
 ##### Observações importantes
 
@@ -10455,6 +10572,76 @@ Uma consulta pontual não calcula o imposto final e não substitui a simulação
 Para UF, informe a sigla de duas letras e confira nome, código IBGE e situação. Para região, informe o código interno exibido na VCLI0510 e confira descrição e estado ativo. Use o resultado para validar cadastros de endereço, clientes e regras comerciais; não digite um código apenas com base no nome apresentado em documentos externos.
 
 Sigla inválida, região inexistente ou registro de outra empresa retorna erro/resultado vazio. A rotina não cria UF ou região e não possui fallback local de municípios, estados ou regiões.
+
+### VPCT0100 — Tolerâncias de Pedido de Compra
+
+**Objetivo.** Cadastrar as regras que dizem quanto uma entrega pode divergir do pedido de compra antes de o sistema avisar ou bloquear.
+
+Cada regra combina **tipo** (quantidade, preço ou prazo), **abrangência** (todos ou um fornecedor específico), o **intervalo** de valores em que ela vale, a **tolerância** (em percentual ou valor absoluto) e a **ação** — avisar ou bloquear. Use **Carregar** para listar, **Nova** para limpar o formulário e salvar; a exclusão remove a regra da avaliação imediatamente.
+
+O painel de **avaliação** simula uma divergência: informe o valor esperado e o real e a tela devolve o veredito que o recebimento aplicaria, sem gravar nada. Use-o para conferir uma regra antes de colocá-la em produção.
+
+Regras se acumulam: uma tolerância por fornecedor e outra geral podem valer ao mesmo tempo — a precedência é resolvida pelo backend. Esta rotina não altera pedidos nem recebimentos já lançados.
+
+### VDES0100 — Desenhos Técnicos
+
+**Objetivo.** Manter o cadastro de desenhos de engenharia e o histórico de revisões de cada um.
+
+Clique em **Carregar** para listar e selecione um desenho para ver os dados e as revisões. Para criar, informe pelo menos **código** e **descrição** (formato, modelo, dígito e unidade são complementares). Para registrar uma revisão, abra o desenho e informe a **revisão**, a **data de início**, o **motivo** e o **aprovador**; marque **é a atual** para que ela passe a valer.
+
+O histórico é acumulativo — revisões anteriores permanecem consultáveis. Excluir um desenho remove também o vínculo com as revisões, então confirme antes que nenhum item em produção dependa dele.
+
+### VTPS0100 — Serviços de Terceiros
+
+**Objetivo.** Cadastrar preços de serviço por fornecedor e acompanhar as ordens de serviço enviadas a terceiros. A tela tem duas abas.
+
+Em **Preços**, cada registro amarra **item + fornecedor + operação** a um preço unitário, com unidade, tipo de frete e o indicador de fornecedor **preferencial**. Item, fornecedor e operação são obrigatórios — sem os três o preço não é aceito.
+
+Em **Ordens de serviço**, a listagem mostra as ordens em aberto e permite mudar o status de cada uma conforme o serviço avança no fornecedor.
+
+O preço preferencial orienta a escolha automática na geração da ordem; ele não impede que outro fornecedor seja usado manualmente.
+
+### VPLN0100 — Pipeline de Planejamento (MRP→CRP→APS)
+
+**Objetivo.** Disparar em sequência o cálculo de materiais (MRP), a análise de capacidade (CRP) e o sequenciamento (APS) para um plano, e ajustar os parâmetros globais de planejamento.
+
+Informe o **plano**, o **número inicial de ordem** (default 10000) e, opcionalmente, a **data de início**; clique em executar. O resultado informa se o plano é **viável** e traz as observações do cálculo. Um plano inviável indica falta de capacidade ou de material no horizonte — trate as exceções antes de firmar as sugestões.
+
+O bloco de **parâmetros** lista os parâmetros numerados de planejamento e permite alterar o valor de um deles. São parâmetros globais: a mudança afeta todos os próximos cálculos, não apenas o plano em tela.
+
+Executar o pipeline **regrava as sugestões** do plano informado. Ele não firma ordens automaticamente — a firmação continua nas rotinas de MRP.
+
+### VBOM0100 — Cabeçalhos de Estrutura (BOM)
+
+**Objetivo.** Controlar as **versões** da estrutura de um item: cada cabeçalho é uma versão com tipo, vigência e status próprios. As linhas (componentes) ficam na VENT0210.
+
+Informe o **item** e clique em carregar para ver as versões existentes. Para criar uma versão nova, informe o **tipo** (MBOM por padrão), opcionalmente a **máscara** e a **data de início de vigência**. O status percorre **DRAFT → APPROVED → OBSOLETE** e é alterado direto na listagem.
+
+Só a versão **APPROVED** vigente é considerada pelo MRP e pela produção. Criar um cabeçalho não copia as linhas da versão anterior — depois de criar, monte a estrutura na VENT0210.
+
+### VLOT0100 — Máscaras de Lote/Série
+
+**Objetivo.** Definir como o número de lote/série é montado e gerar o próximo número da sequência.
+
+Crie a máscara informando **aplicação** e **descrição** (item e cliente são opcionais, para máscaras específicas). Depois abra a máscara e monte o número **parte por parte**: cada parte tem um tipo (caractere fixo, data, sequencial…), um valor, um tamanho e, para datas, um formato. As partes são numeradas de 10 em 10 na ordem em que você as adiciona.
+
+A geração usa as partes na ordem cadastrada — mudar uma parte muda os lotes futuros, nunca os já gerados. Lotes emitidos permanecem como estão.
+
+### VAUD0100 — Log de Auditoria
+
+**Objetivo.** Consultar o registro de quem alterou o quê no sistema. Rotina **somente leitura** e **restrita a administradores**.
+
+Filtre por **entidade**, **ação** e **usuário** e clique em carregar. As colunas da tabela são montadas dinamicamente a partir do que o backend devolve — o conjunto varia conforme a entidade consultada. Datas aparecem no formato `AAAA-MM-DD hh:mm:ss` e objetos aninhados são exibidos em JSON.
+
+O log é imutável: não há edição nem exclusão por aqui. Usuário sem perfil de administrador recebe 403.
+
+### VUSR0100 — Solicitações de Troca de Senha
+
+**Objetivo.** Conduzir o fluxo de troca de senha: **solicitar → aprovar/rejeitar → concluir**.
+
+O usuário solicita informando o **motivo** (obrigatório). Um administrador então **aprova** ou **rejeita** a solicitação na listagem. Com a solicitação aprovada, a troca é concluída informando o **id da solicitação**, a **senha atual**, a **nova senha** e a **confirmação** — a tela recusa quando nova senha e confirmação não conferem.
+
+A senha só muda no passo de conclusão: aprovar apenas libera a troca. Uma solicitação rejeitada não pode ser concluída — abra uma nova.
 
 ## Permissões e mensagens
 

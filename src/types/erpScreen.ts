@@ -1013,7 +1013,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VVND0300",
     title: "Orçamento de Venda",
-    description: "Registrar propostas comerciais (capa + itens), acompanhar carteira, cancelar/descancelar/atender e converter o saldo aberto em pedido de venda.",
+    description: "Registrar propostas comerciais (capa + itens), acompanhar carteira, liberar/bloquear, cancelar/descancelar com motivo, atender, anexar documentos, gerar DAV/Pré-Venda e converter o saldo aberto em pedido de venda.",
+    module: "comercial",
+  },
+  {
+    code: "VVND0310",
+    title: "Parâmetros de Orçamento",
+    description: "Configurar por empresa os rótulos dos campos comerciais, cliente consumidor final, padrão NFC-e, frete CIF mínimo e redespacho, além dos padrões de comissão e motivos de cancelamento usados no VVND0300.",
     module: "comercial",
   },
   {

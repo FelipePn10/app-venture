@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { EXPORT_FORMATS, exportReport, type ExportFormat, type ExportPayload } from '@/services/reportExport';
 import { errMessage } from '@/services/fiscalShared';
+import { notifyDownload } from '@/services/fileDownload';
 
 export type ExportToast = { type: 'success' | 'error'; message: string } | null;
 
@@ -26,17 +27,22 @@ export function useReportExport(): UseReportExport {
 
   const run = useCallback(async (format: ExportFormat, payload: ExportPayload) => {
     if (!payload.rows.length) {
-      setToast({ type: 'error', message: 'Nada para exportar — gere/filtre os dados primeiro.' });
+      const message = 'Nada para exportar — gere/filtre os dados primeiro.';
+      setToast({ type: 'error', message });
+      notifyDownload('error', message);
       return;
     }
     const label = EXPORT_FORMATS.find((f) => f.format === format)?.label ?? format.toUpperCase();
     setExporting(format);
     setToast(null);
     try {
-      await exportReport(format, payload);
+      const filename = await exportReport(format, payload);
       setToast({ type: 'success', message: `Exportação para ${label} concluída.` });
+      notifyDownload('success', `Exportação para ${label} concluída — o arquivo está na sua pasta de downloads.`, filename);
     } catch (e) {
-      setToast({ type: 'error', message: errMessage(e, 'Falha ao exportar o relatório.') });
+      const message = errMessage(e, 'Falha ao exportar o relatório.');
+      setToast({ type: 'error', message });
+      notifyDownload('error', message);
     } finally {
       setExporting(null);
     }

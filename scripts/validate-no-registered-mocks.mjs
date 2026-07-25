@@ -53,7 +53,10 @@ for (const file of productionFiles) {
 }
 
 if (/VITE0129:\s*<Vite0129Page/.test(host)) failures.push('VITE0129 ainda aponta para a implementação simulada');
-if (/VIMP010[12]:\s*<Vimp010[12]Page/.test(host)) failures.push('rotina de importação ainda aponta para implementação simulada');
+// VIMP0101 saiu da lista: o commit 2c04d7b reescreveu a tela para consumir
+// `/api/procurement/import-processes` (rotas reais). VIMP0102 (CT-e) segue aqui
+// porque não tem implementação — se um stub for registrado, a regra trava.
+if (/VIMP0102:\s*<Vimp0102Page/.test(host)) failures.push('rotina de importação ainda aponta para implementação simulada');
 if (/USE_MOCK_AUTH|simulateLogin|mock-jwt-token/.test(auth)) failures.push('autenticação simulada ainda disponível');
 
 const catalogCodes = new Set([...catalog.matchAll(/code:\s*["']([A-Z][A-Z0-9]+)["']/g)].map((match) => match[1]));

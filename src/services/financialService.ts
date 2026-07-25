@@ -17,7 +17,12 @@ export interface ContaBancariaDTO {
 }
 export interface ContaBancaria extends ContaBancariaDTO {
   id: number;
-  saldo_atual: number;
+  /**
+   * `ContaBancariaResponse` NÃO traz saldo atual — o cadastro só guarda o saldo
+   * inicial. O saldo movimentado vem de `/saldo-contas` ({@link getSaldoContas}),
+   * consumido pelo VFIN0300. Fica opcional para a tela poder cair no saldo inicial.
+   */
+  saldo_atual?: number;
 }
 
 export interface CondicaoPagamentoDTO { nome: string; parcelas: string; }
@@ -102,12 +107,15 @@ export interface BaixaRecebimentoDTO {
   observacao?: string;
 }
 
-export interface Aging {
-  a_vencer: number;
-  vencido_ate_30: number;
-  vencido_31_60: number;
-  vencido_61_90: number;
-  vencido_acima_90: number;
+/**
+ * Faixa de vencimento devolvida por `/contas-pagar/aging` e `/contas-receber/aging`.
+ *
+ * O backend responde uma LISTA de `{period, total}` agrupada no SQL — as faixas
+ * são `Vencido`, `7 dias`, `15 dias`, `30 dias`, `60 dias` e `Acima de 60 dias`.
+ * Não existe um objeto único com faixas fixas: a tela renderiza o que vier.
+ */
+export interface AgingBucket {
+  period: string;
   total: number;
 }
 
@@ -144,21 +152,25 @@ export interface SaldoConta {
 
 // ─── Apuração ───────────────────────────────────────────────────────────────
 
-export interface ApuracaoImpostos {
+/**
+ * Apuração de impostos — `/apuracao-impostos`.
+ *
+ * O backend devolve uma LISTA com UMA LINHA POR IMPOSTO (`TaxAssessmentResponse`),
+ * não um objeto com colunas fixas por tributo. `debitos` são as saídas,
+ * `creditos` as entradas, e o resultado do período fica em `saldo_devedor` /
+ * `saldo_credor` (um dos dois é zero).
+ */
+export interface ApuracaoImposto {
+  id: number;
+  imposto: string;
   competencia: string;
-  valor_icms_saidas: number;
-  valor_icms_entradas: number;
-  saldo_icms: number;
-  valor_ipi_saidas: number;
-  valor_ipi_entradas: number;
-  saldo_ipi: number;
-  valor_pis_saidas: number;
-  valor_pis_entradas: number;
-  saldo_pis: number;
-  valor_cofins_saidas: number;
-  valor_cofins_entradas: number;
-  saldo_cofins: number;
+  debitos: number;
+  creditos: number;
+  saldo_devedor: number;
+  saldo_credor: number;
   status: string;
+  cp_id?: number;
+  data_vencimento?: string;
 }
 
 // ─── Parsers (tolerate snake_case AND PascalCase — see demo doc §7) ──────────
@@ -174,7 +186,7 @@ function parseContaBancaria(raw: unknown): ContaBancaria {
     descricao: parseStr(o, 'descricao', 'Descricao'),
     titular: parseStr(o, 'titular', 'Titular'),
     saldo_inicial: parseNum(o, 'saldo_inicial', 'SaldoInicial'),
-    saldo_atual: parseNum(o, 'saldo_atual', 'SaldoAtual'),
+    saldo_atual: parseNum(o, 'saldo_atual', 'SaldoAtual') || undefined,
     chave_pix: parseStr(o, 'chave_pix', 'ChavePix'),
     tipo_chave_pix: parseStr(o, 'tipo_chave_pix', 'TipoChavePix'),
   };
@@ -244,16 +256,17 @@ function parseReceber(raw: unknown): ContaReceber {
   };
 }
 
-function parseAging(raw: unknown): Aging {
+function parseAgingBucket(raw: unknown): AgingBucket {
   const o = unwrapObject(raw);
   return {
-    a_vencer: parseNum(o, 'a_vencer', 'AVencer'),
-    vencido_ate_30: parseNum(o, 'vencido_ate_30', 'VencidoAte30'),
-    vencido_31_60: parseNum(o, 'vencido_31_60', 'Vencido3160'),
-    vencido_61_90: parseNum(o, 'vencido_61_90', 'Vencido6190'),
-    vencido_acima_90: parseNum(o, 'vencido_acima_90', 'VencidoAcima90'),
+    period: parseStr(o, 'period', 'Period'),
     total: parseNum(o, 'total', 'Total'),
   };
+}
+
+/** Soma das faixas — o backend não devolve total consolidado. */
+export function agingTotal(buckets: AgingBucket[]): number {
+  return buckets.reduce((sum, b) => sum + b.total, 0);
 }
 
 function buildParams(f?: ListFilters): Record<string, string> | undefined {
@@ -334,9 +347,9 @@ export async function cancelContaPagar(id: number): Promise<ContaPagar> {
   const { data } = await httpClient.post(`${BASE}/contas-pagar/${id}/cancel`, {});
   return parsePagar(data);
 }
-export async function agingPagar(): Promise<Aging> {
+export async function agingPagar(): Promise<AgingBucket[]> {
   const { data } = await httpClient.get(`${BASE}/contas-pagar/aging`);
-  return parseAging(data);
+  return unwrapArray(data).map(parseAgingBucket);
 }
 
 // ─── Contas a receber ───────────────────────────────────────────────────────
@@ -357,9 +370,9 @@ export async function cancelContaReceber(id: number): Promise<ContaReceber> {
   const { data } = await httpClient.post(`${BASE}/contas-receber/${id}/cancel`, {});
   return parseReceber(data);
 }
-export async function agingReceber(): Promise<Aging> {
+export async function agingReceber(): Promise<AgingBucket[]> {
   const { data } = await httpClient.get(`${BASE}/contas-receber/aging`);
-  return parseAging(data);
+  return unwrapArray(data).map(parseAgingBucket);
 }
 
 // ─── Fluxo de caixa & saldos ────────────────────────────────────────────────
@@ -425,32 +438,28 @@ export async function getSaldoContas(): Promise<SaldoConta[]> {
 
 // ─── Apuração de impostos ───────────────────────────────────────────────────
 
-function parseApuracao(raw: unknown): ApuracaoImpostos {
+function parseApuracao(raw: unknown): ApuracaoImposto {
   const o = unwrapObject(raw);
   return {
+    id: parseNum(o, 'id', 'ID'),
+    imposto: parseStr(o, 'imposto', 'Imposto'),
     competencia: parseStr(o, 'competencia', 'Competencia'),
-    valor_icms_saidas: parseNum(o, 'valor_icms_saidas'),
-    valor_icms_entradas: parseNum(o, 'valor_icms_entradas'),
-    saldo_icms: parseNum(o, 'saldo_icms'),
-    valor_ipi_saidas: parseNum(o, 'valor_ipi_saidas'),
-    valor_ipi_entradas: parseNum(o, 'valor_ipi_entradas'),
-    saldo_ipi: parseNum(o, 'saldo_ipi'),
-    valor_pis_saidas: parseNum(o, 'valor_pis_saidas'),
-    valor_pis_entradas: parseNum(o, 'valor_pis_entradas'),
-    saldo_pis: parseNum(o, 'saldo_pis'),
-    valor_cofins_saidas: parseNum(o, 'valor_cofins_saidas'),
-    valor_cofins_entradas: parseNum(o, 'valor_cofins_entradas'),
-    saldo_cofins: parseNum(o, 'saldo_cofins'),
+    debitos: parseNum(o, 'debitos', 'Debitos'),
+    creditos: parseNum(o, 'creditos', 'Creditos'),
+    saldo_devedor: parseNum(o, 'saldo_devedor', 'SaldoDevedor'),
+    saldo_credor: parseNum(o, 'saldo_credor', 'SaldoCredor'),
     status: parseStr(o, 'status', 'Status'),
+    cp_id: parseNum(o, 'cp_id', 'CpID') || undefined,
+    data_vencimento: parseStr(o, 'data_vencimento', 'DataVencimento') || undefined,
   };
 }
 
-export async function apurarImpostos(competencia: string): Promise<ApuracaoImpostos> {
+export async function apurarImpostos(competencia: string): Promise<ApuracaoImposto[]> {
   const { data } = await httpClient.post(`${BASE}/apuracao-impostos`, { competencia });
-  return parseApuracao(data);
+  return unwrapArray(data).map(parseApuracao);
 }
 
-export async function getApuracao(competencia: string): Promise<ApuracaoImpostos> {
+export async function getApuracao(competencia: string): Promise<ApuracaoImposto[]> {
   const { data } = await httpClient.get(`${BASE}/apuracao-impostos/${encodeURIComponent(competencia)}`);
-  return parseApuracao(data);
+  return unwrapArray(data).map(parseApuracao);
 }

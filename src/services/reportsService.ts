@@ -1,4 +1,5 @@
 import { httpClient } from '@/services/fiscalShared';
+import { downloadBlob } from '@/services/fileDownload';
 
 /**
  * Exportação genérica de relatórios (`POST /api/reports/export?format=xlsx|pdf|csv`).
@@ -14,10 +15,6 @@ export interface ReportTable {
 
 export async function exportReport(table: ReportTable, fmt: 'xlsx' | 'pdf' | 'csv'): Promise<void> {
   const { data } = await httpClient.post('/api/reports/export', table, { params: { format: fmt }, responseType: 'blob' });
-  const url = URL.createObjectURL(data as Blob);
-  const a = document.createElement('a');
   const name = (table.title || 'relatorio').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  a.href = url; a.download = `${name || 'relatorio'}.${fmt}`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(data as Blob, `${name || 'relatorio'}.${fmt}`);
 }

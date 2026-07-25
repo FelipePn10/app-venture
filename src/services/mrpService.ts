@@ -105,9 +105,9 @@ function parseProfile(raw: unknown): MrpProfileRow {
     item_code: parseNum(o, 'item_code', 'ItemCode') || undefined,
     date: parseStr(o, 'date', 'Date', 'period') || undefined,
     demand: parseNum(o, 'demand', 'Demand'),
-    planned_orders: parseNum(o, 'planned_orders', 'PlannedOrders'),
-    firm_orders: parseNum(o, 'firm_orders', 'FirmOrders'),
-    projected_stock: parseNum(o, 'projected_stock', 'ProjectedStock'),
+    planned_orders: parseNum(o, 'orders_planned', 'OrdersPlanned'),
+    firm_orders: parseNum(o, 'orders_firm', 'OrdersFirm'),
+    projected_stock: parseNum(o, 'stock_projected', 'StockProjected'),
   };
 }
 function parseRule(raw: unknown): ConfiguredRule {

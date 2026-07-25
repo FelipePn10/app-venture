@@ -20,9 +20,13 @@
     "tauri:build:demo": "tauri build --config src-tauri/tauri.demo.conf.json",
     "doctor:package": "node scripts/verify-package-json.mjs",
     "validate:backend-alignment": "node scripts/validate-backend-alignment.mjs && node scripts/validate-no-registered-mocks.mjs",
+    "validate:sales-quotation": "node scripts/validate-sales-quotation-contract.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp}",
+    "audit:drift": "node scripts/audit-frontend-drift.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-ghost-routes",
+    "e2e:orcamentos": "node scripts/e2e/comercial-orcamentos.mjs",
     "validate:no-mocks": "node scripts/validate-no-registered-mocks.mjs",
     "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing",
     "test:versioning": "node scripts/test-versioning.mjs",
+    "test:download-notice": "node scripts/test-download-notice.mjs",
     "version:sync": "node scripts/set-release-version.mjs"
   },
   "dependencies": {

@@ -308,7 +308,7 @@ function parseMaterial(raw: unknown): MaterialDTO {
     quantity: parseNum(o, 'quantity', 'Quantity'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     automatic_issue: parseBool(o, 'automatic_issue', 'AutomaticIssue'),
-    allocated_qty: parseNum(o, 'allocated_qty', 'AllocatedQty'),
+    allocated_qty: parseNum(o, 'AttendedQuantity', 'attended_quantity'),
     balance: parseNum(o, 'balance', 'Balance'),
   };
 }

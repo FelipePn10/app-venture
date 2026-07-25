@@ -95,14 +95,14 @@ export function Vfin0100Page(): JSX.Element {
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Contas cadastradas — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
           <table className="erp-grid">
-            <thead><tr><th>Banco</th><th>Agência</th><th>Conta</th><th>Descrição</th><th>Titular</th><th>Saldo Atual</th></tr></thead>
+            <thead><tr><th>Banco</th><th>Agência</th><th>Conta</th><th>Descrição</th><th>Titular</th><th>Saldo Inicial</th></tr></thead>
             <tbody>
               {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma conta cadastrada.</td></tr>}
               {list.map((c) => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600 }}>{c.banco}</td><td>{c.agencia}</td><td>{c.conta}{c.digito ? `-${c.digito}` : ""}</td>
                   <td>{c.descricao}</td><td>{c.titular || "—"}</td>
-                  <td>{money(c.saldo_atual ?? c.saldo_inicial)}</td>
+                  <td>{money(c.saldo_atual ?? c.saldo_inicial)}</td>{/* o cadastro só guarda o inicial; o movimentado está no VFIN0300 */}
                 </tr>
               ))}
             </tbody>
