@@ -68,5 +68,11 @@ jobs:
           releaseName: ERP Venture ${{ github.ref_name }}
           releaseBody: ${{ steps.relnotes.outputs.body }}
           releaseDraft: false
-          prerelease: false
+          # Tag com sufixo SemVer de pré-lançamento (v1.1.1-rc.1) publica como
+          # prerelease. É o que impede que uma RC vire a "latest" do GitHub — o
+          # updater dos clientes instalados lê
+          # releases/latest/download/latest.json, e esse endpoint ignora
+          # prereleases. Sem isso, qualquer tag de teste seria oferecida a todo
+          # mundo que já tem o app instalado.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           args: --bundles nsis,msi
