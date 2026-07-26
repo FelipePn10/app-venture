@@ -22,15 +22,25 @@ updateJSON('package-lock.json', (value) => {
 });
 updateJSON('src-tauri/tauri.conf.json', (value) => { value.version = version; });
 
+// Os arquivos Rust são editados por regex, então precisam tolerar CRLF: o
+// runner Windows faz checkout com \r\n e um padrão preso a \n simplesmente não
+// casa — a substituição virava um no-op SILENCIOSO. Isso passou despercebido
+// porque o release.sh sincroniza no Linux e commita os arquivos já corretos,
+// deixando a re-sincronização do runner sem nada para fazer. Só apareceu ao
+// taggear direto, sem o commit de bump (v1.1.1-rc.1).
 for (const relativePath of ['src-tauri/Cargo.toml', 'src-tauri/Cargo.lock']) {
   const file = path.join(root, relativePath);
-  let content = fs.readFileSync(file, 'utf8');
-  if (relativePath.endsWith('Cargo.toml')) {
-    content = content.replace(/(\[package\][\s\S]*?\nversion = ")[^"]+("\n)/, `$1${version}$2`);
-  } else {
-    content = content.replace(/(name = "erp_venture_desktop"\nversion = ")[^"]+("\n)/, `$1${version}$2`);
+  const content = fs.readFileSync(file, 'utf8');
+  const pattern = relativePath.endsWith('Cargo.toml')
+    ? /(\[package\][\s\S]*?\r?\nversion = ")[^"]+("\r?\n)/
+    : /(name = "erp_venture_desktop"\r?\nversion = ")[^"]+("\r?\n)/;
+  const updated = content.replace(pattern, `$1${version}$2`);
+  // Falha alto: sem isto, uma regex que deixa de casar volta a passar batido.
+  if (updated === content && !pattern.test(content)) {
+    console.error(`set-release-version: não encontrei a versão em ${relativePath} — padrão não casou.`);
+    process.exit(1);
   }
-  fs.writeFileSync(file, content);
+  fs.writeFileSync(file, updated);
 }
 
 console.log(`Versão desktop sincronizada em ${version}.`);
