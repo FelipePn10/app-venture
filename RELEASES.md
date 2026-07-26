@@ -23,6 +23,28 @@ O workflow usa a assinatura do updater, que garante autenticidade do pacote para
 
 Nunca mova/reutilize uma tag já distribuída. Falhas recebem um patch novo, como `1.4.1`.
 
+## Validar o pipeline sem afetar quem já tem o app
+
+Para exercitar o workflow (após mexer em actions, Node ou nas ferramentas de release) sem oferecer nada aos clientes instalados, taggeie uma **pré-release**:
+
+```bash
+git tag -a v1.4.1-1 -m "validação do pipeline (descartável)" HEAD
+git push origin refs/tags/v1.4.1-1
+```
+
+Duas restrições, ambas descobertas na prática:
+
+1. **O identificador de pré-lançamento precisa ser numérico.** O alvo MSI recusa `v1.4.1-rc.1` com `optional pre-release identifier in app version must be numeric-only and cannot be greater than 65535 for msi target`. Use `-1`, `-2`… e não `-rc.1`, `-beta`.
+2. **A tag precisa ter hífen para sair como prerelease.** O workflow deriva `prerelease` de `contains(github.ref_name, '-')`. Isso é o que mantém a RC fora de `/releases/latest` — o endpoint que o updater dos clientes consulta. Sem o hífen, a tag de teste viraria a *latest* e seria oferecida a todo mundo.
+
+Não é preciso commit de bump de versão: o próprio job roda `set-release-version.mjs` a partir do nome da tag. Depois de validar, apague a release e a tag:
+
+```bash
+gh release delete v1.4.1-1 --yes --cleanup-tag
+```
+
+Confira sempre, ao final, que `releases/latest/download/latest.json` continua apontando para a versão de produção.
+
 ## Comportamento no cliente
 
 Ao abrir, o app consulta `/api/version`. Se sua versão for menor que `min_client`, a navegação fica bloqueada e oferece a atualização. Se for compatível, o app consulta `latest.json`; havendo versão maior, mostra “Atualização disponível — instalar agora?”. O plugin baixa, valida a assinatura, instala em modo passivo e reinicia.
