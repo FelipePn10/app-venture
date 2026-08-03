@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.1] — 2026-08-03
+
 - **Correção — Cadastro de Item (VITM0100)**: o cadastro rápido deixou de gravar e passou a exibir "item name is required" após a atualização do servidor. Foi adicionado o campo **Nome**, agora obrigatório, e o item volta a ser criado normalmente.
 
 ## [v1.1.0] — 2026-07-25
