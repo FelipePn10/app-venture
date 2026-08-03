@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Correção — Cadastro de Item (VITM0100)**: o cadastro rápido deixou de gravar e passou a exibir "item name is required" após a atualização do servidor. Foi adicionado o campo **Nome**, agora obrigatório, e o item volta a ser criado normalmente.
+
 ## [v1.1.0] — 2026-07-25
 
 - **Orçamento de Venda renovado (VVND0300)**: agora dá para editar o orçamento depois de criado, anexar documentos (até 10 MB), acompanhar todo o histórico do pedido, bloquear/liberar comercialmente e gerar o DAV/Pré-Venda. O cancelamento passa a exigir um motivo cadastrado, e o descancelamento reabre a proposta com o mesmo motivo.
