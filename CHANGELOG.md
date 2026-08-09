@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## Novidades
+- Agora você pode escolher um item-base como modelo e copiar automaticamente as configurações de estoque, engenharia, planejamento, vendas, contabilidade e suprimentos.
+
+## Melhorias
+- O cadastro de itens ficou mais simples, com nomes de campos claros e sem descrições repetidas.
+- Itens Genéricos e Configurados podem ser cadastrados sem item-base; quando um modelo é usado, o código e o nome do novo item são preservados.
+
+## Correções
+- As mensagens de validação do nome e do item-base passam a ser exibidas em português.
+
 ## [v1.1.2] — 2026-08-09
 
 ## Novidades
