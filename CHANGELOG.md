@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.2] — 2026-08-09
+
 ## Novidades
 - O cadastro de itens agora salva também as informações Comerciais e Contábeis, incluindo garantia, tipo de venda, origem, CEST e unidades de compra e venda.
 
