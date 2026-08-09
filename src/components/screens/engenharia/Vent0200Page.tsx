@@ -1,30 +1,33 @@
 import { useState, useCallback } from "react";
+import { createItem } from "@/services/itemService";
+import { errMessage } from "@/services/fiscalShared";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses } from "@/services/lookups";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
+//
+// ⚠️ Estes valores são os aceitos por `internal/domain/enums/types`. Enviar
+// qualquer outra string faz o `POST /api/items/create` devolver 400 — a UM, por
+// exemplo, é validada por `TypeUnitOfMeasurementItem.IsValid()`.
 
-type TypeSituationItem = "Ativo" | "Inativo";
-type Health = "Normal" | "Crítico" | "Obsoleto";
+type TypeSituationItem = "LINHA" | "PROMOCAO";
+type Health = "ATIVO" | "INATIVO" | "FANTASMA";
 type TypeUnitOfMeasurementItem =
-  | "UN"
-  | "KG"
+  | "MM"
+  | "CM"
   | "M"
+  | "IN"
+  | "KG"
   | "M2"
   | "M3"
-  | "L"
-  | "CX"
-  | "PC"
-  | "GL"
-  | "PAR";
-type TypeItem = "Fabricado" | "Comprado" | "Terceirizado" | "Serviço";
-type TypeStructItem = "Simples" | "Fantasma" | "Conjunto" | "Subconjunto";
-type TypePlanejamento =
-  | "MRP"
-  | "MPS"
-  | "Kanban"
-  | "Mínimo/Máximo"
-  | "Ponto de Reposição"
-  | "Carro a Carro"
-  | "Protótipo";
+  | "UN"
+  | "MICROMETRO"
+  | "TONELADA";
+type TypeItem = "FABRICADO" | "COMPRADO" | "DE_TERCEIRO" | "SERVICO";
+type TypeStructItem = "INDUSTRIAL" | "COMERCIAL";
+type TypePlanejamento = "NORMAL_MRP" | "PROJETO";
+/** `ItemNature` — 0 Genérico, 1 Configurado, 2 Item Base. */
+type ItemNature = 0 | 1 | 2;
 type TypeBaixaOF = "Não faz" | "Cadastro/Liberação" | "Entrega de Produção";
 type TypeBaixaAut = "Direta" | "Transferência";
 type TypeTipoUtilizacao = "Industrialização" | "Consumo" | "Imobilizado";
@@ -52,9 +55,12 @@ interface FormItem {
   name: string;
   description: string;
   complement: string;
-  generic: boolean;
-  configured: boolean;
-  itemBase: boolean;
+  /**
+   * Antes eram três checkboxes independentes (Genérico/Configurado/Item Base),
+   * o que permitia marcar as três ao mesmo tempo. No backend é um enum único
+   * (`ItemNature`), então aqui virou um campo só.
+   */
+  nature: ItemNature;
   process: boolean;
   groupID: string;
   modifierID: string;
@@ -81,6 +87,8 @@ interface FormItem {
 
   // Planejamento
   typePlanejamento: TypePlanejamento;
+  /** Low Level Code: 1 = produto final, 2–8 intermediários, 9 = matéria-prima. */
+  llc: string;
   lotMaximo: string;
   lotMinimo: string;
   lotMultiplo: string;
@@ -158,32 +166,37 @@ const UNIDADES: TypeUnitOfMeasurementItem[] = [
   "M",
   "M2",
   "M3",
-  "L",
-  "CX",
-  "PC",
-  "GL",
-  "PAR",
+  "MM",
+  "CM",
+  "IN",
+  "MICROMETRO",
+  "TONELADA",
 ];
-const TIPOS_ITEM: TypeItem[] = [
-  "Fabricado",
-  "Comprado",
-  "Terceirizado",
-  "Serviço",
+/** Rótulo em português ⇄ valor aceito pelo backend. */
+const TIPOS_ITEM: { value: TypeItem; label: string; hint: string }[] = [
+  { value: "FABRICADO", label: "Fabricado", hint: "Gera ordem de fabricação — exige estrutura (BOM) e roteiro" },
+  { value: "COMPRADO", label: "Comprado", hint: "Gera ordem de compra — exige fornecedor preferencial" },
+  { value: "DE_TERCEIRO", label: "De terceiro", hint: "Item de terceiro em poder da empresa — não gera ordem" },
+  { value: "SERVICO", label: "Serviço", hint: "Serviço comercial/fiscal — não gera ordem de material" },
 ];
-const TIPOS_STRUCT: TypeStructItem[] = [
-  "Simples",
-  "Fantasma",
-  "Conjunto",
-  "Subconjunto",
+const TIPOS_STRUCT: { value: TypeStructItem; label: string; hint: string }[] = [
+  { value: "INDUSTRIAL", label: "Industrial", hint: "O MRP gera ordem e controla estoque" },
+  { value: "COMERCIAL", label: "Comercial", hint: "Item pronto para venda" },
 ];
-const TIPOS_PLAN: TypePlanejamento[] = [
-  "MRP",
-  "MPS",
-  "Kanban",
-  "Mínimo/Máximo",
-  "Ponto de Reposição",
-  "Carro a Carro",
-  "Protótipo",
+const TIPOS_PLAN: { value: TypePlanejamento; label: string; hint: string }[] = [
+  { value: "NORMAL_MRP", label: "MRP normal", hint: "Planejado pelo MRP a partir da demanda" },
+  { value: "PROJETO", label: "Projeto", hint: "Planejado por projeto, fora do MRP regular" },
+];
+/** Rótulo da aba Suprimentos ⇄ `TypeOfUseItem` do backend. */
+const TIPO_UTILIZACAO_WIRE: Record<TypeTipoUtilizacao, string> = {
+  "Industrialização": "INDUSTRIALIZACAO",
+  "Consumo": "CONSUMO",
+  "Imobilizado": "IMOBILIZADO",
+};
+const NATUREZAS: { value: ItemNature; label: string; hint: string }[] = [
+  { value: 2, label: "Item Base", hint: "Item independente; serve de base para genéricos/configurados" },
+  { value: 0, label: "Genérico", hint: "Agrupa materiais não estocáveis sob um código — exige item-base" },
+  { value: 1, label: "Configurado", hint: "Item com variações (cor, medida) — exige item-base" },
 ];
 const ORIGENS: OrigemItem[] = [
   "0 - Nacional",
@@ -206,14 +219,12 @@ const formInicial: FormItem = {
   name: "",
   description: "",
   complement: "",
-  generic: false,
-  configured: false,
-  itemBase: false,
+  nature: 2,
   process: false,
   groupID: "",
   modifierID: "",
-  situation: "Ativo",
-  health: "Normal",
+  situation: "LINHA",
+  health: "ATIVO",
   observations: "",
   warehouseID: "",
   unitOfMeasurement: "UN",
@@ -225,10 +236,11 @@ const formInicial: FormItem = {
   grossWeight: "",
   netWeight: "",
   cubicVolume: "",
-  type: "Comprado",
-  typeStruct: "Simples",
+  type: "COMPRADO",
+  typeStruct: "INDUSTRIAL",
   oem: false,
-  typePlanejamento: "MRP",
+  typePlanejamento: "NORMAL_MRP",
+  llc: "2",
   lotMaximo: "",
   lotMinimo: "",
   lotMultiplo: "",
@@ -298,52 +310,204 @@ export function Vent0200Page(): JSX.Element {
   const [form, setForm] = useState<FormItem>(formInicial);
   const [aba, setAba] = useState<AbaAtiva>("capa");
   const [isSaving, setIsSaving] = useState(false);
-  const [feedback, setFeedback] = useState<"success" | "error" | null>(null);
+  const [feedback, setFeedback] = useState<
+    { type: "success" | "error"; message: string } | null
+  >(null);
   const [errors, setErrors] = useState<Partial<Record<keyof FormItem, string>>>(
     {},
   );
+  /**
+   * As mensagens de obrigatório só aparecem depois da primeira tentativa de
+   * salvar. Antes disso o formulário fica limpo — reclamar de campo vazio para
+   * quem acabou de abrir a tela não ajuda ninguém.
+   */
+  const [submitTentado, setSubmitTentado] = useState(false);
 
   const setField = useCallback(
     <K extends keyof FormItem>(key: K, value: FormItem[K]) => {
       setForm((p) => ({ ...p, [key]: value }));
       setErrors((p) => ({ ...p, [key]: undefined }));
+      setFeedback(null);
     },
     [],
   );
 
-  function validate(): boolean {
+  /** Campos obrigatórios, com o rótulo e a aba onde cada um mora. */
+  function coletarErros(): Partial<Record<keyof FormItem, string>> {
     const e: Partial<Record<keyof FormItem, string>> = {};
+    const codeNum = Number(form.code);
     if (!form.code.trim()) e.code = "Código obrigatório.";
+    else if (!Number.isInteger(codeNum) || codeNum <= 0)
+      e.code = "Código deve ser um número inteiro maior que zero.";
     if (!form.name.trim()) e.name = "Nome obrigatório.";
-    if (!form.description.trim())
-      e.description = "Descrição técnica obrigatória.";
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    if (!form.groupID.trim()) e.groupID = "Grupo PDM obrigatório — cadastre em VITE0114 se ainda não existir.";
+    if (!form.modifierID.trim()) e.modifierID = "Modificador PDM obrigatório — cadastre em VITE0115 se ainda não existir.";
+    // O backend recusa item Genérico/Configurado sem item-base (item_entity.go).
+    if (form.nature !== 2 && !form.itemBaseCod.trim())
+      e.itemBaseCod = "Item-base obrigatório para itens Genérico/Configurado.";
+    // Weight.IsValid(): bruto não pode ser menor que líquido.
+    const bruto = Number(form.grossWeight || 0);
+    const liquido = Number(form.netWeight || 0);
+    if (liquido < 0) e.netWeight = "Peso líquido não pode ser negativo.";
+    else if (bruto < liquido) e.grossWeight = "Peso bruto não pode ser menor que o líquido.";
+    if (form.fatorConvVol.trim() && Number(form.fatorConvVol) <= 0)
+      e.fatorConvVol = "Fator de conversão deve ser maior que zero.";
+    if (form.multiploVenda.trim() && Number(form.multiploVenda) <= 0)
+      e.multiploVenda = "Múltiplo de venda deve ser maior que zero.";
+    if (form.minVenda.trim() && Number(form.minVenda) < 0)
+      e.minVenda = "Mínimo de venda não pode ser negativo.";
+    if (form.entregaEstimada.trim() && Number(form.entregaEstimada) < 0)
+      e.entregaEstimada = "Prazo de entrega não pode ser negativo.";
+    if (form.tempoGarantia.trim() && Number(form.tempoGarantia) < 0)
+      e.tempoGarantia = "Garantia não pode ser negativa.";
+    if (form.cest.trim() && !/^\d{7}$/.test(form.cest.trim()))
+      e.cest = "CEST deve conter exatamente 7 dígitos.";
+    return e;
   }
 
-  function handleSalvar() {
-    if (!validate()) {
-      setAba("capa");
+  /** Rótulo amigável + aba de cada campo obrigatório, para a mensagem de erro. */
+  const CAMPO_INFO: Partial<Record<keyof FormItem, { label: string; aba: AbaAtiva }>> = {
+    code: { label: "Código", aba: "capa" },
+    name: { label: "Nome", aba: "capa" },
+    groupID: { label: "Grupo PDM", aba: "capa" },
+    modifierID: { label: "Modificador PDM", aba: "capa" },
+    itemBaseCod: { label: "Item-base", aba: "engenharia" },
+    grossWeight: { label: "Peso bruto", aba: "engenharia" },
+    netWeight: { label: "Peso líquido", aba: "engenharia" },
+    fatorConvVol: { label: "Fator de conversão de volume", aba: "comercial" },
+    multiploVenda: { label: "Múltiplo de venda", aba: "comercial" },
+    minVenda: { label: "Mínimo de venda", aba: "comercial" },
+    entregaEstimada: { label: "Entrega estimada", aba: "comercial" },
+    tempoGarantia: { label: "Tempo de garantia", aba: "comercial" },
+    cest: { label: "CEST", aba: "contabil" },
+  };
+
+  async function handleSalvar() {
+    setSubmitTentado(true);
+    const e = coletarErros();
+    setErrors(e);
+    const faltando = Object.keys(e) as (keyof FormItem)[];
+    if (faltando.length > 0) {
+      const primeiro = CAMPO_INFO[faltando[0]];
+      setAba(primeiro?.aba ?? "capa");
+      setFeedback({
+        type: "error",
+        message: `Verifique: ${faltando
+          .map((k) => CAMPO_INFO[k]?.label ?? k)
+          .join(", ")}.`,
+      });
       return;
     }
+
     setIsSaving(true);
     setFeedback(null);
-    // Conectar ao backend: itemService.salvar(form)
-    setTimeout(() => {
+    try {
+      const bruto = Number(form.grossWeight || 0);
+      const liquido = Number(form.netWeight || 0);
+      const optionalNumber = (value: string): number | undefined => {
+        if (!value.trim()) return undefined;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
+      const created = await createItem({
+        code: Number(form.code),
+        name: form.name.trim(),
+        complement: form.complement.trim() || undefined,
+        nature: form.nature,
+        situation: form.situation,
+        health: form.health,
+        pdm: {
+          group_code: Number(form.groupID),
+          modifier_code: Number(form.modifierID),
+          attributes: [],
+          description_technique: form.description.trim() || form.name.trim(),
+        },
+        warehouse: {
+          warehouse_code: Number(form.warehouseID) || 1,
+          unit_of_measurement: form.unitOfMeasurement,
+          automatic_low: form.automaticLow,
+          minimum_stock: Number(form.cyclicalCountMinStock) || 0,
+          ...(form.cyclicalCount
+            ? { cyclical_count_config: { days: Number(form.cyclicalCountDays) || 0, minimum_stock: Number(form.cyclicalCountMinStock) || 0 } }
+            : {}),
+        },
+        engineering: {
+          ...(form.nature !== 2 ? { item_base_cod: Number(form.itemBaseCod) } : {}),
+          weight: { gross: bruto, net: liquido, unit: "KG" },
+          type: form.type,
+          type_struct: form.typeStruct,
+          oem: form.oem,
+        },
+        planning: {
+          type_mrp: form.typePlanejamento,
+          llc: Number(form.llc) || 0,
+          ghost: form.fantasma,
+        },
+        supplies: { type_of_use: TIPO_UTILIZACAO_WIRE[form.tipoUtilizacao] },
+        commercial: {
+          description: form.descrComercial.trim() || undefined,
+          sale_type: form.tipoVenda.toUpperCase(),
+          volume_conversion_factor: optionalNumber(form.fatorConvVol),
+          sale_multiple: optionalNumber(form.multiploVenda),
+          minimum_sale_quantity: optionalNumber(form.minVenda),
+          estimated_delivery_days: optionalNumber(form.entregaEstimada),
+          warranty_days: optionalNumber(form.tempoGarantia) ?? 0,
+          transfer_warehouse_code: optionalNumber(form.almoxTransf),
+          technical_assistance_warehouse_code: optionalNumber(form.almoxAssTec),
+          packaging_item_code: optionalNumber(form.itemEmbalagem),
+          allow_billing_description_change: form.alterarDescrFat,
+          issue_loading_labels: form.emiteEtiquetas,
+          assemble_shipping_volumes: form.montagemVolExp,
+          requires_special_packaging: form.embalagDif,
+          withhold_pis_cofins: form.retencaoPisCofins,
+          is_packaging: form.embalagem,
+          mobile_enabled: form.foccoMobile,
+          export_packaging: form.embExportacao,
+          classification_code: form.classificacaoCom.trim() || undefined,
+          notes: form.obsComercial.trim() || undefined,
+        },
+        accounting: {
+          sale_fiscal_classification_code: form.classifFiscVenda.trim() || undefined,
+          purchase_fiscal_classification_code: form.classifFiscCompra.trim() || undefined,
+          origin: Number(form.origem.split(" ", 1)[0]),
+          sale_ipi_type: form.tipoIpiVenda.toUpperCase(),
+          sale_ipi_rate: optionalNumber(form.aliqIpiVenda),
+          purchase_ipi_type: form.tipoIpiCompra.toUpperCase(),
+          purchase_ipi_rate: optionalNumber(form.aliqIpiCompra),
+          icms_rate: optionalNumber(form.aliqIcms),
+          sale_unit_of_measurement: form.umVenda || undefined,
+          purchase_unit_of_measurement: form.umCompra || undefined,
+          inventory_group_code: optionalNumber(form.grupoInventario),
+          accounting_classification_code: form.classificacaoCont.trim() || undefined,
+          cest: form.cest.trim() || undefined,
+          input_code: form.insumo.trim() || undefined,
+          calculate_pis_cofins: form.calculaPisCofins,
+          notes: form.obsContabil.trim() || undefined,
+        },
+      });
+      const codigoGravado = (created?.["code"] as number | undefined) ?? Number(form.code);
+      setFeedback({ type: "success", message: `Item ${codigoGravado} gravado com sucesso.` });
+      setForm(formInicial);
+      setErrors({});
+      setSubmitTentado(false);
+      setAba("capa");
+    } catch (err) {
+      setFeedback({ type: "error", message: errMessage(err, "Não foi possível gravar o item.") });
+    } finally {
       setIsSaving(false);
-      setFeedback("success");
-      setTimeout(() => setFeedback(null), 4000);
-    }, 800);
+    }
   }
 
   function handleLimpar() {
     setForm(formInicial);
     setErrors({});
     setFeedback(null);
+    setSubmitTentado(false);
     setAba("capa");
   }
 
-  const errCount = Object.keys(errors).length;
+  // Só conta erros depois da primeira tentativa de salvar — ver `submitTentado`.
+  const errCount = submitTentado ? Object.keys(errors).length : 0;
 
   return (
     <>
@@ -496,6 +660,8 @@ export function Vent0200Page(): JSX.Element {
         .it-feedback { display: flex; align-items: center; gap: 9px; padding: 11px 15px; border-radius: 9px; font-size: 13px; animation: itFade 0.2s ease; }
         .it-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
         .it-feedback.error   { background: #fff5f5; border: 1px solid #f8c0c0; border-left: 3px solid #e05252; color: #b91c1c; }
+        .it-feedback.it-warn { background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #f59e0b; color: #92400e; align-items: flex-start; line-height: 1.5; }
+        .it-feedback.it-warn svg { flex-shrink: 0; margin-top: 2px; }
 
         /* Footer */
         .it-footer { background: #fff; border-top: 1px solid #dbe8d5; padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
@@ -682,7 +848,7 @@ export function Vent0200Page(): JSX.Element {
 
         {/* BODY */}
         <div className="it-body">
-          {feedback === "success" && (
+          {feedback?.type === "success" && (
             <div className="it-feedback success">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                 <path
@@ -693,10 +859,10 @@ export function Vent0200Page(): JSX.Element {
                   strokeLinejoin="round"
                 />
               </svg>
-              Item salvo com sucesso.
+              {feedback.message}
             </div>
           )}
-          {errCount > 0 && (
+          {feedback?.type === "error" && (
             <div className="it-feedback error">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                 <circle
@@ -713,9 +879,7 @@ export function Vent0200Page(): JSX.Element {
                   strokeLinecap="round"
                 />
               </svg>
-              {errCount} campo{errCount > 1 ? "s" : ""} obrigatório
-              {errCount > 1 ? "s" : ""} não preenchido{errCount > 1 ? "s" : ""}.
-              Verifique a aba <strong>Capa</strong>.
+              {feedback.message}
             </div>
           )}
 
@@ -749,9 +913,9 @@ export function Vent0200Page(): JSX.Element {
                 )}
                 <span className="it-card-badge">VENT0200</span>
                 <span
-                  className={`it-sit-badge ${form.situation === "Ativo" ? "it-sit-ativo" : "it-sit-inativo"}`}
+                  className={`it-sit-badge ${form.health === "ATIVO" ? "it-sit-ativo" : "it-sit-inativo"}`}
                 >
-                  {form.situation}
+                  {form.health === "ATIVO" ? "Ativo" : form.health === "INATIVO" ? "Inativo" : "Fantasma"}
                 </span>
               </div>
             </div>
@@ -779,12 +943,12 @@ export function Vent0200Page(): JSX.Element {
                     </label>
                     <input
                       className={`it-input${errors.code ? " err" : ""}`}
+                      type="number"
+                      min={1}
+                      step={1}
                       value={form.code}
-                      onChange={(e) =>
-                        setField("code", e.target.value.toUpperCase())
-                      }
-                      placeholder="Ex: ITEM001"
-                      maxLength={30}
+                      onChange={(e) => setField("code", e.target.value)}
+                      placeholder="Ex: 1001"
                     />
                     {errors.code && (
                       <span className="it-field-error">
@@ -812,7 +976,7 @@ export function Vent0200Page(): JSX.Element {
                       </span>
                     )}
                     <span className="it-field-hint">
-                      Não use caracteres especiais.
+                      Número inteiro maior que zero.
                     </span>
                   </div>
 
@@ -852,6 +1016,9 @@ export function Vent0200Page(): JSX.Element {
                         {errors.name}
                       </span>
                     )}
+                    <span className="it-field-hint">
+                      Usado como descrição técnica quando o campo abaixo ficar em branco.
+                    </span>
                   </div>
 
                   <div className="it-field it-col-2">
@@ -866,9 +1033,12 @@ export function Vent0200Page(): JSX.Element {
                         )
                       }
                     >
-                      <option>Ativo</option>
-                      <option>Inativo</option>
+                      <option value="LINHA">Linha</option>
+                      <option value="PROMOCAO">Promoção</option>
                     </select>
+                    <span className="it-field-hint">
+                      Linha = item de catálogo corrente; Promoção = campanha temporária.
+                    </span>
                   </div>
 
                   <div className="it-field it-col-9">
@@ -929,76 +1099,35 @@ export function Vent0200Page(): JSX.Element {
                   </div>
 
                   <div className="it-field it-col-3">
-                    <label className="it-label">Grupo (PDM)</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
-                        value={form.groupID}
-                        onChange={(e) => setField("groupID", e.target.value)}
-                        placeholder="Código do grupo"
-                      />
-                      <button className="it-input-btn" title="Buscar grupo">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <label className="it-label">
+                      Grupo (PDM) <span className="it-label-req">*</span>
+                    </label>
+                    <LookupField
+                      value={Number(form.groupID) || undefined}
+                      onChange={(code) => setField("groupID", code ? String(code) : "")}
+                      loader={loadPdmGroups}
+                      entityLabel="grupo"
+                      placeholder="Selecionar grupo…"
+                    />
+                    {errors.groupID
+                      ? <span className="it-field-error">{errors.groupID}</span>
+                      : <span className="it-field-hint">Cadastre em VITE0114 antes do item.</span>}
                   </div>
 
                   <div className="it-field it-col-3">
-                    <label className="it-label">Modificador (PDM)</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
-                        value={form.modifierID}
-                        onChange={(e) => setField("modifierID", e.target.value)}
-                        placeholder="Código do modificador"
-                      />
-                      <button
-                        className="it-input-btn"
-                        title="Buscar modificador"
-                      >
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <label className="it-label">
+                      Modificador (PDM) <span className="it-label-req">*</span>
+                    </label>
+                    <LookupField
+                      value={Number(form.modifierID) || undefined}
+                      onChange={(code) => setField("modifierID", code ? String(code) : "")}
+                      loader={loadPdmModifiers}
+                      entityLabel="modificador"
+                      placeholder="Selecionar modificador…"
+                    />
+                    {errors.modifierID
+                      ? <span className="it-field-error">{errors.modifierID}</span>
+                      : <span className="it-field-hint">Cadastre em VITE0115 antes do item.</span>}
                   </div>
 
                   <div className="it-field it-col-3">
@@ -1010,57 +1139,45 @@ export function Vent0200Page(): JSX.Element {
                         setField("health", e.target.value as Health)
                       }
                     >
-                      <option>Normal</option>
-                      <option>Crítico</option>
-                      <option>Obsoleto</option>
+                      <option value="ATIVO">Ativo</option>
+                      <option value="INATIVO">Inativo</option>
+                      <option value="FANTASMA">Fantasma</option>
                     </select>
                   </div>
 
-                  <div className="it-field it-col-12">
+                  <div className="it-field it-col-4">
+                    <label className="it-label">Natureza</label>
+                    <select
+                      className="it-select"
+                      value={form.nature}
+                      onChange={(e) =>
+                        setField("nature", Number(e.target.value) as ItemNature)
+                      }
+                    >
+                      {NATUREZAS.map((n) => (
+                        <option key={n.value} value={n.value}>{n.label}</option>
+                      ))}
+                    </select>
+                    <span className="it-field-hint">
+                      {NATUREZAS.find((n) => n.value === form.nature)?.hint}
+                    </span>
+                  </div>
+
+                  <div className="it-field it-col-8">
                     <label className="it-label">Indicadores</label>
                     <div className="it-checks">
-                      {(
-                        [
-                          {
-                            key: "generic",
-                            label: "Genérico",
-                            hint: "Vários materiais não estocáveis num único código",
-                          },
-                          {
-                            key: "configured",
-                            label: "Configurado",
-                            hint: "Item com variações (cor, medidas)",
-                          },
-                          {
-                            key: "itemBase",
-                            label: "Item Base",
-                            hint: "Usado como base para criação via PDM",
-                          },
-                          {
-                            key: "process",
-                            label: "Item de Processo",
-                            hint: "Operações externas / terceiros",
-                          },
-                        ] as {
-                          key: keyof FormItem;
-                          label: string;
-                          hint: string;
-                        }[]
-                      ).map(({ key, label, hint }) => (
-                        <label
-                          key={key}
-                          className="it-check-label"
-                          title={hint}
-                        >
-                          <input
-                            type="checkbox"
-                            className="it-checkbox"
-                            checked={form[key] as boolean}
-                            onChange={(e) => setField(key, e.target.checked)}
-                          />
-                          <span className="it-check-text">{label}</span>
-                        </label>
-                      ))}
+                      <label
+                        className="it-check-label"
+                        title="Operações externas / terceiros"
+                      >
+                        <input
+                          type="checkbox"
+                          className="it-checkbox"
+                          checked={form.process}
+                          onChange={(e) => setField("process", e.target.checked)}
+                        />
+                        <span className="it-check-text">Item de Processo</span>
+                      </label>
                     </div>
                   </div>
 
@@ -1084,42 +1201,16 @@ export function Vent0200Page(): JSX.Element {
                 <div className="it-grid">
                   <div className="it-field it-col-4">
                     <label className="it-label">Almoxarifado</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
-                        value={form.warehouseID}
-                        onChange={(e) =>
-                          setField("warehouseID", e.target.value)
-                        }
-                        placeholder="Código do almoxarifado"
-                      />
-                      <button
-                        className="it-input-btn"
-                        title="Buscar almoxarifado"
-                      >
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <LookupField
+                      value={Number(form.warehouseID) || undefined}
+                      onChange={(code) => setField("warehouseID", code ? String(code) : "")}
+                      loader={loadWarehouses}
+                      entityLabel="almoxarifado"
+                      placeholder="Selecionar almoxarifado…"
+                    />
+                    <span className="it-field-hint">
+                      Depósito padrão de estoque do item. Em branco = almoxarifado 1.
+                    </span>
                   </div>
 
                   <div className="it-field it-col-3">
@@ -1244,7 +1335,7 @@ export function Vent0200Page(): JSX.Element {
                       }
                     >
                       {TIPOS_ITEM.map((t) => (
-                        <option key={t}>{t}</option>
+                        <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
                   </div>
@@ -1259,46 +1350,31 @@ export function Vent0200Page(): JSX.Element {
                       }
                     >
                       {TIPOS_STRUCT.map((t) => (
-                        <option key={t}>{t}</option>
+                        <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="it-field it-col-3">
-                    <label className="it-label">Item Base (Cód.)</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
-                        value={form.itemBaseCod}
-                        onChange={(e) =>
-                          setField("itemBaseCod", e.target.value)
-                        }
-                        placeholder="Código do item base"
-                      />
-                      <button className="it-input-btn" title="Buscar item base">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <label className="it-label">
+                      Item Base
+                      {form.nature !== 2 && <span className="it-label-req">*</span>}
+                    </label>
+                    <LookupField
+                      value={Number(form.itemBaseCod) || undefined}
+                      onChange={(code) => setField("itemBaseCod", code ? String(code) : "")}
+                      loader={loadBaseItems}
+                      entityLabel="item base"
+                      placeholder="Selecionar item base…"
+                      disabled={form.nature === 2}
+                    />
+                    {errors.itemBaseCod
+                      ? <span className="it-field-error">{errors.itemBaseCod}</span>
+                      : <span className="it-field-hint">
+                          {form.nature === 2
+                            ? "Não se aplica: este item já é um Item Base."
+                            : "Obrigatório para Genérico/Configurado."}
+                        </span>}
                   </div>
 
                   <div className="it-field it-col-3">
@@ -1389,7 +1465,7 @@ export function Vent0200Page(): JSX.Element {
                       }
                     >
                       {TIPOS_PLAN.map((t) => (
-                        <option key={t}>{t}</option>
+                        <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
                   </div>
@@ -1399,53 +1475,30 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.classificacaoPlan}
                         onChange={(e) =>
                           setField("classificacaoPlan", e.target.value)
                         }
                         placeholder="Código de classificação"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
-                  {form.typePlanejamento === "Kanban" && (
-                    <div className="it-field it-col-2">
-                      <label className="it-label">Nº de Cartões</label>
-                      <input
-                        className="it-input it-input-num"
-                        type="number"
-                        min={1}
-                        value={form.kanbanNumCartoes}
-                        onChange={(e) =>
-                          setField("kanbanNumCartoes", e.target.value)
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                  )}
+                  <div className="it-field it-col-2">
+                    <label className="it-label">LLC</label>
+                    <input
+                      className="it-input it-input-num"
+                      type="number"
+                      min={0}
+                      max={9}
+                      value={form.llc}
+                      onChange={(e) => setField("llc", e.target.value)}
+                      placeholder="2"
+                    />
+                    <span className="it-field-hint">
+                      Nível na estrutura: 1 = produto final · 2–8 = intermediários · 9 = matéria-prima.
+                    </span>
+                  </div>
 
                   <div className="it-sep" style={{ gridColumn: "span 12" }} />
                   <div
@@ -1780,35 +1833,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.almoxTransf}
                         onChange={(e) =>
                           setField("almoxTransf", e.target.value)
                         }
                         placeholder="Código"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -1817,35 +1847,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.almoxAssTec}
                         onChange={(e) =>
                           setField("almoxAssTec", e.target.value)
                         }
                         placeholder="Código"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -1854,35 +1861,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.itemEmbalagem}
                         onChange={(e) =>
                           setField("itemEmbalagem", e.target.value)
                         }
                         placeholder="Código do item embalagem"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -1959,35 +1943,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.classifFiscVenda}
                         onChange={(e) =>
                           setField("classifFiscVenda", e.target.value)
                         }
                         placeholder="NCM / código fiscal"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -1996,35 +1957,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.classifFiscCompra}
                         onChange={(e) =>
                           setField("classifFiscCompra", e.target.value)
                         }
                         placeholder="NCM / código fiscal"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -2163,35 +2101,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.grupoInventario}
                         onChange={(e) =>
                           setField("grupoInventario", e.target.value)
                         }
                         placeholder="Código"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -2200,33 +2115,10 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.cest}
                         onChange={(e) => setField("cest", e.target.value)}
                         placeholder="Código CEST"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -2293,35 +2185,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.almoxSuprimentos}
                         onChange={(e) =>
                           setField("almoxSuprimentos", e.target.value)
                         }
                         placeholder="Código do almoxarifado"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -2351,35 +2220,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
-                        style={{ borderRadius: "7px 0 0 7px" }}
                         value={form.classifSuprimentos}
                         onChange={(e) =>
                           setField("classifSuprimentos", e.target.value)
                         }
                         placeholder="Código de classificação"
                       />
-                      <button className="it-input-btn" title="Buscar">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <circle
-                            cx="6.5"
-                            cy="6.5"
-                            r="4.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M10 10l3.5 3.5"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   </div>
 

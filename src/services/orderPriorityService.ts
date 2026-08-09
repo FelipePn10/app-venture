@@ -2,11 +2,22 @@ import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject } from '@/ser
 
 const BASE = '/api/order-priority';
 
+/**
+ * Faixas de prioridade do APS/MRP.
+ *
+ * ⚠️ `interval_start`/`interval_end` são **quantidade da ordem planejada** — não
+ * dias, não valor. O MRP classifica cada sugestão por
+ * `findPriorityForQuantity()` (`mrp_service_impl.go`), que devolve a primeira
+ * faixa em que `quantidade >= interval_start && quantidade <= interval_end`.
+ * As faixas não podem se sobrepor: o backend recusa o cadastro.
+ */
 export interface OrderPriorityDTO {
   code?: number;
   priority: string;
   description: string;
+  /** Quantidade mínima da ordem para cair nesta prioridade (inclusive). */
   interval_start: number;
+  /** Quantidade máxima da ordem para cair nesta prioridade (inclusive). */
   interval_end: number;
 }
 

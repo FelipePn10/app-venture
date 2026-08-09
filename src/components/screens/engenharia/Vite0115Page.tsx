@@ -42,7 +42,7 @@ export function Vite0115Page(): JSX.Element {
         <div className="erp-tgroup"><span className="erp-tgroup-label">Modificadores</span>
           <button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Listar</button>
           <button className="erp-btn" onClick={limpar} disabled={busy}>Novo</button></div>
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Filtrar</span><input className="erp-tinput" style={{ width: 180 }} placeholder="id ou descrição" value={filtro} onChange={(e) => setFiltro(e.target.value)} /></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Filtrar</span><input className="erp-tinput" style={{ width: 180 }} placeholder="código ou descrição" value={filtro} onChange={(e) => setFiltro(e.target.value)} /></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VITE0115 — Modificadores PDM" filename="vite0115" /></div>
       </div>
 
@@ -63,8 +63,8 @@ export function Vite0115Page(): JSX.Element {
           <section className="erp-detail-panel">
             <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editar modificador ${form.id}` : "Novo modificador"}</button></div>
             <div className="erp-detail-body">
-              <div className="erp-fieldset"><div className="erp-fieldset-head">Modificador (global; id gerado pelo sistema)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label">Id</label><input className="erp-input num" value={editing ? form.id : "—"} disabled /></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head">Modificador (global; código gerado pelo sistema)</div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" value={editing ? form.id : "Automático"} disabled /></div>
                 <div className="erp-field erp-c8"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
                 <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{editing ? "Atualizar" : "Criar"}</button></div>
               </div></div>

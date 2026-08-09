@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { type GrupoPDM, listarGrupos, criarGrupo, atualizarGrupo } from "@/services/pdmService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -18,8 +18,19 @@ export function Vite0114Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  const carregar = () => run(async () => { setGrupos(await listarGrupos()); });
-  const limpar = () => { setForm({ code: "", description: "", enterprise_id: "1" }); setEditing(false); };
+  const carregar = () => run(async () => {
+    const lista = await listarGrupos();
+    setGrupos(lista);
+    if (!editing) setForm((f) => ({ ...f, code: String(lista.reduce((max, g) => Math.max(max, g.code), 0) + 1) }));
+  });
+  useEffect(() => {
+    void listarGrupos().then((lista) => {
+      setGrupos(lista);
+      setForm((f) => ({ ...f, code: String(lista.reduce((max, g) => Math.max(max, g.code), 0) + 1) }));
+    }).catch((e) => setFeedback({ type: "error", message: errMessage(e) }));
+  }, []);
+  const proximoCodigo = () => String(grupos.reduce((max, g) => Math.max(max, g.code), 0) + 1);
+  const limpar = () => { setForm({ code: proximoCodigo(), description: "", enterprise_id: "1" }); setEditing(false); };
   const selecionar = (g: GrupoPDM) => { setForm({ code: String(g.code), description: g.description, enterprise_id: String(g.enterprise_id ?? 1) }); setEditing(true); };
   const salvar = () => run(async () => {
     const code = Number(form.code);
@@ -66,8 +77,8 @@ export function Vite0114Page(): JSX.Element {
           <section className="erp-detail-panel">
             <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editar grupo ${form.code}` : "Novo grupo"}</button></div>
             <div className="erp-detail-body">
-              <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo PDM (o código é informado e imutável; sem exclusão no backend)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={form.code} disabled={editing} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} /></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo PDM (código sugerido automaticamente e imutável; sem exclusão)</div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" value={form.code || "Carregue a lista"} disabled /><span className="erp-hint">Próximo código livre</span></div>
                 <div className="erp-field erp-c7"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={form.enterprise_id} onChange={(e) => setForm((f) => ({ ...f, enterprise_id: e.target.value }))} /></div>
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{editing ? "Atualizar" : "Criar"}</button></div>

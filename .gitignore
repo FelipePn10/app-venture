@@ -7,3 +7,8 @@ src-tauri/target
 
 # Distribution artifacts
 *.zip
+
+# Saídas temporárias do gerador de treinamento podem conter tokens e inspeções
+# locais. O gerador é fonte; PDFs e Markdown são entregáveis versionados.
+.ai/treinamento/_build/*
+!.ai/treinamento/_build/build.py

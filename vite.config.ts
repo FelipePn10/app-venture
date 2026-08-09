@@ -43,6 +43,20 @@ export default defineConfig(({ mode }) => {
         )
       : undefined;
 
+  // Porta do dev server. Sem VITE_DEV_PORT o Vite usa o padrão (5173), então
+  // dev/demo seguem inalterados; o modo treinamento usa a 5174 e pode rodar
+  // junto. strictPort evita cair silenciosamente em outra porta (o Tauri espera
+  // exatamente a URL configurada).
+  const devPort = Number(env.VITE_DEV_PORT) || undefined;
+
+  const server =
+    proxy || devPort
+      ? {
+          ...(proxy ? { proxy } : {}),
+          ...(devPort ? { port: devPort, strictPort: true } : {}),
+        }
+      : undefined;
+
   return {
     plugins: [react()],
     resolve: {
@@ -50,6 +64,6 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    server: proxy ? { proxy } : undefined,
+    server,
   };
 });
