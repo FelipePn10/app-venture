@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   type EmployeeDTO, type EmployeeSituation,
   listEmployees, createEmployee, updateEmployee, deactivateEmployee,
@@ -8,6 +8,22 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const EMPTY: EmployeeDTO = { code: 0, name: "", role: "", situation: "ACTIVE", participates_budget: false, technical_assistant: false };
+
+/**
+ * Próximo código livre = maior código cadastrado + 1 (mínimo 1, pois
+ * `entity.NewEmployee` recusa `code <= 0`). O backend não expõe uma sequência
+ * para funcionário, então o número é sugerido aqui e reconfirmado no salvamento:
+ * se outro usuário gravar o mesmo código no intervalo, `salvar()` recarrega a
+ * lista e tenta uma vez com o próximo livre.
+ */
+function nextFreeCode(list: EmployeeDTO[]): number {
+  return list.reduce((max, e) => Math.max(max, e.code ?? 0), 0) + 1;
+}
+
+/** `true` quando o erro do backend indica código já usado (unique violation). */
+function isDuplicateCode(e: unknown): boolean {
+  return /duplicat|já (existe|cadastrad)|unique|23505/i.test(errMessage(e, ""));
+}
 
 export function Vfun0100Page(): JSX.Element {
   const [list, setList] = useState<EmployeeDTO[]>([]);
@@ -24,17 +40,33 @@ export function Vfun0100Page(): JSX.Element {
   }, []);
   useEffect(() => { void reload(); }, [reload]);
 
+  /** Código sugerido para o próximo cadastro; em edição vale o código gravado. */
+  const suggestedCode = useMemo(() => nextFreeCode(list), [list]);
+  const shownCode = editing ? form.code : suggestedCode;
+
   function setF<K extends keyof EmployeeDTO>(k: K, v: EmployeeDTO[K]) { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); }
   function novo() { setForm(EMPTY); setEditing(false); setFeedback(null); }
   function edit(e: EmployeeDTO) { setForm({ ...EMPTY, ...e }); setEditing(true); setFeedback(null); }
 
   async function salvar() {
-    if (!form.code) { setFeedback({ type: "error", message: "Código é obrigatório." }); return; }
     if (!form.name.trim()) { setFeedback({ type: "error", message: "Nome é obrigatório." }); return; }
     setBusy(true); setFeedback(null);
     try {
-      if (editing) await updateEmployee(form); else await createEmployee(form);
-      setFeedback({ type: "success", message: `Funcionário ${form.code} salvo.` });
+      if (editing) {
+        await updateEmployee(form);
+        setFeedback({ type: "success", message: `Funcionário ${form.code} salvo.` });
+      } else {
+        let code = suggestedCode;
+        try {
+          await createEmployee({ ...form, code });
+        } catch (e) {
+          if (!isDuplicateCode(e)) throw e;
+          // Alguém gravou esse código enquanto a tela estava aberta: recalcula e repete.
+          code = nextFreeCode(await listEmployees());
+          await createEmployee({ ...form, code });
+        }
+        setFeedback({ type: "success", message: `Funcionário ${code} salvo.` });
+      }
       novo(); await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -67,8 +99,9 @@ export function Vfun0100Page(): JSX.Element {
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label>
-            <input className="erp-input num" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setF("code", Number(e.target.value))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Código</label>
+            <input className="erp-input num" type="number" value={shownCode || ""} disabled readOnly title="Gerado automaticamente pelo sistema" />
+            {!editing && <span className="erp-hint">Gerado automaticamente</span>}</div>
           <div className="erp-field erp-c5"><label className="erp-label erp-req">Nome</label>
             <input className="erp-input" value={form.name} onChange={(e) => setF("name", e.target.value)} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Função / Cargo</label>

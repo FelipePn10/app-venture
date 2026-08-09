@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## Novidades
+- O cadastro de itens agora salva também as informações Comerciais e Contábeis, incluindo garantia, tipo de venda, origem, CEST e unidades de compra e venda.
+
+## Melhorias
+- O cadastro de Grupo PDM passa a sugerir o próximo código automaticamente.
+- A montagem da descrição técnica do item ficou mais clara, sem exibir informações em formato JSON.
+- A prioridade das ordens explica claramente as faixas de quantidade e impede intervalos sobrepostos.
+
+## Correções
+- O Centro de Custo Contábil agora confere se o centro pai existe antes de salvar, evitando hierarquias quebradas.
+- Códigos técnicos sem utilidade deixaram de aparecer como zero na lista de prioridades.
+
 ## [v1.1.1] — 2026-08-03
 
 - **Correção — Cadastro de Item (VITM0100)**: o cadastro rápido deixou de gravar e passou a exibir "item name is required" após a atualização do servidor. Foi adicionado o campo **Nome**, agora obrigatório, e o item volta a ser criado normalmente.

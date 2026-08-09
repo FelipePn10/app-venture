@@ -65,7 +65,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: ERP Venture ${{ github.ref_name }}
+          releaseName: Cadastros mais completos e fáceis — ${{ github.ref_name }}
           releaseBody: ${{ steps.relnotes.outputs.body }}
           releaseDraft: false
           # Tag com sufixo SemVer de pré-lançamento (v1.1.1-rc.1) publica como

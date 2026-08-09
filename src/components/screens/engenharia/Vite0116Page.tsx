@@ -33,8 +33,6 @@ export function Vite0116Page(): JSX.Element {
   const grupo = grupos.find((g) => g.code === Number(groupCode));
   const mod = mods.find((m) => m.id === Number(modifierId));
   const descricao = [grupo?.description, mod?.description, ...attrs.map((a) => `${a.name}:${a.value}`)].filter(Boolean).join(" ");
-  const pdmPayload = { group_code: Number(groupCode) || null, modifier_code: Number(modifierId) || null, attributes: attrs, description_technique: descricao };
-  const copiar = () => { void navigator.clipboard?.writeText(JSON.stringify(pdmPayload, null, 2)); setFeedback({ type: "success", message: "Payload `pdm` copiado — cole no cadastro do item." }); };
 
   return (
     <div className="erp-screen">
@@ -52,12 +50,12 @@ export function Vite0116Page(): JSX.Element {
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Montador do objeto pdm do item</button></div>
+          <div className="erp-tabs"><button className="erp-tab active">Montador da descrição técnica do item</button></div>
           <div className="erp-detail-body">
-            <div className="erp-feedback info" style={{ marginBottom: 12 }}>Atributos não têm cadastro próprio — são gravados no objeto <strong>pdm</strong> do <strong>item</strong> (VENT0200). Aqui você monta e pré-visualiza esse objeto.</div>
+            <div className="erp-feedback info" style={{ marginBottom: 12 }}>Os atributos fazem parte do cadastro do <strong>item</strong> (VENT0200). Use esta tela para conferir, em linguagem simples, como a descrição técnica será formada.</div>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo &amp; Modificador</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c6"><label className="erp-label">Grupo</label><select className="erp-input" value={groupCode} onChange={(e) => setGroupCode(e.target.value)}><option value="">— selecione —</option>{grupos.map((g) => <option key={g.code} value={g.code}>{g.code} — {g.description}</option>)}</select></div>
-              <div className="erp-field erp-c6"><label className="erp-label">Modificador</label><select className="erp-input" value={modifierId} onChange={(e) => setModifierId(e.target.value)}><option value="">— selecione —</option>{mods.map((m) => <option key={m.id} value={m.id}>{m.id} — {m.description}</option>)}</select></div>
+              <div className="erp-field erp-c6"><label className="erp-label">Modificador</label><select className="erp-input" value={modifierId} onChange={(e) => setModifierId(e.target.value)}><option value="">— selecione —</option>{mods.map((m) => <option key={m.id} value={m.id}>Código {m.id} — {m.description}</option>)}</select></div>
             </div></div>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Atributos do item ({attrs.length})</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c4"><label className="erp-label">Nome (ex.: COR)</label><input className="erp-input" value={attrForm.name} onChange={(e) => setAttrForm((f) => ({ ...f, name: e.target.value }))} /></div>
@@ -68,8 +66,14 @@ export function Vite0116Page(): JSX.Element {
             </div></div>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Pré-visualização</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c12"><label className="erp-label">Descrição técnica composta</label><input className="erp-input" value={descricao} readOnly /></div>
-              <div className="erp-field erp-c12"><label className="erp-label">Objeto pdm (item)</label><textarea className="erp-input" style={{ minHeight: 130, fontFamily: "monospace" }} value={JSON.stringify(pdmPayload, null, 2)} readOnly /></div>
-              <div className="erp-field erp-c3"><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={copiar}>Copiar pdm</button></div>
+              <div className="erp-field erp-c12"><label className="erp-label">Resumo para o cadastro do item</label>
+                <table className="erp-grid"><tbody>
+                  <tr><th style={{ width: 190 }}>Grupo</th><td>{grupo ? `${grupo.code} — ${grupo.description}` : "Não selecionado"}</td></tr>
+                  <tr><th>Modificador</th><td>{mod ? `${mod.id} — ${mod.description}` : "Não selecionado"}</td></tr>
+                  <tr><th>Atributos</th><td>{attrs.length ? attrs.map((a) => `${a.name}: ${a.value}`).join(" · ") : "Nenhum atributo"}</td></tr>
+                  <tr><th>Descrição técnica</th><td><strong>{descricao || "Selecione grupo e modificador"}</strong></td></tr>
+                </tbody></table>
+              </div>
             </div></div>
           </div>
         </section>

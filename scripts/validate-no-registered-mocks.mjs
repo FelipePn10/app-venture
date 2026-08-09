@@ -22,6 +22,19 @@ const forbidden = [
   { pattern: /\b[A-Z0-9_]+_MOCK\b/, label: 'constante _MOCK' },
   { pattern: /await new Promise\([^\n]*setTimeout/, label: 'espera simulando chamada remota' },
   { pattern: /\/\/\s*Simulate API call/i, label: 'chamada de API simulada' },
+  // O VENT0200 passou meses registrado como tela real gravando em setTimeout:
+  // o "Salvar" acendia o spinner, esperava 800ms e mostrava "salvo com
+  // sucesso" sem nunca chamar o backend. As duas regras abaixo pegam esse
+  // padrão — um salvamento que "termina" por temporizador e o comentário que
+  // costuma acompanhá-lo.
+  {
+    pattern: /setTimeout\(\s*(?:\(\)|function\s*\(\))\s*=>?\s*\{(?:[^{}]|\{[^{}]*\})*?\bset(?:Is)?(?:Saving|Loading|Busy|Salvando)\(\s*false\s*\)/,
+    label: 'salvamento concluído por temporizador (não chama o backend)',
+  },
+  {
+    pattern: /\/\/\s*(?:conectar|integrar|ligar|plugar)\s+(?:ao|com|no)\s+(?:o\s+)?backend/i,
+    label: 'comentário marcando integração pendente com o backend',
+  },
   { pattern: /(?:será|sera) implementad[ao]/i, label: 'função declarada como não implementada' },
   { pattern: /\bmock(?:Results?|Rows?|Data|List|Itens|Pedidos|Cargas)\b/i, label: 'dados nomeados como mock' },
 ];

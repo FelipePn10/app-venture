@@ -4,6 +4,7 @@ import { listItems } from '@/services/itemService';
 import { listSalesOrders } from '@/services/salesOrderService';
 import { listSuppliers } from '@/services/supplierService';
 import { listRepresentatives } from '@/services/representativeService';
+import { listarGrupos, listarModificadores } from '@/services/pdmService';
 
 /**
  * Fontes de dados para o componente <LookupField>: em vez de o usuário digitar
@@ -78,8 +79,37 @@ export const loadEstablishments = cached(() =>
   loadEndpoint('/api/enterprise', ['nome_fantasia', 'razao_social', 'name', 'nome'], ['cnpj', 'matriz_cnpj', 'municipio']),
 );
 
+/**
+ * Grupos e modificadores do PDM — pré-requisitos do cadastro de item: sem eles
+ * o `POST /api/items/create` é recusado. O modificador é identificado por `id`
+ * (gerado pelo backend), não por `code`; o grupo usa `code` informado.
+ */
+export const loadPdmGroups = cached(async () =>
+  (await listarGrupos()).map((g) => ({
+    code: g.code,
+    label: g.description || `Grupo ${g.code}`,
+  })).filter((o) => o.code),
+);
+
+export const loadPdmModifiers = cached(async () =>
+  (await listarModificadores()).map((m) => ({
+    code: m.id ?? 0,
+    label: m.description || `Modificador ${m.id}`,
+  })).filter((o) => o.code),
+);
+
+/** Só itens marcados como **Item Base** podem ser pai de genérico/configurado. */
+export const loadBaseItems = cached(async () =>
+  (await listItems())
+    .filter((i) => i.nature === 2)
+    .map((i) => ({ code: i.code ?? 0, label: i.description || `Item ${i.code}`, sub: i.uom || undefined }))
+    .filter((o) => o.code),
+);
+
+// A rota de listagem é `/api/warehouse/list`; `/api/warehouse` (sem sufixo) é
+// 404 e deixava todo campo de almoxarifado abrindo vazio.
 export const loadWarehouses = cached(() =>
-  loadEndpoint('/api/warehouse', ['descricao', 'nome', 'name', 'description'], ['tipo', 'type']),
+  loadEndpoint('/api/warehouse/list', ['descricao', 'nome', 'name', 'description'], ['tipo', 'type']),
 );
 
 export const loadSuppliers = cached(async () =>

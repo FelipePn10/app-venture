@@ -1415,7 +1415,9 @@ Gerenciar o calendário industrial da empresa, definindo quais dias do ano são 
 
 ##### Objetivo
 
-Definir níveis de prioridade para ordens de produção, utilizados pelo sistema APS (Advanced Planning and Scheduling) no sequenciamento da produção. Cada prioridade possui um nome, descrição e intervalo numérico que determina sua posição na fila de produção.
+Classificar automaticamente as ordens planejadas por **faixa de quantidade**. Quando o MRP gera dezenas ou centenas de ordens de uma vez, esta tabela é a régua que carimba cada uma com uma etiqueta (`Urgente`, `Alta`, `Normal`…) sem ninguém marcar ordem por ordem. O APS usa essa etiqueta no sequenciamento.
+
+> ⚠️ **O intervalo é a QUANTIDADE que a ordem pede, em unidades do item.** Não é dias, não é prazo, não é valor em reais. O MRP resolve a etiqueta por `findPriorityForQuantity()`: devolve a primeira faixa em que `quantidade >= início` **e** `quantidade <= fim`.
 
 ##### Pré-requisitos
 
@@ -1427,12 +1429,13 @@ Definir níveis de prioridade para ordens de produção, utilizados pelo sistema
 2. Clique em **Adicionar**.
 3. Informe a **Prioridade** (ex: `Urgente`, `Alta`, `Normal`, `Baixa`).
 4. Informe opcionalmente uma **Descrição** explicativa.
-5. Defina o **Início Intervalo** e o **Fim Intervalo**:
-   - O intervalo numérico posiciona a prioridade na escala de classificação.
-   - Ex: Urgente = 1–10, Alta = 11–30, Normal = 31–70, Baixa = 71–100.
-   - O sistema valida que **Fim ≥ Início**.
+5. Defina a **Qtd. mínima da ordem** e a **Qtd. máxima da ordem**:
+   - São quantidades em **unidades do item**, ambas inclusivas.
+   - Ex.: Baixa = 1–10, Normal = 11–30, Alta = 31–70, Urgente = 71–1000
+     (lê-se: "ordem de 45 peças cai na faixa 31–70 → etiqueta Alta").
+   - O sistema exige **máxima > mínima** (estritamente maior).
 6. Clique no botão de ação para salvar.
-7. A tabela exibe as prioridades ordenadas pelo Início Intervalo.
+7. A tabela exibe as prioridades ordenadas pela quantidade mínima.
 
 ##### Campos
 
@@ -1440,14 +1443,16 @@ Definir níveis de prioridade para ordens de produção, utilizados pelo sistema
 |-------|------|-------------|--------|--------|
 | Prioridade | texto | Sim | — | Nome da prioridade (ex: `Urgente`, `Normal`) |
 | Descrição | texto | Não | — | Descrição explicativa da prioridade |
-| Início Intervalo | número | Não | — | Valor inicial do intervalo de classificação |
-| Fim Intervalo | número | Não | — | Valor final do intervalo (deve ser ≥ Início) |
+| Qtd. mínima da ordem | número | Sim | — | Quantidade mínima (inclusive) para a ordem cair nesta faixa |
+| Qtd. máxima da ordem | número | Sim | — | Quantidade máxima (inclusive). Deve ser **estritamente maior** que a mínima |
 
 ##### Observações importantes
 
-- Os intervalos numéricos definem a ordenação relativa entre prioridades. Ordens de produção com valores dentro de intervalos mais baixos (ex: 1–10) são sequenciadas antes das de intervalos mais altos (ex: 71–100).
-- O sistema valida que o **Fim Intervalo** seja maior ou igual ao **Início Intervalo**.
-- Intervalos podem ser sobrepostos entre prioridades diferentes? **Não recomendado** — o comportamento do APS em caso de sobreposição é indefinido. Mantenha os intervalos mutuamente exclusivos.
+- A faixa é escolhida pela **quantidade da ordem planejada**, não pela urgência de data. Qual etiqueta significa "mais urgente" é convenção sua: o sistema só devolve o nome da faixa que casar.
+- O sistema exige **máxima > mínima** (iguais são recusadas).
+- **Faixas sobrepostas são recusadas pelo backend.** Como vence a primeira faixa que casar, uma sobreposição faria o resultado depender da ordem de cadastro.
+- Quantidade que **não cai em faixa nenhuma** fica **sem prioridade** — não é erro, mas a ordem não recebe etiqueta. Cubra a escala inteira.
+- **Sem nenhuma faixa cadastrada, nenhuma ordem é priorizada.**
 - Esta tela é utilizada pelo módulo de produção (APS) e impacta diretamente a ordem de fabricação no chão de fábrica.
 
 ##### Telas Relacionadas
@@ -1550,24 +1555,34 @@ O produto nasce na **Engenharia** (VENT0200), onde recebe código, estrutura e r
 
 Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semiacabados, acabados, serviços e insumos). É a tela de cadastro mais complexa do ERP Venture, centralizando informações de engenharia, estoque, planejamento, comercial, contábil/fiscal e suprimentos em sete abas.
 
+**Por que esta tela existe:** o item é o átomo do ERP. Compra, produção, estoque, venda, custo e nota fiscal todos apontam para um código de item — sem item cadastrado, nenhum outro módulo tem do que falar. As sete abas existem porque sete áreas guardam informação sobre o mesmo objeto.
+
+> As sete abas são persistidas pelo cadastro. Desde o backend `v1.1.3`,
+> `POST /api/items/create` grava também as pastas **Comercial** e **Contábil**;
+> `GET /api/items/search/{code}` permite conferir os valores e
+> `PUT /api/items/{code}` faz atualização parcial sem apagar campos omitidos.
+
 ##### Pré-requisitos
 
-- Empresa cadastrada no sistema.
-- Para itens do tipo Fabricado: Estrutura de Produtos (VENT0210) e Roteiro de Fabricação (VENT0202) devem existir.
-- Para itens configurados: Grupo PDM (VENT0204), Modificadores (VITE0115) e Atributos (VITE0116) devem estar parametrizados.
-- Para itens de suprimentos: Fornecedores (VSUP0500) e Contratos (VCON0200) cadastrados.
+**Nesta ordem:**
+
+1. **Grupo PDM (VITE0114) e Modificador PDM (VITE0115) cadastrados — obrigatório para QUALQUER item.** O item guarda um ponteiro para os dois; se não existirem, a gravação é recusada pelo backend. Cadastre o PDM **antes** de abrir esta tela.
+2. Empresa cadastrada no sistema (VEMP0100).
+3. Para natureza **Genérico** ou **Configurado**: um **item-base** já cadastrado (informado na aba Engenharia).
+4. Para itens do tipo Fabricado: Estrutura de Produtos (VENT0210) e Roteiro de Fabricação (VENT0202) — podem vir depois, mas o item só fica pronto para o MRP quando existirem.
+5. Para itens de suprimentos: Fornecedores (VSUP0500) e Contratos (VCON0200) cadastrados.
 
 ##### Passo a passo
 
 1. Acesse **VENT0200** pelo menu _Engenharia > Cadastro de Itens_.
 2. Clique em **Novo** (F2).
-3. Na aba **Capa**, preencha ao menos: **Código**, **Nome** e **Descrição** (campos obrigatórios).
-4. Selecione o **Grupo PDM** e o **Modificador PDM** se o item pertencer a uma família de configurados.
-5. Defina o **Status de Saúde** do item: _Normal_, _Crítico_ ou _Obsoleto_.
-6. Marque os flags aplicáveis: _Genérico_, _Configurado_, _Item Base_, _Processo_.
-7. Na aba **Estoque**, defina almoxarifado padrão, unidade de medida (UN, KG, M, M², M³, L, CX, PC, GL, PAR) e parâmetros de contagem cíclica (intervalo em dias, estoque mínimo, baixa automática).
-8. Na aba **Engenharia**, defina o **tipo** do item (Fabricado, Comprado, Terceirizado, Serviço), a **estrutura** (Simples, Fantasma, Conjunto, Subconjunto), o item base para referência OEM, peso bruto, peso líquido e volume cúbico.
-9. Na aba **Planejamento**, escolha o **tipo de planejamento** (MRP, MPS, Kanban, Min-Max, Ponto de Reposição, Carro a Carro, Protótipo), classificação ABC, lotes, estoques de segurança, tempos de produção e flags (Crítico, Exclusivo, Fantasma).
+3. Na aba **Capa**, preencha os obrigatórios: **Código** (número inteiro maior que zero — não aceita letras) e **Nome**.
+4. Selecione o **Grupo PDM** e o **Modificador PDM** — **obrigatórios**, escolhidos numa lista de busca que só mostra registros já cadastrados.
+5. Defina o **Estado** do item: _Ativo_, _Inativo_ ou _Fantasma_; e a **Situação**: _Linha_ ou _Promoção_.
+6. Escolha a **Natureza** — _Item Base_, _Genérico_ ou _Configurado_. É **um campo único**, não marcações independentes. Genérico e Configurado exigem item-base.
+7. Na aba **Estoque**, defina almoxarifado padrão, unidade de medida e parâmetros de contagem cíclica (intervalo em dias, estoque mínimo, baixa automática). A lista de unidades é **fechada**: UN, KG, M, M2, M3, MM, CM, IN, MICROMETRO, TONELADA.
+8. Na aba **Engenharia**, defina o **tipo** do item (Fabricado, Comprado, De terceiro, Serviço), a **estrutura** (Industrial, Comercial), o item-base, peso bruto e peso líquido. O peso bruto **não pode ser menor** que o líquido.
+9. Na aba **Planejamento**, escolha o **tipo de planejamento** (MRP normal, Projeto), o **LLC** (1 = produto final, 2–8 = intermediários, 9 = matéria-prima) e a flag Fantasma.
 10. Na aba **Comercial**, preencha descrição comercial, tipo de venda (Venda, Revenda), múltiplos de venda, garantia em dias e flags.
 11. Na aba **Contábil**, defina classificações fiscais: origem (0-Nacional, 1-Estrangeira Importação, 2-Estrangeira adquirida no mercado interno), NCM, alíquotas de IPI, ICMS, CEST e PIS/COFINS.
 12. Na aba **Suprimentos**, configure unidade de medida de suprimento, almoxarifado padrão para suprimentos, tipo de utilização (Industrialização, Consumo, Imobilizado), checklist de recebimento e safra.
@@ -1577,30 +1592,30 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 
 | Campo | Aba | Tipo | Obrigatório | Descrição |
 |-------|-----|------|-------------|-----------|
-| Código | Capa | Texto (30) | Sim | Código único do item no sistema |
-| Nome | Capa | Texto (120) | Sim | Nome reduzido do item |
-| Descrição | Capa | Texto (255) | Sim | Descrição completa do item |
-| Grupo PDM | Capa | Select | Não | Família PDM à qual o item pertence |
-| Modificador PDM | Capa | Select | Não | Modificador dentro do grupo PDM |
-| Saúde | Capa | Select | Sim | Normal / Crítico / Obsoleto |
-| Genérico | Capa | Checkbox | Não | Item serve como template para configurados |
-| Configurado | Capa | Checkbox | Não | Item gerado via configurador PDM |
-| Item Base | Capa | Checkbox | Não | Item de referência para a família |
-| Processo | Capa | Checkbox | Não | Item representa uma etapa de processo |
+| Código | Capa | Número inteiro > 0 | Sim | Código único do item. **Não aceita letras** |
+| Nome | Capa | Texto | Sim | Nome reduzido. Vira a descrição técnica se a Descrição ficar vazia |
+| Descrição Técnica | Capa | Texto | Não | Descrição completa. Em branco, o sistema usa o Nome |
+| Grupo PDM | Capa | Lookup | **Sim** | Família PDM (VITE0114). Sem ela a gravação é recusada |
+| Modificador PDM | Capa | Lookup | **Sim** | Modificador (VITE0115). Sem ele a gravação é recusada |
+| Estado | Capa | Select | Sim | Ativo / Inativo / Fantasma |
+| Situação | Capa | Select | Não | Linha (catálogo corrente) / Promoção (campanha temporária) |
+| Natureza | Capa | Select | Sim | Item Base / Genérico / Configurado — **campo único** |
+| Item de Processo | Capa | Checkbox | Não | Item representa operação externa / de terceiro |
 | Almoxarifado | Estoque | Select | Não | Almoxarifado padrão para movimentações |
-| Unidade de Medida | Estoque | Select | Sim | UN / KG / M / M² / M³ / L / CX / PC / GL / PAR |
+| Unidade de Medida | Estoque | Select | Sim | UN / KG / M / M2 / M3 / MM / CM / IN / MICROMETRO / TONELADA — **lista fechada** |
 | Baixa Automática | Estoque | Checkbox | Não | Baixa estoque automaticamente na produção |
 | Contagem Cíclica | Estoque | Checkbox | Não | Habilita contagem cíclica para o item |
 | Intervalo (dias) | Estoque | Number | Não | Intervalo entre contagens cíclicas |
 | Estoque Mínimo | Estoque | Number | Não | Quantidade mínima antes de disparar alerta |
-| Tipo | Engenharia | Select | Sim | Fabricado / Comprado / Terceirizado / Serviço |
-| Estrutura | Engenharia | Select | Não | Simples / Fantasma / Conjunto / Subconjunto |
-| Item Base | Engenharia | Select | Não | Item OEM de referência |
+| Tipo | Engenharia | Select | Sim | Fabricado / Comprado / De terceiro / Serviço |
+| Estrutura | Engenharia | Select | Não | Industrial (MRP gera ordem e controla estoque) / Comercial (pronto para venda) |
+| Item Base | Engenharia | Lookup | Condicional | **Obrigatório** quando a Natureza é Genérico ou Configurado |
 | OEM | Engenharia | Texto (30) | Não | Código do fabricante original |
-| Peso Bruto | Engenharia | Number | Não | Peso bruto em KG |
+| Peso Bruto | Engenharia | Number | Não | Peso bruto em KG. **Não pode ser menor que o líquido** |
 | Peso Líquido | Engenharia | Number | Não | Peso líquido em KG |
 | Volume Cúbico | Engenharia | Number | Não | Volume em M³ |
-| Tipo Planejamento | Planejamento | Select | Sim | MRP / MPS / Kanban / Min-Max / Ponto Reposição / Carro a Carro / Protótipo |
+| Tipo Planejamento | Planejamento | Select | Sim | MRP normal / Projeto |
+| LLC | Planejamento | Number (0–9) | Sim | Nível na estrutura: 1 = produto final, 2–8 = intermediários, 9 = matéria-prima |
 | Classificação | Planejamento | Select | Não | Classificação ABC (A, B, C) |
 | Lote Mínimo | Planejamento | Number | Não | Tamanho mínimo de lote de produção/compra |
 | Lote Múltiplo | Planejamento | Number | Não | Múltiplo para arredondamento de lotes |
@@ -1711,7 +1726,9 @@ Manter a lista de materiais (Bill of Materials) dos itens fabricados, representa
 
 ##### Objetivo
 
-Cadastrar os grupos (famílias) PDM que agrupam itens configurados com características e variáveis comuns. O grupo PDM é o primeiro nível da hierarquia de configuração.
+Este código legado trata do mesmo cadastro de famílias PDM. Para a operação diária,
+use **VITE0114**, que oferece formulário com campos identificados e sugere o código
+automaticamente. O usuário não precisa montar comandos nem editar JSON.
 
 ##### Pré-requisitos
 
@@ -1719,22 +1736,20 @@ Cadastrar os grupos (famílias) PDM que agrupam itens configurados com caracter�
 
 ##### Passo a passo
 
-1. Acesse **VENT0204** pelo menu _Engenharia > Grupos PDM_.
-2. Clique em **Novo** (F2).
-3. Na barra de operações, escolha **Cadastrar**.
-4. No corpo JSON, informe `code` com um número inteiro ainda não utilizado, `description` com o nome da família e `enterprise_id` com o código numérico da empresa proprietária.
-5. Clique em **Executar** e somente considere o cadastro concluído quando a resposta do backend for exibida sem erro.
-6. Escolha **Consultar**, execute e confirme que o novo grupo aparece na grade persistida.
-7. Para revisar um registro, escolha **Abrir grupo**, informe o código numérico e execute.
-8. Para alterar, escolha **Alterar grupo**, informe o mesmo código no campo próprio e, no JSON, envie a nova `description` e o `enterprise_id`; execute e consulte novamente para confirmar a persistência.
+1. Abra **VITE0114 — Cadastro de Grupos (PDM)**.
+2. Clique em **Listar** para carregar os grupos e calcular o próximo código livre.
+3. Clique em **Novo** e confira o **Código** sugerido automaticamente.
+4. Informe a **Descrição** da família e a **Empresa**.
+5. Clique em **Criar** e confirme o novo grupo na lista.
+6. Para alterar, selecione o grupo, ajuste Descrição/Empresa e clique em **Atualizar**.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Código (`code`) | Número inteiro | Sim | Identificador único do grupo PDM; é usado também nas consultas e alterações |
-| Empresa (`enterprise_id`) | Número inteiro | Sim | Código da empresa proprietária do grupo |
-| Descrição (`description`) | Texto | Sim | Nome descritivo da família PDM |
+| Código | Número inteiro | Sim | Próximo código livre sugerido pelo sistema; imutável após criar |
+| Empresa | Número inteiro | Sim | Empresa proprietária do grupo |
+| Descrição | Texto | Sim | Nome descritivo da família PDM |
 
 ##### Observações importantes
 
@@ -1747,9 +1762,9 @@ Cadastrar os grupos (famílias) PDM que agrupam itens configurados com caracter�
 | Tela | Relação |
 |------|---------|
 | VENT0200 | Vincula item ao grupo no campo Grupo PDM |
-| VITE0114 | Grupos PDM (tema azul) — versão alternativa de cadastro com vínculo empresa/item base |
-| VITE0115 | Modificadores PDM — modificadores dentro deste grupo |
-| VITE0116 | Atributos PDM — atributos de modificadores dentro deste grupo |
+| VITE0114 | Tela operacional para criar e manter os Grupos PDM |
+| VITE0115 | Modificadores PDM — cadastro global, com código automático |
+| VITE0116 | Montador legível da descrição técnica e dos atributos |
 | VITE0118 | Regras Itens Configurados — regras baseadas nos atributos do grupo |
 
 ---
@@ -2197,14 +2212,14 @@ Gerar máscaras (códigos configurados) para itens configuráveis a partir da se
 ##### Objetivo
 
 Cadastrar os **Grupos** do PDM — a primeira dimensão da descrição técnica (ex.: CHAPAS,
-PARAFUSOS, CABOS). O grupo é um cadastro simples: **código** (informado pelo usuário) +
+PARAFUSOS, CABOS). O grupo é um cadastro simples: **código** (sugerido automaticamente pela tela) +
 **descrição**, isolado por empresa.
 
 ##### Passo a passo
 
 1. Acesse **VITE0114**. Clique em **Listar** para ver os grupos cadastrados (filtre por
    código ou descrição no campo **Filtrar**).
-2. Para criar, clique em **Novo**, informe **Código**, **Descrição** e a **Empresa**
+2. Para criar, clique em **Novo**, confira o **Código** sugerido, informe **Descrição** e a **Empresa**
    (padrão 1) e clique em **Criar**.
 3. Para editar, clique em **Editar** na linha do grupo — o **código não muda** (é a
    chave); ajuste a descrição e clique em **Atualizar**.
@@ -2213,7 +2228,7 @@ PARAFUSOS, CABOS). O grupo é um cadastro simples: **código** (informado pelo u
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Código | Número | Sim | Código do grupo (informado; imutável após criar) |
+| Código | Número | Sim | Próximo código livre sugerido pela tela; imutável após criar |
 | Descrição | Texto | Sim | Nome do grupo (ex.: "Chapas de Aço") |
 | Empresa | Número | Não | Empresa dona do cadastro (padrão 1) |
 
@@ -2239,12 +2254,12 @@ PARAFUSOS, CABOS). O grupo é um cadastro simples: **código** (informado pelo u
 
 Cadastrar os **Modificadores** — a segunda dimensão da descrição técnica (ex.: "Chapa Aço
 Carbono", "Frete Expresso"). O modificador é **global** (não pertence a um grupo) e tem
-apenas uma **descrição**; o **id** é gerado automaticamente.
+apenas uma **descrição**; o **Código** é gerado automaticamente (internamente, a API o chama de `id`).
 
 ##### Passo a passo
 
 1. Acesse **VITE0115** e clique em **Listar**.
-2. Para criar, clique em **Novo**, informe a **Descrição** e clique em **Criar** — o id é
+2. Para criar, clique em **Novo**, informe a **Descrição** e clique em **Criar** — o Código é
    atribuído pelo sistema.
 3. Para editar, clique em **Editar** na linha, ajuste a descrição e clique em **Atualizar**.
 
@@ -2252,7 +2267,7 @@ apenas uma **descrição**; o **id** é gerado automaticamente.
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Id | Número | — | Gerado pelo sistema (somente leitura) |
+| Código | Número | — | Gerado pelo sistema (somente leitura) |
 | Descrição | Texto | Sim | Nome do modificador |
 
 ##### Observações importantes
@@ -2274,11 +2289,11 @@ apenas uma **descrição**; o **id** é gerado automaticamente.
 
 ##### Objetivo
 
-Montar o objeto **PDM do item** — a combinação **Grupo + Modificador + Atributos** que
+Montar a **descrição técnica do item** — a combinação **Grupo + Modificador + Atributos** que
 gera a descrição técnica. Como os **atributos não têm cadastro próprio** (são gravados no
 item), esta tela é um **montador/pré-visualizador**: você escolhe grupo e modificador
-reais, adiciona os pares **nome:valor** e copia o objeto `pdm` pronto para colar no
-cadastro do item.
+reais, adiciona os pares **nome:valor** e mostra um resumo legível para conferir no
+cadastro do item. O usuário não precisa ler nem copiar JSON.
 
 ##### Passo a passo
 
@@ -2286,8 +2301,8 @@ cadastro do item.
 2. Selecione o **Grupo** e o **Modificador** nas listas.
 3. Em **Atributos do item**, informe **Nome** (ex.: COR) e **Valor** (ex.: PRETO) e clique
    em **Adicionar**. Repita para cada atributo.
-4. Confira a **Descrição técnica composta** e o **Objeto pdm (item)** na pré-visualização.
-5. Clique em **Copiar pdm** e cole o objeto no campo PDM do cadastro do item (VENT0200).
+4. Confira a **Descrição técnica composta** e o resumo de Grupo, Modificador e Atributos.
+5. No cadastro do item (VENT0200), selecione os mesmos dados.
 
 ##### Campos
 
@@ -2300,8 +2315,7 @@ cadastro do item.
 
 ##### Observações importantes
 
-- Atributos **não** têm cadastro separado no ERP — eles vivem no objeto `pdm` do item
-  (`group_code`, `modifier_code`, `attributes: [{name, value}]`, `description_technique`).
+- Atributos **não** têm cadastro separado no ERP — eles são gravados junto do item.
 - Esta tela não persiste nada sozinha: a gravação acontece no **cadastro do item**.
 
 ##### Telas relacionadas
@@ -7488,7 +7502,7 @@ produto final, e cada papel exige configurações diferentes.
 | **Natureza** | Item Base (molde de variações), Genérico ou Configurado (gera máscara por atributos/PDM). |
 | **PDM** | A descrição técnica é **composta** por Grupo + Modificador + Atributos (ex.: "Chapa Aço Carbono 1020 6,35mm"), não digitada livre. |
 | **LLC** | Nível do item na estrutura: **1** = produto final; **2–8** = intermediários; **9** = matéria-prima. Ordena o processamento do MRP. |
-| **Tipo MRP** | MRP, Min/Max, Kanban, Ponto de Pedido (ROP), MPS — a política que decide como o item é reposto. |
+| **Tipo MRP** | `NORMAL_MRP` (planejado pelo MRP a partir da demanda) ou `PROJETO` (planejado por projeto, fora do MRP regular). São **só estes dois**. O **Ponto de Pedido (ROP)** não é um tipo: é um bloco de parâmetros à parte (`TR`, `CM`, `CR`, `ES`) que convive com qualquer um dos dois. |
 
 ##### Passo a passo
 

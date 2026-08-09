@@ -141,6 +141,9 @@ export function Vctb0102Page(): JSX.Element {
   const [novaEmpresa, setNovaEmpresa] = useState("");
   const [novaUnidade, setNovaUnidade] = useState("");
   const [errors, setErrors]           = useState<Partial<Record<keyof FormCC, string>>>({});
+  /** CC Pai já confirmado no backend — mostrado sob o campo como confirmação. */
+  const [parentInfo, setParentInfo]   = useState<{ code: number; description: string } | null>(null);
+  const [parentChecking, setParentChecking] = useState(false);
 
   // ── Search state
   const [filtroDataRef, setFiltroDataRef]   = useState("");
@@ -173,8 +176,36 @@ export function Vctb0102Page(): JSX.Element {
     [],
   );
 
+  /**
+   * Confere se o CC Pai informado existe de fato. O backend aceita
+   * `parent_code` sem checar a referência, então um pai inexistente gravava um
+   * CC órfão — a hierarquia ficava quebrada e só aparecia no rateio.
+   *
+   * Devolve a mensagem de erro (ou `null` se estiver tudo certo) e atualiza o
+   * rótulo de confirmação exibido sob o campo.
+   */
+  const checkParent = useCallback(async (raw: string, selfCode: string): Promise<string | null> => {
+    const trimmed = raw.trim();
+    setParentInfo(null);
+    if (!trimmed) return null; // campo é opcional
+    const code = Number(trimmed);
+    if (isNaN(code) || code <= 0 || !Number.isInteger(code)) return "CC Pai deve ser um número inteiro positivo.";
+    if (selfCode.trim() && code === Number(selfCode)) return "Um centro de custo não pode ser pai de si mesmo.";
+    setParentChecking(true);
+    try {
+      const cc = await getCostCenter(code);
+      if (!cc) return `CC Pai ${code} não existe. Cadastre-o primeiro ou deixe o campo em branco.`;
+      setParentInfo({ code: cc.code, description: cc.description });
+      return null;
+    } catch {
+      return "Não foi possível verificar o CC Pai. Verifique a conexão.";
+    } finally {
+      setParentChecking(false);
+    }
+  }, []);
+
   // ── Validation
-  function validate(): boolean {
+  async function validate(): Promise<boolean> {
     const e: Partial<Record<keyof FormCC, string>> = {};
     if (!form.code.trim()) {
       e.code = "Código obrigatório.";
@@ -191,6 +222,8 @@ export function Vctb0102Page(): JSX.Element {
     if (form.endDate && form.startDate && form.endDate < form.startDate) {
       e.endDate = "Data final deve ser igual ou posterior à data inicial.";
     }
+    const parentError = await checkParent(form.parentCode, form.code);
+    if (parentError) e.parentCode = parentError;
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -262,7 +295,7 @@ export function Vctb0102Page(): JSX.Element {
 
   // ── Save (always creates — update endpoint can be added later)
   async function handleSalvar() {
-    if (!validate()) return;
+    if (!(await validate())) return;
     setIsSaving(true);
     setFeedback(null);
     try {
@@ -510,6 +543,7 @@ export function Vctb0102Page(): JSX.Element {
 
         .ctb-field-error { font-size: 11px; color: #c84040; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
         .ctb-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
+        .ctb-field-ok    { font-size: 11px; color: #2f7d47; margin-top: 2px; font-weight: 500; }
 
         /* ── INFO BOX ── */
         .ctb-info-box {
@@ -987,36 +1021,47 @@ export function Vctb0102Page(): JSX.Element {
                     <label className="ctb-label">CC Pai</label>
                     <div className="ctb-input-wrap">
                       <input
-                        className="ctb-input"
+                        className={`ctb-input${errors.parentCode ? " has-error" : ""}`}
                         style={{ borderRadius: "7px 0 0 7px" }}
                         placeholder="Cód. pai"
                         value={form.parentCode}
                         onChange={(e) => setField("parentCode", e.target.value)}
+                        onBlur={async (e) => {
+                          const msg = await checkParent(e.target.value, form.code);
+                          setErrors((prev) => ({ ...prev, parentCode: msg ?? undefined }));
+                        }}
                       />
                       <button
                         className="ctb-input-btn"
                         title="Verificar CC Pai"
                         type="button"
-                        disabled={!form.parentCode.trim() || isLoading}
+                        disabled={!form.parentCode.trim() || isLoading || parentChecking}
                         onClick={async () => {
-                          const code = Number(form.parentCode.trim());
-                          if (!code) return;
-                          try {
-                            const cc = await getCostCenter(code);
-                            if (cc) setFeedback({ type: "info", message: `CC Pai ${cc.code} — ${cc.description}` });
-                            else setFeedback({ type: "info", message: `CC ${code} não encontrado.` });
-                          } catch {
-                            setFeedback({ type: "error", message: "Erro ao consultar CC Pai." });
-                          }
+                          const msg = await checkParent(form.parentCode, form.code);
+                          setErrors((prev) => ({ ...prev, parentCode: msg ?? undefined }));
                         }}
                       >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                          <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                          <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
+                        {parentChecking
+                          ? <div className="ctb-spinner-dark" style={{ width: 12, height: 12 }} />
+                          : <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+                              <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                            </svg>
+                        }
                       </button>
                     </div>
-                    <span className="ctb-field-hint">Opcional — CC principal ao qual este é subordinado.</span>
+                    {errors.parentCode
+                      ? <span className="ctb-field-error">
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                            <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
+                            <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
+                          </svg>
+                          {errors.parentCode}
+                        </span>
+                      : parentInfo
+                        ? <span className="ctb-field-ok">✓ {parentInfo.code} — {parentInfo.description}</span>
+                        : <span className="ctb-field-hint">Opcional — CC principal ao qual este é subordinado. É conferido ao sair do campo.</span>
+                    }
                   </div>
 
                   {/* Descrição */}

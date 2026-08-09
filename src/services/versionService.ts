@@ -31,6 +31,9 @@ export async function getClientVersion(): Promise<string> {
 
 export async function checkDesktopUpdate(): Promise<Update | null> {
   if (!isTauri()) return null;
+  // O ambiente de TREINAMENTO nunca se auto-atualiza: o catálogo do updater é o
+  // de produção, e instalar aquele build tiraria a turma do ambiente isolado.
+  if (import.meta.env.MODE === 'training') return null;
   return check();
 }
 
