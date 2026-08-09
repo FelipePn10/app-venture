@@ -79,7 +79,7 @@ trava no primeiro item. Este bloco tem de vir antes do A4.
 1. **Código** — **número inteiro maior que zero** (não aceita letras) — e o **Nome**.
 2. **Grupo e Modificador PDM** — escolhidos na **lista de busca** (os que foram criados no A3). São **obrigatórios**.
 3. **Unidade de medida** — a fábrica compra em `KG`, estoca em `KG`, consome em peça? Isso importa. ⚠️ A lista é **fechada**: `UN KG M M2 M3 MM CM IN MICROMETRO TONELADA`.
-4. **Natureza** — `Item Base` / `Genérico` / `Configurado`. É **um campo só**; genérico e configurado **exigem item-base**.
+4. **Natureza** — `Item Base` / `Genérico` / `Configurado`. É **um campo só**; o item-base é apenas um modelo opcional para copiar configurações.
 5. **Comprado × Fabricado** — *o interruptor mais importante*: comprado gera **pedido de compra**; fabricado gera **ordem de produção**.
 6. **LLC** (aba Planejamento) — `1` produto final, `2`–`8` intermediários, `9` matéria-prima.
 7. Em `VITM0100`, revisar a **prontidão para o MRP** (o que falta para o item "rodar" no planejamento).

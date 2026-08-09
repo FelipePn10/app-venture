@@ -24,7 +24,7 @@ const STRUCTS = [{ value: 0, label: "INDUSTRIAL" }, { value: 1, label: "COMERCIA
 const USE_TYPES = [{ value: 0, label: "INDUSTRIALIZAÇÃO" }, { value: 1, label: "CONSUMO" }, { value: 2, label: "IMOBILIZADO" }];
 
 const EMPTY_NEW = {
-  code: "", name: "", nature: 2, item_base_code: "", group_code: "", modifier_code: "",
+  code: "", name: "", nature: 2, group_code: "", modifier_code: "",
   uom: "UN", minimum_stock: "0", eng_type: 0, type_struct: 0,
   weight_net: "0", type_mrp: 0, llc: "2", type_of_use: 0,
 };
@@ -53,7 +53,7 @@ export function Vitm0100Page(): JSX.Element {
   }); };
 
   const criar = () => run(async () => {
-    if (!nf.code || !nf.name.trim() || !nf.group_code || !nf.modifier_code || (nf.nature !== 2 && !nf.item_base_code)) { setFeedback({ type: "error", message: "Código, nome, grupo, modificador e item-base (para itens não-base) são obrigatórios." }); return; }
+    if (!nf.code || !nf.name.trim() || !nf.group_code || !nf.modifier_code) { setFeedback({ type: "error", message: "Código, nome, grupo e modificador são obrigatórios." }); return; }
     const dto = {
       code: Number(nf.code),
       name: nf.name.trim(),
@@ -62,7 +62,7 @@ export function Vitm0100Page(): JSX.Element {
       health: "ATIVO",
       pdm: { group_code: Number(nf.group_code), modifier_code: Number(nf.modifier_code), attributes: [], description_technique: "" },
       warehouse: { warehouse_code: 1, unit_of_measurement: nf.uom, automatic_low: false, minimum_stock: Number(nf.minimum_stock) || 0 },
-      engineering: { ...(nf.nature !== 2 ? { item_base_cod: Number(nf.item_base_code) } : {}), type: nf.eng_type, type_struct: nf.type_struct, oem: false, weight: { gross: Number(nf.weight_net) || 0, net: Number(nf.weight_net) || 0, unit: "KG" } },
+      engineering: { type: nf.eng_type, type_struct: nf.type_struct, oem: false, weight: { gross: Number(nf.weight_net) || 0, net: Number(nf.weight_net) || 0, unit: "KG" } },
       planning: { type_mrp: nf.type_mrp, llc: Number(nf.llc), ghost: false },
       supplies: { type_of_use: nf.type_of_use },
     };
@@ -103,7 +103,6 @@ export function Vitm0100Page(): JSX.Element {
           <div className="erp-field erp-c1"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={nf.code} onChange={(e) => setNf((p) => ({ ...p, code: e.target.value }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label erp-req">Nome</label><input className="erp-input" type="text" maxLength={120} value={nf.name} onChange={(e) => setNf((p) => ({ ...p, name: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Natureza</label><select className="erp-input" value={nf.nature} onChange={(e) => setNf((p) => ({ ...p, nature: Number(e.target.value) }))}>{[0, 1, 2].map((n) => <option key={n} value={n}>{NATURE_LABEL[n]}</option>)}</select></div>
-          {nf.nature !== 2 && <div className="erp-field erp-c1"><label className="erp-label erp-req">Item-base</label><input className="erp-input num" type="number" value={nf.item_base_code} onChange={(e) => setNf((p) => ({ ...p, item_base_code: e.target.value }))} /></div>}
           <div className="erp-field erp-c1"><label className="erp-label erp-req">Grupo</label><input className="erp-input num" type="number" value={nf.group_code} onChange={(e) => setNf((p) => ({ ...p, group_code: e.target.value }))} /></div>
           <div className="erp-field erp-c1"><label className="erp-label erp-req">Modif.</label><input className="erp-input num" type="number" value={nf.modifier_code} onChange={(e) => setNf((p) => ({ ...p, modifier_code: e.target.value }))} /></div>
           <div className="erp-field erp-c1"><label className="erp-label">UM estoque</label><input className="erp-input" value={nf.uom} onChange={(e) => setNf((p) => ({ ...p, uom: e.target.value.toUpperCase() }))} /></div>

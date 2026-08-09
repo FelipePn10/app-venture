@@ -439,8 +439,8 @@ mas cada aba vazia é uma área que vai reclamar depois.
 1. **Grupo PDM** (`VITE0114`) e **Modificador PDM** (`VITE0115`) cadastrados.
    Sem os dois, a gravação é recusada. *(Parte 4 — faça primeiro.)*
 2. Empresa cadastrada (`VEMP0100`).
-3. Para item **Genérico** ou **Configurado**: um **item-base** já cadastrado, que
-   você informa na aba Engenharia.
+3. Opcionalmente, um **item-base** já cadastrado para copiar as configurações das
+   demais abas e acelerar o preenchimento.
 4. Para item **Fabricado**: Estrutura (`VENT0210`) e Roteiro (`VENT0202`) —
    podem vir depois, mas o item só fica *pronto para o MRP* quando existirem.
 
@@ -475,8 +475,9 @@ mas cada aba vazia é uma área que vai reclamar depois.
 | **Natureza** | ✅ | `Item Base` / `Genérico` / `Configurado` — **é um campo só**, não três marcações |
 | Item de Processo | | Representa operação externa / de terceiro |
 
-⚠️ **Natureza `Genérico` ou `Configurado` exige um item-base** (aba Engenharia).
-Sem ele a gravação é recusada.
+💡 **Usar item-base como modelo é opcional.** Ao selecionar um modelo na aba
+Engenharia, o sistema copia suas configurações e mantém o código, o nome e o nome
+técnico informados para o novo item.
 
 ⚠️ **Estado `Fantasma`** faz o item ser explodido pelo MRP sem gerar ordem própria
 — ele "atravessa" para os filhos. Use com intenção.
@@ -609,7 +610,7 @@ Subestimado → falta de material. Superestimado → estoque parado. **Preencha 
 
 ### Passo a passo
 1. **Listar** → traz os itens cadastrados, com descrição composta, natureza, situação e parâmetros de planejamento.
-2. **Cadastro rápido** (opcional) → informe **Código**, **Grupo PDM** e **Modificador PDM** já cadastrados; escolha a **Natureza**; para Genérico/Configurado informe também o **item-base**.
+2. **Cadastro rápido** (opcional) → informe **Código**, **Nome**, **Grupo PDM** e **Modificador PDM** já cadastrados; escolha a **Natureza**.
 3. Complete UM de estoque, uso, tipo de engenharia, estrutura, tipo de planejamento, LLC e demais parâmetros.
 4. **Criar item** → aguarde a confirmação e confira em **Listar**.
 5. Selecione um item e clique em **Prontidão**.
@@ -626,7 +627,7 @@ Subestimado → falta de material. Superestimado → estoque parado. **Preencha 
 
 > A verificação **apenas informa** — ela **não altera** o item. Use como conferência final antes de colocar o item para operar.
 
-⚠️ **A descrição é montada pelo PDM.** Se Grupo, Modificador ou item-base não existirem, o cadastro é **recusado** e nada é gravado.
+⚠️ **A descrição técnica é montada pelo PDM.** Se Grupo ou Modificador não existirem, o cadastro é **recusado** e nada é gravado.
 
 ✍️ **Anote o padrão de código de item da sua empresa:**
 
