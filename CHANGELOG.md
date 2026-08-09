@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.3] — 2026-08-09
+
 ## Novidades
 - Agora você pode escolher um item-base como modelo e copiar automaticamente as configurações de estoque, engenharia, planejamento, vendas, contabilidade e suprimentos.
 
