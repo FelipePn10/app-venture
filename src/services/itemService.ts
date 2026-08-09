@@ -76,6 +76,12 @@ export async function getItem(code: number): Promise<ItemDTO> {
   const { data } = await httpClient.get(`${BASE}/search/${code}`);
   return parseItem(data);
 }
+
+/** Detalhe completo, usado para copiar as pastas de um item-base no cadastro. */
+export async function getItemTemplate(code: number): Promise<Obj> {
+  const { data } = await httpClient.get(`${BASE}/search/${code}`);
+  return unwrapObject(data);
+}
 export async function listItemsWithMasks(): Promise<ItemDTO[]> {
   const { data } = await httpClient.get(`${BASE}/with-masks`);
   return unwrapArray(data).map(parseItem);

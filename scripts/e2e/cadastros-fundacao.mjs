@@ -13,7 +13,7 @@
  *   VCTB0102  Centro de custo — CC Pai inexistente
  *   VENT0204  Grupo PDM       — pré-requisito do item
  *   VITE0115  Modificador PDM — pré-requisito do item
- *   VENT0200  Item            — exige PDM existente; enums validados
+ *   VENT0200  Item            — exige PDM existente; item-base é só um modelo opcional
  *   lookups   — endpoints que o <LookupField> consome respondem
  *
  * Uso:
@@ -273,14 +273,12 @@ async function pdmEItem() {
     'POST', '/api/items/create',
     corpoItem(proximoItem, { group_code: grupos[0]?.code ?? 1, modifier_code: mods[0]?.id ?? 1, uom: 'CX' }));
 
-  // Natureza != Item Base exige item-base (item_entity.go → Validate).
-  await expectRejection('VENT0200 — recusa Genérico/Configurado sem item-base',
-    'POST', '/api/items/create',
-    corpoItem(proximoItem, { group_code: grupos[0]?.code ?? 1, modifier_code: mods[0]?.id ?? 1, nature: 1, semItemBase: true }));
-
   if (RUN_WRITES && grupos.length && mods.length) {
     const groupCode = Number(grupos[0].code ?? grupos[0].Code);
     const modifierCode = Number(mods[0].id ?? mods[0].ID);
+    await call('POST', '/api/items/create',
+      corpoItem(proximoItem + 1, { group_code: groupCode, modifier_code: modifierCode, nature: 1, semItemBase: true }),
+      { expect: [200, 201], label: 'VENT0200 — cria Configurado sem item-base obrigatório' });
     const criado = await call('POST', '/api/items/create',
       corpoItem(proximoItem, { group_code: groupCode, modifier_code: modifierCode, pastasCompletas: true }),
       { expect: [200, 201], label: `VENT0200 — cria item ${proximoItem} com PDM válido` });

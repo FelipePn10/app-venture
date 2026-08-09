@@ -154,6 +154,8 @@ export function humanizeApiError(e: unknown, fallback = 'Ocorreu um erro inesper
 
     const raw = rawFromBody(e.response.data);
     if (raw) {
+      const validation = translateCommonValidation(raw);
+      if (validation) return validation;
       // 1) Tenta traduzir erro cru de banco.
       const translated = translatePostgres(raw);
       if (translated) return translated;
@@ -174,6 +176,17 @@ export function humanizeApiError(e: unknown, fallback = 'Ocorreu um erro inesper
     return looksTechnical(e) ? (translatePostgres(e) ?? fallback) : e.trim();
   }
   return fallback;
+}
+
+/** Traduções de validações de domínio que ainda chegam em inglês pela API. */
+function translateCommonValidation(text: string): string | undefined {
+  if (/item\s+name\s+(is\s+)?required|name\s+(is\s+)?required/i.test(text)) {
+    return 'Informe o nome do item.';
+  }
+  if (/item[-_ ]?base.*required|required.*item[-_ ]?base/i.test(text)) {
+    return 'O servidor ainda exige um item-base para esta natureza. Selecione um modelo ou altere a natureza para Item Base.';
+  }
+  return undefined;
 }
 
 /** Heurística: a string parece um erro técnico/cru que não deve ir à tela? */

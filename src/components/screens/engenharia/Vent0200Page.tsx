@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { createItem } from "@/services/itemService";
-import { errMessage } from "@/services/fiscalShared";
+import { createItem, getItemTemplate } from "@/services/itemService";
+import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses } from "@/services/lookups";
 
@@ -194,9 +194,9 @@ const TIPO_UTILIZACAO_WIRE: Record<TypeTipoUtilizacao, string> = {
   "Imobilizado": "IMOBILIZADO",
 };
 const NATUREZAS: { value: ItemNature; label: string; hint: string }[] = [
-  { value: 2, label: "Item Base", hint: "Item independente; serve de base para genéricos/configurados" },
-  { value: 0, label: "Genérico", hint: "Agrupa materiais não estocáveis sob um código — exige item-base" },
-  { value: 1, label: "Configurado", hint: "Item com variações (cor, medida) — exige item-base" },
+  { value: 2, label: "Item Base", hint: "Modelo reutilizável com parâmetros contábeis, comerciais, de estoque e planejamento" },
+  { value: 0, label: "Genérico", hint: "Agrupa materiais não estocáveis sob um código" },
+  { value: 1, label: "Configurado", hint: "Item com variações, como cor e medida" },
 ];
 const ORIGENS: OrigemItem[] = [
   "0 - Nacional",
@@ -342,9 +342,6 @@ export function Vent0200Page(): JSX.Element {
     if (!form.name.trim()) e.name = "Nome obrigatório.";
     if (!form.groupID.trim()) e.groupID = "Grupo PDM obrigatório — cadastre em VITE0114 se ainda não existir.";
     if (!form.modifierID.trim()) e.modifierID = "Modificador PDM obrigatório — cadastre em VITE0115 se ainda não existir.";
-    // O backend recusa item Genérico/Configurado sem item-base (item_entity.go).
-    if (form.nature !== 2 && !form.itemBaseCod.trim())
-      e.itemBaseCod = "Item-base obrigatório para itens Genérico/Configurado.";
     // Weight.IsValid(): bruto não pode ser menor que líquido.
     const bruto = Number(form.grossWeight || 0);
     const liquido = Number(form.netWeight || 0);
@@ -432,7 +429,7 @@ export function Vent0200Page(): JSX.Element {
             : {}),
         },
         engineering: {
-          ...(form.nature !== 2 ? { item_base_cod: Number(form.itemBaseCod) } : {}),
+          ...(form.itemBaseCod.trim() ? { item_base_cod: Number(form.itemBaseCod) } : {}),
           weight: { gross: bruto, net: liquido, unit: "KG" },
           type: form.type,
           type_struct: form.typeStruct,
@@ -495,6 +492,84 @@ export function Vent0200Page(): JSX.Element {
       setFeedback({ type: "error", message: errMessage(err, "Não foi possível gravar o item.") });
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function aplicarItemBase(code: number | undefined) {
+    setField("itemBaseCod", code ? String(code) : "");
+    if (!code) return;
+    try {
+      const base = await getItemTemplate(code);
+      const pdm = unwrapObject(base["pdm"] ?? base["Pdm"]);
+      const warehouse = unwrapObject(base["warehouse"] ?? base["Warehouse"]);
+      const engineering = unwrapObject(base["engineering"] ?? base["Engineering"]);
+      const weight = unwrapObject(engineering["weight"] ?? engineering["Weight"]);
+      const planning = unwrapObject(base["planning"] ?? base["Planning"]);
+      const commercial = unwrapObject(base["commercial"] ?? base["Commercial"]);
+      const accounting = unwrapObject(base["accounting"] ?? base["Accounting"]);
+      const supplies = unwrapObject(base["supplies"] ?? base["Supplies"]);
+      const opt = (o: Obj, ...keys: string[]) => parseStr(o, ...keys);
+      const numText = (o: Obj, ...keys: string[]) => {
+        const value = parseNum(o, ...keys);
+        return value === 0 ? "" : String(value);
+      };
+      const use = opt(supplies, "type_of_use", "TypeOfUse");
+      setForm((current) => ({
+        ...current,
+        itemBaseCod: String(code),
+        groupID: String(parseNum(pdm, "group_code", "GroupCode") || current.groupID),
+        modifierID: String(parseNum(pdm, "modifier_code", "ModifierCode") || current.modifierID),
+        warehouseID: String(parseNum(warehouse, "warehouse_code", "WarehouseCode") || current.warehouseID),
+        unitOfMeasurement: (opt(warehouse, "unit_of_measurement", "UnitOfMeasurement") || current.unitOfMeasurement) as TypeUnitOfMeasurementItem,
+        automaticLow: parseBool(warehouse, "automatic_low", "AutomaticLow"),
+        cyclicalCountMinStock: parseNum(warehouse, "minimum_stock", "MinimumStock"),
+        grossWeight: numText(weight, "gross", "Gross"),
+        netWeight: numText(weight, "net", "Net"),
+        type: (opt(engineering, "type", "Type") || current.type) as TypeItem,
+        typeStruct: (opt(engineering, "type_struct", "TypeStruct") || current.typeStruct) as TypeStructItem,
+        oem: parseBool(engineering, "oem", "OEM"),
+        typePlanejamento: (opt(planning, "type_mrp", "TypeMrp") || current.typePlanejamento) as TypePlanejamento,
+        llc: String(parseNum(planning, "llc", "Llc", "LLC") || current.llc),
+        fantasma: parseBool(planning, "ghost", "Ghost"),
+        descrComercial: opt(commercial, "description", "Description"),
+        fatorConvVol: numText(commercial, "volume_conversion_factor", "VolumeConversionFactor"),
+        multiploVenda: numText(commercial, "sale_multiple", "SaleMultiple"),
+        minVenda: numText(commercial, "minimum_sale_quantity", "MinimumSaleQuantity"),
+        entregaEstimada: numText(commercial, "estimated_delivery_days", "EstimatedDeliveryDays"),
+        tempoGarantia: numText(commercial, "warranty_days", "WarrantyDays"),
+        almoxTransf: numText(commercial, "transfer_warehouse_code", "TransferWarehouseCode"),
+        almoxAssTec: numText(commercial, "technical_assistance_warehouse_code", "TechnicalAssistanceWarehouseCode"),
+        itemEmbalagem: numText(commercial, "packaging_item_code", "PackagingItemCode"),
+        alterarDescrFat: parseBool(commercial, "allow_billing_description_change", "AllowBillingDescriptionChange"),
+        emiteEtiquetas: parseBool(commercial, "issue_loading_labels", "IssueLoadingLabels"),
+        montagemVolExp: parseBool(commercial, "assemble_shipping_volumes", "AssembleShippingVolumes"),
+        embalagDif: parseBool(commercial, "requires_special_packaging", "RequiresSpecialPackaging"),
+        retencaoPisCofins: parseBool(commercial, "withhold_pis_cofins", "WithholdPisCofins"),
+        embalagem: parseBool(commercial, "is_packaging", "IsPackaging"),
+        foccoMobile: parseBool(commercial, "mobile_enabled", "MobileEnabled"),
+        embExportacao: parseBool(commercial, "export_packaging", "ExportPackaging"),
+        classificacaoCom: opt(commercial, "classification_code", "ClassificationCode"),
+        obsComercial: opt(commercial, "notes", "Notes"),
+        classifFiscVenda: opt(accounting, "sale_fiscal_classification_code", "SaleFiscalClassificationCode"),
+        classifFiscCompra: opt(accounting, "purchase_fiscal_classification_code", "PurchaseFiscalClassificationCode"),
+        aliqIpiVenda: numText(accounting, "sale_ipi_rate", "SaleIpiRate"),
+        aliqIpiCompra: numText(accounting, "purchase_ipi_rate", "PurchaseIpiRate"),
+        aliqIcms: numText(accounting, "icms_rate", "IcmsRate"),
+        umVenda: opt(accounting, "sale_unit_of_measurement", "SaleUnitOfMeasurement"),
+        umCompra: opt(accounting, "purchase_unit_of_measurement", "PurchaseUnitOfMeasurement"),
+        grupoInventario: numText(accounting, "inventory_group_code", "InventoryGroupCode"),
+        classificacaoCont: opt(accounting, "accounting_classification_code", "AccountingClassificationCode"),
+        cest: opt(accounting, "cest", "Cest"),
+        insumo: opt(accounting, "input_code", "InputCode"),
+        calculaPisCofins: parseBool(accounting, "calculate_pis_cofins", "CalculatePisCofins"),
+        obsContabil: opt(accounting, "notes", "Notes"),
+        umSuprimentos: (opt(supplies, "unit_of_measurement", "UnitOfMeasurement") || current.umSuprimentos) as TypeUnitOfMeasurementItem,
+        tipoUtilizacao: use === "CONSUMO" ? "Consumo" : use === "IMOBILIZADO" ? "Imobilizado" : "Industrialização",
+        obsSuprimentos: opt(supplies, "notes", "Notes"),
+      }));
+      setFeedback({ type: "success", message: `Configurações do item-base ${code} copiadas. Código, nome e nome técnico do novo item foram mantidos.` });
+    } catch (err) {
+      setFeedback({ type: "error", message: errMessage(err, "Não foi possível copiar os dados do item-base.") });
     }
   }
 
@@ -1043,13 +1118,13 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-9">
                     <label className="it-label">
-                      Descrição Técnica <span className="it-label-req">*</span>
+                      Nome técnico detalhado
                     </label>
                     <input
                       className={`it-input${errors.description ? " err" : ""}`}
                       value={form.description}
                       onChange={(e) => setField("description", e.target.value)}
-                      placeholder="Descrição completa do item"
+                      placeholder="Opcional; se vazio, será usado o nome do item"
                     />
                     {errors.description && (
                       <span className="it-field-error">
@@ -1079,22 +1154,12 @@ export function Vent0200Page(): JSX.Element {
                   </div>
 
                   <div className="it-field it-col-3">
-                    <label className="it-label">Descrição Resumida</label>
-                    <input
-                      className="it-input"
-                      value={form.name}
-                      onChange={(e) => setField("name", e.target.value)}
-                      placeholder="Resumo"
-                    />
-                  </div>
-
-                  <div className="it-field it-col-12">
-                    <label className="it-label">Descrição Complementar</label>
+                    <label className="it-label">Complemento do nome</label>
                     <input
                       className="it-input"
                       value={form.complement}
                       onChange={(e) => setField("complement", e.target.value)}
-                      placeholder="Característica adicional"
+                      placeholder="Ex.: linha premium"
                     />
                   </div>
 
@@ -1357,23 +1422,19 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-3">
                     <label className="it-label">
-                      Item Base
-                      {form.nature !== 2 && <span className="it-label-req">*</span>}
+                      Usar item-base como modelo
                     </label>
                     <LookupField
                       value={Number(form.itemBaseCod) || undefined}
-                      onChange={(code) => setField("itemBaseCod", code ? String(code) : "")}
+                      onChange={(code) => void aplicarItemBase(code)}
                       loader={loadBaseItems}
                       entityLabel="item base"
                       placeholder="Selecionar item base…"
-                      disabled={form.nature === 2}
                     />
                     {errors.itemBaseCod
                       ? <span className="it-field-error">{errors.itemBaseCod}</span>
                       : <span className="it-field-hint">
-                          {form.nature === 2
-                            ? "Não se aplica: este item já é um Item Base."
-                            : "Obrigatório para Genérico/Configurado."}
+                          Opcional. Ao selecionar, copia as configurações das demais abas; código, nome e nome técnico continuam sendo os do novo item.
                         </span>}
                   </div>
 
