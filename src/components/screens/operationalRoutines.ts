@@ -252,7 +252,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     create("/api/bom-headers/", '{"item_code":100,"mask":"","bom_type":"MBOM","valid_from":"2026-07-14T00:00:00Z","created_by":"UUID_DO_USUARIO"}'),
     { label: "Consultar por item", method: "GET", path: "/api/bom-headers/item/{itemCode}", fields: [id("itemCode", "Item")] },
     { label: "Abrir cabeçalho", method: "GET", path: "/api/bom-headers/{id}", fields: [id()] },
-    { label: "Alterar status", method: "PUT", path: "/api/bom-headers/{id}/status", fields: [id(), json('{"status":"ACTIVE"}')] },
+    { label: "Alterar situação", method: "PUT", path: "/api/bom-headers/{id}/status", fields: [id(), json('{"status":"APPROVED"}')] },
   ]),
   VENG0400: routine("VENG0400", "Desenhos e revisões", "Mantém desenho técnico, revisões, distribuição controlada, características e parâmetros de fabricação.", [
     list("/api/drawings/"), create("/api/drawings/", '{"code":"DES-001","digit":"0","format":"A3","model":"2D","item_code":100,"description":"Desenho principal","uom":"UN","material_spec":"Aço","creation_date":"2026-07-14"}'),

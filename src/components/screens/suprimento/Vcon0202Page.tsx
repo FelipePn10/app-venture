@@ -52,7 +52,7 @@ export function Vcon0202Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">Baixa de Saldo</button></div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="erp-feedback info" style={{ marginBottom: 12 }}>A baixa de item é o <strong>consumo de saldo</strong> (só em contrato <strong>ACTIVE</strong>, sem exceder o saldo). O encerramento é feito pelo status (Cancelar contrato).</div>
+        <div className="erp-feedback info" style={{ marginBottom: 12 }}>A baixa de item é o <strong>consumo de saldo</strong> (somente em contrato <strong>Ativo</strong>, sem exceder o saldo). O encerramento é feito pela situação do contrato, usando a ação <strong>Cancelar contrato</strong>.</div>
 
         {contrato && (
           <>

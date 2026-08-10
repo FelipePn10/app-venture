@@ -112,18 +112,24 @@ duas abas são gravadas junto com o item e podem ser conferidas ao reabrir o cad
 
 ▶ **O que fazer:** conferir/cadastrar as máquinas-tipo da metalúrgica. Elas serão os **centros de trabalho** das operações do roteiro.
 
+Na `VMAQ0300`, use a **lupa** para escolher a máquina e o item já cadastrados. Mostre que situações e datas aparecem em português e que a tela descreve a ação de negócio, sem expor endereços técnicos da API.
+
+### B0.1. Máscara do item configurado (10 min) — antes da BOM
+
+Se o produto for configurado, abra `VITE0313`, pesquise o item e o Grupo PDM, selecione as características, simule e **persista** a máscara. Na `VBOM0100`, confirme que essa máscara aparece na lista pesquisável; o participante não deve copiar nem digitar uma máscara longa manualmente.
+
 ### B1. Estrutura de Produto / BOM — a "receita" (30 min)
 
 **Telas:** `VBOM0100` — Cabeçalhos de Estrutura (BOM) · `VENT0210` / `VENG0300` — Estrutura de Produtos
 
 ▶ **O que criar (a estrutura de um produto simples):**
-1. Em `VBOM0100`, criar o **cabeçalho da estrutura**: versão, **tipo (EBOM** engenharia × **MBOM** manufatura**)** e status (`DRAFT` → `APPROVED` → `OBSOLETE`).
+1. Em `VBOM0100`, criar o **cabeçalho da estrutura**: versão, **tipo (EBOM** engenharia × **MBOM** manufatura**)** e situação (**Rascunho** → **Aprovado** → **Obsoleto**).
 2. Em `VENT0210`, adicionar os **componentes**: item-filho, **quantidade** e **perda/refugo** (crítico na metalurgia — sobra de chapa, aparas).
-3. **Aprovar** a estrutura (mudar status para `APPROVED`).
+3. **Aprovar** a estrutura (mudar a situação para **Aprovado**).
 
 🗣 **Fala:** *"Essa árvore é a receita do bolo: diz **o quê** e **quanto** entra no produto. É exatamente isso que o MRP vai 'explodir' no Dia 3 pra saber o que comprar e o que fabricar. Um componente esquecido aqui vira uma falta de material lá na frente."*
 
-⚠️ **Ponto de atenção:** estrutura em `DRAFT` **não** é considerada pelo planejamento. Mostrar que aprovar é o que "liga" a BOM.
+⚠️ **Ponto de atenção:** estrutura em **Rascunho** **não** é considerada pelo planejamento. Mostrar que aprovar é o que "liga" a BOM.
 
 ### B2. Roteiro de Fabricação — o "modo de preparo" (30 min)
 

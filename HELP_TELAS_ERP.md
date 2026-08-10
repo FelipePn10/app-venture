@@ -1561,6 +1561,8 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 > `POST /api/items/create` grava também as pastas **Comercial** e **Contábil**;
 > `GET /api/items/search/{code}` permite conferir os valores e
 > `PUT /api/items/{code}` faz atualização parcial sem apagar campos omitidos.
+> Desde o backend `v1.1.4`, o item-base é uma referência opcional usada como
+> modelo de preenchimento, inclusive para itens Genéricos e Configurados.
 
 ##### Pré-requisitos
 
@@ -1568,7 +1570,7 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 
 1. **Grupo PDM (VITE0114) e Modificador PDM (VITE0115) cadastrados — obrigatório para QUALQUER item.** O item guarda um ponteiro para os dois; se não existirem, a gravação é recusada pelo backend. Cadastre o PDM **antes** de abrir esta tela.
 2. Empresa cadastrada no sistema (VEMP0100).
-3. Para natureza **Genérico** ou **Configurado**: um **item-base** já cadastrado (informado na aba Engenharia).
+3. Opcionalmente, um **item-base** já cadastrado para copiar as configurações das demais abas.
 4. Para itens do tipo Fabricado: Estrutura de Produtos (VENT0210) e Roteiro de Fabricação (VENT0202) — podem vir depois, mas o item só fica pronto para o MRP quando existirem.
 5. Para itens de suprimentos: Fornecedores (VSUP0500) e Contratos (VCON0200) cadastrados.
 
@@ -1579,9 +1581,9 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 3. Na aba **Capa**, preencha os obrigatórios: **Código** (número inteiro maior que zero — não aceita letras) e **Nome**.
 4. Selecione o **Grupo PDM** e o **Modificador PDM** — **obrigatórios**, escolhidos numa lista de busca que só mostra registros já cadastrados.
 5. Defina o **Estado** do item: _Ativo_, _Inativo_ ou _Fantasma_; e a **Situação**: _Linha_ ou _Promoção_.
-6. Escolha a **Natureza** — _Item Base_, _Genérico_ ou _Configurado_. É **um campo único**, não marcações independentes. Genérico e Configurado exigem item-base.
+6. Escolha a **Natureza** — _Item Base_, _Genérico_ ou _Configurado_. É **um campo único**, não marcações independentes.
 7. Na aba **Estoque**, defina almoxarifado padrão, unidade de medida e parâmetros de contagem cíclica (intervalo em dias, estoque mínimo, baixa automática). A lista de unidades é **fechada**: UN, KG, M, M2, M3, MM, CM, IN, MICROMETRO, TONELADA.
-8. Na aba **Engenharia**, defina o **tipo** do item (Fabricado, Comprado, De terceiro, Serviço), a **estrutura** (Industrial, Comercial), o item-base, peso bruto e peso líquido. O peso bruto **não pode ser menor** que o líquido.
+8. Na aba **Engenharia**, defina o **tipo** do item (Fabricado, Comprado, De terceiro, Serviço), a **estrutura** (Industrial, Comercial), peso bruto e peso líquido. Se quiser reaproveitar um cadastro, escolha **Usar item-base como modelo**: as configurações são copiadas, mas código, nome e nome técnico continuam sendo os do novo item. O peso bruto **não pode ser menor** que o líquido.
 9. Na aba **Planejamento**, escolha o **tipo de planejamento** (MRP normal, Projeto), o **LLC** (1 = produto final, 2–8 = intermediários, 9 = matéria-prima) e a flag Fantasma.
 10. Na aba **Comercial**, preencha descrição comercial, tipo de venda (Venda, Revenda), múltiplos de venda, garantia em dias e flags.
 11. Na aba **Contábil**, defina classificações fiscais: origem (0-Nacional, 1-Estrangeira Importação, 2-Estrangeira adquirida no mercado interno), NCM, alíquotas de IPI, ICMS, CEST e PIS/COFINS.
@@ -1593,8 +1595,9 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 | Campo | Aba | Tipo | Obrigatório | Descrição |
 |-------|-----|------|-------------|-----------|
 | Código | Capa | Número inteiro > 0 | Sim | Código único do item. **Não aceita letras** |
-| Nome | Capa | Texto | Sim | Nome reduzido. Vira a descrição técnica se a Descrição ficar vazia |
-| Descrição Técnica | Capa | Texto | Não | Descrição completa. Em branco, o sistema usa o Nome |
+| Nome do item | Capa | Texto | Sim | Nome principal do item. Também é usado como nome técnico quando o campo detalhado fica vazio |
+| Nome técnico detalhado | Capa | Texto | Não | Texto técnico completo. Em branco, o sistema usa o Nome do item |
+| Complemento do nome | Capa | Texto | Não | Informação adicional, como linha ou acabamento |
 | Grupo PDM | Capa | Lookup | **Sim** | Família PDM (VITE0114). Sem ela a gravação é recusada |
 | Modificador PDM | Capa | Lookup | **Sim** | Modificador (VITE0115). Sem ele a gravação é recusada |
 | Estado | Capa | Select | Sim | Ativo / Inativo / Fantasma |
@@ -1609,7 +1612,7 @@ Cadastrar, consultar e manter todos os itens do sistema (matérias-primas, semia
 | Estoque Mínimo | Estoque | Number | Não | Quantidade mínima antes de disparar alerta |
 | Tipo | Engenharia | Select | Sim | Fabricado / Comprado / De terceiro / Serviço |
 | Estrutura | Engenharia | Select | Não | Industrial (MRP gera ordem e controla estoque) / Comercial (pronto para venda) |
-| Item Base | Engenharia | Lookup | Condicional | **Obrigatório** quando a Natureza é Genérico ou Configurado |
+| Usar item-base como modelo | Engenharia | Lookup | Não | Copia as configurações das demais abas; não altera código, nome nem nome técnico do novo item |
 | OEM | Engenharia | Texto (30) | Não | Código do fabricante original |
 | Peso Bruto | Engenharia | Number | Não | Peso bruto em KG. **Não pode ser menor que o líquido** |
 | Peso Líquido | Engenharia | Number | Não | Peso líquido em KG |
@@ -7511,16 +7514,15 @@ produto final, e cada papel exige configurações diferentes.
    Use o código exibido pela grade nas consultas seguintes; não invente um código que
    ainda não exista.
 2. Para cadastrar, use o **Cadastro rápido**. Informe obrigatoriamente **Código**,
-   **Grupo PDM** e **Modificador PDM** já cadastrados. Escolha a **Natureza**: `Item
+   **Nome**, **Grupo PDM** e **Modificador PDM** já cadastrados. Escolha a **Natureza**: `Item
    Base` para o molde principal, `Genérico` para item sem configuração de máscara ou
-   `Configurado` para uma variante. Para Genérico/Configurado, informe também o
-   **Código do item-base** existente que origina a variante.
+   `Configurado` para uma variante. Nenhuma das naturezas exige item-base.
 3. Complete a UM de estoque, uso do item, tipo de engenharia, estrutura, tipo de
    planejamento, planejamento de estoque, LLC e demais parâmetros das pastas. Os
    campos de seleção já enviam os códigos numéricos aceitos pelo backend; escolha a
    descrição apresentada e não converta o valor manualmente.
 4. Clique em **Criar item**. Aguarde a confirmação do backend e confira o novo registro
-   em **Listar**. A descrição é montada pelo PDM; se Grupo, Modificador ou item-base não
+   em **Listar**. A descrição é montada pelo PDM; se Grupo ou Modificador não
    existirem, o cadastro é recusado e nada é gravado.
 5. Selecione um item e clique em **Prontidão**: o sistema roda o **checklist de
    ativação** e mostra se o item está ✅ **pronto** ou ⚠️ com **pendências**/**alertas**,
@@ -9934,8 +9936,12 @@ engenharia ou `MBOM` de manufatura), vigência e situação.
 2. Cadastre Item, Máscara opcional, Tipo e Vigência inicial. O usuário criador é obtido
    da sessão autenticada; não deve ser inventado ou copiado de outro usuário.
 3. Abra pelo código e confira as linhas/versão relacionadas no cadastro de estrutura.
-4. Use **Alterar status** somente após a revisão: `DRAFT` durante montagem, `APPROVED`
-   para uso produtivo e `OBSOLETE` quando substituída.
+4. Use **Alterar situação** somente após a revisão: **Rascunho** durante montagem,
+   **Aprovado** para uso produtivo e **Obsoleto** quando substituída. A interface faz
+   a conversão para os valores internos do servidor.
+
+Datas são escolhidas pelo calendário e exibidas como **dia/mês/ano**. O UUID do usuário
+responsável é obtido automaticamente da sessão e nunca deve ser solicitado ao operador.
 
 Não aprove BOM sem componentes, quantidades, unidades e efetividade validados. Tornar
 obsoleta não apaga histórico nem deve alterar ordens já firmadas.
@@ -10260,13 +10266,17 @@ inválida ou vigência conflitante são recusados; não repita a gravação sem 
 
 ### VMAQ0300 — Tempos e Programação de Máquina
 
-Em **Registrar tempo**, selecione a máquina pelo código da URL e informe item, prioridade
+Em **Registrar tempo**, pesquise a máquina e o item pela lupa e informe prioridade
 e tempo produtivo na unidade adotada pela máquina. Prioridade menor representa maior
 preferência. Em **Programar máquina**, informe ordem, data, início/fim, quantidade
 planejada, situação e sequência. A ordem e a máquina devem existir e o intervalo deve
 ser cronológico. Consulte o sequenciamento em VAPS0600 depois da inclusão para detectar
 sobreposição. Não use esta rotina para registrar produção realizada; `produced_qty`
 somente deve ser informado quando o processo responsável permitir a atualização.
+
+A interface apresenta situações em português, usa calendário para datas e horários e
+não mostra métodos ou endereços internos da API. Códigos de máquina e item são enviados
+pela seleção feita na lupa, sem digitação manual.
 
 ### VCAL0200 — Dias Úteis Prometidos por Item
 
@@ -10629,7 +10639,9 @@ Executar o pipeline **regrava as sugestões** do plano informado. Ele não firma
 
 **Objetivo.** Controlar as **versões** da estrutura de um item: cada cabeçalho é uma versão com tipo, vigência e status próprios. As linhas (componentes) ficam na VENT0210.
 
-Informe o **item** e clique em carregar para ver as versões existentes. Para criar uma versão nova, informe o **tipo** (MBOM por padrão), opcionalmente a **máscara** e a **data de início de vigência**. O status percorre **DRAFT → APPROVED → OBSOLETE** e é alterado direto na listagem.
+Pesquise o **item** pela lupa e clique em carregar para ver as versões existentes. Para criar uma versão nova, escolha o **tipo** (estrutura de fabricação por padrão), uma **máscara já cadastrada** quando aplicável e a **data de início de vigência** pelo calendário. A situação percorre **Rascunho → Aprovado → Obsoleto** e é alterada direto na listagem.
+
+Para itens configurados, gere e persista a máscara em `VITE0313` antes de criar o cabeçalho. A tela carrega somente máscaras existentes do item e recusa uma máscara incompatível; o operador não precisa digitar sequências longas.
 
 Só a versão **APPROVED** vigente é considerada pelo MRP e pela produção. Criar um cabeçalho não copia as linhas da versão anterior — depois de criar, monte a estrutura na VENT0210.
 
@@ -10659,8 +10671,8 @@ A senha só muda no passo de conclusão: aprovar apenas libera a troca. Uma soli
 
 ## Permissões e mensagens
 
-- Operações marcadas como **requer administrador** retornam 403 para usuários sem
-  perfil ADMIN; a tela mantém essa indicação ao lado da rota.
+- Operações marcadas como **requer administrador** são bloqueadas para usuários sem
+  esse perfil; a tela apresenta a orientação sem exibir a rota técnica.
 - Erros de validação e banco são traduzidos pelo tratamento central do frontend.
 - A grade mostra o retorno confirmado pelo backend. Uma mensagem de sucesso não
   substitui a conferência de status, quantidades e identificadores retornados.

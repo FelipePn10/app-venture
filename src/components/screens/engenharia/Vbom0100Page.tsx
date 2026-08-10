@@ -1,7 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { type BomHeader, listBomHeaders, createBomHeader, updateBomHeaderStatus } from "@/services/bomHeaderService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
+import { listItemMasks } from "@/services/itemService";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const STATUSES = ["DRAFT", "APPROVED", "OBSOLETE"];
@@ -13,6 +16,13 @@ export function Vbom0100Page(): JSX.Element {
   const [form, setForm] = useState({ mask: "", bom_type: "MBOM", valid_from: "" });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [masks, setMasks] = useState<string[]>([]);
+
+  useEffect(() => {
+    const code = Number(item);
+    if (!code) { setMasks([]); return; }
+    void listItemMasks(code).then(setMasks).catch(() => setMasks([]));
+  }, [item]);
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true); setFeedback(null);
@@ -22,6 +32,7 @@ export function Vbom0100Page(): JSX.Element {
   const carregar = () => run(async () => { const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setHeaders(await listBomHeaders(it)); });
   const criar = () => run(async () => {
     const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; }
+    if (form.mask && !masks.includes(form.mask)) { setFeedback({ type: "error", message: "A máscara selecionada não existe para este item." }); return; }
     await createBomHeader({ item_code: it, mask: form.mask.trim() || undefined, bom_type: form.bom_type, valid_from: form.valid_from || undefined });
     setForm({ mask: "", bom_type: "MBOM", valid_from: "" }); setHeaders(await listBomHeaders(it)); setFeedback({ type: "success", message: "Cabeçalho criado (nova versão)." });
   });
@@ -39,7 +50,7 @@ export function Vbom0100Page(): JSX.Element {
       </header>
 
       <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><input className="erp-tinput" style={{ width: 110 }} type="number" value={item} onChange={(e) => setItem(e.target.value)} />
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div style={{ width: 320 }}><LookupField value={Number(item) || undefined} onChange={(code) => { setItem(code ? String(code) : ""); setForm((f) => ({ ...f, mask: "" })); }} loader={loadItems} entityLabel="item" placeholder="Pesquisar item…" /></div>
           <button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VBOM0100 — Cabeçalhos de Estrutura" filename="vbom0100" /></div>
       </div>
@@ -50,8 +61,8 @@ export function Vbom0100Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">Cabeçalhos do item</button></div>
           <div className="erp-detail-body">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Novo cabeçalho (versão auto-incrementada)</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label">Máscara</label><input className="erp-input" value={form.mask} onChange={(e) => setForm((f) => ({ ...f, mask: e.target.value }))} /></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={form.bom_type} onChange={(e) => setForm((f) => ({ ...f, bom_type: e.target.value }))}><option value="MBOM">MBOM</option><option value="EBOM">EBOM</option></select></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Máscara cadastrada</label><select className="erp-input" value={form.mask} onChange={(e) => setForm((f) => ({ ...f, mask: e.target.value }))} disabled={!item}><option value="">Item sem máscara</option>{masks.map((mask) => <option key={mask} value={mask}>{mask}</option>)}</select><span className="erp-field-hint">As opções são carregadas do item selecionado; não é necessário digitar.</span></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={form.bom_type} onChange={(e) => setForm((f) => ({ ...f, bom_type: e.target.value }))}><option value="MBOM">Estrutura de fabricação (MBOM)</option><option value="EBOM">Estrutura de engenharia (EBOM)</option></select></div>
               <div className="erp-field erp-c3"><label className="erp-label">Vigência de</label><input className="erp-input" type="date" value={form.valid_from} onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar cabeçalho</button></div>
             </div></div>
@@ -62,8 +73,8 @@ export function Vbom0100Page(): JSX.Element {
                   {headers.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Informe o item e carregue.</td></tr>}
                   {headers.map((h) => (
                     <tr key={h.id}><td><strong>#{h.id}</strong></td><td>{h.mask || "—"}</td><td>{h.bom_type}</td><td>{h.version ?? "—"}</td>
-                      <td><span className={`erp-badge ${h.status === "APPROVED" ? "ok" : h.status === "OBSOLETE" ? "err" : "draft"}`}>{h.status}</span></td>
-                      <td style={{ display: "flex", gap: 4 }}>{STATUSES.filter((s) => s !== h.status).map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(h.id, s)} disabled={busy}>{s}</button>)}</td></tr>
+                      <td><span className={`erp-badge ${h.status === "APPROVED" ? "ok" : h.status === "OBSOLETE" ? "err" : "draft"}`}>{h.status === "APPROVED" ? "Aprovado" : h.status === "OBSOLETE" ? "Obsoleto" : "Rascunho"}</span></td>
+                      <td style={{ display: "flex", gap: 4 }}>{STATUSES.filter((s) => s !== h.status).map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(h.id, s)} disabled={busy}>{s === "APPROVED" ? "Aprovar" : s === "OBSOLETE" ? "Tornar obsoleto" : "Voltar para rascunho"}</button>)}</td></tr>
                   ))}
                 </tbody>
               </table></div>

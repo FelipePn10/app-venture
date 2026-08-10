@@ -343,7 +343,7 @@ Faça **na frente da turma**, narrando cada aba. Depois **repita** e peça que e
 | Aba | Campo | Valor | O que dizer |
 |:--|:--|:--|:--|
 | **Capa** | Código | `MP-CHAPA-1020-6.35` | *"Padrão de código é decisão da empresa. Escolham um e não mudem — o código é para sempre."* |
-| | Nome / Descrição | Chapa Aço Carbono 1020 6,35mm | Obrigatórios |
+| | Nome do item | Chapa Aço Carbono 1020 6,35mm | Obrigatório; o nome técnico detalhado é opcional |
 | | Grupo PDM / Modificador PDM | `CHAPAS` / `Chapa Aço Carbono` | *"A descrição técnica não é digitada livre — ela é **composta**."* |
 | | Saúde | `Normal` | ⚠️ *"Crítico ou Obsoleto muda o comportamento do MRP e pode bloquear ordens."* |
 | **Estoque** | Unidade de Medida | `KG` | ⭐ *"A fábrica compra em quilo. Guardem isso — no Dia 2 a gente converte."* |
@@ -352,6 +352,7 @@ Faça **na frente da turma**, narrando cada aba. Depois **repita** e peça que e
 | | Contagem cíclica / Intervalo | Sim / 90 dias | |
 | **Engenharia** | **Tipo** | `Comprado` | ⭐⭐ **O interruptor mais importante** |
 | | Estrutura | `INDUSTRIAL` | *"Industrial = o MRP gera ordem e controla estoque. Comercial = item pronto para venda."* |
+| | Usar item-base como modelo | Em branco | *"É opcional. Quando escolhido, copia as configurações das outras abas sem trocar o código ou o nome deste item."* |
 | | Peso bruto / líquido | 49,9 kg/m² | *"Peso é o que o Fiscal e a Expedição vão usar."* |
 | **Planejamento** | Tipo de Planejamento | `NORMAL_MRP` | *"São dois: NORMAL_MRP entra no cálculo; PROJETO fica de fora. O ponto de pedido é configurado à parte."* |
 | | Classificação ABC | `A` | |
@@ -412,6 +413,7 @@ Abra `VITM0100`, selecione o item recém-criado e clique em **Prontidão**.
 |:--|:--|
 | **LLC (Low Level Code)** | *"É o andar do item na estrutura: **1** = produto final, **2–8** = intermediários, **9** = matéria-prima. O MRP processa de cima para baixo usando esse número."* |
 | **Natureza** | *"Item Base = o molde. Genérico = sem máscara. Configurado = uma variante gerada pelo configurador."* |
+| **Item-base como modelo** | *"É um atalho opcional: copia estoque, engenharia, planejamento, comercial, contábil e suprimentos. Depois você altera o nome e o nome técnico do novo item."* |
 | **Tipo MRP** | *"São dois valores: `NORMAL_MRP` e `PROJETO`. Quem repõe por ponto de pedido preenche o bloco de reposição (TR/CM/CR/ES) — não é um tipo separado."* |
 | **Ponto de pedido (ROP)** | Fórmula: `(TR × CM / CR) + ES` — *"tempo de reposição × consumo médio, mais o estoque de segurança."* |
 | **Percentual de perda** | *"Na metalurgia é regra, não exceção: sobra de chapa, aparas. O MRP soma a perda na necessidade."* |
@@ -542,6 +544,8 @@ O sistema devolve: **ciclos** (arredondados para cima), tempo de setup, tempo de
 
 Registrar tempo (item, prioridade, tempo produtivo) e **programar a máquina** (ordem, data, início/fim, quantidade planejada, situação, sequência).
 
+Mostre a **lupa** dos campos Máquina e Item. O participante deve selecionar pelo nome; nunca memorizar códigos. Destaque também que situações e datas são apresentadas em português e que a tela não exibe endereços técnicos da API.
+
 ⚠️ *"Esta rotina **não** serve para registrar produção realizada. Isso é apontamento, e é no Dia 3."*
 
 ---
@@ -549,6 +553,8 @@ Registrar tempo (item, prioridade, tempo produtivo) e **programar a máquina** (
 ### B1. Estrutura de Produto / BOM ⭐ (2:12–2:42 · 30 min)
 
 **Telas:** `VBOM0100` (cabeçalhos/versões) · `VENG0300` (cabeçalho e situação) · `VENT0210` (linhas/componentes) · `VENG0500` (consulta avançada)
+
+Antes de iniciar, se o produto for **Configurado**, abra `VITE0313`, selecione as características, simule e persista uma máscara. Volte à `VBOM0100` e mostre que a máscara aparece na lista pesquisável. Sem essa etapa, não avance para uma BOM específica de variante.
 
 #### A ordem correta (a turma erra isso o tempo todo)
 
@@ -568,7 +574,9 @@ Registrar tempo (item, prioridade, tempo produtivo) e **programar a máquina** (
 | Máscara | (opcional) | Só para itens configurados |
 | **Tipo** | `MBOM` (padrão) | ⭐ **EBOM** = estrutura de **engenharia** (como foi projetado) · **MBOM** = estrutura de **manufatura** (como é realmente fabricado) |
 | Vigência inicial | hoje | |
-| Status | `DRAFT` | Percorre `DRAFT → APPROVED → OBSOLETE` |
+| Situação | Rascunho | Percorre **Rascunho → Aprovado → Obsoleto** |
+
+O usuário responsável vem automaticamente da sessão. Nunca peça UUID à turma. Para vigência, explique o formato visual **dia/mês/ano** e escolha a data no calendário.
 
 ⚠️ **Três avisos obrigatórios:**
 1. **Só a versão `APPROVED` vigente é considerada pelo MRP e pela produção.**

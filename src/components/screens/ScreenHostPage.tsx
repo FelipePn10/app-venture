@@ -132,6 +132,7 @@ import { Vaud0100Page } from "./cadastros/Vaud0100Page";
 import { Vusr0100Page } from "./cadastros/Vusr0100Page";
 import { WindowControls } from "@/components/window/WindowControls";
 import { OperationalRoutinePage } from "./OperationalRoutinePage";
+import { EntityLookupAssist } from "@/components/ui/EntityLookupAssist";
 import { OPERATIONAL_ROUTINES } from "./operationalRoutines";
 
 const SCREEN_REGISTRY: Record<string, JSX.Element> = {
@@ -319,6 +320,7 @@ export function ScreenHostPage(): JSX.Element {
   return (
     <div className="screen-host" style={{ position: "relative" }}>
       {screen}
+      <EntityLookupAssist />
 
       <span className="screen-host-routine-code" aria-label={`Rotina ${code ?? "desconhecida"}`}>
         {code ?? "—"}

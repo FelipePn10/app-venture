@@ -5,6 +5,7 @@ import { listSalesOrders } from '@/services/salesOrderService';
 import { listSuppliers } from '@/services/supplierService';
 import { listRepresentatives } from '@/services/representativeService';
 import { listarGrupos, listarModificadores } from '@/services/pdmService';
+import { listMachines } from '@/services/machineService';
 
 /**
  * Fontes de dados para o componente <LookupField>: em vez de o usuário digitar
@@ -72,6 +73,14 @@ export const loadItems = cached(async () =>
     code: i.code ?? 0,
     label: i.description || `Item ${i.code}`,
     sub: i.uom || undefined,
+  })).filter((o) => o.code),
+);
+
+export const loadMachines = cached(async () =>
+  (await listMachines()).map((m) => ({
+    code: m.code,
+    label: m.name || `Máquina ${m.code}`,
+    sub: m.is_active ? 'Ativa' : 'Inativa',
   })).filter((o) => o.code),
 );
 

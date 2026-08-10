@@ -448,7 +448,7 @@ mas cada aba vazia é uma área que vai reclamar depois.
 | Campo | Regra |
 |:--|:--|
 | **Código** | Número inteiro **maior que zero**. Não aceita letras. |
-| **Nome** | Texto livre. Vira a descrição técnica se você deixar a Descrição em branco. |
+| **Nome do item** | Texto livre. Também é usado como nome técnico se o campo detalhado ficar em branco. |
 | **Grupo (PDM)** | Escolhido na lista — só aparecem grupos já cadastrados. |
 | **Modificador (PDM)** | Idem. |
 
@@ -466,8 +466,9 @@ mas cada aba vazia é uma área que vai reclamar depois.
 | Campo | Obrig. | O que preencher |
 |:--|:-:|:--|
 | **Código** | ✅ | **Número inteiro maior que zero.** Não aceita letras. O código é **para sempre** |
-| **Nome** | ✅ | Nome reduzido. Vira a descrição técnica se a Descrição ficar em branco |
-| Descrição Técnica | | Descrição completa. Em branco, o sistema usa o Nome |
+| **Nome do item** | ✅ | Nome principal do item |
+| Nome técnico detalhado | | Texto técnico completo. Em branco, o sistema usa o Nome do item |
+| Complemento do nome | | Informação adicional, como linha ou acabamento |
 | **Grupo PDM** | ✅ | Escolhido numa **lista de busca** — só grupos já cadastrados (`VITE0114`) |
 | **Modificador PDM** | ✅ | Idem, de `VITE0115` |
 | **Estado** | ✅ | `Ativo` / `Inativo` / `Fantasma` |
@@ -507,7 +508,8 @@ técnico informados para o novo item.
 |:--|:-:|:--|
 | **Tipo** | ✅ | `Fabricado` (gera ordem de fabricação) / `Comprado` (gera ordem de compra) / `De terceiro` (em poder da empresa, não gera ordem) / `Serviço` (não gera ordem de material) |
 | Estrutura | | `INDUSTRIAL` (MRP gera ordem e controla estoque) / `COMERCIAL` (item pronto para venda) |
-| Item Base / OEM | | Referência do fabricante original |
+| Usar item-base como modelo | | Opcional; copia as configurações das demais abas sem alterar código, nome e nome técnico |
+| OEM | | Indica item montado sob a marca de outra empresa |
 | Peso Bruto / Líquido | | Em KG |
 | Volume Cúbico | | Em M³ |
 
@@ -746,11 +748,24 @@ Registre disponibilidade e paradas por data. **Selecione a máquina na grade** p
 
 ## 7.3 `VMAQ0300` — Tempos e Programação de Máquina
 
-- **Registrar tempo:** máquina, item, prioridade (menor = mais preferida) e tempo produtivo.
-- **Programar máquina:** ordem, data, início/fim, quantidade planejada, situação e sequência.
+- **Registrar tempo:** pesquise a máquina e o item pela lupa, informe a prioridade (menor = mais preferida) e o tempo produtivo.
+- **Programar máquina:** pesquise a máquina, informe ordem, data, início/fim, quantidade planejada, situação e sequência.
+- A tela mostra **Rascunho, Planejado, Aprovado, Obsoleto** e demais situações em português; códigos técnicos e endereços da API não são informações para o operador.
 
 ⚠️ Esta rotina **não** registra produção realizada — isso é apontamento (Dia 3).
 💡 Depois de programar, consulte o sequenciamento em `VAPS0600` para detectar sobreposição.
+
+## 7.4 Máscara do item configurado — faça antes da estrutura
+
+Se o item for **Configurado**, gere sua máscara antes de abrir a estrutura:
+
+1. Em `VCFG0100`/`VCFG0200`, confira as características e opções que formam a variante.
+2. Abra `VITE0313` e pesquise o item configurável e o Grupo PDM.
+3. Selecione as respostas, confira a prévia e use **Simular** antes de persistir.
+4. Clique em **Gerar máscaras** com a opção de persistência habilitada.
+5. Volte à consulta e confirme que a máscara aparece na lista do item.
+
+Na `VBOM0100`, a máscara é escolhida em uma lista: não copie nem digite sequências longas. Se a máscara não aparecer, ela ainda não foi persistida para aquele item.
 
 ---
 
@@ -775,7 +790,7 @@ Registre disponibilidade e paradas por data. **Selecione a máquina na grade** p
 **Passo a passo**
 1. Informe o **item** e carregue para ver as versões existentes.
 2. Para criar: informe o **Tipo**, opcionalmente a **Máscara**, e a **data de início de vigência**.
-3. O **status** percorre `DRAFT → APPROVED → OBSOLETE` e é alterado direto na listagem.
+3. A **situação** percorre **Rascunho → Aprovado → Obsoleto** e é alterada direto na listagem.
 
 ### EBOM × MBOM
 
