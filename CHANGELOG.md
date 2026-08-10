@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.4] — 2026-08-10
+
 ## Novidades
 - Adicionamos lupas para pesquisar itens, máquinas e outros cadastros relacionados sem precisar memorizar códigos.
 
