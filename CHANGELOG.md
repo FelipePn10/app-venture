@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## Novidades
+- Adicionamos lupas para pesquisar itens, máquinas e outros cadastros relacionados sem precisar memorizar códigos.
+
+## Melhorias
+- Deixamos as rotinas operacionais mais claras, com situações, datas e informações apresentadas em português.
+- A estrutura do produto agora permite escolher o item e suas máscaras já cadastradas em listas pesquisáveis.
+- Ampliamos o treinamento do primeiro dia para ensinar a criação da máscara antes da estrutura do produto.
+
+## Correções
+- Removemos endereços técnicos e identificadores internos que apareciam em algumas telas.
+- O responsável pelos registros passa a ser identificado automaticamente, sem solicitar códigos internos do usuário.
+
 ## [v1.1.3] — 2026-08-09
 
 ## Novidades
