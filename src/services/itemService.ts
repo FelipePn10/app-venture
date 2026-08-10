@@ -87,6 +87,28 @@ export async function listItemsWithMasks(): Promise<ItemDTO[]> {
   return unwrapArray(data).map(parseItem);
 }
 
+/** Máscaras configuradas disponíveis para um item, sem exigir digitação manual. */
+export async function listItemMasks(code: number): Promise<string[]> {
+  const { data } = await httpClient.get(`${BASE}/with-masks`);
+  const masks = new Set<string>();
+  const collect = (value: unknown): void => {
+    if (typeof value === 'string' && value.trim()) { masks.add(value.trim()); return; }
+    if (Array.isArray(value)) { value.forEach(collect); return; }
+    if (!value || typeof value !== 'object') return;
+    const o = value as Obj;
+    const itemCode = parseNum(o, 'code', 'Code', 'item_code', 'ItemCode');
+    if (itemCode && itemCode !== code) return;
+    for (const key of ['mask', 'Mask', 'masks', 'Masks', 'item_masks', 'ItemMasks', 'configured_masks']) {
+      if (o[key] !== undefined) collect(o[key]);
+    }
+    for (const key of ['data', 'items', 'results', 'records']) {
+      if (o[key] !== undefined) collect(o[key]);
+    }
+  };
+  collect(data);
+  return [...masks].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
 export async function getActivationReadiness(code: number): Promise<ActivationReadiness> {
   const { data } = await httpClient.get(`${BASE}/${code}/activation-readiness`);
   const o = unwrapObject(data);

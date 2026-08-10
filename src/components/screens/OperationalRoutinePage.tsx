@@ -3,6 +3,8 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { currentUserId, errMessage, httpClient, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { downloadBlob } from "@/services/fileDownload";
 import { useAuthStore } from "@/store/authStore";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCustomers, loadItems, loadMachines, loadSuppliers, loadWarehouses, type LookupLoader } from "@/services/lookups";
 
 export type RoutineField = {
   name: string;
@@ -64,7 +66,48 @@ const LABELS: Record<string, string> = {
   code: "Código", sequence: "Sequência", starts_at: "Início", ends_at: "Fim", start_from: "Iniciar em",
   valid_from: "Vigência inicial", valid_to: "Vigência final", reference_date: "Data de referência",
   __body: "Dados da operação",
+  order_code: "Ordem", schedule_date: "Data da programação", start_time: "Início", end_time: "Fim",
+  planned_qty: "Quantidade planejada", produced_qty: "Quantidade produzida", production_time: "Tempo de produção",
+  priority: "Prioridade", bom_type: "Tipo de estrutura", created_by: "Usuário responsável",
 };
+
+const VALUE_LABELS: Record<string, string> = {
+  DRAFT: "Rascunho", ACTIVE: "Ativo", INACTIVE: "Inativo", SCHEDULED: "Programado",
+  ARRIVED: "Recebido", IN_CONFERENCE: "Em conferência", RELEASED: "Liberado", BLOCKED: "Bloqueado",
+  CANCELLED: "Cancelado", APPROVED: "Aprovado", OBSOLETE: "Obsoleto", PLANNED: "Planejado",
+  EBOM: "Estrutura de engenharia (EBOM)", MBOM: "Estrutura de fabricação (MBOM)",
+  INBOUND: "Entrada", OUTBOUND: "Saída", WARN: "Alertar", BLOCK: "Bloquear", ALLOW: "Permitir",
+};
+
+const AUDIT_FIELDS = new Set(["created_by", "updated_by", "approved_by_id", "user_id", "user_uuid"]);
+
+const ENUM_WORDS: Record<string, string> = {
+  OPEN: "Aberto", CLOSED: "Encerrado", PENDING: "Pendente", DONE: "Concluído", IN: "Entrada", OUT: "Saída",
+  PROGRESS: "andamento", CONFERENCE: "conferência", RECEIVING: "recebimento", NOTICE: "aviso", RETURN: "retorno",
+  SHIPMENT: "remessa", RECEIPT: "recebimento", ADJUSTMENT: "ajuste", VALUE: "valor", QUANTITY: "quantidade",
+  WEIGHT: "peso", FIXED: "fixo", TEXT: "texto", NUMBER: "número", BOOLEAN: "sim/não", ALL: "todos",
+  PREVENTIVE: "preventivo", MONTHLY: "mensal", DAILY: "diário", WEEKLY: "semanal", HOUR: "hora", DAY: "dia",
+};
+function valueLabel(value: string): string {
+  if (VALUE_LABELS[value]) return VALUE_LABELS[value];
+  if (/^[A-Z][A-Z0-9_]*$/.test(value) && value.includes("_")) {
+    return value.split("_").map((word) => ENUM_WORDS[word] ?? word.toLocaleLowerCase("pt-BR")).join(" ").replace(/^./, (c) => c.toUpperCase());
+  }
+  return ENUM_WORDS[value] ?? value;
+}
+
+function isDateField(name: string): boolean { return name.includes("date") || name.endsWith("_on"); }
+function isDateTimeField(name: string): boolean { return name.endsWith("_time") || name.endsWith("_at") || name === "starts_at" || name === "ends_at"; }
+
+function lookupFor(name: string, label = ""): LookupLoader | undefined {
+  const key = `${name} ${label}`.toLowerCase();
+  if (/machine|máquina/.test(key)) return loadMachines;
+  if (/item|produto|componente/.test(key)) return loadItems;
+  if (/supplier|fornecedor/.test(key)) return loadSuppliers;
+  if (/customer|cliente/.test(key)) return loadCustomers;
+  if (/warehouse|almoxarifado|depósito/.test(key)) return loadWarehouses;
+  return undefined;
+}
 
 function humanLabel(key: string): string {
   return LABELS[key] ?? key.split("_").map((part) => part ? part[0].toUpperCase() + part.slice(1) : part).join(" ");
@@ -81,6 +124,7 @@ function updateNested(root: unknown, path: Array<string | number>, value: unknow
 }
 
 function PayloadNode({ name, value, path, root, onChange }: { name: string; value: unknown; path: Array<string | number>; root: unknown; onChange: (next: unknown) => void }): JSX.Element {
+  if (AUDIT_FIELDS.has(name)) return <></>;
   if (Array.isArray(value)) return <div className="erp-field erp-c12" style={{ border: "1px solid #dbe5df", borderRadius: 6, padding: 10 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><strong className="erp-label">{humanLabel(name)} ({value.length})</strong>
       <button type="button" className="erp-btn erp-btn-sm" onClick={() => onChange(updateNested(root, path, [...value, value.length ? clone(value[0]) : {}]))}>+ Adicionar</button></div>
@@ -92,10 +136,14 @@ function PayloadNode({ name, value, path, root, onChange }: { name: string; valu
   </div>;
   if (value && typeof value === "object") return <div className="erp-field erp-c12" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 10 }}>{Object.entries(value as Obj).map(([key, child]) => <PayloadNode key={key} name={key} value={child} path={[...path, key]} root={root} onChange={onChange}/>)}</div>;
   const options = ENUM_OPTIONS[name];
+  const lookup = typeof value === "number" ? lookupFor(name) : undefined;
   return <div className="erp-field erp-c3"><label className="erp-label">{humanLabel(name)}</label>
     {typeof value === "boolean" ? <label className="erp-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={value} onChange={(event) => onChange(updateNested(root, path, event.target.checked))}/> Sim</label>
-      : options ? <select className="erp-input" value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, event.target.value))}><option value="">Selecione…</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>
-      : <input className={`erp-input ${typeof value === "number" ? "num" : ""}`} type={typeof value === "number" ? "number" : name.includes("date") || name.endsWith("_on") ? "date" : "text"} value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, typeof value === "number" ? Number(event.target.value) : event.target.value))}/>}
+      : lookup ? <LookupField value={Number(value) || undefined} onChange={(code) => onChange(updateNested(root, path, code ?? 0))} loader={lookup} entityLabel={humanLabel(name).toLowerCase()} placeholder={`Pesquisar ${humanLabel(name).toLowerCase()}…`}/>
+      : options ? <select className="erp-input" value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, event.target.value))}><option value="">Selecione…</option>{options.map((option) => <option key={option} value={option}>{valueLabel(option)}</option>)}</select>
+      : <input className={`erp-input ${typeof value === "number" ? "num" : ""}`} type={typeof value === "number" ? "number" : isDateTimeField(name) ? "datetime-local" : isDateField(name) ? "date" : "text"} value={isDateTimeField(name) ? String(value ?? "").replace(/Z$/, "").slice(0, 16) : String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, typeof value === "number" ? Number(event.target.value) : isDateTimeField(name) && event.target.value ? new Date(event.target.value).toISOString() : event.target.value))}/>}
+    {isDateField(name) && <span className="erp-field-hint">Formato: dia/mês/ano.</span>}
+    {isDateTimeField(name) && <span className="erp-field-hint">Informe dia, mês, ano e horário.</span>}
   </div>;
 }
 
@@ -135,8 +183,14 @@ function displayRows(raw: unknown): Obj[] {
 
 function cell(value: unknown): string {
   if (value == null || value === "") return "—";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  if (Array.isArray(value)) return value.map(cell).join("; ");
+  if (typeof value === "object") return Object.entries(value as Obj).map(([key, child]) => `${humanLabel(key)}: ${cell(child)}`).join("; ");
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(text)) {
+    const date = new Date(text.length === 10 ? `${text}T00:00:00` : text);
+    if (!Number.isNaN(date.getTime())) return text.includes('T') ? date.toLocaleString('pt-BR') : date.toLocaleDateString('pt-BR');
+  }
+  return valueLabel(text);
 }
 
 export function OperationalRoutinePage({ routine }: { routine: OperationalRoutine }): JSX.Element {
@@ -219,9 +273,9 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
         <div className="erp-tabs"><button className="erp-tab active">{operation.label}</button></div>
         <div className="erp-detail-body">
       {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
-      <div className="erp-fieldset"><div className="erp-fieldset-head">{operation.label} — <span style={{ fontWeight: 400, opacity: 0.7 }}>{operation.method} {operation.path}{operation.adminOnly ? " · requer administrador" : ""}</span></div><div className="erp-fieldset-body">
+      <div className="erp-fieldset"><div className="erp-fieldset-head">{operation.label}{operation.adminOnly ? " — requer administrador" : ""}</div><div className="erp-fieldset-body">
         <div className="erp-field erp-c12"><p style={{ margin: 0, color: "var(--v-muted, #64748b)", fontSize: 12 }}>{routine.description} {routine.guidance}</p></div>
-        {(operation.fields ?? []).map((field) => <div className={`erp-field ${field.type === "textarea" || field.type === "json" || field.type === "file-text" || field.type === "file-base64" ? "erp-c12" : "erp-c3"}`} key={field.name}>
+        {(operation.fields ?? []).filter((field) => !AUDIT_FIELDS.has(field.name)).map((field) => <div className={`erp-field ${field.type === "textarea" || field.type === "json" || field.type === "file-text" || field.type === "file-base64" ? "erp-c12" : "erp-c3"}`} key={field.name}>
           <label className={`erp-label ${field.required ? "erp-req" : ""}`}>{field.label}</label>
           {field.type === "checkbox" ? <label className="erp-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={Boolean(values[field.name])} onChange={(event) => setValue(field.name, event.target.checked)}/> Sim</label>
             : field.type === "json" ? <StructuredPayloadEditor raw={String(values[field.name] || field.placeholder || "{}")} onChange={(next) => setValue(field.name, next)}/>
@@ -242,12 +296,14 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
               reader.readAsDataURL(file);
             }}/>
             : field.type === "textarea" ? <textarea className="erp-input" rows={3} value={String(values[field.name] ?? "")} placeholder={field.placeholder} onChange={(event) => setValue(field.name, event.target.value)}/>
+            : lookupFor(field.name, field.label) ? <LookupField value={Number(values[field.name]) || undefined} onChange={(code) => setValue(field.name, code ? String(code) : "")} loader={lookupFor(field.name, field.label)!} entityLabel={field.label.toLowerCase()} placeholder={`Pesquisar ${field.label.toLowerCase()}…`}/>
             : <input className={`erp-input ${field.type === "number" ? "num" : ""}`} type={field.type ?? "text"} value={String(values[field.name] ?? "")} placeholder={field.placeholder} onChange={(event) => setValue(field.name, event.target.value)}/>}
           {field.help && <span className="erp-field-hint">{field.help}</span>}
+          {(field.type === "date" || field.type === "datetime-local") && <span className="erp-field-hint">Formato: dia/mês/ano{field.type === "datetime-local" ? " e hora" : ""}.</span>}
         </div>)}
         {(operation.fields ?? []).length === 0 && <div className="erp-field erp-c12"><div className="erp-grid-empty">Esta operação não exige parâmetros.</div></div>}
       </div></div>
-      <div className="erp-fieldset"><div className="erp-fieldset-head">Resultado ({rows.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12"><table className="erp-grid"><thead><tr>{columns.map((column) => <th key={column}>{column.split("_").join(" ")}</th>)}</tr></thead><tbody>
+      <div className="erp-fieldset"><div className="erp-fieldset-head">Resultado ({rows.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12"><table className="erp-grid"><thead><tr>{columns.map((column) => <th key={column}>{humanLabel(column)}</th>)}</tr></thead><tbody>
         {rows.length === 0 && <tr><td className="erp-grid-empty">Execute uma operação para visualizar o resultado.</td></tr>}
         {rows.map((row, index) => <tr key={String(row.id ?? row.code ?? index)}>{columns.map((column) => <td key={column} title={cell(row[column])}>{cell(row[column]).slice(0, 100)}</td>)}</tr>)}
       </tbody></table></div></div></div>

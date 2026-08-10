@@ -11,6 +11,8 @@
  *   2. **Ordem de pré-requisitos**: uma tela citada como passo de exercício
  *      antes da tela que a alimenta (ex.: item antes do PDM).
  *   3. **Valores de enum** que a documentação afirma e o backend não aceita.
+ *   4. **Ordem da máscara configurada**: o aluno aprende a gerar e persistir
+ *      a máscara antes de chegar à estrutura/BOM que a consome.
  *
  * Uso:  node scripts/audit-training-docs.mjs
  */
@@ -117,6 +119,23 @@ for (const caminho of arquivos) {
       if (re.test(l) && ctx.test(l)) aviso(rel, i + 1, 'enum-invalido', msg);
     }
   });
+
+  // ── 4. Máscara configurada antes da BOM ──────────────────────────────────
+  // Menções em índices e tabelas não bastam: procuramos uma instrução prática
+  // de gerar/persistir e exigimos que ela venha antes da primeira seção de BOM.
+  if (rel.includes('dia-1-fundacao')) {
+    const ondeBom = texto.search(/^(?:# PARTE \d+ — Estrutura de produto|### D2 — Estrutura de produto|### B1\. Estrutura de Produto).*$/mi);
+    if (ondeBom >= 0) {
+      const instrucaoMascara = texto.search(/VITE0313[\s\S]{0,600}?(?:persist(?:a|ir|ida)|gravar|salvar)/i);
+      // No manual a advertência fica logo dentro da abertura do bloco da BOM,
+      // antes do Passo 1; por isso aceitamos uma pequena margem após o título.
+      const ensinaMascara = instrucaoMascara >= 0 && instrucaoMascara <= ondeBom + 1_000;
+      if (!ensinaMascara) {
+        const linha = texto.slice(0, ondeBom).split('\n').length;
+        aviso(rel, linha, 'mascara-fora-de-ordem', 'ensina a estrutura/BOM antes de ensinar a gerar e persistir a máscara na VITE0313');
+      }
+    }
+  }
 }
 
 // ── Relatório ───────────────────────────────────────────────────────────────

@@ -32,6 +32,7 @@
     "e2e:fundacao": "node scripts/e2e/cadastros-fundacao.mjs",
     "audit:treinamento": "node scripts/audit-training-docs.mjs",
     "audit:scroll": "node scripts/audit-scroll-traps.mjs",
+    "audit:usability": "node scripts/audit-frontend-usability.mjs",
     "validate:no-mocks": "node scripts/validate-no-registered-mocks.mjs",
     "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing",
     "test:versioning": "node scripts/test-versioning.mjs",
