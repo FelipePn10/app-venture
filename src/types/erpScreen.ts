@@ -132,8 +132,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
   {
     code: "VAUD0100",
-    title: "Log de Auditoria",
-    description: "Consultar os eventos de auditoria do sistema (somente ADMIN).",
+    title: "Histórico de Alterações",
+    description: "Consultar quem realizou cada ação, quando aconteceu e qual cadastro ou processo foi afetado (somente ADMIN).",
     module: "cadastros",
   },
   {
