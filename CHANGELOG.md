@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.5] — 2026-08-12
+
 ## Melhorias
 - A busca de telas agora coloca o resultado mais exato em primeiro lugar, facilitando abrir a rotina desejada pelo código.
 - Substituímos a lupa em formato de emoji por um ícone mais profissional e consistente.
