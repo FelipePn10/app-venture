@@ -46,8 +46,9 @@ export function EntityLookupAssist(): JSX.Element | null {
       input.style.paddingRight = "38px";
       const button = document.createElement("button");
       button.type = "button"; button.className = "erp-entity-lookup-btn"; button.title = `Pesquisar ${label.textContent?.trim().toLowerCase()}`;
-      button.setAttribute("aria-label", button.title); button.textContent = "🔍";
-      Object.assign(button.style, { position: "absolute", right: "5px", top: "23px", width: "28px", height: "28px", border: "1px solid #b8cdbc", borderRadius: "5px", background: "#f4f8f3", color: "#245b35", cursor: "pointer", zIndex: "2" });
+      button.setAttribute("aria-label", button.title);
+      button.innerHTML = '<svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.8"/><path d="m12.6 12.6 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+      Object.assign(button.style, { position: "absolute", right: "5px", top: "23px", width: "28px", height: "28px", border: "1px solid #b8cdbc", borderRadius: "5px", background: "#f4f8f3", color: "#245b35", cursor: "pointer", zIndex: "2", display: "grid", placeItems: "center", padding: "0" });
       button.onclick = () => setActive({ input, entity, label: label.textContent?.trim() || "registro", useId: /\bID\b/i.test(label.textContent || "") || /_id$/i.test(input.name) });
       field.appendChild(button); buttons.add(button);
     });

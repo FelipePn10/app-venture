@@ -181,6 +181,24 @@
 .erp-fieldset-head::before { content: ''; width: 3px; height: 12px; border-radius: 2px; background: var(--v-green); }
 .erp-fieldset-body { padding: 14px; display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px 14px; }
 
+/* Janelas desktop menores ainda são comuns no treinamento. Em 12 colunas, os
+   campos c1/c2 ficam estreitos demais e controles vizinhos parecem sobrepostos. */
+@media (max-width: 1100px) and (min-width: 701px) {
+  .erp-fieldset-body { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .erp-fieldset-body > .erp-c1,
+  .erp-fieldset-body > .erp-c2 { grid-column: span 2; }
+  .erp-fieldset-body > .erp-c3,
+  .erp-fieldset-body > .erp-c4 { grid-column: span 3; }
+  .erp-fieldset-body > .erp-c5,
+  .erp-fieldset-body > .erp-c6 { grid-column: span 6; }
+  .erp-fieldset-body > .erp-c7,
+  .erp-fieldset-body > .erp-c8,
+  .erp-fieldset-body > .erp-c9,
+  .erp-fieldset-body > .erp-c10,
+  .erp-fieldset-body > .erp-c11,
+  .erp-fieldset-body > .erp-c12 { grid-column: 1 / -1; }
+}
+
 /* Compact field */
 .erp-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .erp-c1{grid-column:span 1}.erp-c2{grid-column:span 2}.erp-c3{grid-column:span 3}.erp-c4{grid-column:span 4}
@@ -384,6 +402,17 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 
 .erp-field-hint { font-size: 11px; color: var(--v-text-3); margin-top: 1px; }
 .erp-text-muted { color: var(--v-text-muted); }
+
+.erp-audit-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.erp-audit-details > div { min-width: 0; padding: 10px 12px; border: 1px solid var(--v-border); border-radius: var(--v-r-sm); background: var(--v-surface-2); }
+.erp-audit-details dt { margin-bottom: 4px; color: var(--v-text-3); font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.erp-audit-details dd { margin: 0; color: var(--v-text); font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .erp-audit-details { grid-template-columns: 1fr; } }
+
+.erp-modal-backdrop { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 18px; background: rgba(13,31,20,.42); }
+.erp-modal { max-height: min(760px, 88vh); overflow: hidden; border: 1px solid var(--v-border-strong); border-radius: var(--v-r-lg); background: var(--v-surface); box-shadow: var(--v-shadow-lg); }
+.erp-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 15px; border-bottom: 1px solid var(--v-border); background: var(--v-surface-2); }
+.erp-modal-body { max-height: calc(88vh - 64px); overflow-y: auto; padding: 15px; }
 
 .erp-results-bar { display: flex; align-items: center; justify-content: space-between; padding: 9px 15px; background: var(--v-surface); border: 1px solid var(--v-border); border-radius: var(--v-r-md, 8px); box-shadow: var(--v-shadow-sm); }
 .erp-results-bar-left { display: flex; align-items: center; gap: 10px; }
