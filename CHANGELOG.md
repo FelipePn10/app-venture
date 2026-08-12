@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## Melhorias
+- A busca de telas agora coloca o resultado mais exato em primeiro lugar, facilitando abrir a rotina desejada pelo código.
+- Substituímos a lupa em formato de emoji por um ícone mais profissional e consistente.
+- Reorganizamos os campos em janelas menores para evitar informações juntas ou sobrepostas.
+- O Histórico de Alterações ficou mais fácil de entender, mostrando quem fez a ação, quando aconteceu e qual cadastro foi afetado.
+
+## Correções
+- Centralizamos o cadastro de itens na tela completa, evitando registros incompletos em uma opção resumida.
+
 ## [v1.1.4] — 2026-08-10
 
 ## Novidades
