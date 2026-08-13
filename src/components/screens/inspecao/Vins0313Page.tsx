@@ -50,7 +50,7 @@ export function Vins0313Page(): JSX.Element {
                 {orders.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Sem ordens. Clique em Consultar.</td></tr>}
                 {orders.map((o, i) => (
                   <tr key={i}>
-                    <td><strong>#{parseNum(o, "id", "ID")}</strong></td><td>{parseNum(o, "item_code", "ItemCode")}</td><td>{parseStr(o, "mask", "Mask") || "—"}</td>
+                    <td><strong>#{parseStr(o, "id", "ID")}</strong></td><td>{parseStr(o, "item_code", "ItemCode")}</td><td>{parseStr(o, "mask", "Mask") || "—"}</td>
                     <td>{parseNum(o, "quantity", "Quantity")}</td><td>{parseStr(o, "source", "Source")}</td><td>{parseNum(o, "supplier_code", "SupplierCode") || "—"}</td>
                     <td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td><td>{d10(parseStr(o, "created_at", "CreatedAt"))}</td>
                   </tr>

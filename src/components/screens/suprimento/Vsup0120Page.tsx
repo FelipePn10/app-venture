@@ -12,7 +12,7 @@ type FeedbackState = { type: "success" | "error" | "info"; message: string } | n
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
 const EMPTY_TABLE: PriceTableDTO = { description: "", currency: "BRL", valid_from: today(), valid_to: "" };
-const EMPTY_ITEM: PriceTableItemDTO = { item_code: 0, price: 0, uom: "UN", min_qty: 0, supplier_code: undefined };
+const EMPTY_ITEM: PriceTableItemDTO = { item_code: "", price: 0, uom: "UN", min_qty: 0, supplier_code: undefined };
 
 export function Vsup0120Page(): JSX.Element {
   const [tables, setTables] = useState<PriceTableDTO[]>([]);
@@ -139,7 +139,7 @@ export function Vsup0120Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Adicionar preço — {selected.description}</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setIF("item_code", c ?? 0)} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setIF("item_code", String(c ?? ""))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço</label><input className="erp-input num" type="number" step="0.01" value={itemForm.price} onChange={(e) => setIF("price", Number(e.target.value))} /></div>
                       <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.uom ?? ""} onChange={(e) => setIF("uom", e.target.value.toUpperCase())} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Qtd mín.</label><input className="erp-input num" type="number" value={itemForm.min_qty ?? 0} onChange={(e) => setIF("min_qty", Number(e.target.value))} /></div>

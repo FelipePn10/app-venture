@@ -14,7 +14,7 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const STATUS_LABEL: Record<string, string> = { OPEN: "Aberto", SEPARATED: "Separado", CONFERRED: "Conferido", SHIPPED: "Despachado", CANCELLED: "Cancelado" };
 const statusLabel = (s?: string) => (s ? STATUS_LABEL[s] ?? s : "—");
 
-const EMPTY_ITEM: ShipmentItemDTO = { item_code: 0, quantity: 1, warehouse_id: 0, unit_net_weight: 0, unit_gross_weight: 0 };
+const EMPTY_ITEM: ShipmentItemDTO = { item_code: "", quantity: 1, warehouse_id: 0, unit_net_weight: 0, unit_gross_weight: 0 };
 const EMPTY_VOL: ShipmentVolumeDTO = { volume_number: 1, package_type: "CAIXA", net_weight: 0, gross_weight: 0, length_cm: 0, width_cm: 0, height_cm: 0, marking: "" };
 
 export function Vexp0100Page(): JSX.Element {
@@ -163,7 +163,7 @@ export function Vexp0100Page(): JSX.Element {
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Itens ({items.length})</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={itemForm.item_code || ""} onChange={(e) => setItemForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code || ""} onChange={(e) => setItemForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={itemForm.quantity || ""} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Depósito</label><input className="erp-input num" type="number" value={itemForm.warehouse_id || ""} onChange={(e) => setItemForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Peso líq. unit.</label><input className="erp-input num" type="number" step="0.01" value={itemForm.unit_net_weight || ""} onChange={(e) => setItemForm((p) => ({ ...p, unit_net_weight: Number(e.target.value) }))} /></div>

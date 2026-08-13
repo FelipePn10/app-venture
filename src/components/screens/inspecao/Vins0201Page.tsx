@@ -26,7 +26,7 @@ export function Vins0201Page(): JSX.Element {
 
   const carregar = () => run(async () => { setOrders(await listInspectionOrders()); });
   const gerar = () => run(async () => {
-    const item_code = Number(gen.item_code), warehouse_id = Number(gen.warehouse_id), quantity = Number(gen.quantity);
+    const item_code = gen.item_code.trim(), warehouse_id = Number(gen.warehouse_id), quantity = Number(gen.quantity);
     if (!item_code || !warehouse_id || !quantity) { setFeedback({ type: "error", message: "Item, almoxarifado e quantidade são obrigatórios." }); return; }
     const o = await createInspectionOrder({ source: gen.source, item_code, mask: gen.mask.trim(), warehouse_id, quantity, supplier_code: Number(gen.supplier_code) || null, lot: gen.lot.trim() || null });
     setGen({ ...GEN_INI }); setFeedback({ type: "success", message: `Ordem de inspeção gerada (#${o.id ?? o.ID}).` }); setOrders(await listInspectionOrders());
@@ -67,7 +67,7 @@ export function Vins0201Page(): JSX.Element {
               {orders.length === 0 && <div className="erp-list-empty">Clique em <strong>Carregar</strong>.</div>}
               {orders.map((o, i) => { const id = parseNum(o, "id", "ID"); return (
                 <div key={i} className={`erp-list-row${parseNum(sel ?? {}, "id", "ID") === id ? " erp-row-sel" : ""}`} onClick={() => setSel(o)}>
-                  <span className="erp-list-code">#{id} · item {parseNum(o, "item_code", "ItemCode")}</span>
+                  <span className="erp-list-code">#{id} · item {parseStr(o, "item_code", "ItemCode")}</span>
                   <span className="erp-list-sub">{parseStr(o, "status", "Status")} · qtd {parseNum(o, "quantity", "Quantity")}</span>
                 </div>
               ); })}
@@ -81,7 +81,7 @@ export function Vins0201Page(): JSX.Element {
                 <div className="erp-fieldset-head">Gerar ordem de inspeção</div>
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c3"><label className="erp-label">Origem</label><select className="erp-input" value={gen.source} onChange={(e) => setGen((f) => ({ ...f, source: e.target.value as InspectionOrderSource }))}>{SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-                  <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={gen.item_code} onChange={(e) => setGen((f) => ({ ...f, item_code: e.target.value }))} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={gen.item_code} onChange={(e) => setGen((f) => ({ ...f, item_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={gen.mask} onChange={(e) => setGen((f) => ({ ...f, mask: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label erp-req">Almox.</label><input className="erp-input num" type="number" value={gen.warehouse_id} onChange={(e) => setGen((f) => ({ ...f, warehouse_id: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtde</label><input className="erp-input num" type="number" value={gen.quantity} onChange={(e) => setGen((f) => ({ ...f, quantity: e.target.value }))} /></div>

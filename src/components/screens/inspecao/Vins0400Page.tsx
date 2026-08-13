@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { RECORD_TYPES, listRecords, listInspectionOrders } from "@/services/procurementService";
-import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
+import { errMessage, parseStr, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
@@ -57,7 +57,7 @@ export function Vins0400Page(): JSX.Element {
                 <thead><tr><th>#</th><th>Tipo</th><th>Fornecedor</th><th>Item</th><th>Referência</th><th>Status</th></tr></thead>
                 <tbody>
                   {records.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem ocorrências. Clique em Consultar.</td></tr>}
-                  {records.map((r, i) => <tr key={i}><td><strong>#{parseNum(r, "id", "ID")}</strong></td><td>{parseStr(r, "record_type", "RecordType")}</td><td>{parseNum(r, "supplier_code", "SupplierCode") || "—"}</td><td>{parseNum(r, "item_code", "ItemCode") || "—"}</td><td>{parseStr(r, "reference", "Reference") || "—"}</td><td><span className="erp-badge info">{parseStr(r, "status", "Status")}</span></td></tr>)}
+                  {records.map((r, i) => <tr key={i}><td><strong>#{parseStr(r, "id", "ID")}</strong></td><td>{parseStr(r, "record_type", "RecordType")}</td><td>{parseStr(r, "supplier_code", "SupplierCode") || "—"}</td><td>{parseStr(r, "item_code", "ItemCode") || "—"}</td><td>{parseStr(r, "reference", "Reference") || "—"}</td><td><span className="erp-badge info">{parseStr(r, "status", "Status")}</span></td></tr>)}
                 </tbody>
               </table>
             ) : (
@@ -65,7 +65,7 @@ export function Vins0400Page(): JSX.Element {
                 <thead><tr><th>#</th><th>Item</th><th>Qtde</th><th>Origem</th><th>Status</th></tr></thead>
                 <tbody>
                   {orders.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem ordens. Clique em Consultar.</td></tr>}
-                  {orders.map((o, i) => <tr key={i}><td><strong>#{parseNum(o, "id", "ID")}</strong></td><td>{parseNum(o, "item_code", "ItemCode")}</td><td>{parseNum(o, "quantity", "Quantity")}</td><td>{parseStr(o, "source", "Source")}</td><td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td></tr>)}
+                  {orders.map((o, i) => <tr key={i}><td><strong>#{parseStr(o, "id", "ID")}</strong></td><td>{parseStr(o, "item_code", "ItemCode")}</td><td>{parseStr(o, "quantity", "Quantity")}</td><td>{parseStr(o, "source", "Source")}</td><td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td></tr>)}
                 </tbody>
               </table>
             )}

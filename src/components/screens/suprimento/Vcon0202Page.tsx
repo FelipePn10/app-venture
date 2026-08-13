@@ -15,7 +15,7 @@ const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDi
 export function Vcon0202Page(): JSX.Element {
   const [contractId, setContractId] = useState("");
   const [contrato, setContrato] = useState<SupplierContract | null>(null);
-  const [sel, setSel] = useState<{ item_code: number; mask: string } | null>(null);
+  const [sel, setSel] = useState<{ item_code: string; mask: string } | null>(null);
   const [qtd, setQtd] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);

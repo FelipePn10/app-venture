@@ -59,7 +59,7 @@ export function Vdes0100Page(): JSX.Element {
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input" value={form.code} onChange={(e) => setF("code", e.target.value)} /></div>
                 <div className="erp-field erp-c1"><label className="erp-label">Dígito</label><input className="erp-input" value={form.digit} onChange={(e) => setF("digit", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Formato</label><input className="erp-input" value={form.format} onChange={(e) => setF("format", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={form.item_code ?? ""} onChange={(e) => setF("item_code", Number(e.target.value) || undefined)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num"  value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value || undefined)} /></div>
                 <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={form.uom} onChange={(e) => setF("uom", e.target.value)} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar desenho</button></div>

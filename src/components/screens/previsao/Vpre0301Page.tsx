@@ -33,7 +33,7 @@ export function Vpre0301Page(): JSX.Element {
 
   // consolida por item (soma das semanas)
   const consolidated = useMemo(() => {
-    const map = new Map<string, { item_code: number; mask: string; qty: number; weeks: number }>();
+    const map = new Map<string, { item_code: string; mask: string; qty: number; weeks: number }>();
     for (const f of raw) {
       const key = `${f.item_code}|${f.mask ?? ""}`;
       const cur = map.get(key) ?? { item_code: f.item_code, mask: f.mask ?? "", qty: 0, weeks: 0 };

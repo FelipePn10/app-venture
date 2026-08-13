@@ -18,7 +18,7 @@ export function Vcon0200Page(): JSX.Element {
   const setC = useCallback(<K extends keyof typeof capa>(k: K, v: string) => setCapa((c) => ({ ...c, [k]: v })), []);
 
   const addItem = () => {
-    const item_code = Number(itemForm.item_code);
+    const item_code = itemForm.item_code.trim();
     const contracted_qty = Number(itemForm.contracted_qty);
     if (!item_code) { setFeedback({ type: "error", message: "Item é obrigatório." }); return; }
     if (!contracted_qty || contracted_qty <= 0) { setFeedback({ type: "error", message: "Quantidade contratada deve ser positiva." }); return; }
@@ -91,7 +91,7 @@ export function Vcon0200Page(): JSX.Element {
         </div></div>
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Linhas do contrato ({items.length})</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd contratada</label><input className="erp-input num" type="number" value={itemForm.contracted_qty} onChange={(e) => setItemForm((f) => ({ ...f, contracted_qty: e.target.value }))} /></div>

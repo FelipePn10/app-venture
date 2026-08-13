@@ -25,6 +25,7 @@ export interface ExportPayload {
   columns: string[];
   rows: ExportCell[][];
   meta?: Record<string, string>;
+  orientation?: 'retrato' | 'paisagem';
 }
 
 export const EXPORT_FORMATS: { format: ExportFormat; label: string; ext: string }[] = [

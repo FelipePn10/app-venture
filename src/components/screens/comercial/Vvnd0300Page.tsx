@@ -78,7 +78,7 @@ const EMPTY_QUOTATION: SalesQuotationDTO = {
   discount_value: 0, surcharge_value: 0, retained_tax_value: 0,
 };
 const EMPTY_ITEM: SalesQuotationItemDTO = {
-  item_code: 0, requested_qty: 1, unit_price: 0, sales_uom: "UN",
+  item_code: "", requested_qty: 1, unit_price: 0, sales_uom: "UN",
   discount_pct: 0, ipi_pct: 0, st_pct: 0, delivery_date_firm: false,
 };
 
@@ -711,9 +711,9 @@ export function Vvnd0300Page(): JSX.Element {
                         <div className="erp-fieldset-body">
                           <div className="erp-field erp-c1">
                             <label className="erp-label">Seq.</label>
-                            <input className="erp-input num" type="number" min={1} placeholder={String(nextSequence)} value={newItem.sequence || ""} onChange={(e) => setI("sequence", Number(e.target.value) || undefined)} />
+                            <input className="erp-input num" type="number" min={1} placeholder={String(nextSequence)} value={newItem.sequence || ""} onChange={(e) => setI("sequence", e.target.value ? Number(e.target.value) : undefined)} />
                           </div>
-                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setI("item_code", code ?? 0)} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setI("item_code", String(code ?? ""))} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" step="0.0001" value={newItem.requested_qty || ""} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço unit.</label><input className="erp-input num" type="number" step="0.0001" value={newItem.unit_price || ""} onChange={(e) => setI("unit_price", Number(e.target.value))} /></div>

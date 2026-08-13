@@ -49,7 +49,7 @@ export function Vitm0100Page(): JSX.Element {
           <button className="erp-btn" onClick={listar} disabled={busy}>Listar</button>
           <input className="erp-input" style={{ width: 200, height: 32 }} value={filter} placeholder="filtrar código/descrição" onChange={(e) => setFilter(e.target.value)} /></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
-          <ExportButton title="VITM0100 — Itens" filename="vitm0100" /></div>
+          <ExportButton title="VITM0100 — Itens" filename="vitm0100" orientation="paisagem" /></div>
       </div>
 
       <div className="erp-content">

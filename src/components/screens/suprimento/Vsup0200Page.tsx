@@ -4,7 +4,7 @@ import {
   listOrders, getOrder, createOrder, cancelOrder, addOrderItem,
   listSuggestions, approveSuggestion, rejectSuggestion,
 } from "@/services/purchaseOrderService";
-import { currentUserId, errMessage, type Obj, parseNum } from "@/services/fiscalShared";
+import { currentUserId, errMessage, type Obj, parseNum, parseStr } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers, loadEstablishments } from "@/services/lookups";
@@ -14,7 +14,7 @@ type View = "pedidos" | "sugestoes";
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const EMPTY_HEAD: PurchaseOrderDTO = { enterprise_code: 1, supplier_code: undefined, currency_code: "BRL", freight_type: "CIF", notes: "" };
-const EMPTY_ITEM: PurchaseOrderItemDTO = { item_code: 0, requested_qty: 1, unit_price: 0, discount_pct: 0, ipi_pct: 0, icms_pct: 0 };
+const EMPTY_ITEM: PurchaseOrderItemDTO = { item_code: "", requested_qty: 1, unit_price: 0, discount_pct: 0, ipi_pct: 0, icms_pct: 0 };
 
 function statusBadge(s?: string): JSX.Element {
   const x = (s ?? "").toUpperCase();
@@ -167,7 +167,7 @@ export function Vsup0200Page(): JSX.Element {
                     <div className="erp-fieldset">
                       <div className="erp-fieldset-head">Adicionar item</div>
                       <div className="erp-fieldset-body">
-                        <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setI("item_code", c ?? 0)} /></div>
+                        <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setI("item_code", String(c ?? ""))} /></div>
                         <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtde</label><input className="erp-input num" type="number" value={itemForm.requested_qty} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
                         <div className="erp-field erp-c2"><label className="erp-label">Preço unit.</label><input className="erp-input num" type="number" step="0.01" value={itemForm.unit_price ?? 0} onChange={(e) => setI("unit_price", Number(e.target.value))} /></div>
                         <div className="erp-field erp-c2"><label className="erp-label">Desc. %</label><input className="erp-input num" type="number" step="0.01" value={itemForm.discount_pct ?? 0} onChange={(e) => setI("discount_pct", Number(e.target.value))} /></div>
@@ -183,7 +183,7 @@ export function Vsup0200Page(): JSX.Element {
                           {items.map((it, i) => (
                             <tr key={i}>
                               <td className="num">{parseNum(it, "sequence", "Sequence") ?? i + 1}</td>
-                              <td className="num" style={{ fontWeight: 600 }}>{parseNum(it, "item_code", "ItemCode")}</td>
+                              <td className="num" style={{ fontWeight: 600 }}>{parseStr(it, "item_code", "ItemCode")}</td>
                               <td className="num">{parseNum(it, "requested_qty", "RequestedQty") ?? 0}</td>
                               <td className="num">{money(parseNum(it, "unit_price", "UnitPrice"))}</td>
                               <td className="num">{parseNum(it, "ipi_pct", "IPIPct") ?? 0}</td>

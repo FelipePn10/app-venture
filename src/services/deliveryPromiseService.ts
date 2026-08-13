@@ -11,7 +11,7 @@ const BASE = '/api/delivery-promise';
  * calendário por item ficam em serviços próprios (VPME0102 / VPME0102ITE).
  */
 export interface TankReservationLine {
-  item_code: number;
+  item_code: string;
   mask?: string;
   quantity: number;
   unit_price?: number;
@@ -30,7 +30,7 @@ export interface RescheduleRequest {
   customer_code?: number;
   representative_code?: number;
   order_codes?: number[];
-  item_codes?: number[];
+  item_codes?: string[];
   new_date: string;
 }
 

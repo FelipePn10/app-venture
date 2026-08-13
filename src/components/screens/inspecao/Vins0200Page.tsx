@@ -48,7 +48,7 @@ export function Vins0200Page(): JSX.Element {
     if (steps.length === 0) { setFeedback({ type: "error", message: "Inclua ao menos uma etapa de inspeção." }); return; }
     const dto: Obj = {
       enterprise_code: Number(capa.enterprise_code) || 1, basis: capa.basis,
-      item_code: capa.basis === "ITEM" ? Number(capa.item_code) : null,
+      item_code: capa.basis === "ITEM" ? capa.item_code.trim() : null,
       classification_code: capa.basis === "CLASSIFICATION" ? capa.classification_code.trim() : null,
       mask: capa.mask.trim(), inspection_warehouse_id: Number(capa.inspection_warehouse_id),
       route_type: capa.route_type.trim() || null, inspection_type: capa.inspection_type.trim() || null, market_type: capa.market_type.trim() || null,
@@ -100,7 +100,7 @@ export function Vins0200Page(): JSX.Element {
                 <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={capa.enterprise_code} onChange={(e) => setC("enterprise_code", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Base</label><select className="erp-input" value={capa.basis} onChange={(e) => setC("basis", e.target.value)}>{BASES.map((b) => <option key={b} value={b}>{b}</option>)}</select></div>
                 {capa.basis === "ITEM"
-                  ? <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={capa.item_code} onChange={(e) => setC("item_code", e.target.value)} /></div>
+                  ? <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={capa.item_code} onChange={(e) => setC("item_code", e.target.value)} /></div>
                   : <div className="erp-field erp-c2"><label className="erp-label erp-req">Classificação</label><input className="erp-input" value={capa.classification_code} onChange={(e) => setC("classification_code", e.target.value)} /></div>}
                 <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={capa.mask} onChange={(e) => setC("mask", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Almox. inspeção</label><input className="erp-input num" type="number" value={capa.inspection_warehouse_id} onChange={(e) => setC("inspection_warehouse_id", e.target.value)} /></div>

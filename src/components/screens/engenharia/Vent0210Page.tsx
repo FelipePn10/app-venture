@@ -17,7 +17,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface BreadcrumbEntry {
-  code: number;
+  code: string;
   label: string;
 }
 
@@ -38,14 +38,14 @@ function nextPosition(rows: LocalRow[]): number {
   return Math.max(...rows.map((r) => r.position)) + 1;
 }
 
-function blankRow(parentCode: number, rows: LocalRow[]): LocalRow {
+function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
   return {
     localId: uid(),
     dirty: true,
     isNew: true,
     id: 0,
     parentCode,
-    childCode: 0,
+    childCode: '',
     childDescription: '',
     parentMask: null,
     quantity: 1,
@@ -114,9 +114,9 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
       <div className="fe-d-row">
         <div className="fe-d-field">
           <label className="fe-d-label">Cód. Filho (int64)</label>
-          <input className="fe-d-input" type="number" min={1}
+          <input className="fe-d-input"
             value={row.childCode || ''}
-            onChange={(e) => onUpdate({ childCode: parseInt(e.target.value, 10) || 0 })}
+            onChange={(e) => onUpdate({ childCode: e.target.value })}
             placeholder="Ex: 2206" style={{ textAlign: 'right' }}/>
         </div>
         <div className="fe-d-field">
@@ -244,7 +244,7 @@ export function Vent0210Page(): JSX.Element {
 
   // ── load root structure ──────────────────────────────────────────────────────
 
-  const loadRoot = useCallback(async (code: number, mask?: string | null) => {
+  const loadRoot = useCallback(async (code: string, mask?: string | null) => {
     setIsLoading(true);
     setRows([]);
     setSelectedLocalId(null);
@@ -266,7 +266,7 @@ export function Vent0210Page(): JSX.Element {
 
   // ── load child level (drill-down) ───────────────────────────────────────────
 
-  const loadChildLevel = useCallback(async (childCode: number, mask?: string | null) => {
+  const loadChildLevel = useCallback(async (childCode: string, mask?: string | null) => {
     setIsLoading(true);
     setRows([]);
     setSelectedLocalId(null);
@@ -290,17 +290,12 @@ export function Vent0210Page(): JSX.Element {
   async function handleSearchRoot() {
     const codeStr = rootCodigo.trim();
     if (!codeStr) return;
-    const codeNum = parseInt(codeStr, 10);
-    if (isNaN(codeNum)) {
-      setFeedback({ type: 'error', msg: 'Código deve ser numérico (int64).' });
-      return;
-    }
     setIsLoading(true);
     setFeedback(null);
     setMaskError('');
     setBreadcrumb([]);
     try {
-      const info = await findItemByCode(codeNum);
+      const info = await findItemByCode(codeStr);
       setRootInfo(info);
       setRootCodigo(String(info.code));
       await loadRoot(info.code, rootMascara || null);
@@ -815,9 +810,9 @@ export function Vent0210Page(): JSX.Element {
                               </div></td>
 
                               <td><div className="fe-td">
-                                <input className="fe-ci" type="number" min={1}
+                                <input className="fe-ci"
                                   value={row.childCode || ''}
-                                  onChange={(e) => updateRow(row.localId, { childCode: parseInt(e.target.value, 10) || 0 })}
+                                  onChange={(e) => updateRow(row.localId, { childCode: e.target.value })}
                                   placeholder="Código"
                                   onClick={(e) => e.stopPropagation()}
                                   onDoubleClick={(e) => e.stopPropagation()}

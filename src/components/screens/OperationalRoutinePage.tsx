@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { currentUserId, errMessage, httpClient, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { downloadBlob } from "@/services/fileDownload";
@@ -50,7 +50,7 @@ function roleFromToken(token: string | null): string | undefined {
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
 const ENUM_OPTIONS: Record<string, string[]> = {
-  status: ["DRAFT", "ACTIVE", "INACTIVE", "SCHEDULED", "ARRIVED", "IN_CONFERENCE", "RELEASED", "BLOCKED", "CANCELLED", "APPROVED", "OBSOLETE"],
+  status: ["PENDENTE", "APROVADO", "REJEITADO", "EXPIRADO", "DRAFT", "ACTIVE", "INACTIVE", "SCHEDULED", "ARRIVED", "IN_CONFERENCE", "RELEASED", "BLOCKED", "CANCELLED", "APPROVED", "OBSOLETE"],
   direction: ["INBOUND", "OUTBOUND"], message_type: ["PO_CONFIRMATION", "ASN", "INVOICE"],
   apportion_basis: ["VALUE", "QUANTITY", "WEIGHT"], value_type: ["PERCENT", "FIXED", "TEXT", "NUMBER", "BOOLEAN"],
   tolerance_type: ["QUANTITY", "ITEM_PRICE", "TOTAL_VALUE"], applies_to: ["INVOICE", "RECEIVING_NOTICE", "ALL"], action: ["WARN", "BLOCK", "ALLOW"],
@@ -76,6 +76,7 @@ const VALUE_LABELS: Record<string, string> = {
   ARRIVED: "Recebido", IN_CONFERENCE: "Em conferência", RELEASED: "Liberado", BLOCKED: "Bloqueado",
   CANCELLED: "Cancelado", APPROVED: "Aprovado", OBSOLETE: "Obsoleto", PLANNED: "Planejado",
   EBOM: "Estrutura de engenharia (EBOM)", MBOM: "Estrutura de fabricação (MBOM)",
+  PENDENTE: "Pendente", APROVADO: "Aprovado", REJEITADO: "Rejeitado", EXPIRADO: "Expirado",
   INBOUND: "Entrada", OUTBOUND: "Saída", WARN: "Alertar", BLOCK: "Bloquear", ALLOW: "Permitir",
 };
 
@@ -196,13 +197,17 @@ function cell(value: unknown): string {
 export function OperationalRoutinePage({ routine }: { routine: OperationalRoutine }): JSX.Element {
   const token = useAuthStore((state) => state.token);
   const userRole = useAuthStore((state) => state.user?.role)?.toUpperCase() ?? roleFromToken(token);
-  const [operationIndex, setOperationIndex] = useState(0);
+  const preferredOperation = Math.max(0, routine.operations.findIndex((candidate) => candidate.method === "GET"));
+  const [operationIndex, setOperationIndex] = useState(preferredOperation);
   const operation = routine.operations[operationIndex];
   const [valuesByOperation, setValuesByOperation] = useState<Record<number, Record<string, string | boolean>>>({});
   const values = valuesByOperation[operationIndex] ?? initialValues(operation);
   const [result, setResult] = useState<unknown>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setOperationIndex(preferredOperation); setValuesByOperation({}); setResult(null); setFeedback(null);
+  }, [routine.code, preferredOperation]);
 
   const rows = useMemo(() => displayRows(result), [result]);
   const columns = useMemo(() => {

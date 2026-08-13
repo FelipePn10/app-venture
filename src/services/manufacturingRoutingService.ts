@@ -21,7 +21,7 @@ export interface OperationDTO {
 export interface RouteDTO {
   id?: number;
   code?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   alternative: number;
   description?: string;
@@ -78,7 +78,7 @@ function parseRoute(raw: unknown): RouteDTO {
   return {
     id: parseNum(o, 'id', 'ID'),
     code: parseNum(o, 'code', 'Code') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     alternative: parseNum(o, 'alternative', 'Alternative') || 1,
     description: parseStr(o, 'description', 'Description') || undefined,
@@ -132,7 +132,7 @@ export async function deleteOperation(id: number): Promise<void> {
 }
 
 // ── Roteiros ──
-export async function listRoutes(itemCode: number): Promise<RouteDTO[]> {
+export async function listRoutes(itemCode: string): Promise<RouteDTO[]> {
   const { data } = await httpClient.get(`${BASE}/routes`, { params: { item_code: itemCode } });
   return unwrapArray(data).map(parseRoute);
 }

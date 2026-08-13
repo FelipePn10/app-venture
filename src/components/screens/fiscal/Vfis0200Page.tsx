@@ -13,7 +13,7 @@ type Mode = "list" | "create";
 const today = () => new Date().toISOString().slice(0, 10);
 
 const EMPTY_ITEM: ExitItemDTO = {
-  sequence: 1, item_code: 0, ncm: "", cfop: "", quantidade: 1,
+  sequence: 1, item_code: "", ncm: "", cfop: "", quantidade: 1,
   unit_price: 0, total_price: 0, origem_mercadoria: "0", description: "",
 };
 
@@ -308,7 +308,7 @@ export function Vfis0200Page(): JSX.Element {
                     {form.itens.map((it, idx) => (
                       <tr key={idx}>
                         <td>{it.sequence}</td>
-                        <td><input className="erp-input" style={{ height: 30, width: 80 }} type="number" value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: Number(e.target.value) })} /></td>
+                        <td><input className="erp-input" style={{ height: 30, width: 80 }}  value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: e.target.value })} /></td>
                         <td><input className="erp-input" style={{ height: 30, width: 100 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
                         <td><input className="erp-input" style={{ height: 30, width: 70 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
                         <td><input className="erp-input" style={{ height: 30, width: 50 }} value={it.origem_mercadoria} onChange={(e) => setItem(idx, { origem_mercadoria: e.target.value })} /></td>

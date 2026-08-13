@@ -211,7 +211,7 @@ export async function addCallChecklistItem(code: number, payload: Obj): Promise<
   const { data } = await httpClient.post(`${BASE}/calls/${code}/checklist`, { call_code: code, ...payload });
   return unwrapObject(data);
 }
-export async function setChecklistItemDone(itemCode: number, done: boolean, notes?: string): Promise<Obj> {
+export async function setChecklistItemDone(itemCode: string, done: boolean, notes?: string): Promise<Obj> {
   const { data } = await httpClient.patch(`${BASE}/calls/checklist/${itemCode}`, { done, notes: notes ?? null });
   return unwrapObject(data);
 }

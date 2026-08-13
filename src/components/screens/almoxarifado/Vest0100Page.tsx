@@ -14,7 +14,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
-const EMPTY_MOV: MovementDTO = { item_code: 0, warehouse_id: 0, movement_type: "IN", quantity: 0, unit_price: 0, lot: "" };
+const EMPTY_MOV: MovementDTO = { item_code: "", warehouse_id: 0, movement_type: "IN", quantity: 0, unit_price: 0, lot: "" };
 
 export function Vest0100Page(): JSX.Element {
   const [itemCode, setItemCode] = useState("");
@@ -25,8 +25,8 @@ export function Vest0100Page(): JSX.Element {
   const [genealogy, setGenealogy] = useState<Obj | null>(null);
   const [consumption, setConsumption] = useState<ConsumptionAvgDTO | null>(null);
   const [movForm, setMovForm] = useState<MovementDTO>({ ...EMPTY_MOV });
-  const [resForm, setResForm] = useState({ item_code: 0, warehouse_id: 0, quantity: 0, reference_type: "MANUAL", reference_code: 0 });
-  const [lotForm, setLotForm] = useState({ item_code: 0, lot: "", heat_number: "", certificate: "" });
+  const [resForm, setResForm] = useState({ item_code: "", warehouse_id: 0, quantity: 0, reference_type: "MANUAL", reference_code: 0 });
+  const [lotForm, setLotForm] = useState({ item_code: "", lot: "", heat_number: "", certificate: "" });
   const [resId, setResId] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +37,7 @@ export function Vest0100Page(): JSX.Element {
   }, []);
 
   const consultarItem = () => run(async () => {
-    const c = Number(itemCode);
+    const c = itemCode.trim();
     if (!c) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     const [mv, bl, at, lt] = await Promise.all([listMovementsByItem(c), listBalancesByItem(c), getAtp(c), listLotsByItem(c)]);
     setMovements(mv); setBalances(bl); setAtp(at); setLots(lt); setGenealogy(null);
@@ -50,7 +50,7 @@ export function Vest0100Page(): JSX.Element {
     if (!movForm.item_code || !movForm.warehouse_id || !movForm.quantity) { setFeedback({ type: "error", message: "Item, depósito e quantidade são obrigatórios." }); return; }
     await createMovement(movForm);
     setFeedback({ type: "success", message: "Movimento lançado (saldo/custo atualizados)." });
-    if (itemCode) await Promise.all([listMovementsByItem(Number(itemCode)).then(setMovements), listBalancesByItem(Number(itemCode)).then(setBalances), getAtp(Number(itemCode)).then(setAtp)]);
+    if (itemCode) await Promise.all([listMovementsByItem(itemCode.trim()).then(setMovements), listBalancesByItem(itemCode.trim()).then(setBalances), getAtp(itemCode.trim()).then(setAtp)]);
   });
 
   const criarReserva = () => run(async () => {
@@ -58,25 +58,25 @@ export function Vest0100Page(): JSX.Element {
     const r = await createReservation(resForm);
     setResId(String(r.id ?? ""));
     setFeedback({ type: "success", message: `Reserva ${r.id} criada (ACTIVE) — ATP reduzido.` });
-    if (itemCode) await getAtp(Number(itemCode)).then(setAtp);
+    if (itemCode) await getAtp(itemCode.trim()).then(setAtp);
   });
-  const liberar = () => run(async () => { const id = Number(resId); if (!id) return; await releaseReservation(id); setFeedback({ type: "success", message: `Reserva ${id} liberada.` }); if (itemCode) await getAtp(Number(itemCode)).then(setAtp); });
-  const consumir = () => run(async () => { const id = Number(resId); if (!id) return; await consumeReservation(id); setFeedback({ type: "success", message: `Reserva ${id} consumida.` }); if (itemCode) await getAtp(Number(itemCode)).then(setAtp); });
+  const liberar = () => run(async () => { const id = Number(resId); if (!id) return; await releaseReservation(id); setFeedback({ type: "success", message: `Reserva ${id} liberada.` }); if (itemCode) await getAtp(itemCode.trim()).then(setAtp); });
+  const consumir = () => run(async () => { const id = Number(resId); if (!id) return; await consumeReservation(id); setFeedback({ type: "success", message: `Reserva ${id} consumida.` }); if (itemCode) await getAtp(itemCode.trim()).then(setAtp); });
 
   const registrarLote = () => run(async () => {
     if (!lotForm.item_code || !lotForm.lot.trim()) { setFeedback({ type: "error", message: "Item e lote são obrigatórios." }); return; }
     await registerLot(lotForm);
     setFeedback({ type: "success", message: `Lote ${lotForm.lot} registrado.` });
-    if (itemCode) await listLotsByItem(Number(itemCode)).then(setLots);
+    if (itemCode) await listLotsByItem(itemCode.trim()).then(setLots);
   });
   const verGenealogia = (lot: string) => run(async () => {
-    const c = Number(itemCode); if (!c) return;
+    const c = itemCode.trim(); if (!c) return;
     setGenealogy(await getLotGenealogy(c, lot));
     setFeedback({ type: "info", message: `Genealogia do lote ${lot} carregada.` });
   });
 
   const recalcConsumo = () => run(async () => {
-    const c = Number(itemCode); if (!c) { setFeedback({ type: "error", message: "Informe o item." }); return; }
+    const c = itemCode.trim(); if (!c) { setFeedback({ type: "error", message: "Informe o item." }); return; }
     await recalcConsumptionAverage(c);
     setConsumption(await getConsumptionAverage(c));
     setFeedback({ type: "success", message: "Consumo médio recalculado." });
@@ -92,7 +92,7 @@ export function Vest0100Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
-          <input className="erp-input num" style={{ width: 110, height: 32 }} type="number" value={itemCode} placeholder="código" onChange={(e) => setItemCode(e.target.value)} />
+          <input className="erp-input num" style={{ width: 110, height: 32 }}  value={itemCode} placeholder="código" onChange={(e) => setItemCode(e.target.value)} />
           <button className="erp-btn" onClick={consultarItem} disabled={busy}>Consultar</button>
           <button className="erp-btn" onClick={listarTodos} disabled={busy}>Últimos movimentos</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
@@ -127,7 +127,7 @@ export function Vest0100Page(): JSX.Element {
 
         {/* Lançar movimento */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Lançar movimento</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={movForm.item_code || ""} onChange={(e) => setMovForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={movForm.item_code || ""} onChange={(e) => setMovForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Depósito</label><input className="erp-input num" type="number" value={movForm.warehouse_id || ""} onChange={(e) => setMovForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Tipo</label>
             <select className="erp-input" value={movForm.movement_type} onChange={(e) => setMovForm((p) => ({ ...p, movement_type: e.target.value }))}>{MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
@@ -150,7 +150,7 @@ export function Vest0100Page(): JSX.Element {
 
         {/* Reservas */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Reservas (ATP)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={resForm.item_code || ""} onChange={(e) => setResForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={resForm.item_code || ""} onChange={(e) => setResForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Depósito</label><input className="erp-input num" type="number" value={resForm.warehouse_id || ""} onChange={(e) => setResForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={resForm.quantity || ""} onChange={(e) => setResForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={criarReserva} disabled={busy}>Criar reserva</button></div>
@@ -162,7 +162,7 @@ export function Vest0100Page(): JSX.Element {
 
         {/* Lotes / genealogia */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Lotes / rastreabilidade ({lots.length})</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={lotForm.item_code || ""} onChange={(e) => setLotForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={lotForm.item_code || ""} onChange={(e) => setLotForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Lote</label><input className="erp-input" value={lotForm.lot} onChange={(e) => setLotForm((p) => ({ ...p, lot: e.target.value }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Corrida (heat)</label><input className="erp-input" value={lotForm.heat_number} onChange={(e) => setLotForm((p) => ({ ...p, heat_number: e.target.value }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Certificado</label><input className="erp-input" value={lotForm.certificate} onChange={(e) => setLotForm((p) => ({ ...p, certificate: e.target.value }))} /></div>

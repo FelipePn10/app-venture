@@ -5,7 +5,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "precos" | "ordens";
-const PRICE: ServicePrice = { item_code: 0, mask: "", supplier_code: 0, operation_id: 0, uom: "UN", unit_price: "0", preferred: true, freight_type: "CIF" };
+const PRICE: ServicePrice = { item_code: "", mask: "", supplier_code: 0, operation_id: 0, uom: "UN", unit_price: "0", preferred: true, freight_type: "CIF" };
 
 export function Vtps0100Page(): JSX.Element {
   const [tab, setTab] = useState<Tab>("precos");
@@ -48,7 +48,7 @@ export function Vtps0100Page(): JSX.Element {
             <div className="erp-tabs"><button className="erp-tab active">Preços de serviço</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset"><div className="erp-fieldset-head">Novo preço</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={form.item_code || ""} onChange={(e) => setF("item_code", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={form.item_code || ""} onChange={(e) => setF("item_code", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Fornecedor</label><input className="erp-input num" type="number" value={form.supplier_code || ""} onChange={(e) => setF("supplier_code", Number(e.target.value))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Operação</label><input className="erp-input num" type="number" value={form.operation_id || ""} onChange={(e) => setF("operation_id", Number(e.target.value))} /></div>
                 <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={form.uom} onChange={(e) => setF("uom", e.target.value)} /></div>
@@ -66,7 +66,7 @@ export function Vtps0100Page(): JSX.Element {
             <div className="erp-detail-body">
               <table className="erp-grid"><thead><tr><th>#</th><th>Fornecedor</th><th>Item</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>{orders.length === 0 ? <tr><td colSpan={5} className="erp-grid-empty">clique em Carregar</td></tr> : orders.map((o, i) => { const id = parseNum(o, "id", "ID"); return (
-                  <tr key={i}><td><strong>#{id}</strong></td><td>{parseNum(o, "supplier_code", "SupplierCode") || "—"}</td><td>{parseNum(o, "item_code", "ItemCode") || "—"}</td>
+                  <tr key={i}><td><strong>#{id}</strong></td><td>{parseStr(o, "supplier_code", "SupplierCode") || "—"}</td><td>{parseStr(o, "item_code", "ItemCode") || "—"}</td>
                     <td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td>
                     <td style={{ display: "flex", gap: 4 }}>{["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"].map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(id, s)} disabled={busy}>{s}</button>)}</td></tr>
                 ); })}</tbody>

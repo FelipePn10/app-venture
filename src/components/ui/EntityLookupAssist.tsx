@@ -5,7 +5,7 @@ import { listSuppliers } from "@/services/supplierService";
 import { listCustomers } from "@/services/customerService";
 import { loadWarehouses } from "@/services/lookups";
 
-type Option = { value: number; code: number; label: string; sub?: string };
+type Option = { value: string | number; code: string | number; label: string; sub?: string };
 type Entity = "item" | "machine" | "supplier" | "customer" | "warehouse";
 type Active = { input: HTMLInputElement; entity: Entity; label: string; useId: boolean } | null;
 
@@ -65,7 +65,7 @@ export function EntityLookupAssist(): JSX.Element | null {
 
   if (!active) return null;
   const filtered = options.filter((option) => !query.trim() || `${option.code} ${option.label} ${option.sub || ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 250);
-  const choose = (value: number) => {
+  const choose = (value: string | number) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
     setter?.call(active.input, String(value));
     active.input.dispatchEvent(new Event("input", { bubbles: true }));

@@ -45,10 +45,10 @@ export function Vcfg0100Page(): JSX.Element {
   const carChars = () => run(async () => { setChars(await listCharacteristics()); });
   const crChar = () => run(async () => { if (!charForm.code.trim() || !charForm.description.trim()) { setFeedback({ type: "error", message: "Código e descrição obrigatórios." }); return; } await createCharacteristic(charForm); setCharForm({ code: "", description: "", type: "ESCOLHA", is_required: true }); setChars(await listCharacteristics()); setFeedback({ type: "success", message: "Característica criada." }); });
   // item
-  const carItemChars = () => run(async () => { const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setItemChars(await listItemCharacteristics(it)); });
-  const addItemChar = (charId: number) => run(async () => { const it = Number(item); if (!it) return; await addItemCharacteristic(it, charId, (itemChars.length + 1) * 10); setItemChars(await listItemCharacteristics(it)); });
+  const carItemChars = () => run(async () => { const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setItemChars(await listItemCharacteristics(it)); });
+  const addItemChar = (charId: number) => run(async () => { const it = item.trim(); if (!it) return; await addItemCharacteristic(it, charId, (itemChars.length + 1) * 10); setItemChars(await listItemCharacteristics(it)); });
   const addAns = () => { const cid = Number(ansForm.characteristic_id); if (!cid) return; setAnswers((a) => [...a, { characteristic_id: cid, variable_id: Number(ansForm.variable_id) || undefined, value: ansForm.value || undefined }]); setAnsForm({ characteristic_id: "", variable_id: "", value: "" }); };
-  const gerar = (persist: boolean) => run(async () => { const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setMaskResult(await generateMask(it, answers, persist)); setFeedback({ type: "success", message: persist ? "Máscara gerada e persistida." : "Máscara gerada (prévia)." }); });
+  const gerar = (persist: boolean) => run(async () => { const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setMaskResult(await generateMask(it, answers, persist)); setFeedback({ type: "success", message: persist ? "Máscara gerada e persistida." : "Máscara gerada (prévia)." }); });
 
   return (
     <div className="erp-screen">
@@ -132,7 +132,7 @@ export function Vcfg0100Page(): JSX.Element {
             <div className="erp-tabs"><button className="erp-tab active">Item &amp; máscara</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset"><div className="erp-fieldset-head">Características do item</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={item} onChange={(e) => setItem(e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" value={item} onChange={(e) => setItem(e.target.value)} /></div>
                 <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}><button className="erp-btn erp-btn-dark" onClick={carItemChars} disabled={busy}>Carregar características</button></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Vincular característica (id)</label><div style={{ display: "flex", gap: 6 }}><input className="erp-input num" type="number" value={ansForm.characteristic_id} onChange={(e) => setAnsForm((f) => ({ ...f, characteristic_id: e.target.value }))} /><button className="erp-btn erp-btn-sm" onClick={() => addItemChar(Number(ansForm.characteristic_id))} disabled={busy}>+ vincular</button></div></div>
                 <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Seq</th><th>Característica</th><th>Default</th></tr></thead>

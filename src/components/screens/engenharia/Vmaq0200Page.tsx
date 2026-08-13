@@ -36,7 +36,7 @@ function resolveUserId(id: string | undefined, token: string | null): string {
 const TIME_UNITS = CAPACITY_PERIODS; // produção usa o mesmo enum de período (MINUTO/HORA/DIA)
 
 const EMPTY_MACHINE = { code: 0, name: "", machine_type_code: 0, capacity: 0, capacity_per_unit: "PEÇAS", capacity_period: "DIA", efficiency_rate: 0.9 };
-const EMPTY_TIME: CreateItemMachineTimeDTO = { item_code: 0, mask: "", machine_code: 0, production_time: 0, production_time_unit: "MINUTO", production_base_qty: 1, setup_time: 0, priority: 1 };
+const EMPTY_TIME: CreateItemMachineTimeDTO = { item_code: "", mask: "", machine_code: 0, production_time: 0, production_time_unit: "MINUTO", production_base_qty: 1, setup_time: 0, priority: 1 };
 
 export function Vmaq0200Page(): JSX.Element {
   const user = useAuthStore((s) => s.user);
@@ -46,7 +46,7 @@ export function Vmaq0200Page(): JSX.Element {
   const [types, setTypes] = useState<MachineType[]>([]);
   const [mForm, setMForm] = useState({ ...EMPTY_MACHINE });
   const [tForm, setTForm] = useState<CreateItemMachineTimeDTO>({ ...EMPTY_TIME });
-  const [calc, setCalc] = useState({ item_code: 0, mask: "", machine_code: 0, demand_qty: 0 });
+  const [calc, setCalc] = useState({ item_code: "", mask: "", machine_code: 0, demand_qty: 0 });
   const [calcResult, setCalcResult] = useState<ProductionCalcResult | null>(null);
   const [sched, setSched] = useState({ machine_code: 0, schedule_date: "", planned_qty: 0, sequence: 0 });
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -123,7 +123,7 @@ export function Vmaq0200Page(): JSX.Element {
 
         {/* ── Cálculo de tempo de produção (§3) ──────────────────────────── */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Cálculo de tempo de produção</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={calc.item_code || ""} onChange={(e) => setCalc((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={calc.item_code || ""} onChange={(e) => setCalc((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={calc.mask} onChange={(e) => setCalc((p) => ({ ...p, mask: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Máquina</label>
             <select className="erp-input" value={calc.machine_code || ""} onChange={(e) => setCalc((p) => ({ ...p, machine_code: Number(e.target.value) }))}>
@@ -184,7 +184,7 @@ export function Vmaq0200Page(): JSX.Element {
 
         {/* ── Tempo item × máquina ───────────────────────────────────────── */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Tempo por item × máquina (cadastro central do cálculo)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={tForm.item_code || ""} onChange={(e) => setTForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={tForm.item_code || ""} onChange={(e) => setTForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={tForm.mask ?? ""} onChange={(e) => setTForm((p) => ({ ...p, mask: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Máquina</label>
             <select className="erp-input" value={tForm.machine_code || ""} onChange={(e) => setTForm((p) => ({ ...p, machine_code: Number(e.target.value) }))}>

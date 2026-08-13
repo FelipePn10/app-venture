@@ -77,13 +77,13 @@ export function Vvnd0500Page(): JSX.Element {
 
   const adicionarItem = () => { const code = selected?.code; if (!code) return; void run(async () => {
     if (!itemForm.target.trim()) { setFeedback({ type: "error", message: "Informe o alvo (item, classificação ou grupo)." }); return; }
-    const t = Number(itemForm.target);
+    const numericTarget = Number(itemForm.target);
     const payload: SalesGoalItemDTO = {
       goal_code: code,
       target_type: itemForm.kind === "item" ? "ITEM" : itemForm.kind === "classification" ? "CLASSIFICATION" : "GROUP",
-      item_code: itemForm.kind === "item" ? t : undefined,
-      item_classification_code: itemForm.kind === "classification" ? t : undefined,
-      item_group_code: itemForm.kind === "group" ? t : undefined,
+      item_code: itemForm.kind === "item" ? itemForm.target : undefined,
+      item_classification_code: itemForm.kind === "classification" ? numericTarget : undefined,
+      item_group_code: itemForm.kind === "group" ? numericTarget : undefined,
       target_quantity: itemForm.quantity ? Number(itemForm.quantity) : 0,
       target_value: itemForm.value ? Number(itemForm.value) : 0,
       sales_uom: itemForm.sales_uom || undefined,
@@ -254,7 +254,7 @@ export function Vvnd0500Page(): JSX.Element {
                           <div className="erp-field erp-c3"><label className="erp-label erp-req">Tipo de alvo</label><select className="erp-input" value={itemForm.kind} onChange={(e) => setItemForm((p) => ({ ...p, kind: e.target.value as TargetKind, target: "" }))}><option value="item">Item</option><option value="classification">Classificação</option><option value="group">Grupo</option></select></div>
                           <div className="erp-field erp-c3"><label className="erp-label erp-req">Alvo</label>
                             {itemForm.kind === "item"
-                              ? <LookupField value={itemForm.target ? Number(itemForm.target) : undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setItemForm((p) => ({ ...p, target: c ? String(c) : "" }))} />
+                              ? <LookupField value={itemForm.target || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setItemForm((p) => ({ ...p, target: c ? String(c) : "" }))} />
                               : <input className="erp-input num" type="number" value={itemForm.target} onChange={(e) => setItemForm((p) => ({ ...p, target: e.target.value }))} />}
                           </div>
                           <div className="erp-field erp-c2"><label className="erp-label">Quantidade</label><input className="erp-input num" type="number" value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))} /></div>

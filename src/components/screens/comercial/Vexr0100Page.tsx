@@ -7,7 +7,7 @@ import { loadSalesOrders, loadItems } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
-const EMPTY: RescheduleDTO = { sales_order_code: 0, item_code: 0, old_date: today(), new_date: today(), reason: "" };
+const EMPTY: RescheduleDTO = { sales_order_code: 0, item_code: "", old_date: today(), new_date: today(), reason: "" };
 
 export function Vexr0100Page(): JSX.Element {
   const [order, setOrder] = useState<number | undefined>(undefined);
@@ -92,7 +92,7 @@ export function Vexr0100Page(): JSX.Element {
               <div className="erp-fieldset-head">Reprogramação de entrega</div>
               <div className="erp-fieldset-body">
                 <div className="erp-field erp-c6"><label className="erp-label erp-req">Pedido</label><LookupField value={form.sales_order_code} loader={loadSalesOrders} entityLabel="pedido" placeholder="Selecionar pedido" clearable={false} onChange={(code) => set("sales_order_code", code ?? 0)} /></div>
-                <div className="erp-field erp-c6"><label className="erp-label erp-req">Item</label><LookupField value={form.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => set("item_code", code ?? 0)} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label erp-req">Item</label><LookupField value={form.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => set("item_code", String(code ?? ""))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Data original</label><input className="erp-input" type="date" value={form.old_date} onChange={(e) => set("old_date", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Nova data</label><input className="erp-input" type="date" value={form.new_date} onChange={(e) => set("new_date", e.target.value)} /></div>
                 <div className="erp-field erp-c12"><label className="erp-label erp-req">Motivo</label><input className="erp-input" value={form.reason ?? ""} onChange={(e) => set("reason", e.target.value)} placeholder="Motivo da reprogramação" /></div>

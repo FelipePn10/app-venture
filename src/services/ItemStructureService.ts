@@ -17,15 +17,15 @@ export const HEALTH_OPTIONS: Health[] = ['ATIVO', 'INATIVO', 'FANTASMA'];
 
 export interface ItemInfo {
   id: number;
-  code: number;
+  code: string;
   name: string;
   unit: UnitOfMeasurement;
 }
 
 export interface StructureComponent {
   id: number;
-  parentCode: number;
-  childCode: number;
+  parentCode: string;
+  childCode: string;
   childDescription: string;
   parentMask: string | null;
   quantity: number;
@@ -44,8 +44,8 @@ export interface StructureComponent {
 }
 
 export interface CreateStructurePayload {
-  parent_code: number;
-  child_code: number;
+  parent_code: string;
+  child_code: string;
   parent_mask?: string | null;
   quantity: number;
   unit_of_measurement: UnitOfMeasurement;
@@ -60,8 +60,8 @@ export interface CreateStructurePayload {
 
 interface RawComponent {
   id: number;
-  parent_item_code: number;
-  child_item_code: number;
+  parent_item_code: string;
+  child_item_code: string;
   child_description: string;
   parent_mask?: string | null;
   quantity: number;
@@ -83,7 +83,7 @@ interface RawTreeNode {
 }
 
 interface RawResolveResponse {
-  root_item_code: number;
+  root_item_code: string;
   components: RawTreeNode[];
   total_levels: number;
   total_nodes: number;
@@ -105,7 +105,7 @@ function mapItemInfo(raw: unknown): ItemInfo {
   const wh  = inner['Warehouse'] as Record<string, unknown> | undefined;
   return {
     id:   Number(inner['ID'] ?? inner['id'] ?? 0),
-    code: Number(code),
+    code: String(code),
     name: String(pdm?.['DescriptionTechnique'] ?? inner['name'] ?? ''),
     unit: (String(wh?.['UnitOfMeasurement'] ?? inner['unit'] ?? 'UN')) as UnitOfMeasurement,
   };
@@ -143,8 +143,8 @@ function flattenLevel(nodes: RawTreeNode[]): StructureComponent[] {
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 /** GET /api/items/search/{code} */
-export async function findItemByCode(itemCode: number): Promise<ItemInfo> {
-  const res = await httpClient.get<unknown>(`/api/items/search/${itemCode}`);
+export async function findItemByCode(itemCode: string): Promise<ItemInfo> {
+  const res = await httpClient.get<unknown>(`/api/items/search/${encodeURIComponent(itemCode)}`);
   return mapItemInfo(res.data);
 }
 
@@ -153,14 +153,14 @@ export async function findItemByCode(itemCode: number): Promise<ItemInfo> {
  * Returns the full tree. We return only the direct children of the root.
  */
 export async function resolveStructure(
-  parentCode: number,
+  parentCode: string,
   mask?: string | null,
 ): Promise<{ components: StructureComponent[]; totalLevels: number; totalNodes: number }> {
   const params: Record<string, string> = {};
   if (mask) params['mask'] = mask;
 
   const res = await httpClient.get<RawResolveResponse>(
-    `/api/items/structure/resolve/${parentCode}`,
+    `/api/items/structure/resolve/${encodeURIComponent(parentCode)}`,
     { params },
   );
 
@@ -177,14 +177,14 @@ export async function resolveStructure(
  * and return its direct children.
  */
 export async function resolveChildLevel(
-  childCode: number,
+  childCode: string,
   mask?: string | null,
 ): Promise<StructureComponent[]> {
   const params: Record<string, string> = {};
   if (mask) params['mask'] = mask;
 
   const res = await httpClient.get<RawResolveResponse>(
-    `/api/items/structure/resolve/${childCode}`,
+    `/api/items/structure/resolve/${encodeURIComponent(childCode)}`,
     { params },
   );
 
@@ -198,9 +198,9 @@ export async function createComponent(payload: CreateStructurePayload): Promise<
 }
 
 /** Validates mask: GET /api/items/search/{code}?mask={mask} — adjust if backend has dedicated route */
-export async function validateMask(itemCode: number, mask: string): Promise<boolean> {
+export async function validateMask(itemCode: string, mask: string): Promise<boolean> {
   try {
-    await httpClient.get(`/api/items/search/${itemCode}`, { params: { mask } });
+    await httpClient.get(`/api/items/search/${encodeURIComponent(itemCode)}`, { params: { mask } });
     return true;
   } catch {
     return false;

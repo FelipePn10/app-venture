@@ -28,7 +28,7 @@ export function Vdpr0100Page(): JSX.Element {
   const [verifyStock, setVerifyStock] = useState(true);
   const [commit, setCommit] = useState(false);
   const [lines, setLines] = useState<TankReservationLine[]>([]);
-  const [lineForm, setLineForm] = useState<TankReservationLine>({ item_code: 0, quantity: 1, unit_price: 0 });
+  const [lineForm, setLineForm] = useState<TankReservationLine>({ item_code: "", quantity: 1, unit_price: 0 });
   const [reservationResult, setReservationResult] = useState<Obj | null>(null);
   const [cancelCode, setCancelCode] = useState("");
   // reprogramação
@@ -52,7 +52,7 @@ export function Vdpr0100Page(): JSX.Element {
   });
 
   const addLine = () => { if (!lineForm.item_code) { setFeedback({ type: "error", message: "Selecione o item." }); return; }
-    setLines((p) => [...p, lineForm]); setLineForm({ item_code: 0, quantity: 1, unit_price: 0 });
+    setLines((p) => [...p, lineForm]); setLineForm({ item_code: "", quantity: 1, unit_price: 0 });
   };
   const removeLine = (i: number) => setLines((p) => p.filter((_, idx) => idx !== i));
 
@@ -155,7 +155,7 @@ export function Vdpr0100Page(): JSX.Element {
           <div className="erp-fieldset">
             <div className="erp-fieldset-head">Linhas da reserva</div>
             <div className="erp-fieldset-body">
-              <div className="erp-field erp-c5"><label className="erp-label erp-req">Item</label><LookupField value={lineForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setLineForm((p) => ({ ...p, item_code: c ?? 0 }))} /></div>
+              <div className="erp-field erp-c5"><label className="erp-label erp-req">Item</label><LookupField value={lineForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setLineForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={lineForm.quantity || ""} onChange={(e) => setLineForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Preço unit.</label><input className="erp-input num" type="number" value={lineForm.unit_price || ""} onChange={(e) => setLineForm((p) => ({ ...p, unit_price: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addLine} disabled={busy}>Adicionar linha</button></div>

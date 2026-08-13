@@ -176,7 +176,7 @@ export function Vpla0102Page(): JSX.Element {
       const createdBy = user?.id ?? decodeJwtSub(token) ?? "anonymous";
       const result = await createDemanda({
         code_demand:      form.demanda.trim() ? Number(form.demanda) : 0,
-        item_code:        Number(form.item),
+        item_code:        form.item.trim(),
         mask:             form.configurado && form.mask.trim() ? form.mask.trim() : undefined,
         cost_center_code: form.cCusto.trim() ? Number(form.cCusto) : undefined,
         quantity:         Number(form.quantidade),
@@ -203,8 +203,8 @@ export function Vpla0102Page(): JSX.Element {
     setFeedback(null);
     try {
       let results: DemandaResponse[];
-      if (filtroItem.trim() && !isNaN(Number(filtroItem))) {
-        results = await listDemandaByItem(Number(filtroItem));
+      if (filtroItem.trim()) {
+        results = await listDemandaByItem(filtroItem.trim());
       } else if (filtroDataInicio.trim()) {
         results = await listDemandaFromDate(filtroDataInicio);
       } else {

@@ -18,7 +18,7 @@ const BASE = '/api/sales-forecast';
  */
 export interface SalesForecastDTO {
   id?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   week: number;
   year: number;
@@ -26,7 +26,7 @@ export interface SalesForecastDTO {
 }
 
 export interface MonthlySalesForecastDTO {
-  item_code: number;
+  item_code: string;
   mask?: string;
   year: number;
   month: number;
@@ -66,7 +66,7 @@ export interface ForecastDataPoint {
  * sem ela, usa a série `history` enviada. `projection_pct` aplica crescimento/redução.
  */
 export interface GenerateForecastDTO {
-  item_code?: number;
+  item_code?: string;
   mask?: string;
   start_week: number;
   start_year: number;
@@ -86,14 +86,14 @@ export interface GenerateForecastDTO {
   target_end_year?: number;
   projection_pct?: number;
   accepts_fraction?: boolean;
-  item_codes?: number[];
+  item_codes?: string[];
 }
 
 function parseForecast(raw: unknown): SalesForecastDTO {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID', 'Id'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     week: parseNum(o, 'week', 'Week'),
     year: parseNum(o, 'year', 'Year'),
@@ -145,7 +145,7 @@ export async function listForecasts(year: number): Promise<SalesForecastDTO[]> {
   const { data } = await httpClient.get(`${BASE}/list/${year}`);
   return unwrapArray(data).map(parseForecast);
 }
-export async function getForecastByItem(itemCode: number): Promise<SalesForecastDTO[]> {
+export async function getForecastByItem(itemCode: string): Promise<SalesForecastDTO[]> {
   const { data } = await httpClient.get(`${BASE}/item/${itemCode}`);
   return unwrapArray(data).map(parseForecast);
 }

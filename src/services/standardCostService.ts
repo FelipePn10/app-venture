@@ -12,7 +12,7 @@ const BASE = '/api/standard-cost';
  * O backend retorna `labor_cost`; a tela usa `operation_cost` (mapeado no parser).
  */
 export interface StandardCost {
-  item_code: number;
+  item_code: string;
   mask?: string;
   material_cost: number;
   operation_cost: number;
@@ -30,7 +30,7 @@ export interface WorkCenterCost {
 }
 
 export interface PurchaseCost {
-  item_code: number;
+  item_code: string;
   cost: number;
   currency?: string;
 }
@@ -38,7 +38,7 @@ export interface PurchaseCost {
 function parseCost(raw: unknown): StandardCost {
   const o = unwrapObject(raw);
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     material_cost: parseNum(o, 'material_cost', 'MaterialCost'),
     operation_cost: parseNum(o, 'operation_cost', 'OperationCost', 'labor_cost', 'LaborCost'),
@@ -60,18 +60,18 @@ function parseWcc(raw: unknown): WorkCenterCost {
 function parsePurchaseCost(raw: unknown): PurchaseCost {
   const o = unwrapObject(raw);
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     cost: parseNum(o, 'cost', 'Cost', 'unit_cost', 'UnitCost', 'purchase_cost', 'PurchaseCost'),
     currency: parseStr(o, 'currency', 'Currency') || undefined,
   };
 }
 
 // ── Custo padrão do item ──
-export async function calculateStandardCost(itemCode: number, mask?: string): Promise<StandardCost> {
+export async function calculateStandardCost(itemCode: string, mask?: string): Promise<StandardCost> {
   const { data } = await httpClient.post(`${BASE}/rollup`, { item_code: itemCode, mask: mask ?? '', calculated_by: currentUserId() });
   return parseCost(data);
 }
-export async function getStandardCost(itemCode: number): Promise<StandardCost> {
+export async function getStandardCost(itemCode: string): Promise<StandardCost> {
   const { data } = await httpClient.get(`${BASE}/items/${itemCode}`);
   return parseCost(data);
 }
@@ -91,11 +91,11 @@ export async function upsertWorkCenterCost(workCenterId: number, costPerHour: nu
 }
 
 // ── Custo de compra por item ──
-export async function getPurchaseCost(itemCode: number): Promise<PurchaseCost> {
+export async function getPurchaseCost(itemCode: string): Promise<PurchaseCost> {
   const { data } = await httpClient.get(`${BASE}/purchase-costs/${itemCode}`);
   return parsePurchaseCost(data);
 }
-export async function upsertPurchaseCost(itemCode: number, cost: number): Promise<PurchaseCost> {
+export async function upsertPurchaseCost(itemCode: string, cost: number): Promise<PurchaseCost> {
   const { data } = await httpClient.post(`${BASE}/purchase-costs`, { item_code: itemCode, cost, updated_by: currentUserId() });
   return parsePurchaseCost(data);
 }

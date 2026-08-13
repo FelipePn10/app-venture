@@ -25,7 +25,7 @@ export function Vlot0100Page(): JSX.Element {
   const abrir = (id?: number) => { if (!id) return; void run(async () => { setSel(await getLotMask(id)); }); };
   const criar = () => run(async () => {
     if (!capa.application.trim() || !capa.description.trim()) { setFeedback({ type: "error", message: "Aplicação e descrição são obrigatórias." }); return; }
-    const m = await createLotMask({ application: capa.application.trim(), description: capa.description.trim(), item_code: Number(capa.item_code) || undefined, customer_code: Number(capa.customer_code) || undefined });
+    const m = await createLotMask({ application: capa.application.trim(), description: capa.description.trim(), item_code: capa.item_code.trim() || undefined, customer_code: Number(capa.customer_code) || undefined });
     setCapa({ ...CAPA }); setMasks(await listLotMasks()); setSel(m); setFeedback({ type: "success", message: `Máscara criada (#${m.id}).` });
   });
   const addParte = () => { if (!sel?.id) return; void run(async () => {
@@ -72,7 +72,7 @@ export function Vlot0100Page(): JSX.Element {
               <div className="erp-fieldset"><div className="erp-fieldset-head">Nova máscara</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Aplicação</label><input className="erp-input" value={capa.application} onChange={(e) => setCapa((c) => ({ ...c, application: e.target.value }))} /></div>
                 <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={capa.description} onChange={(e) => setCapa((c) => ({ ...c, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={capa.item_code} onChange={(e) => setCapa((c) => ({ ...c, item_code: e.target.value }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num"  value={capa.item_code} onChange={(e) => setCapa((c) => ({ ...c, item_code: e.target.value }))} /></div>
                 <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar</button></div>
               </div></div>
               {sel && (

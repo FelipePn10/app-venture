@@ -495,7 +495,7 @@ export function Vent0200Page(): JSX.Element {
     }
   }
 
-  async function aplicarItemBase(code: number | undefined) {
+  async function aplicarItemBase(code: string | undefined) {
     setField("itemBaseCod", code ? String(code) : "");
     if (!code) return;
     try {
@@ -1216,7 +1216,7 @@ export function Vent0200Page(): JSX.Element {
                       className="it-select"
                       value={form.nature}
                       onChange={(e) =>
-                        setField("nature", Number(e.target.value) as ItemNature)
+                        setField("nature", e.target.value as unknown as ItemNature)
                       }
                     >
                       {NATUREZAS.map((n) => (
@@ -1425,7 +1425,7 @@ export function Vent0200Page(): JSX.Element {
                       Usar item-base como modelo
                     </label>
                     <LookupField
-                      value={Number(form.itemBaseCod) || undefined}
+                      value={form.itemBaseCod || undefined}
                       onChange={(code) => void aplicarItemBase(code)}
                       loader={loadBaseItems}
                       entityLabel="item base"

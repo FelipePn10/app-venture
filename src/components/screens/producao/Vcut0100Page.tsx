@@ -17,7 +17,7 @@ const pct = (n?: number) => `${(n ?? 0).toFixed(1)}%`;
 const STATUS_LABEL: Record<string, string> = { RASCUNHO: "Rascunho", OTIMIZADO: "Otimizado", FIRMADO: "Firmado", EM_EXECUCAO: "Em execução", CONCLUIDO: "Concluído" };
 const is2D = (t?: string) => t === "GUILLOTINE_2D" || t === "TRUE_SHAPE_2D";
 
-const EMPTY_PLAN: CuttingPlanDTO = { material_item_code: 0, cut_type: "LINEAR_1D", description: "", kerf_mm: 3, trim_mm: 0, min_remnant_mm: 300, stock_uom: "M", uom_factor: 0, warehouse_id: 0, include_remnants: false };
+const EMPTY_PLAN: CuttingPlanDTO = { material_item_code: "", cut_type: "LINEAR_1D", description: "", kerf_mm: 3, trim_mm: 0, min_remnant_mm: 300, stock_uom: "M", uom_factor: 0, warehouse_id: 0, include_remnants: false };
 const EMPTY_PART: CuttingPartDTO = { label: "", length_mm: 0, width_mm: 0, height_mm: 0, quantity: 1 };
 const EMPTY_STOCK: CuttingStockDTO = { length_mm: 0, width_mm: 0, height_mm: 0, quantity: 1, is_remnant: false };
 
@@ -106,7 +106,7 @@ export function Vcut0100Page(): JSX.Element {
           <div className="erp-detail-body">
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Novo plano de corte</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c2"><label className="erp-label erp-req">Matéria-prima (item)</label><input className="erp-input num" type="number" value={newPlan.material_item_code || ""} onChange={(e) => setNewPlan((s) => ({ ...s, material_item_code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Matéria-prima (item)</label><input className="erp-input num"  value={newPlan.material_item_code || ""} onChange={(e) => setNewPlan((s) => ({ ...s, material_item_code: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Tipo de corte</label><select className="erp-input" value={newPlan.cut_type} onChange={(e) => setNewPlan((s) => ({ ...s, cut_type: e.target.value }))}>{CUT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
               <div className="erp-field erp-c3"><label className="erp-label">Descrição</label><input className="erp-input" value={newPlan.description ?? ""} onChange={(e) => setNewPlan((s) => ({ ...s, description: e.target.value }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Kerf</label><input className="erp-input num" type="number" value={newPlan.kerf_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, kerf_mm: Number(e.target.value) }))} /></div>

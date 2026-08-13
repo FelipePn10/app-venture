@@ -22,7 +22,7 @@ export function Vins0106Page(): JSX.Element {
   async function salvar() {
     setBusy(true); setFeedback(null);
     try {
-      await createRecord({ record_type: form.record_type, status: form.status, supplier_code: Number(form.supplier_code) || null, item_code: Number(form.item_code) || null, mask: form.mask.trim(), quantity: Number(form.quantity) || 0, reference: form.reference.trim() || null, payload: {} });
+      await createRecord({ record_type: form.record_type, status: form.status, supplier_code: Number(form.supplier_code) || null, item_code: form.item_code.trim() || null, mask: form.mask.trim(), quantity: Number(form.quantity) || 0, reference: form.reference.trim() || null, payload: {} });
       setForm({ ...EMPTY }); setFeedback({ type: "success", message: "Ocorrência registrada." }); await carregar();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -84,7 +84,7 @@ export function Vins0106Page(): JSX.Element {
                   <div className="erp-field erp-c4"><label className="erp-label erp-req">Tipo</label><select className="erp-input" value={form.record_type} onChange={(e) => setForm((f) => ({ ...f, record_type: e.target.value }))}>{RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Status</label><select className="erp-input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Fornecedor</label><input className="erp-input num" type="number" value={form.supplier_code} onChange={(e) => setForm((f) => ({ ...f, supplier_code: e.target.value }))} /></div>
-                  <div className="erp-field erp-c4"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={form.item_code} onChange={(e) => setForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+                  <div className="erp-field erp-c4"><label className="erp-label">Item</label><input className="erp-input num"  value={form.item_code} onChange={(e) => setForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Quantidade</label><input className="erp-input num" type="number" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Referência</label><input className="erp-input" value={form.reference} onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))} /></div>
                   <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>Registrar ocorrência</button></div>

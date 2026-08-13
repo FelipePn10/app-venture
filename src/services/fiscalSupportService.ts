@@ -78,7 +78,7 @@ export interface ParametroIcmsIpiDTO {
   id?: number;
   uf: string;
   ncm_code?: string;
-  item_code?: number;
+  item_code?: string;
   operation_type: OperationType;
   icms_pct_contrib: number;
   icms_pct_non_contrib: number;

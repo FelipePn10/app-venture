@@ -4,7 +4,7 @@ const BASE = '/api/mrp-calculation';
 
 /** Alertas de Exceções MRP (§8): notifica via webhook e/ou e-mail. */
 export interface MrpException {
-  item_code: number;
+  item_code: string;
   message_type: string;
   description: string;
 }
@@ -32,7 +32,7 @@ export async function notifyMrpExceptions(req: NotifyRequest): Promise<MrpAlertR
   const exceptions = unwrapArray(o['exceptions'] ?? o['Exceptions']).map((raw) => {
     const e = unwrapObject(raw);
     return {
-      item_code: parseNum(e, 'item_code', 'ItemCode'),
+      item_code: parseStr(e, 'item_code', 'ItemCode'),
       message_type: parseStr(e, 'message_type', 'MessageType'),
       description: parseStr(e, 'description', 'Description'),
     };

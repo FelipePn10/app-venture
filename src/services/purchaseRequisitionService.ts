@@ -8,7 +8,7 @@ const BASE = '/api/purchase-requisitions';
  */
 export interface RequisitionItemDTO {
   id?: number;
-  item_code: number;
+  item_code: string;
   quantity: number;
   uom: string;
   suggested_price?: number;
@@ -39,7 +39,7 @@ function parseItem(raw: unknown): RequisitionItemDTO {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     uom: parseStr(o, 'uom', 'Uom') || 'UN',
     suggested_price: parseNum(o, 'suggested_price', 'SuggestedPrice') || undefined,

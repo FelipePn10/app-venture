@@ -1,7 +1,7 @@
 import { httpClient } from '@/services/httpClient';
 
 export interface ItemMachineTime {
-  item_code: number;
+  item_code: string;
   mask?: string | null;
   machine_code: number;
   production_time: number;
@@ -12,7 +12,7 @@ export interface ItemMachineTime {
 }
 
 export interface CreateItemMachineTimeDTO {
-  item_code: number;
+  item_code: string;
   mask?: string | null;
   machine_code: number;
   production_time: number;
@@ -23,7 +23,7 @@ export interface CreateItemMachineTimeDTO {
 }
 
 export interface CalculateProductionDTO {
-  item_code: number;
+  item_code: string;
   mask?: string | null;
   machine_code: number;
   /** Backend exige `demand_qty` (não `quantity`); `quantity` é rejeitado. */
@@ -45,7 +45,7 @@ type Obj = Record<string, unknown>;
 function parseTime(raw: unknown): ItemMachineTime | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Obj;
-  const item_code    = Number(o.item_code    ?? o.ItemCode    ?? 0);
+  const item_code    = String(o.item_code    ?? o.ItemCode    ?? '');
   const machine_code = Number(o.machine_code ?? o.MachineCode ?? 0);
   if (!item_code || !machine_code) return null;
   return {
@@ -72,7 +72,7 @@ function unwrap(raw: unknown): unknown[] {
 }
 
 /** Lista os tempos de um item — o filtro `?item_code=` é obrigatório (query-string). */
-export async function listItemMachineTimes(itemCode: number): Promise<ItemMachineTime[]> {
+export async function listItemMachineTimes(itemCode: string): Promise<ItemMachineTime[]> {
   const res = await httpClient.get<unknown>('/api/machine/time/list', { params: { item_code: itemCode } });
   return unwrap(res.data).map(parseTime).filter(Boolean) as ItemMachineTime[];
 }

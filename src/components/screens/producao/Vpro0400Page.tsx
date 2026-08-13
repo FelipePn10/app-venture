@@ -24,9 +24,9 @@ const sevBadge = (s?: string) => {
   return <span className={`erp-badge ${map[s ?? ""] ?? "info"}`}>{s ?? "—"}</span>;
 };
 
-const EMPTY_PLAN: InspectionPlanDTO = { item_code: 0, point_type: "PROCESSO", description: "", sample_size: 1, acceptance_level: 0 };
+const EMPTY_PLAN: InspectionPlanDTO = { item_code: "", point_type: "PROCESSO", description: "", sample_size: 1, acceptance_level: 0 };
 const EMPTY_CHAR: CharacteristicDTO = { name: "", is_critical: false };
-const EMPTY_NC: NonConformanceDTO = { item_code: 0, nonconform_qty: 1, description: "", severity: "MENOR" };
+const EMPTY_NC: NonConformanceDTO = { item_code: "", nonconform_qty: 1, description: "", severity: "MENOR" };
 
 export function Vpro0400Page(): JSX.Element {
   const [view, setView] = useState<View>("plans");
@@ -34,7 +34,7 @@ export function Vpro0400Page(): JSX.Element {
   const [busy, setBusy] = useState(false);
 
   // planos
-  const [planItem, setPlanItem] = useState<number | undefined>(undefined);
+  const [planItem, setPlanItem] = useState<string | undefined>(undefined);
   const [plans, setPlans] = useState<InspectionPlanDTO[]>([]);
   const [planForm, setPlanForm] = useState<InspectionPlanDTO>(EMPTY_PLAN);
   const [selPlan, setSelPlan] = useState<InspectionPlanDTO | null>(null);
@@ -43,7 +43,7 @@ export function Vpro0400Page(): JSX.Element {
   // registros
   const [recPlanId, setRecPlanId] = useState<number | undefined>(undefined);
   const [recChars, setRecChars] = useState<CharacteristicDTO[]>([]);
-  const [recForm, setRecForm] = useState<QualityRecordDTO>({ plan_id: 0, item_code: 0, inspected_qty: 0, approved_qty: 0, rejected_qty: 0, result: "PENDENTE" });
+  const [recForm, setRecForm] = useState<QualityRecordDTO>({ plan_id: 0, item_code: "", inspected_qty: 0, approved_qty: 0, rejected_qty: 0, result: "PENDENTE" });
   const [meas, setMeas] = useState<Record<number, { measured_value: number; is_conformant: boolean }>>({});
   const [recFilterKind, setRecFilterKind] = useState<"order" | "item">("order");
   const [recFilterVal, setRecFilterVal] = useState("");
@@ -99,9 +99,9 @@ export function Vpro0400Page(): JSX.Element {
     setMeas({});
   });
   const filtrarRegistros = () => run(async () => {
-    const v = Number(recFilterVal);
+    const v = recFilterVal.trim();
     if (!v) { setFeedback({ type: "error", message: "Informe o código de filtro." }); return; }
-    setRecords(recFilterKind === "order" ? await listRecordsByOrder(v) : await listRecordsByItem(v));
+    setRecords(recFilterKind === "order" ? await listRecordsByOrder(Number(v)) : await listRecordsByItem(v));
   });
 
   // ── NCs ──
@@ -157,7 +157,7 @@ export function Vpro0400Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Novo plano de inspeção</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item</label><LookupField value={planForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setPlanForm((p) => ({ ...p, item_code: c ?? 0 }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item</label><LookupField value={planForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setPlanForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Momento</label><select className="erp-tselect" value={planForm.point_type} onChange={(e) => setPlanForm((p) => ({ ...p, point_type: e.target.value as PointType }))}>{POINT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
                   <div className="erp-field erp-c12"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={planForm.description} onChange={(e) => setPlanForm((p) => ({ ...p, description: e.target.value }))} /></div>
                   {numField("Tam. amostra", planForm.sample_size, (n) => setPlanForm((p) => ({ ...p, sample_size: n })), true, "erp-c3")}
@@ -288,7 +288,7 @@ export function Vpro0400Page(): JSX.Element {
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Registrar não-conformidade</div>
               <div className="erp-fieldset-body">
-                <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={ncForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setNcForm((p) => ({ ...p, item_code: c ?? 0 }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={ncForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setNcForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
                 {numField("Registro (id)", ncForm.quality_record_id, (n) => setNcForm((p) => ({ ...p, quality_record_id: n || null })), false, "erp-c2")}
                 {numField("OF (id)", ncForm.production_order_id, (n) => setNcForm((p) => ({ ...p, production_order_id: n || null })), false, "erp-c2")}
                 <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" value={ncForm.lot ?? ""} onChange={(e) => setNcForm((p) => ({ ...p, lot: e.target.value }))} /></div>

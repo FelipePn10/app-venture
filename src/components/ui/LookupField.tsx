@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { LookupLoader, LookupOption } from "@/services/lookups";
 
-interface LookupFieldProps {
+interface LookupFieldProps<T extends string | number> {
   /** Código selecionado (ou undefined/0 = vazio). */
-  value?: number;
+  value?: T;
   /** Disparado ao escolher/limpar. */
-  onChange: (code: number | undefined, option?: LookupOption) => void;
+  onChange: (code: T | undefined, option?: LookupOption) => void;
   /** Fonte de dados (ex.: loadCustomers). */
   loader: LookupLoader;
   placeholder?: string;
@@ -21,9 +21,9 @@ interface LookupFieldProps {
  * "escolha da lista de registros cadastrados". Mostra `#código — rótulo`, abre
  * um popover com busca e resolve o rótulo do código atual automaticamente.
  */
-export function LookupField({
+export function LookupField<T extends string | number = number>({
   value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true,
-}: LookupFieldProps): JSX.Element {
+}: LookupFieldProps<T>): JSX.Element {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -71,7 +71,7 @@ export function LookupField({
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
-  const choose = (o: LookupOption) => { onChange(o.code, o); setOpen(false); };
+  const choose = (o: LookupOption) => { onChange(o.code as T, o); setOpen(false); };
   const clear = (e: React.MouseEvent) => { e.stopPropagation(); onChange(undefined); };
 
   const display = selected

@@ -28,7 +28,7 @@ export interface RecurringSaleDTO {
   enterprise_code: number;
   customer_code: number;
   establishment_code?: number;
-  item_code: number;
+  item_code: string;
   item_mask?: string;
   sales_plan_code?: number;
   movement_type: 'SALE' | 'UPGRADE' | 'DOWNGRADE' | 'ADJUSTMENT' | 'RECALCULATION' | 'CANCELLATION';
@@ -72,7 +72,7 @@ function parseSale(raw: unknown): RecurringSaleDTO {
     enterprise_code: parseNum(o, 'enterprise_code', 'EnterpriseCode'),
     customer_code: parseNum(o, 'customer_code', 'CustomerCode'),
     establishment_code: parseNum(o, 'establishment_code', 'EstablishmentCode'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     item_mask: parseStr(o, 'item_mask', 'ItemMask'),
     sales_plan_code: parseNum(o, 'sales_plan_code', 'SalesPlanCode'),
     movement_type: (parseStr(o, 'movement_type', 'MovementType') || 'SALE') as RecurringSaleDTO['movement_type'],
@@ -155,7 +155,7 @@ export async function calculateAdjustment(payload: Obj): Promise<Obj> {
 }
 
 // ─── Consultas gerenciais ─────────────────────────────────────────────────────
-export async function getMonthlyRevenue(filters: { from: string; to: string; customer_code?: number; item_code?: number; adjustment_percent?: number }): Promise<Obj[]> {
+export async function getMonthlyRevenue(filters: { from: string; to: string; customer_code?: number; item_code?: string; adjustment_percent?: number }): Promise<Obj[]> {
   const params: Record<string, string> = {};
   if (filters.from) params.from = filters.from;
   if (filters.to) params.to = filters.to;

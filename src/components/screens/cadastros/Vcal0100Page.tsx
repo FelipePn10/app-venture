@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { type ParsedCalendarDay, getCalendarMonth, createCalendarDay } from "@/services/industrialCalendarService";
+import { type ParsedCalendarDay, getCalendarMonth, createCalendarDay, generateIndustrialCalendar } from "@/services/industrialCalendarService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -34,6 +34,15 @@ export function Vcal0100Page(): JSX.Element {
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
+  async function generateMonth() {
+    setBusy(true); setFeedback(null);
+    try {
+      const result = await generateIndustrialCalendar({ year, month, weekdays: [1, 2, 3, 4, 5] });
+      setFeedback({ type: "success", message: `Calendário gerado: ${result.created} dia(s) criado(s) e ${result.preserved} preservado(s).` });
+      await reload();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
   const workdays = days.filter((d) => d.is_workday).length;
   const holidays = days.filter((d) => !d.is_workday).length;
 
@@ -50,7 +59,8 @@ export function Vcal0100Page(): JSX.Element {
           <input className="erp-input num" style={{ width: 80, height: 32 }} type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
           <select className="erp-input" style={{ width: 90, height: 32 }} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
             {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select>
-          <button className="erp-btn" onClick={() => void reload()} disabled={busy}>Ver</button></div>
+          <button className="erp-btn" onClick={() => void reload()} disabled={busy}>Ver</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => void generateMonth()} disabled={busy}>Gerar automaticamente</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCAL0100 — Calendário Industrial" filename="vcal0100" /></div>
       </div>

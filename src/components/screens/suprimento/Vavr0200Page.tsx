@@ -35,7 +35,7 @@ export function Vavr0200Page(): JSX.Element {
   const carregar = () => run(async () => { setNotices(await listReceivingNotices()); });
 
   const addItem = () => {
-    const item_code = Number(itemForm.item_code), expected_qty = Number(itemForm.expected_qty);
+    const item_code = itemForm.item_code.trim(), expected_qty = Number(itemForm.expected_qty);
     if (!item_code || !expected_qty) { setFeedback({ type: "error", message: "Item e quantidade esperada são obrigatórios." }); return; }
     setItems((a) => [...a, { item_code, mask: itemForm.mask.trim(), expected_qty, unit: itemForm.unit.trim() || undefined }]);
     setItemForm({ ...ITEM_INI }); setFeedback(null);
@@ -65,7 +65,7 @@ export function Vavr0200Page(): JSX.Element {
     setDetalhe(n); setNotices(await listReceivingNotices());
     setFeedback({ type: "success", message: `Aviso ${n.notice_number ?? n.id} → ${n.status}${n.blocked ? " (bloqueado)" : ""}.` });
   }); };
-  const addDiv = () => { if (!detalhe?.id) return; const item_code = Number(divForm.item_code); const eq = Number(divForm.expected_qty), aq = Number(divForm.actual_qty);
+  const addDiv = () => { if (!detalhe?.id) return; const item_code = divForm.item_code.trim(); const eq = Number(divForm.expected_qty), aq = Number(divForm.actual_qty);
     void run(async () => {
       await createReceivingDivergence({ notice_id: detalhe.id, supplier_code: detalhe.supplier_code, item_code: item_code || undefined, divergence_type: divForm.divergence_type, expected_qty: eq, actual_qty: aq, affects_supplier_score: divForm.affects_supplier_score });
       setDivForm({ ...DIV_INI }); setDivs(await listReceivingDivergences({ notice_id: detalhe.id }));
@@ -108,7 +108,7 @@ export function Vavr0200Page(): JSX.Element {
           <div className="erp-field erp-c9"><label className="erp-label">Observações</label><input className="erp-input" value={capa.notes} onChange={(e) => setC("notes", e.target.value)} /></div>
         
         <div className="erp-fieldset-body" style={{ marginTop: 8 }}>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd esperada</label><input className="erp-input num" type="number" value={itemForm.expected_qty} onChange={(e) => setItemForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
@@ -151,7 +151,7 @@ export function Vavr0200Page(): JSX.Element {
             </div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Divergências ({divs.length}) — <span style={{fontWeight:400,opacity:0.65}}>falta/sobra/avaria/preço… alimentam o IQF do fornecedor</span></div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={divForm.item_code} onChange={(e) => setDivForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num"  value={divForm.item_code} onChange={(e) => setDivForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={divForm.divergence_type} onChange={(e) => setDivForm((f) => ({ ...f, divergence_type: e.target.value as DivergenceType }))}>{DIVERGENCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
               <div className="erp-field erp-c2"><label className="erp-label">Esperada</label><input className="erp-input num" type="number" value={divForm.expected_qty} onChange={(e) => setDivForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Real</label><input className="erp-input num" type="number" value={divForm.actual_qty} onChange={(e) => setDivForm((f) => ({ ...f, actual_qty: e.target.value }))} /></div>

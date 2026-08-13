@@ -37,6 +37,8 @@ export interface ExportButtonProps {
   formats?: ExportFormat[];
   /** Rótulo do botão (padrão "Exportar"). */
   label?: string;
+  /** Orientação usada quando o formato escolhido for PDF. */
+  orientation?: 'retrato' | 'paisagem';
 }
 
 const ACTION_HEADER = /^(a[çc][aã]o(es|ões)?|actions?)$/i;
@@ -88,6 +90,7 @@ export function ExportButton({
   disabled,
   formats,
   label = 'Exportar',
+  orientation,
 }: ExportButtonProps): JSX.Element | null {
   // O aviso de conclusão é global (<DownloadNotice>); aqui só o estado de "exportando".
   const { exporting, run } = useReportExport();
@@ -148,6 +151,7 @@ export function ExportButton({
       columns: table.columns,
       rows: table.rows,
       meta: table.meta ?? meta,
+      orientation: format === 'pdf' ? orientation : undefined,
     });
   }
 

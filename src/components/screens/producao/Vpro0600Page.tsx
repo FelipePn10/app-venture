@@ -24,7 +24,7 @@ export function Vpro0600Page(): JSX.Element {
   function removeRow(i: number) { setHistory((p) => p.filter((_, idx) => idx !== i)); }
 
   async function calcular() {
-    const c = Number(itemCode); const pa = Number(periodsAhead);
+    const c = itemCode.trim(); const pa = Number(periodsAhead);
     if (!c) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     const hist = history.filter((h) => h.period.trim());
     if (hist.length < 2) { setFeedback({ type: "error", message: "Informe ao menos 2 períodos de histórico." }); return; }
@@ -45,7 +45,7 @@ export function Vpro0600Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
-          <input className="erp-input" style={{ width: 90, height: 32 }} type="number" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
+          <input className="erp-input" style={{ width: 90, height: 32 }}  value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
           <span className="erp-tgroup-label">Períodos à frente</span>
           <input className="erp-input" style={{ width: 60, height: 32 }} type="number" value={periodsAhead} onChange={(e) => setPeriodsAhead(e.target.value)} />
           <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Prever"}</button></div>

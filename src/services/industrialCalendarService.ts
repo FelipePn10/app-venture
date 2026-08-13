@@ -17,6 +17,20 @@ export interface ParsedCalendarDay {
   is_workday: boolean;
 }
 
+export interface GenerateCalendarDTO {
+  year: number;
+  month: number | null;
+  weekdays: number[];
+}
+
+export interface GenerateCalendarResult {
+  year: number;
+  month: number | null;
+  created: number;
+  preserved: number;
+  ignored: number;
+}
+
 // ─── Defensive parsers ────────────────────────────────────────────────────────
 // The backend may return any of these shapes:
 //   { year, month, day, is_workday }       ← snake_case DTO
@@ -97,6 +111,12 @@ export async function getCalendarMonth(year: number, month: number): Promise<Par
 
 export async function createCalendarDay(dto: CreateCalendarDayDTO): Promise<void> {
   await httpClient.post(`${BASE}/create`, dto);
+}
+
+/** Gera o calendário sem sobrescrever dias já revisados manualmente. */
+export async function generateIndustrialCalendar(dto: GenerateCalendarDTO): Promise<GenerateCalendarResult> {
+  const { data } = await httpClient.post<GenerateCalendarResult>(`${BASE}/generate`, dto);
+  return data;
 }
 
 /** Retorna apenas os dias úteis do mês (GET /workdays/{year}/{month}). */

@@ -28,9 +28,9 @@ export function Vcus0100Page(): JSX.Element {
   const [bases, setBases] = useState<AllocationBase[]>([]);
   const [ovhs, setOvhs] = useState<OverheadAllocation[]>([]);
   const [wccForm, setWccForm] = useState({ work_center_id: 0, cost_per_hour: 0 });
-  const [pcForm, setPcForm] = useState({ item_code: 0, cost: 0 });
+  const [pcForm, setPcForm] = useState({ item_code: "", cost: 0 });
   const [pcResult, setPcResult] = useState<PurchaseCost | null>(null);
-  const [rollupItem, setRollupItem] = useState(0);
+  const [rollupItem, setRollupItem] = useState("");
   const [rollup, setRollup] = useState<StandardCost | null>(null);
   const [baseForm, setBaseForm] = useState<AllocationBase>({ code: 0, description: "", period: "" });
   const [ovhForm, setOvhForm] = useState({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100 });
@@ -111,7 +111,7 @@ export function Vcus0100Page(): JSX.Element {
           <div className="erp-detail-body">
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Custo padrão — rollup</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={rollupItem || ""} onChange={(e) => setRollupItem(Number(e.target.value))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input" value={rollupItem} onChange={(e) => setRollupItem(e.target.value)} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={rodarRollup} disabled={busy}>Recalcular (rollup)</button></div>
               {rollup && <>
                 <div className="erp-field erp-c2"><label className="erp-label">Material</label><input className="erp-input num" value={money(rollup.material_cost)} readOnly /></div>
@@ -134,7 +134,7 @@ export function Vcus0100Page(): JSX.Element {
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Custo de compra por item</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={pcForm.item_code || ""} onChange={(e) => setPcForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={pcForm.item_code || ""} onChange={(e) => setPcForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Custo</label><input className="erp-input num" type="number" step="0.01" value={pcForm.cost || ""} onChange={(e) => setPcForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c6" style={{ flexDirection: "row", gap: 8, alignItems: "flex-end" }}>
                 <button className="erp-btn erp-btn-primary" onClick={salvarPc} disabled={busy}>Salvar custo</button>

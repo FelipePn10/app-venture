@@ -9,7 +9,7 @@ const BASE = '/api/bom-headers';
 
 export interface BomHeader {
   id?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   bom_type: string;
   version?: number;
@@ -20,7 +20,7 @@ function parse(raw: unknown): BomHeader {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     bom_type: parseStr(o, 'bom_type', 'BomType') || 'MBOM',
     version: parseNum(o, 'version', 'Version') || undefined,
@@ -28,7 +28,7 @@ function parse(raw: unknown): BomHeader {
     valid_from: parseStr(o, 'valid_from', 'ValidFrom') || undefined,
   };
 }
-export async function listBomHeaders(itemCode: number): Promise<BomHeader[]> {
+export async function listBomHeaders(itemCode: string): Promise<BomHeader[]> {
   const { data } = await httpClient.get(`${BASE}/item/${itemCode}`);
   return unwrapArray(data).map(parse);
 }
