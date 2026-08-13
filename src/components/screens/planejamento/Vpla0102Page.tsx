@@ -17,7 +17,7 @@ type FeedbackState = { type: "success" | "error" | "info"; message: string } | n
 
 interface FormDemanda {
   demanda: string;    // code_demand (int64 as string, "" = auto / next available)
-  item: string;       // item_code (int64 as string)
+  item: string;       // código comercial alfanumérico do item
   configurado: boolean; // UI toggle — controls whether mask is shown/required
   mask: string;       // mask (optional config string)
   cCusto: string;     // cost_center_code (int64 as string)
@@ -114,8 +114,8 @@ export function Vpla0102Page(): JSX.Element {
     if (form.demanda.trim() && (isNaN(Number(form.demanda)) || Number(form.demanda) <= 0)) {
       e.demanda = "Deve ser um número inteiro positivo.";
     }
-    if (!form.item.trim() || isNaN(Number(form.item)) || Number(form.item) <= 0) {
-      e.item = "Código do item obrigatório (número inteiro).";
+    if (!form.item.trim()) {
+      e.item = "Código do item obrigatório.";
     }
     if (form.configurado && !form.mask.trim()) {
       e.mask = "Informe a máscara (configuração) do item configurado.";
@@ -890,7 +890,7 @@ export function Vpla0102Page(): JSX.Element {
                   </label>
                   <input
                     className={`pla-input${errors.item ? " has-error" : ""}`}
-                    type="number" min="1" placeholder="Código do item (int)..."
+                    type="text" maxLength={60} placeholder="Ex.: TEA452-0"
                     value={form.item}
                     onChange={(e) => setField("item", e.target.value)}
                   />

@@ -1,5 +1,9 @@
 # Backend — correções encontradas na validação do handoff operacional
 
+> Reteste do frontend em 13/08/2026: os itens 1 e 3 estão corrigidos no worktree
+> `panossoerp-ajustes` e a credencial do item 2 voltou a autenticar. Permanecem as
+> pendências operacionais e de contrato descritas no final deste documento.
+
 ## 1. Publicar as rotas do calendário industrial
 
 O handler novo declara `POST /generate` e `POST /generate/{year}/{month}` em
@@ -41,3 +45,38 @@ Critério de aceite:
   compatibilidade;
 - zeros à esquerda permanecem intactos;
 - códigos são resolvidos somente dentro da empresa autenticada.
+
+## 4. Atualizar o backend executado no ambiente de treinamento
+
+O login real voltou a responder `200`, mas o container `venturerp-api-training`
+continua usando uma imagem criada em 08/08/2026, anterior aos ajustes. No smoke
+autenticado de 13/08/2026:
+
+- `POST /api/industrial-calendar/generate` retornou `404`;
+- `POST /api/industrial-calendar/generate/{year}/{month}` retornou `404`;
+- `GET /api/item-suppliers/search` retornou `405`;
+- `POST /api/production-order/scanner/scan` retornou `404`;
+- uma rota antiga do calendário respondeu `200`, confirmando autenticação e API.
+
+Critério de aceite:
+
+- reconstruir/reimplantar o treinamento a partir da branch que contém os ajustes;
+- aplicar as migrations 301 a 306 no banco de treinamento;
+- repetir o smoke autenticado das rotas acima sem imprimir senha ou token;
+- não misturar nem sobrescrever as alterações locais protegidas da `develop`.
+
+## 5. Tratar `item_base_cod` como referência comercial de item
+
+O cadastro de item possui `engineering.item_base_cod`, mas essa chave não está em
+`itemReferenceKeys` do middleware `item_business_code.go`. O DTO interno continua
+numérico, portanto enviar `TEA452-0` nesse campo pode falhar no binding em vez de
+ser resolvido para o ID imutável.
+
+Critério de aceite:
+
+- incluir `item_base_cod` entre as referências traduzidas no body;
+- aceitar códigos como `TEA452-0` e `0007-A` nesse campo;
+- devolver o código comercial na resposta e manter a referência legada apenas no
+  campo temporário de compatibilidade;
+- cobrir criação de item baseado em outro item com teste HTTP e isolamento por
+  empresa.
