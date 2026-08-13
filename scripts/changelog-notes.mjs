@@ -4,14 +4,15 @@
 // Nunca sai com código de erro: em qualquer falha, imprime um texto padrão para
 // não quebrar o pipeline de release.
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const FALLBACK = 'Consulte o CHANGELOG e a documentação da versão antes de instalar.';
 const tag = (process.argv[2] ?? '').trim();
 
-function extract() {
+export function extractReleaseNotes(requestedTag, markdown) {
+  const tag = (requestedTag ?? '').trim();
   if (!tag) return FALLBACK;
-  const md = readFileSync('CHANGELOG.md', 'utf8');
-  const lines = md.split('\n');
+  const lines = markdown.split('\n');
   const wanted = tag.replace(/^v/, '');
 
   let start = -1;
@@ -26,15 +27,20 @@ function extract() {
 
   const body = [];
   for (let i = start; i < lines.length; i += 1) {
-    if (/^##\s+/.test(lines[i])) break;
+    // Títulos internos ("## Novidades", "## Melhorias" etc.) fazem parte das
+    // notas. Somente o cabeçalho da próxima versão encerra a seção atual.
+    if (/^##\s+\[v?[^\]]+\]/.test(lines[i])) break;
     body.push(lines[i]);
   }
   const text = body.join('\n').trim();
   return text || FALLBACK;
 }
 
-try {
-  process.stdout.write(`${extract()}\n`);
-} catch {
-  process.stdout.write(`${FALLBACK}\n`);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    const markdown = readFileSync('CHANGELOG.md', 'utf8');
+    process.stdout.write(`${extractReleaseNotes(tag, markdown)}\n`);
+  } catch {
+    process.stdout.write(`${FALLBACK}\n`);
+  }
 }
