@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## Novidades
+- Adicionamos códigos alfanuméricos aos itens, preservando letras, símbolos permitidos e zeros à esquerda em todas as rotinas.
+- O calendário industrial agora pode preparar automaticamente os dias do mês sem apagar ajustes já revisados.
+- A ordem de produção passa a gerar e ler códigos de barras seguros para iniciar, apontar e concluir operações.
+- O cadastro de fornecedor consulta os dados do CNPJ e permite revisá-los antes de salvar.
+- Relatórios de qualidade podem ser anexados ao item do fornecedor e associados à inspeção de recebimento.
+
+## Melhorias
+- As rotinas que possuem consulta e cadastro passam a abrir primeiro na busca ou listagem.
+- O relatório de itens usa o espaço da página com mais segurança, evitando que a identificação da empresa seja encoberta.
+
+## Correções
+- Códigos comerciais de item deixam de ser convertidos em números nas telas de estoque, vendas, engenharia, planejamento, produção, fiscal e suprimentos.
+
 ## [v1.1.5] — 2026-08-12
 
 ## Melhorias
