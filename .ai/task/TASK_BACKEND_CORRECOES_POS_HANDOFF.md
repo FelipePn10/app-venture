@@ -4,6 +4,24 @@
 > `panossoerp-ajustes` e a credencial do item 2 voltou a autenticar. Permanecem as
 > pendências operacionais e de contrato descritas no final deste documento.
 
+## Status final — CONCLUÍDO em 13/08/2026
+
+Reteste independente após o novo retorno do backend:
+
+- container de treinamento reconstruído em 13/08/2026 e saudável;
+- login autenticado respondeu `200`;
+- geração de calendário, rota de compatibilidade e scanner responderam `422` aos
+  payloads inválidos controlados, confirmando roteamento e validação;
+- rota antiga do calendário respondeu `200`;
+- busca de item-fornecedor chegou ao handler (sem os antigos `404/405`);
+- `item_base_cod` consta no middleware e no teste HTTP aninhado, incluindo
+  `0007-A` e `legacy_item_base_cod` apenas na resposta de compatibilidade;
+- `go test ./...`, auditoria dos 1.004 endpoints, alinhamento das 211 telas e
+  validação de versionamento passaram.
+
+Os itens 1 a 5 abaixo ficam preservados como histórico do diagnóstico e dos
+critérios de aceite. Não há correção adicional pendente para o frontend.
+
 ## 1. Publicar as rotas do calendário industrial
 
 O handler novo declara `POST /generate` e `POST /generate/{year}/{month}` em
