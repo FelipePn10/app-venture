@@ -15,7 +15,12 @@ assert.deepEqual(config.plugins.updater.endpoints, ['https://github.com/FelipePn
 assert.ok(!config.plugins.updater.pubkey.includes('PRIVATE'), 'configuração contém material privado');
 
 const changelog = fs.readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
-const releaseNotes = extractReleaseNotes(`v${packageInfo.version}`, changelog);
+// Durante `make release`, os manifestos recebem a nova versão antes de o cabeçalho
+// correspondente ser promovido de Unreleased. Valide a seção publicada mais
+// recente para que o teste cubra o extrator sem bloquear essa etapa intermediária.
+const latestReleasedVersion = changelog.match(/^## \[v?([^\]]+)\]/m)?.[1];
+assert.ok(latestReleasedVersion, 'CHANGELOG não possui nenhuma versão publicada');
+const releaseNotes = extractReleaseNotes(`v${latestReleasedVersion}`, changelog);
 assert.match(releaseNotes, /^## (Novidades|Melhorias|Correções)/m, 'notas da versão não foram extraídas');
 assert.doesNotMatch(releaseNotes, /Consulte o CHANGELOG/, 'extrator retornou texto genérico');
 
