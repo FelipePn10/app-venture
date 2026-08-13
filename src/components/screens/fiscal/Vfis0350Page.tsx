@@ -15,6 +15,8 @@ const INDS: IpiIndicator[] = ["PERCENTUAL", "VALOR"];
 const EMPTY: FiscalClassificationDTO = {
   description: "", ncm: "", cest: "", ex_tarifario: "", ipi_rate: 0, ipi_indicator: "PERCENTUAL",
   pis_rate: 0, cofins_rate: 0, mod_bc_icms: "", mod_bc_icms_st: "", cod_clas_trib: "", obs_fiscal: "",
+  valid_from: today(), valid_until: "", default_origin: "0", default_icms_rate: 0,
+  default_calculate_pis_cofins: false, un_ipi: "", un_tributacao: "",
 };
 
 export function Vfis0350Page(): JSX.Element {
@@ -122,6 +124,26 @@ export function Vfis0350Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label">Ex Tarifário</label>
               <input className="erp-input" value={form.ex_tarifario ?? ""} onChange={(e) => setF("ex_tarifario", e.target.value)} /></div>
           
+        </div></div>
+
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Padrões herdados pelos itens</div><div className="erp-fieldset-body">
+            <div className="erp-field erp-c3"><label className="erp-label">Vigência inicial</label>
+              <input className="erp-input" type="date" value={(form.valid_from ?? "").slice(0, 10)} onChange={(e) => setF("valid_from", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Vigência final</label>
+              <input className="erp-input" type="date" value={(form.valid_until ?? "").slice(0, 10)} onChange={(e) => setF("valid_until", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Origem padrão</label>
+              <select className="erp-input" value={form.default_origin ?? ""} onChange={(e) => setF("default_origin", e.target.value)}>
+                <option value="">Não definida</option><option value="0">0 — Nacional</option><option value="1">1 — Importação direta</option><option value="2">2 — Adquirida no mercado interno</option>
+              </select></div>
+            <div className="erp-field erp-c3"><label className="erp-label">ICMS padrão (%)</label>
+              <input className="erp-input num" type="number" min={0} step="0.01" value={form.default_icms_rate ?? 0} onChange={(e) => setF("default_icms_rate", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">UM de IPI</label>
+              <input className="erp-input" value={form.un_ipi ?? ""} onChange={(e) => setF("un_ipi", e.target.value.toUpperCase())} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">UM de tributação</label>
+              <input className="erp-input" value={form.un_tributacao ?? ""} onChange={(e) => setF("un_tributacao", e.target.value.toUpperCase())} /></div>
+            <div className="erp-field erp-c6" style={{ alignSelf: "end" }}><label className="erp-label" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input type="checkbox" checked={!!form.default_calculate_pis_cofins} onChange={(e) => setF("default_calculate_pis_cofins", e.target.checked)} />Calcular PIS/COFINS por padrão
+            </label></div>
         </div></div>
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Tributos</div><div className="erp-fieldset-body">

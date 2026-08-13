@@ -219,7 +219,7 @@ export function Vcli0500Page(): JSX.Element {
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ/CPF</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input className="erp-input" value={form.document_number} onChange={(e) => setF("document_number", e.target.value)} />
-                    {form.document_type === "CNPJ" && <button className="erp-btn" style={{ whiteSpace: "nowrap" }} onClick={() => void buscarCnpj()} disabled={busy} title="Preencher pela Receita">🔎 CNPJ</button>}
+                    {form.document_type === "CNPJ" && <button className="erp-btn" style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => void buscarCnpj()} disabled={busy} title="Preencher pela Receita"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.8"/><path d="m12.6 12.6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>Consultar CNPJ</button>}
                   </div>
                   {form.document_number.trim() && (form.document_type === "CNPJ" || form.document_type === "CPF") && (<span className="erp-field-hint" style={{ color: validateCNPJOrCPF(form.document_number) ? "#1e6030" : "#b91c1c" }}>{validateCNPJOrCPF(form.document_number) ? "✓ válido" : "✗ inválido"}</span>)}</div>
                 <div className="erp-field erp-c2"><label className="erp-label">Inscr. Estadual</label><input className="erp-input" value={form.state_registration ?? ""} onChange={(e) => setF("state_registration", e.target.value)} /></div>

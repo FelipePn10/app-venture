@@ -33,6 +33,51 @@ export interface ItemDTO {
   type_mrp?: string;
   llc?: number;
   ghost?: boolean;
+  fiscal_effective?: ItemFiscalEffective;
+}
+
+export interface EffectiveFiscalContext {
+  classification_id?: number;
+  classification_code?: string;
+  ncm?: string;
+  cest?: string;
+  unit?: string;
+  origin?: number;
+  ipi_rate?: number;
+  icms_rate?: number;
+  pis_rate?: number;
+  cofins_rate?: number;
+  calculate_pis_cofins?: boolean;
+  sources: Record<string, 'HERDADO' | 'SOBRESCRITO'>;
+}
+
+export interface ItemFiscalEffective {
+  purchase?: EffectiveFiscalContext;
+  sale?: EffectiveFiscalContext;
+}
+
+function parseEffectiveContext(raw: unknown): EffectiveFiscalContext | undefined {
+  const o = unwrapObject(raw);
+  if (!Object.keys(o).length) return undefined;
+  const sourcesRaw = unwrapObject(o['sources'] ?? o['Sources']);
+  const sources: Record<string, 'HERDADO' | 'SOBRESCRITO'> = {};
+  for (const [key, value] of Object.entries(sourcesRaw)) {
+    if (value === 'HERDADO' || value === 'SOBRESCRITO') sources[key] = value;
+  }
+  return {
+    classification_id: parseNum(o, 'classification_id', 'ClassificationID') || undefined,
+    classification_code: parseStr(o, 'classification_code', 'ClassificationCode') || undefined,
+    ncm: parseStr(o, 'ncm', 'NCM') || undefined,
+    cest: parseStr(o, 'cest', 'CEST') || undefined,
+    unit: parseStr(o, 'unit', 'Unit') || undefined,
+    origin: o['origin'] === undefined && o['Origin'] === undefined ? undefined : parseNum(o, 'origin', 'Origin'),
+    ipi_rate: o['ipi_rate'] === undefined && o['IPIRate'] === undefined ? undefined : parseNum(o, 'ipi_rate', 'IPIRate'),
+    icms_rate: o['icms_rate'] === undefined && o['ICMSRate'] === undefined ? undefined : parseNum(o, 'icms_rate', 'ICMSRate'),
+    pis_rate: o['pis_rate'] === undefined && o['PISRate'] === undefined ? undefined : parseNum(o, 'pis_rate', 'PISRate'),
+    cofins_rate: o['cofins_rate'] === undefined && o['COFINSRate'] === undefined ? undefined : parseNum(o, 'cofins_rate', 'COFINSRate'),
+    calculate_pis_cofins: o['calculate_pis_cofins'] === undefined && o['CalculatePISCOFINS'] === undefined ? undefined : parseBool(o, 'calculate_pis_cofins', 'CalculatePISCOFINS'),
+    sources,
+  };
 }
 
 export interface ActivationReadiness {
@@ -49,6 +94,7 @@ function parseItem(raw: unknown): ItemDTO {
   const wh = unwrapObject(o['warehouse'] ?? o['Warehouse']);
   const eng = unwrapObject(o['engineering'] ?? o['Engineering']);
   const pl = unwrapObject(o['planning'] ?? o['Planning']);
+  const fiscal = unwrapObject(o['fiscal_effective'] ?? o['FiscalEffective']);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
     code: parseStr(o, 'code', 'Code') || undefined,
@@ -65,6 +111,10 @@ function parseItem(raw: unknown): ItemDTO {
     type_mrp: parseStr(pl, 'type_mrp', 'TypeMrp') || undefined,
     llc: parseNum(pl, 'llc', 'Llc', 'LLC') || undefined,
     ghost: parseBool(pl, 'ghost', 'Ghost'),
+    fiscal_effective: {
+      purchase: parseEffectiveContext(fiscal['purchase'] ?? fiscal['Purchase']),
+      sale: parseEffectiveContext(fiscal['sale'] ?? fiscal['Sale']),
+    },
   };
 }
 
