@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## Correções
+- O cadastro completo de itens agora aceita códigos com letras e símbolos permitidos, além de permitir a geração automática quando o código fica vazio.
+- Corrigimos campos de item no planejamento, MRP, estoque, compras, custos, engenharia e serviços para não restringirem a digitação a números.
+- Itens-base e itens de embalagem passam a preservar integralmente o código comercial informado.
+
 ## [v1.1.6] — 2026-08-13
 
 ## Novidades

@@ -275,7 +275,7 @@ export function Vmrp0100Page(): JSX.Element {
 
         {/* Perfil do item */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Perfil MRP do item (tabela time-phased)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c3"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={profileItem} onChange={(e) => setProfileItem(e.target.value)} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Item</label><input className="erp-input" maxLength={60} value={profileItem} onChange={(e) => setProfileItem(e.target.value)} placeholder="Ex.: TEA452-0" /></div>
           <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={verPerfil} disabled={busy}>Ver perfil</button></div>
         
         {profile.length > 0 && (
@@ -288,7 +288,7 @@ export function Vmrp0100Page(): JSX.Element {
 
         {/* Regras configuradas */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Regras configuradas por item</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num" type="number" value={ruleItem} onChange={(e) => setRuleItem(e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input" maxLength={60} value={ruleItem} onChange={(e) => setRuleItem(e.target.value)} placeholder="Ex.: TEA452-0" /></div>
           <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={verRegras} disabled={busy}>Listar</button></div>
           <div className="erp-field erp-c2"><label className="erp-label">Tabela</label>
             <select className="erp-input" value={ruleForm.table_type} onChange={(e) => setRuleForm((s) => ({ ...s, table_type: e.target.value }))}><option value="PLANNING_DATA">PLANNING_DATA</option><option value="PLANNER_DATA">PLANNER_DATA</option></select></div>

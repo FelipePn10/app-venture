@@ -335,10 +335,10 @@ export function Vent0200Page(): JSX.Element {
   /** Campos obrigatórios, com o rótulo e a aba onde cada um mora. */
   function coletarErros(): Partial<Record<keyof FormItem, string>> {
     const e: Partial<Record<keyof FormItem, string>> = {};
-    const codeNum = Number(form.code);
-    if (!form.code.trim()) e.code = "Código obrigatório.";
-    else if (!Number.isInteger(codeNum) || codeNum <= 0)
-      e.code = "Código deve ser um número inteiro maior que zero.";
+    const itemCode = form.code.trim();
+    if (itemCode.length > 60) e.code = "Código deve ter no máximo 60 caracteres.";
+    else if (itemCode && !/^[A-Za-z0-9._/-]+$/.test(itemCode))
+      e.code = "Use apenas letras, números, hífen, ponto, barra ou sublinhado.";
     if (!form.name.trim()) e.name = "Nome obrigatório.";
     if (!form.groupID.trim()) e.groupID = "Grupo PDM obrigatório — cadastre em VITE0114 se ainda não existir.";
     if (!form.modifierID.trim()) e.modifierID = "Modificador PDM obrigatório — cadastre em VITE0115 se ainda não existir.";
@@ -407,7 +407,7 @@ export function Vent0200Page(): JSX.Element {
         return Number.isFinite(parsed) ? parsed : undefined;
       };
       const created = await createItem({
-        code: Number(form.code),
+        code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
         complement: form.complement.trim() || undefined,
         nature: form.nature,
@@ -429,7 +429,7 @@ export function Vent0200Page(): JSX.Element {
             : {}),
         },
         engineering: {
-          ...(form.itemBaseCod.trim() ? { item_base_cod: Number(form.itemBaseCod) } : {}),
+          ...(form.itemBaseCod.trim() ? { item_base_cod: form.itemBaseCod.trim() } : {}),
           weight: { gross: bruto, net: liquido, unit: "KG" },
           type: form.type,
           type_struct: form.typeStruct,
@@ -451,7 +451,7 @@ export function Vent0200Page(): JSX.Element {
           warranty_days: optionalNumber(form.tempoGarantia) ?? 0,
           transfer_warehouse_code: optionalNumber(form.almoxTransf),
           technical_assistance_warehouse_code: optionalNumber(form.almoxAssTec),
-          packaging_item_code: optionalNumber(form.itemEmbalagem),
+          packaging_item_code: form.itemEmbalagem.trim() || undefined,
           allow_billing_description_change: form.alterarDescrFat,
           issue_loading_labels: form.emiteEtiquetas,
           assemble_shipping_volumes: form.montagemVolExp,
@@ -482,7 +482,7 @@ export function Vent0200Page(): JSX.Element {
           notes: form.obsContabil.trim() || undefined,
         },
       });
-      const codigoGravado = (created?.["code"] as number | undefined) ?? Number(form.code);
+      const codigoGravado = parseStr(created, "code", "Code") || form.code.trim() || "gerado automaticamente";
       setFeedback({ type: "success", message: `Item ${codigoGravado} gravado com sucesso.` });
       setForm(formInicial);
       setErrors({});
@@ -539,7 +539,7 @@ export function Vent0200Page(): JSX.Element {
         tempoGarantia: numText(commercial, "warranty_days", "WarrantyDays"),
         almoxTransf: numText(commercial, "transfer_warehouse_code", "TransferWarehouseCode"),
         almoxAssTec: numText(commercial, "technical_assistance_warehouse_code", "TechnicalAssistanceWarehouseCode"),
-        itemEmbalagem: numText(commercial, "packaging_item_code", "PackagingItemCode"),
+        itemEmbalagem: opt(commercial, "packaging_item_code", "PackagingItemCode"),
         alterarDescrFat: parseBool(commercial, "allow_billing_description_change", "AllowBillingDescriptionChange"),
         emiteEtiquetas: parseBool(commercial, "issue_loading_labels", "IssueLoadingLabels"),
         montagemVolExp: parseBool(commercial, "assemble_shipping_volumes", "AssembleShippingVolumes"),
@@ -1014,16 +1014,15 @@ export function Vent0200Page(): JSX.Element {
                 <div className="it-grid">
                   <div className="it-field it-col-3">
                     <label className="it-label">
-                      Código <span className="it-label-req">*</span>
+                      Código
                     </label>
                     <input
                       className={`it-input${errors.code ? " err" : ""}`}
-                      type="number"
-                      min={1}
-                      step={1}
+                      type="text"
+                      maxLength={60}
                       value={form.code}
-                      onChange={(e) => setField("code", e.target.value)}
-                      placeholder="Ex: 1001"
+                      onChange={(e) => setField("code", e.target.value.toUpperCase())}
+                      placeholder="Ex.: TEA452-0 (vazio = automático)"
                     />
                     {errors.code && (
                       <span className="it-field-error">
