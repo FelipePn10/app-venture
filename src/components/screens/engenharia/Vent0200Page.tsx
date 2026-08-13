@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { createItem, getItemTemplate } from "@/services/itemService";
+import { listFiscalClassifications, type FiscalClassification } from "@/services/fiscalAdvancedService";
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses } from "@/services/lookups";
@@ -34,6 +35,7 @@ type TypeTipoUtilizacao = "Industrialização" | "Consumo" | "Imobilizado";
 type TypeVenda = "Venda" | "Revenda";
 type TipoIPI = "Percentual" | "Valor";
 type OrigemItem =
+  | ""
   | "0 - Nacional"
   | "1 - Estrangeira (Importação Direta)"
   | "2 - Estrangeira (Adquirida no Mercado Interno)";
@@ -145,7 +147,7 @@ interface FormItem {
   classificacaoCont: string;
   cest: string;
   insumo: string;
-  calculaPisCofins: boolean;
+  calculaPisCofins: "HERDAR" | "SIM" | "NAO";
   obsContabil: string;
 
   // Suprimentos
@@ -288,12 +290,12 @@ const formInicial: FormItem = {
   aliqIcms: "",
   umVenda: "",
   umCompra: "",
-  origem: "0 - Nacional",
+  origem: "",
   grupoInventario: "",
   classificacaoCont: "",
   cest: "",
   insumo: "",
-  calculaPisCofins: false,
+  calculaPisCofins: "HERDAR",
   obsContabil: "",
   umSuprimentos: "UN",
   almoxSuprimentos: "",
@@ -322,6 +324,18 @@ export function Vent0200Page(): JSX.Element {
    * quem acabou de abrir a tela não ajuda ninguém.
    */
   const [submitTentado, setSubmitTentado] = useState(false);
+  const [classificacoesFiscais, setClassificacoesFiscais] = useState<FiscalClassification[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void listFiscalClassifications(false)
+      .then((rows) => { if (active) setClassificacoesFiscais(rows); })
+      .catch(() => { /* O backend validará o código digitado mesmo se a lista estiver indisponível. */ });
+    return () => { active = false; };
+  }, []);
+
+  const fiscalVenda = classificacoesFiscais.find((c) => String(c.code) === form.classifFiscVenda.trim());
+  const fiscalCompra = classificacoesFiscais.find((c) => String(c.code) === form.classifFiscCompra.trim());
 
   const setField = useCallback(
     <K extends keyof FormItem>(key: K, value: FormItem[K]) => {
@@ -466,7 +480,7 @@ export function Vent0200Page(): JSX.Element {
         accounting: {
           sale_fiscal_classification_code: form.classifFiscVenda.trim() || undefined,
           purchase_fiscal_classification_code: form.classifFiscCompra.trim() || undefined,
-          origin: Number(form.origem.split(" ", 1)[0]),
+          ...(form.origem ? { origin: Number(form.origem.split(" ", 1)[0]) } : {}),
           sale_ipi_type: form.tipoIpiVenda.toUpperCase(),
           sale_ipi_rate: optionalNumber(form.aliqIpiVenda),
           purchase_ipi_type: form.tipoIpiCompra.toUpperCase(),
@@ -478,7 +492,7 @@ export function Vent0200Page(): JSX.Element {
           accounting_classification_code: form.classificacaoCont.trim() || undefined,
           cest: form.cest.trim() || undefined,
           input_code: form.insumo.trim() || undefined,
-          calculate_pis_cofins: form.calculaPisCofins,
+          ...(form.calculaPisCofins === "HERDAR" ? {} : { calculate_pis_cofins: form.calculaPisCofins === "SIM" }),
           notes: form.obsContabil.trim() || undefined,
         },
       });
@@ -561,7 +575,7 @@ export function Vent0200Page(): JSX.Element {
         classificacaoCont: opt(accounting, "accounting_classification_code", "AccountingClassificationCode"),
         cest: opt(accounting, "cest", "Cest"),
         insumo: opt(accounting, "input_code", "InputCode"),
-        calculaPisCofins: parseBool(accounting, "calculate_pis_cofins", "CalculatePisCofins"),
+        calculaPisCofins: parseBool(accounting, "calculate_pis_cofins", "CalculatePisCofins") ? "SIM" : "NAO",
         obsContabil: opt(accounting, "notes", "Notes"),
         umSuprimentos: (opt(supplies, "unit_of_measurement", "UnitOfMeasurement") || current.umSuprimentos) as TypeUnitOfMeasurementItem,
         tipoUtilizacao: use === "CONSUMO" ? "Consumo" : use === "IMOBILIZADO" ? "Imobilizado" : "Industrialização",
@@ -2003,11 +2017,12 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
+                        list="classificacoes-fiscais-item"
                         value={form.classifFiscVenda}
                         onChange={(e) =>
                           setField("classifFiscVenda", e.target.value)
                         }
-                        placeholder="NCM / código fiscal"
+                        placeholder="Selecione o código do mestre fiscal"
                       />
                     </div>
                   </div>
@@ -2017,14 +2032,30 @@ export function Vent0200Page(): JSX.Element {
                     <div className="it-input-wrap">
                       <input
                         className="it-input"
+                        list="classificacoes-fiscais-item"
                         value={form.classifFiscCompra}
                         onChange={(e) =>
                           setField("classifFiscCompra", e.target.value)
                         }
-                        placeholder="NCM / código fiscal"
+                        placeholder="Selecione o código do mestre fiscal"
                       />
                     </div>
                   </div>
+
+                  <datalist id="classificacoes-fiscais-item">
+                    {classificacoesFiscais.map((c) => <option key={c.code} value={c.code}>{c.description}</option>)}
+                  </datalist>
+
+                  {(fiscalVenda || fiscalCompra) && (
+                    <div className="it-field it-col-12">
+                      <div className="it-field-hint">
+                        {fiscalVenda && <>Venda herdará de <strong>{fiscalVenda.code} — {fiscalVenda.description}</strong>: NCM {fiscalVenda.ncm || "não definido"}, IPI {fiscalVenda.ipi_rate ?? 0}%, ICMS {fiscalVenda.default_icms_rate ?? 0}%, PIS {fiscalVenda.pis_rate ?? 0}% e COFINS {fiscalVenda.cofins_rate ?? 0}%.</>}
+                        {fiscalVenda && fiscalCompra && <br />}
+                        {fiscalCompra && <>Compra herdará de <strong>{fiscalCompra.code} — {fiscalCompra.description}</strong>: NCM {fiscalCompra.ncm || "não definido"}, IPI {fiscalCompra.ipi_rate ?? 0}%, ICMS {fiscalCompra.default_icms_rate ?? 0}%, PIS {fiscalCompra.pis_rate ?? 0}% e COFINS {fiscalCompra.cofins_rate ?? 0}%.</>}
+                        <br />Preencha os campos abaixo somente quando precisar sobrescrever o padrão do mestre.
+                      </div>
+                    </div>
+                  )}
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Origem</label>
@@ -2035,6 +2066,7 @@ export function Vent0200Page(): JSX.Element {
                         setField("origem", e.target.value as OrigemItem)
                       }
                     >
+                      <option value="">Herdar do mestre fiscal</option>
                       {ORIGENS.map((o) => (
                         <option key={o} value={o}>
                           {o}
@@ -2182,23 +2214,13 @@ export function Vent0200Page(): JSX.Element {
                     </div>
                   </div>
 
-                  <div className="it-field it-col-12">
-                    <label className="it-label">Indicadores</label>
-                    <div className="it-checks">
-                      <label className="it-check-label">
-                        <input
-                          type="checkbox"
-                          className="it-checkbox"
-                          checked={form.calculaPisCofins}
-                          onChange={(e) =>
-                            setField("calculaPisCofins", e.target.checked)
-                          }
-                        />
-                        <span className="it-check-text">
-                          Calcula PIS/COFINS
-                        </span>
-                      </label>
-                    </div>
+                  <div className="it-field it-col-4">
+                    <label className="it-label">Cálculo de PIS/COFINS</label>
+                    <select className="it-select" value={form.calculaPisCofins} onChange={(e) => setField("calculaPisCofins", e.target.value as FormItem["calculaPisCofins"])}>
+                      <option value="HERDAR">Herdar do mestre fiscal</option>
+                      <option value="SIM">Sobrescrever: Sim</option>
+                      <option value="NAO">Sobrescrever: Não</option>
+                    </select>
                   </div>
 
                   <div className="it-field it-col-12">

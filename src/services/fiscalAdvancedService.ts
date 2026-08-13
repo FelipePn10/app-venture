@@ -201,7 +201,7 @@ export async function listNotaEspecialItens(notaId: number): Promise<Obj[]> {
 export interface FiscalClassificationDTO {
   code?: string;
   description: string;
-  ncm: string;
+  ncm?: string;
   cest?: string;
   ex_tarifario?: string;
   ipi_rate: number;
@@ -213,6 +213,13 @@ export interface FiscalClassificationDTO {
   cod_clas_trib?: string;
   cod_clas_trib_trib_reg?: string;
   obs_fiscal?: string;
+  valid_from?: string;
+  valid_until?: string;
+  default_origin?: string;
+  default_icms_rate?: number;
+  default_calculate_pis_cofins?: boolean;
+  un_ipi?: string;
+  un_tributacao?: string;
   is_active?: boolean;
 }
 export interface FiscalClassification extends FiscalClassificationDTO { code: string; is_active?: boolean; }

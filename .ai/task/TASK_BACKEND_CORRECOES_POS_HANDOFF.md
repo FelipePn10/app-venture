@@ -20,7 +20,7 @@ Reteste independente após o novo retorno do backend:
   validação de versionamento passaram.
 
 Os itens 1 a 5 abaixo ficam preservados como histórico do diagnóstico e dos
-critérios de aceite. Não há correção adicional pendente para o frontend.
+critérios de aceite.
 
 ## 1. Publicar as rotas do calendário industrial
 
@@ -98,3 +98,23 @@ Critério de aceite:
   campo temporário de compatibilidade;
 - cobrir criação de item baseado em outro item com teste HTTP e isolamento por
   empresa.
+
+## 6. Permitir herança real do indicador PIS/COFINS — PENDENTE
+
+Na varredura final do frontend, o mestre fiscal e `fiscal_effective.sources`
+foram integrados à interface. Entretanto, `AccountingDTO.calculate_pis_cofins`
+no cadastro do item ainda é `bool`, enquanto o update já utiliza `*bool`.
+Consequentemente, o create não distingue campo ausente (herdar) de `false`
+(sobrescrever com não), e o repositório sempre marca um valor específico do item.
+
+Critério de aceite:
+
+- alterar o campo do create para `*bool` ou mecanismo equivalente que preserve
+  ausência no JSON;
+- manter três estados públicos: ausente = `HERDADO`, `true`/`false` =
+  `SOBRESCRITO`;
+- persistir valor nullable ou outro indicador explícito de override;
+- `fiscal_effective.purchase/sale.sources.calculate_pis_cofins` deve refletir a
+  origem correta;
+- teste HTTP deve cobrir herança de `true`, herança de `false` e os dois valores
+  sobrescritos.

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Melhorias
+- O cadastro do item agora permite selecionar o mestre fiscal e mostra os valores que serão herdados em compra e venda.
+- A classificação fiscal passa a cadastrar vigência, origem, ICMS, unidades e cálculo padrão de PIS/COFINS.
+
+## Correções
+- Removemos a última lupa em formato de emoji e mantivemos a pesquisa profissional também nos campos alfanuméricos.
+
 ## [v1.1.7] — 2026-08-13
 
 ## Correções

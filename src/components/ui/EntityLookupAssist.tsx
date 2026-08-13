@@ -37,7 +37,7 @@ export function EntityLookupAssist(): JSX.Element | null {
   useEffect(() => {
     const buttons = new Set<HTMLButtonElement>();
     const enhance = () => document.querySelectorAll<HTMLElement>(".erp-field").forEach((field) => {
-      const input = field.querySelector<HTMLInputElement>('input[type="number"]');
+      const input = field.querySelector<HTMLInputElement>('input[type="number"], input[type="text"]:not([readonly])');
       const label = field.querySelector<HTMLLabelElement>("label");
       if (!input || !label || input.readOnly || input.disabled || field.querySelector(".erp-entity-lookup-btn")) return;
       const entity = identify(label.textContent || "");

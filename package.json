@@ -25,7 +25,7 @@
     "tauri:build:demo": "tauri build --config src-tauri/tauri.demo.conf.json",
     "tauri:build:training": "tauri build --config src-tauri/tauri.training.conf.json",
     "doctor:package": "node scripts/verify-package-json.mjs",
-    "validate:backend-alignment": "node scripts/validate-backend-alignment.mjs && node scripts/validate-no-registered-mocks.mjs",
+    "validate:backend-alignment": "node scripts/validate-backend-alignment.mjs && node scripts/validate-no-registered-mocks.mjs && node scripts/validate-operational-adjustments.mjs",
     "validate:sales-quotation": "node scripts/validate-sales-quotation-contract.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp}",
     "audit:drift": "node scripts/audit-frontend-drift.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-ghost-routes",
     "e2e:orcamentos": "node scripts/e2e/comercial-orcamentos.mjs",
