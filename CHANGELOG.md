@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.6] — 2026-08-13
+
 ## Novidades
 - Adicionamos códigos alfanuméricos aos itens, preservando letras, símbolos permitidos e zeros à esquerda em todas as rotinas.
 - O calendário industrial agora pode preparar automaticamente os dias do mês sem apagar ajustes já revisados.
