@@ -5,6 +5,7 @@
 ## Melhorias
 - O cadastro do item agora permite selecionar o mestre fiscal e mostra os valores que serão herdados em compra e venda.
 - A classificação fiscal passa a cadastrar vigência, origem, ICMS, unidades e cálculo padrão de PIS/COFINS.
+- O treinamento do Dia 4 agora explica como herdar o cálculo de PIS/COFINS ou definir explicitamente Sim e Não no item.
 
 ## Correções
 - Removemos a última lupa em formato de emoji e mantivemos a pesquisa profissional também nos campos alfanuméricos.

@@ -597,6 +597,24 @@ OPEN → RELEASED → LOADING → LOADED → SHIPPED
 
 > **Quando a alíquota vier "errada" na nota, é essa escada que você percorre, de cima para baixo.**
 
+### Mestre fiscal e herança no item
+
+Em `VFIS0350`, cadastre a classificação com sua **vigência**, NCM, CEST, origem,
+unidades e padrões de IPI, ICMS, PIS e COFINS. Em seguida, associe-a ao item em
+`VENT0200` → aba **Contábil**, separando os contextos de **Compra** e **Venda**.
+
+O campo **Cálculo de PIS/COFINS** possui três estados:
+
+| Escolha no item | Resultado |
+|:--|:--|
+| **Herdar do mestre fiscal** | Usa o padrão vigente; a origem aparece como `HERDADO` |
+| **Sobrescrever: Sim** | Força o cálculo neste item; origem `SOBRESCRITO` |
+| **Sobrescrever: Não** | Força a não calcular neste item; origem `SOBRESCRITO` |
+
+⚠️ **Ausente não é igual a Não.** Ausente significa acompanhar o mestre; “Não” é
+uma decisão explícita do item. Se o padrão do mestre mudar, somente os itens em
+**Herdar** acompanham a alteração.
+
 ---
 
 ## 9.4 `VFIS0300` — CFOPs / Naturezas de Operação
@@ -622,7 +640,7 @@ OPEN → RELEASED → LOADING → LOADED → SHIPPED
 | `VFIS0310` | Dispositivos Legais — o embasamento das alíquotas diferenciadas |
 | `VFIS0320` | Parâmetros ICMS/IPI por UF + NCM + Operação |
 | `VFIS0330` | Redução / Substituição / Diferimento de ICMS |
-| `VFIS0350` | Classificações Fiscais — CEST, Ex Tarifário, modalidades de base de cálculo |
+| `VFIS0350` | Mestre de Classificações Fiscais — vigência, NCM, CEST, origem, unidades e padrões de IPI/ICMS/PIS/COFINS |
 | `VFIS0360` | Tipos de Operação de Entrada |
 | `VFIS0630` | **Tabela IBPT** — carga tributária aproximada (Lei da Transparência) |
 | `VFIS0120` | Exclusão controlada de tributação NCM |

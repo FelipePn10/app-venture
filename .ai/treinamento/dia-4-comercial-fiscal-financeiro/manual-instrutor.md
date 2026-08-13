@@ -676,6 +676,18 @@ OPEN → RELEASED → LOADING → LOADED → SHIPPED
 
 🗣 *"Quando a alíquota vier 'errada' na nota, é essa hierarquia que vocês vão percorrer, de cima para baixo, para descobrir de onde veio o número. Guardem essa escada."*
 
+**Demonstração obrigatória — herança fiscal do item (5 min)**
+
+1. Abra `VFIS0350` e mostre vigência, origem, ICMS, unidades e o padrão de PIS/COFINS.
+2. Abra `VENT0200` → Contábil e associe os mestres de Compra e Venda.
+3. Mostre as três opções de PIS/COFINS: **Herdar**, **Sobrescrever: Sim** e **Sobrescrever: Não**.
+4. Explique que `HERDADO` acompanha o mestre vigente e `SOBRESCRITO` preserva a decisão do item.
+
+🗣 *"Campo ausente não quer dizer Não. Ausente quer dizer: siga o mestre. O Não explícito é uma sobrescrita e continuará Não mesmo que o padrão da classificação mude."*
+
+✅ **Verificação:** alterne entre os três estados e peça à turma para dizer qual
+origem deve aparecer. Reforce que compra e venda podem usar mestres diferentes.
+
 **`VFIS0300` — CFOPs / Naturezas de Operação**
 
 | Campo | Opções |

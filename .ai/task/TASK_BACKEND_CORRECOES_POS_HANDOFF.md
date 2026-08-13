@@ -18,8 +18,11 @@ Reteste independente após o novo retorno do backend:
   `0007-A` e `legacy_item_base_cod` apenas na resposta de compatibilidade;
 - `go test ./...`, auditoria dos 1.004 endpoints, alinhamento das 211 telas e
   validação de versionamento passaram.
+- a herança PIS/COFINS passou a preservar os três estados (`NULL`, `true` e
+  `false`) e foi validada por testes HTTP e de repositório com PostgreSQL;
+- a migration `000307` foi validada em `up/down/up`, e `go vet ./...` passou.
 
-Os itens 1 a 5 abaixo ficam preservados como histórico do diagnóstico e dos
+Os itens 1 a 6 abaixo ficam preservados como histórico do diagnóstico e dos
 critérios de aceite.
 
 ## 1. Publicar as rotas do calendário industrial
@@ -99,7 +102,7 @@ Critério de aceite:
 - cobrir criação de item baseado em outro item com teste HTTP e isolamento por
   empresa.
 
-## 6. Permitir herança real do indicador PIS/COFINS — PENDENTE
+## 6. Permitir herança real do indicador PIS/COFINS — CONCLUÍDO
 
 Na varredura final do frontend, o mestre fiscal e `fiscal_effective.sources`
 foram integrados à interface. Entretanto, `AccountingDTO.calculate_pis_cofins`
@@ -118,3 +121,13 @@ Critério de aceite:
   origem correta;
 - teste HTTP deve cobrir herança de `true`, herança de `false` e os dois valores
   sobrescritos.
+
+Resultado do reteste em 13/08/2026:
+
+- `AccountingDTO.calculate_pis_cofins`, entidade e resposta aceitam ausência;
+- create e update persistem `NULL`, `true` ou `false`;
+- a resolução efetiva usa o padrão do mestre quando o item não possui override;
+- `sources.calculate_pis_cofins` distingue `HERDADO` de `SOBRESCRITO`;
+- migration `000307_item_pis_cofins_inheritance` validada em `up/down/up`;
+- quatro cenários HTTP e integração do repositório com PostgreSQL aprovados;
+- `go test ./...`, `go vet ./...`, `sqlc generate` e `git diff --check` aprovados.
