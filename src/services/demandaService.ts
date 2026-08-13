@@ -6,7 +6,7 @@ const BASE = "/api/independent-demand";
 
 export interface DemandaCreateRequest {
   code_demand: number;        // int64 — 0 means "use next available"
-  item_code: number;          // int64
+  item_code: string;          // int64
   mask?: string;              // optional configuration mask
   cost_center_code?: number;  // optional int64
   quantity: number;           // float64
@@ -16,7 +16,7 @@ export interface DemandaCreateRequest {
 
 export interface DemandaUpdateRequest {
   code_demand: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   cost_center_code?: number;
   quantity: number;
@@ -27,7 +27,7 @@ export interface DemandaUpdateRequest {
 
 export interface DemandaResponse {
   code_demand: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   cost_center_code?: number;
   quantity: number;
@@ -64,7 +64,7 @@ function parseDemanda(raw: unknown): DemandaResponse | null {
   if (code_demand == null) return null;
   return {
     code_demand,
-    item_code:        parseNum(o, "item_code", "ItemCode", "itemCode") ?? 0,
+    item_code:        parseStr(o, "item_code", "ItemCode", "itemCode") ?? 0,
     mask:             parseStr(o, "mask", "Mask") || undefined,
     cost_center_code: parseNum(o, "cost_center_code", "CostCenterCode", "costCenterCode"),
     quantity:         parseNum(o, "quantity", "Quantity") ?? 0,
@@ -117,7 +117,7 @@ export async function listDemandas(): Promise<DemandaResponse[]> {
   return unwrapArray(data).map(parseDemanda).filter((d): d is DemandaResponse => d !== null);
 }
 
-export async function listDemandaByItem(itemCode: number): Promise<DemandaResponse[]> {
+export async function listDemandaByItem(itemCode: string): Promise<DemandaResponse[]> {
   const { data } = await httpClient.get<unknown>(`${BASE}/list-by-item/${itemCode}`);
   return unwrapArray(data).map(parseDemanda).filter((d): d is DemandaResponse => d !== null);
 }

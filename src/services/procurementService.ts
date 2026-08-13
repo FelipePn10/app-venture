@@ -23,7 +23,7 @@ export const DIVERGENCE_RESOLUTIONS: DivergenceResolution[] = ['PENDING', 'ACCEP
 export interface NoticeItem {
   id?: number;
   purchase_order_item_code?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   expected_qty: number;
   received_qty?: number;
@@ -52,7 +52,7 @@ export interface ReceivingDivergence {
   purchase_order_code?: number;
   purchase_order_item_code?: number;
   supplier_code?: number;
-  item_code?: number;
+  item_code?: string;
   mask?: string;
   divergence_type: DivergenceType;
   expected_qty: number;
@@ -69,7 +69,7 @@ function parseNoticeItem(raw: unknown): NoticeItem {
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
     purchase_order_item_code: parseNum(o, 'purchase_order_item_code', 'PurchaseOrderItemCode') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     expected_qty: parseNum(o, 'expected_qty', 'ExpectedQty'),
     received_qty: parseNum(o, 'received_qty', 'ReceivedQty'),
@@ -105,7 +105,7 @@ function parseDivergence(raw: unknown): ReceivingDivergence {
     purchase_order_code: parseNum(o, 'purchase_order_code', 'PurchaseOrderCode') || undefined,
     purchase_order_item_code: parseNum(o, 'purchase_order_item_code', 'PurchaseOrderItemCode') || undefined,
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode') || undefined,
+    item_code: parseStr(o, 'item_code', 'ItemCode') || undefined,
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     divergence_type: (parseStr(o, 'divergence_type', 'DivergenceType') || 'OTHER') as DivergenceType,
     expected_qty: parseNum(o, 'expected_qty', 'ExpectedQty'),

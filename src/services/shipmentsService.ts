@@ -55,7 +55,7 @@ export interface ShipmentDTO {
 
 export interface ShipmentItemDTO {
   id?: number;
-  item_code: number;
+  item_code: string;
   quantity: number;
   conferred_qty?: number;
   is_conferred?: boolean;
@@ -138,7 +138,7 @@ function parseItem(raw: unknown): ShipmentItemDTO {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID', 'shipment_item_id'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     conferred_qty: parseNum(o, 'conferred_qty', 'ConferredQty'),
     is_conferred: parseBool(o, 'is_conferred', 'IsConferred'),

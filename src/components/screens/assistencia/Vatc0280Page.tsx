@@ -26,7 +26,7 @@ const STATUS_META: Record<string, { label: string; badge: string }> = {
 const badge = (s?: string) => { const m = STATUS_META[s ?? ""]; return <span className={`erp-badge ${m?.badge ?? "info"}`}>{m?.label ?? s ?? "—"}</span>; };
 
 const EMPTY_CALL: TACallDTO = { enterprise_code: 0, customer_code: 0, subject: "", priority: "NORMAL", opened_at: today(), promised_date: today() };
-const EMPTY_ITEM: TACallItemDTO = { sequence: 1, item_code: 0, quantity: 1, warranty_days: 0, purchase_invoice_date: today(), requested_action: "REPAIR" };
+const EMPTY_ITEM: TACallItemDTO = { sequence: 1, item_code: "", quantity: 1, warranty_days: 0, purchase_invoice_date: today(), requested_action: "REPAIR" };
 
 export function Vatc0280Page(): JSX.Element {
   const [view, setView] = useState<View>("calls");
@@ -162,11 +162,11 @@ export function Vatc0280Page(): JSX.Element {
     <div className="erp-fieldset">
       <div className="erp-fieldset-head">Incluir item</div>
       <div className="erp-fieldset-body">
-        <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setItemForm((p) => ({ ...p, item_code: c ?? 0 }))} /></div>
+        <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setItemForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
         <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={itemForm.quantity || ""} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
         <div className="erp-field erp-c3"><label className="erp-label">Nº série</label><input className="erp-input" value={itemForm.serial_number ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, serial_number: e.target.value }))} /></div>
         <div className="erp-field erp-c3"><label className="erp-label">Motivo de defeito</label>
-          <select className="erp-tselect" value={itemForm.defect_reason_code ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, defect_reason_code: e.target.value ? Number(e.target.value) : null }))}>
+              <select className="erp-tselect" value={itemForm.defect_reason_code ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, defect_reason_code: e.target.value ? Number(e.target.value) : null }))}>
             <option value="">—</option>{reasons.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.description}</option>)}
           </select>
         </div>

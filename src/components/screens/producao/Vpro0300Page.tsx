@@ -22,14 +22,14 @@ export function Vpro0300Page(): JSX.Element {
   useEffect(() => { void reload(); }, [reload]);
 
   async function calcular() {
-    const c = Number(itemCode);
+    const c = itemCode.trim();
     if (!c) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     setBusy(true); setFeedback(null);
     try { setCurrent(await calculateStandardCost(c)); setFeedback({ type: "success", message: `Custo padrão do item ${c} calculado.` }); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function consultar() {
-    const c = Number(itemCode);
+    const c = itemCode.trim();
     if (!c) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     setBusy(true); setFeedback(null);
     try { setCurrent(await getStandardCost(c)); setFeedback({ type: "info", message: `Custo padrão do item ${c} carregado.` }); }
@@ -46,7 +46,7 @@ export function Vpro0300Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
-          <input className="erp-input" style={{ width: 110, height: 32 }} type="number" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
+          <input className="erp-input" style={{ width: 110, height: 32 }}  value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
           <button className="erp-btn" onClick={() => void consultar()} disabled={busy}>Consultar</button>
           <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Calcular"}</button></div>
         <div className="erp-tgroup">

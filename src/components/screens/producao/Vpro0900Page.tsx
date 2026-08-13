@@ -26,9 +26,14 @@ import {
   addMaterial,
   allocateLots,
   addScrapDestination,
+  createProductionScanToken,
+  scanProductionOrder,
+  type ProductionScanAction,
+  type ProductionScanToken,
 } from "@/services/productionOrderService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { Code128Barcode } from "@/components/ui/Code128Barcode";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -38,9 +43,9 @@ const STATUS_LABEL: Record<string, string> = {
 const statusLabel = (s?: string) => (s ? STATUS_LABEL[s] ?? s : "—");
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
-const EMPTY_OF: ProductionOrderDTO = { item_code: 0, planned_qty: 1, priority: "NORMAL" };
+const EMPTY_OF: ProductionOrderDTO = { item_code: "", planned_qty: 1, priority: "NORMAL" };
 const EMPTY_APP: AppointmentDTO = { production_order_id: 0, produced_qty: 0, scrapped_qty: 0 };
-const EMPTY_CONS: ConsumptionDTO = { production_order_id: 0, item_code: 0, consumed_qty: 0, warehouse_id: 0 };
+const EMPTY_CONS: ConsumptionDTO = { production_order_id: 0, item_code: "", consumed_qty: 0, warehouse_id: 0 };
 
 export function Vpro0900Page(): JSX.Element {
   const [orders, setOrders] = useState<ProductionOrderDTO[]>([]);
@@ -56,6 +61,8 @@ export function Vpro0900Page(): JSX.Element {
   const [cons, setCons] = useState<ConsumptionDTO>(EMPTY_CONS);
   const [completeWh, setCompleteWh] = useState("2");
   const [completeLot, setCompleteLot] = useState("");
+  const [scanToken, setScanToken] = useState<ProductionScanToken | null>(null);
+  const [scanner, setScanner] = useState({ token: "", action: "RESOLVER" as ProductionScanAction, device_id: "terminal-producao", employee_id: "", good_quantity: "", scrap_quantity: "", hours: "", scrap_reason: "", complete_operation: false });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -127,7 +134,7 @@ export function Vpro0900Page(): JSX.Element {
 
   const incluirMaterial = () => { const id = selected?.id; if (!id) return; void run(async () => {
     if (!matForm.item_code || !matForm.quantity) { setFeedback({ type: "error", message: "Item e quantidade do material são obrigatórios." }); return; }
-    await addMaterial({ production_order_id: id, kind: "DEMAND", item_code: Number(matForm.item_code), quantity: matForm.quantity, warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined, automatic_issue: matForm.automatic_issue });
+    await addMaterial({ production_order_id: id, kind: "DEMAND", item_code: matForm.item_code.trim(), quantity: matForm.quantity, warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined, automatic_issue: matForm.automatic_issue });
     setMatForm({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true });
     setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: "Material incluído na OF." });
   }); };
@@ -139,6 +146,25 @@ export function Vpro0900Page(): JSX.Element {
     await addScrapDestination({ production_order_id: id, destination_kind: "DEMAND", production_order_material_id: m.id, scrap_item_code: m.item_code, warehouse_id: m.warehouse_id || 2, scrap_quantity: 1, destination_date: new Date().toISOString().slice(0, 10) });
     setFeedback({ type: "success", message: "Destino de sucata registrado." });
   }); };
+
+  const gerarCodigoBarras = (operationId?: number) => { const id = selected?.id; if (!id) return; void run(async () => {
+    const token = await createProductionScanToken({ production_order_id: id, operation_id: operationId });
+    setScanToken(token); setScanner((s) => ({ ...s, token: token.token }));
+    setFeedback({ type: "success", message: "Código de barras seguro gerado para a operação." });
+  }); };
+  const lerCodigoBarras = () => run(async () => {
+    if (!scanner.token.trim() || !scanner.device_id.trim()) { setFeedback({ type: "error", message: "Leia o código de barras e informe o dispositivo." }); return; }
+    const result = await scanProductionOrder({
+      token: scanner.token.trim(), action: scanner.action,
+      idempotency_key: `${scanner.device_id}-${crypto.randomUUID()}`, device_id: scanner.device_id.trim(),
+      employee_id: scanner.employee_id ? Number(scanner.employee_id) : undefined,
+      good_quantity: scanner.good_quantity || undefined, scrap_quantity: scanner.scrap_quantity || undefined,
+      hours: scanner.hours || undefined, scrap_reason: scanner.scrap_reason || undefined,
+      complete_operation: scanner.complete_operation,
+    });
+    if (result.production_order_id) await loadDetails(result.production_order_id);
+    setFeedback({ type: "success", message: result.replayed ? "Leitura já processada anteriormente." : "Leitura registrada com sucesso." });
+  });
 
   const st = selected?.status;
 
@@ -165,7 +191,7 @@ export function Vpro0900Page(): JSX.Element {
 
         {/* Nova OF */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Nova ordem (OPEN)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={newOf.item_code || ""} onChange={(e) => setNewOf((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={newOf.item_code || ""} onChange={(e) => setNewOf((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd planejada</label><input className="erp-input num" type="number" value={newOf.planned_qty || ""} onChange={(e) => setNewOf((p) => ({ ...p, planned_qty: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Máquina</label><input className="erp-input num" type="number" value={newOf.machine_id || ""} onChange={(e) => setNewOf((p) => ({ ...p, machine_id: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Centro custo</label><input className="erp-input num" type="number" value={newOf.cost_center_id || ""} onChange={(e) => setNewOf((p) => ({ ...p, cost_center_id: Number(e.target.value) }))} /></div>
@@ -216,7 +242,7 @@ export function Vpro0900Page(): JSX.Element {
               </div>
               <div className="erp-c6">
                 <div className="erp-fieldset"><div className="erp-fieldset-head">Consumo de insumo</div><div className="erp-fieldset-body">
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item insumo</label><input className="erp-input num" type="number" value={cons.item_code || ""} onChange={(e) => setCons((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item insumo</label><input className="erp-input num"  value={cons.item_code || ""} onChange={(e) => setCons((p) => ({ ...p, item_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Qtd consumida</label><input className="erp-input num" type="number" value={cons.consumed_qty || ""} onChange={(e) => setCons((p) => ({ ...p, consumed_qty: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Depósito</label><input className="erp-input num" type="number" value={cons.warehouse_id || ""} onChange={(e) => setCons((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
@@ -249,14 +275,28 @@ export function Vpro0900Page(): JSX.Element {
             {/* Operações / Apontamentos / Consumos */}
             <div className="erp-fieldset"><div className="erp-fieldset-head">Operações ({operations.length}) · Apontamentos ({appointments.length}) · Consumos ({consumptions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
-                <thead><tr><th>Seq</th><th>Operação</th><th>Status</th></tr></thead>
+                <thead><tr><th>Seq</th><th>Operação</th><th>Status</th><th>Ação</th></tr></thead>
                 <tbody>
-                  {operations.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Sem operações (explodir roteiro).</td></tr>}
-                  {operations.map((op) => <tr key={op.id}><td>{op.sequence}</td><td>{op.description || op.operation_code || "—"}</td><td>{op.status || "—"}</td></tr>)}
+                  {operations.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Sem operações (explodir roteiro).</td></tr>}
+                  {operations.map((op) => <tr key={op.id}><td>{op.sequence}</td><td>{op.description || op.operation_code || "—"}</td><td>{op.status || "—"}</td><td><button className="erp-btn erp-btn-sm" onClick={() => gerarCodigoBarras(op.id)} disabled={busy || !op.id}>Gerar código de barras</button></td></tr>)}
                 </tbody>
               </table>
             </div></div>
             </div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Leitura de produção por código de barras</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c5"><label className="erp-label erp-req">Código lido</label><input className="erp-input" autoComplete="off" value={scanner.token} onChange={(e) => setScanner((s) => ({ ...s, token: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Ação</label><select className="erp-input" value={scanner.action} onChange={(e) => setScanner((s) => ({ ...s, action: e.target.value as ProductionScanAction }))}><option value="RESOLVER">Consultar</option><option value="INICIAR">Iniciar</option><option value="APONTAR">Apontar</option><option value="CONCLUIR">Concluir</option></select></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Dispositivo</label><input className="erp-input" value={scanner.device_id} onChange={(e) => setScanner((s) => ({ ...s, device_id: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Funcionário</label><input className="erp-input num" type="number" value={scanner.employee_id} onChange={(e) => setScanner((s) => ({ ...s, employee_id: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Qtd. boa</label><input className="erp-input num" inputMode="decimal" value={scanner.good_quantity} onChange={(e) => setScanner((s) => ({ ...s, good_quantity: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Qtd. refugo</label><input className="erp-input num" inputMode="decimal" value={scanner.scrap_quantity} onChange={(e) => setScanner((s) => ({ ...s, scrap_quantity: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Horas</label><input className="erp-input num" inputMode="decimal" value={scanner.hours} onChange={(e) => setScanner((s) => ({ ...s, hours: e.target.value }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Motivo do refugo</label><input className="erp-input" value={scanner.scrap_reason} onChange={(e) => setScanner((s) => ({ ...s, scrap_reason: e.target.value }))} /></div>
+              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={scanner.complete_operation} onChange={(e) => setScanner((s) => ({ ...s, complete_operation: e.target.checked }))} /><span>Concluir operação</span></label></div>
+              <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void lerCodigoBarras()} disabled={busy}>Processar leitura</button></div>
+              {scanToken && <div className="erp-field erp-c12"><Code128Barcode value={scanToken.barcode_value} /><small>Use exatamente este código; os IDs da ordem e da operação não substituem o token.</small></div>}
+            </div></div>
             <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Consumo</th><th>Item</th><th>Qtd</th><th>Depósito</th></tr></thead>
@@ -271,7 +311,7 @@ export function Vpro0900Page(): JSX.Element {
             {/* Materiais da OF (MRP): demanda, alocação de lotes, destino de sucata */}
             <div className="erp-fieldset"><div className="erp-fieldset-head">Materiais da OF ({materials.length})</div><div className="erp-fieldset-body">
               
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={matForm.item_code} onChange={(e) => setMatForm((m) => ({ ...m, item_code: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={matForm.item_code} onChange={(e) => setMatForm((m) => ({ ...m, item_code: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={matForm.quantity} onChange={(e) => setMatForm((m) => ({ ...m, quantity: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><input className="erp-input num" type="number" value={matForm.warehouse_id} onChange={(e) => setMatForm((m) => ({ ...m, warehouse_id: e.target.value }))} /></div>
                 <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>

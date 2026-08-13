@@ -23,19 +23,19 @@ export const RULE_TYPES: RuleType[] = ['EQUAL', 'DIFFERENT', 'RANGE'];
 export interface MrpSuggestion {
   code: number;
   plan_code?: number;
-  item_code: number;
+  item_code: string;
   quantity: number;
   need_date?: string;
   start_date?: string;
   order_type?: string;
   demand_type?: string;
-  parent_item_code?: number | null;
+  parent_item_code?: string | null;
   llc?: number;
   notes?: string | null;
 }
 
 export interface MrpProfileRow {
-  item_code?: number;
+  item_code?: string;
   date?: string;
   demand?: number;
   planned_orders?: number;
@@ -45,7 +45,7 @@ export interface MrpProfileRow {
 
 export interface ConfiguredRule {
   id?: number;
-  item_code: number;
+  item_code: string;
   table_type: string;   // PLANNING_DATA | PLANNER_DATA
   field_name: string;
   rule_type: RuleType;
@@ -54,7 +54,7 @@ export interface ConfiguredRule {
 }
 
 export interface MrpException {
-  item_code: number;
+  item_code: string;
   message_type: string;
   description: string;
 }
@@ -63,7 +63,7 @@ export interface PlannedOrder {
   code?: number;
   planned_code?: number;
   order_number?: number;
-  item_code: number;
+  item_code: string;
   quantity: number;
   order_type?: string;
   demand_type?: string;
@@ -88,13 +88,13 @@ function parseSuggestion(raw: unknown): MrpSuggestion {
   return {
     code: parseNum(o, 'code', 'Code'),
     plan_code: parseNum(o, 'plan_code', 'PlanCode') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     need_date: parseStr(o, 'need_date', 'NeedDate') || undefined,
     start_date: parseStr(o, 'start_date', 'StartDate') || undefined,
     order_type: parseStr(o, 'order_type', 'OrderType') || undefined,
     demand_type: parseStr(o, 'demand_type', 'DemandType') || undefined,
-    parent_item_code: parseNum(o, 'parent_item_code', 'ParentItemCode') || null,
+    parent_item_code: parseStr(o, 'parent_item_code', 'ParentItemCode') || null,
     llc: parseNum(o, 'llc', 'Llc', 'LLC'),
     notes: parseStr(o, 'notes', 'Notes') || null,
   };
@@ -102,7 +102,7 @@ function parseSuggestion(raw: unknown): MrpSuggestion {
 function parseProfile(raw: unknown): MrpProfileRow {
   const o = unwrapObject(raw);
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode') || undefined,
+    item_code: parseStr(o, 'item_code', 'ItemCode') || undefined,
     date: parseStr(o, 'date', 'Date', 'period') || undefined,
     demand: parseNum(o, 'demand', 'Demand'),
     planned_orders: parseNum(o, 'orders_planned', 'OrdersPlanned'),
@@ -114,7 +114,7 @@ function parseRule(raw: unknown): ConfiguredRule {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     table_type: parseStr(o, 'table_type', 'TableType'),
     field_name: parseStr(o, 'field_name', 'FieldName'),
     rule_type: (parseStr(o, 'rule_type', 'RuleType') || 'EQUAL') as RuleType,
@@ -125,7 +125,7 @@ function parseRule(raw: unknown): ConfiguredRule {
 function parseException(raw: unknown): MrpException {
   const o = unwrapObject(raw);
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     message_type: parseStr(o, 'message_type', 'MessageType'),
     description: parseStr(o, 'description', 'Description'),
   };
@@ -136,7 +136,7 @@ function parsePlanned(raw: unknown): PlannedOrder {
     code: parseNum(o, 'code', 'Code') || undefined,
     planned_code: parseNum(o, 'planned_code', 'PlannedCode') || undefined,
     order_number: parseNum(o, 'order_number', 'OrderNumber') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     order_type: parseStr(o, 'order_type', 'OrderType') || undefined,
     demand_type: parseStr(o, 'demand_type', 'DemandType') || undefined,
@@ -161,12 +161,12 @@ export async function runMrp(planCode: number, initialOrderNumber = 10000, gener
     finished_at: parseStr(o, 'finished_at', 'FinishedAt') || undefined,
   };
 }
-export async function getMrpProfile(itemCode: number, planCode: number): Promise<MrpProfileRow[]> {
+export async function getMrpProfile(itemCode: string, planCode: number): Promise<MrpProfileRow[]> {
   const { data } = await httpClient.get(`/api/mrp-calculation/profile/${itemCode}/${planCode}`);
   return unwrapArray(data).map(parseProfile);
 }
 /** Perfil operacional filtrável: `position` CALCULATION (foto do MRP) | CURRENT (+ saldo atual). */
-export async function getMrpProfileOperational(itemCode: number, planCode: number, opts: { position?: 'CALCULATION' | 'CURRENT'; from?: string; to?: string } = {}): Promise<Obj> {
+export async function getMrpProfileOperational(itemCode: string, planCode: number, opts: { position?: 'CALCULATION' | 'CURRENT'; from?: string; to?: string } = {}): Promise<Obj> {
   const { data } = await httpClient.get(`/api/mrp-calculation/profile/${itemCode}/${planCode}/operational`, { params: opts });
   return unwrapObject(data);
 }
@@ -186,7 +186,7 @@ export async function firmSuggestion(code: number): Promise<PlannedOrder> {
 }
 
 // ── Regras configuradas ──
-export async function listConfiguredRules(itemCode: number): Promise<ConfiguredRule[]> {
+export async function listConfiguredRules(itemCode: string): Promise<ConfiguredRule[]> {
   const { data } = await httpClient.get(`/api/mrp-calculation/configured-rules/${itemCode}`);
   return unwrapArray(data).map(parseRule);
 }

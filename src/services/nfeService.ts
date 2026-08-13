@@ -11,7 +11,7 @@ export type TipoRateio = 'VALOR' | 'PESO';
 
 export interface ExitItemDTO {
   sequence: number;
-  item_code: number;
+  item_code: string;
   ncm: string;
   cfop: string;
   quantidade: number;
@@ -133,7 +133,7 @@ export async function listCartasCorrecao(code: number): Promise<Obj[]> {
 
 export interface EntryItemDTO {
   sequence: number;
-  item_code: number;
+  item_code: string;
   ncm: string;
   cfop: string;
   quantity: number;

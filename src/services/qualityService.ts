@@ -41,7 +41,7 @@ export interface CharacteristicDTO {
 
 export interface InspectionPlanDTO {
   id?: number;
-  item_code: number;
+  item_code: string;
   route_operation_id?: number | null;
   point_type: PointType;
   description: string;
@@ -63,7 +63,7 @@ export interface QualityRecordDTO {
   plan_id: number;
   production_order_id?: number | null;
   lot?: string | null;
-  item_code: number;
+  item_code: string;
   inspected_qty: number;
   approved_qty: number;
   rejected_qty: number;
@@ -77,7 +77,7 @@ export interface NonConformanceDTO {
   id?: number;
   quality_record_id?: number | null;
   production_order_id?: number | null;
-  item_code: number;
+  item_code: string;
   lot?: string | null;
   nonconform_qty: number;
   description: string;
@@ -105,7 +105,7 @@ function parsePlan(raw: unknown): InspectionPlanDTO {
   const chars = o['characteristics'] ?? o['Characteristics'];
   return {
     id: parseNum(o, 'id', 'ID'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     route_operation_id: parseNum(o, 'route_operation_id', 'RouteOperationID') || null,
     point_type: (parseStr(o, 'point_type', 'PointType') || 'PROCESSO') as PointType,
     description: parseStr(o, 'description', 'Description'),
@@ -124,7 +124,7 @@ function parseRecord(raw: unknown): QualityRecordDTO {
     plan_id: parseNum(o, 'plan_id', 'PlanID'),
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID') || null,
     lot: parseStr(o, 'lot', 'Lot') || null,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     inspected_qty: parseNum(o, 'inspected_qty', 'InspectedQty'),
     approved_qty: parseNum(o, 'approved_qty', 'ApprovedQty'),
     rejected_qty: parseNum(o, 'rejected_qty', 'RejectedQty'),
@@ -140,7 +140,7 @@ function parseNC(raw: unknown): NonConformanceDTO {
     id: parseNum(o, 'id', 'ID'),
     quality_record_id: parseNum(o, 'quality_record_id', 'QualityRecordID') || null,
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID') || null,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     lot: parseStr(o, 'lot', 'Lot') || null,
     nonconform_qty: parseNum(o, 'nonconform_qty', 'NonConformQty'),
     description: parseStr(o, 'description', 'Description'),
@@ -156,7 +156,7 @@ export async function getPlan(id: number): Promise<InspectionPlanDTO> {
   const { data } = await httpClient.get(`${BASE}/plans/${id}`);
   return parsePlan(data);
 }
-export async function listPlansByItem(itemCode: number): Promise<InspectionPlanDTO[]> {
+export async function listPlansByItem(itemCode: string): Promise<InspectionPlanDTO[]> {
   const { data } = await httpClient.get(`${BASE}/plans/by-item/${itemCode}`);
   return unwrapArray(data).map(parsePlan);
 }
@@ -182,7 +182,7 @@ export async function listRecordsByOrder(orderId: number): Promise<QualityRecord
   const { data } = await httpClient.get(`${BASE}/records/by-order/${orderId}`);
   return unwrapArray(data).map(parseRecord);
 }
-export async function listRecordsByItem(itemCode: number): Promise<QualityRecordDTO[]> {
+export async function listRecordsByItem(itemCode: string): Promise<QualityRecordDTO[]> {
   const { data } = await httpClient.get(`${BASE}/records/by-item/${itemCode}`);
   return unwrapArray(data).map(parseRecord);
 }
@@ -201,7 +201,7 @@ export async function getNC(id: number): Promise<NonConformanceDTO> {
   const { data } = await httpClient.get(`${BASE}/non-conformances/${id}`);
   return parseNC(data);
 }
-export async function listNCsByItem(itemCode: number): Promise<NonConformanceDTO[]> {
+export async function listNCsByItem(itemCode: string): Promise<NonConformanceDTO[]> {
   const { data } = await httpClient.get(`${BASE}/non-conformances/by-item/${itemCode}`);
   return unwrapArray(data).map(parseNC);
 }

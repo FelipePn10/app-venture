@@ -28,7 +28,7 @@ export interface PurchaseOrderDTO {
 
 export interface PurchaseOrderItemDTO {
   id?: number;
-  item_code: number;
+  item_code: string;
   requested_qty: number;
   unit_price: number;
   discount_pct?: number;
@@ -42,7 +42,7 @@ export interface PurchaseOrderItemDTO {
 
 export interface SuggestionDTO {
   code: number;
-  item_code: number;
+  item_code: string;
   quantity: number;
   need_date?: string;
   status?: string;
@@ -73,7 +73,7 @@ function parseItem(raw: unknown): PurchaseOrderItemDTO {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     requested_qty: parseNum(o, 'requested_qty', 'RequestedQty'),
     unit_price: parseNum(o, 'unit_price', 'UnitPrice'),
     discount_pct: parseNum(o, 'discount_pct', 'DiscountPct'),
@@ -108,7 +108,7 @@ function parseSuggestion(raw: unknown): SuggestionDTO {
   const o = unwrapObject(raw);
   return {
     code: parseNum(o, 'code', 'Code'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     need_date: parseStr(o, 'need_date', 'NeedDate') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,

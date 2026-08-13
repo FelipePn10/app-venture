@@ -12,6 +12,7 @@ import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadEstablishments } from "@/services/lookups";
+import { lookupCnpj } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Folder = "dados" | "endereco" | "telefones" | "emails" | "vencimentos" | "contatos" | "empresas";
@@ -132,6 +133,33 @@ export function Vsup0500Page(): JSX.Element {
     try { const r = await sefazQuery(form.code); setFeedback({ type: "info", message: `SEFAZ: ${JSON.stringify(r).slice(0, 200)}` }); await abrir(form.code); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
+  async function consultarCnpj() {
+    if (form.document_type !== "CNPJ" || !validateCNPJOrCPF(form.document_number)) {
+      setFeedback({ type: "error", message: "Informe um CNPJ válido antes de consultar." }); return;
+    }
+    setBusy(true); setFeedback(null);
+    try {
+      const data = await lookupCnpj(form.document_number);
+      setForm((current) => ({
+        ...current,
+        name: data.legal_name || current.name,
+        trade_name: data.trade_name || current.trade_name,
+        state_registration: data.state_registration || current.state_registration,
+        is_mei: data.mei ?? current.is_mei,
+      }));
+      if (data.address) setAddrForm((current) => ({
+        ...current,
+        zip_code: data.address?.zip_code || current.zip_code,
+        street: data.address?.street || current.street,
+        number: data.address?.number || current.number,
+        complement: data.address?.complement || current.complement,
+        district: data.address?.neighborhood || current.district,
+        city: data.address?.city || current.city,
+        uf: data.address?.uf || current.uf,
+      }));
+      setFeedback({ type: "info", message: "Dados consultados. Revise as informações antes de salvar o fornecedor." });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
   async function verDefaults() {
     if (!form.code) return;
     setBusy(true); setFeedback(null);
@@ -241,6 +269,7 @@ export function Vsup0500Page(): JSX.Element {
                         <div className="erp-field erp-c2"><label className="erp-label">Tipo doc.</label><select className="erp-input" value={form.document_type} onChange={(e) => setF("document_type", e.target.value as DocumentType)}>{DOCUMENT_TYPES.map((x) => <option key={x} value={x}>{x}</option>)}</select></div>
                         <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ/CPF</label><input className="erp-input" value={form.document_number} onChange={(e) => setF("document_number", e.target.value)} />
                           {form.document_number.trim() && (form.document_type === "CNPJ" || form.document_type === "CPF") && <span style={{ fontSize: 11, marginTop: 3, color: validateCNPJOrCPF(form.document_number) ? "var(--v-ok)" : "var(--v-err)" }}>{validateCNPJOrCPF(form.document_number) ? "✓ válido" : "✗ inválido"}</span>}</div>
+                        {!editing && form.document_type === "CNPJ" && <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={() => void consultarCnpj()} disabled={busy || !validateCNPJOrCPF(form.document_number)}>Consultar CNPJ</button></div>}
                         <div className="erp-field erp-c3"><label className="erp-label">Inscr. Estadual</label><input className="erp-input" value={form.state_registration ?? ""} onChange={(e) => setF("state_registration", e.target.value)} /></div>
                         <div className="erp-field erp-c2"><label className="erp-label">Insc. Municipal</label><input className="erp-input" value={form.municipal_registration ?? ""} onChange={(e) => setF("municipal_registration", e.target.value)} /></div>
                         <div className="erp-field erp-c4"><label className="erp-label">Tipo de fornecedor</label><select className="erp-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value ? Number(e.target.value) : undefined)}><option value="">—</option>{types.map((t) => <option key={t.code} value={t.code}>{t.description} ({t.kind})</option>)}</select></div>

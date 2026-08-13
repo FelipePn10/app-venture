@@ -20,7 +20,7 @@ export interface CuttingPlanDTO {
   cut_type?: string;
   source?: string;
   status?: string;
-  material_item_code: number;
+  material_item_code: string;
   warehouse_id?: number;
   production_order_code?: number;
   stock_uom?: string;
@@ -114,7 +114,7 @@ function parsePlan(raw: unknown): CuttingPlanDTO {
     cut_type: parseStr(o, 'cut_type', 'CutType') || undefined,
     source: parseStr(o, 'source', 'Source') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,
-    material_item_code: parseNum(o, 'material_item_code', 'MaterialItemCode'),
+    material_item_code: parseStr(o, 'material_item_code', 'MaterialItemCode'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     stock_uom: parseStr(o, 'stock_uom', 'StockUom') || undefined,
     uom_factor: parseNum(o, 'uom_factor', 'UomFactor'),
@@ -278,7 +278,7 @@ export async function updateCuttingSettings(dto: CuttingSettings): Promise<Cutti
   const { data } = await httpClient.put('/api/cutting-settings', dto);
   return unwrapObject(data) as CuttingSettings;
 }
-export async function listStockRemnants(itemCode: number, onlyAvailable = true): Promise<Obj[]> {
+export async function listStockRemnants(itemCode: string, onlyAvailable = true): Promise<Obj[]> {
   const { data } = await httpClient.get('/api/stock-remnants', { params: { item_code: itemCode, only_available: onlyAvailable } });
   return unwrapArray(data).map(unwrapObject);
 }

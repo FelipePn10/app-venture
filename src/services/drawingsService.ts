@@ -12,7 +12,7 @@ export interface Drawing {
   digit?: string;
   format?: string;
   model?: string;
-  item_code?: number;
+  item_code?: string;
   description: string;
   uom?: string;
   weight?: number;
@@ -34,7 +34,7 @@ function parseDrawing(raw: unknown): Drawing {
   return {
     id: parseNum(o, 'id', 'ID') || undefined, code: parseStr(o, 'code', 'Code'), digit: parseStr(o, 'digit', 'Digit') || undefined,
     format: parseStr(o, 'format', 'Format') || undefined, model: parseStr(o, 'model', 'Model') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode') || undefined, description: parseStr(o, 'description', 'Description'),
+    item_code: parseStr(o, 'item_code', 'ItemCode') || undefined, description: parseStr(o, 'description', 'Description'),
     uom: parseStr(o, 'uom', 'UOM') || undefined, weight: parseNum(o, 'weight', 'Weight') || undefined, material_spec: parseStr(o, 'material_spec', 'MaterialSpec') || undefined,
   };
 }

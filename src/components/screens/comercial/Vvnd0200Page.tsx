@@ -38,7 +38,7 @@ const EMPTY_ORDER: SalesOrderDTO = {
   emission_date: today(), delivery_date: today(), commission_pct: 0, additional_days: 0,
 };
 const EMPTY_ITEM: SalesOrderItemDTO = {
-  item_code: 0, requested_qty: 1, unit_price: 0, warehouse_code: 0, sales_uom: "UN", discount_pct: 0,
+  item_code: "", requested_qty: 1, unit_price: 0, warehouse_code: 0, sales_uom: "UN", discount_pct: 0,
 };
 
 export function Vvnd0200Page(): JSX.Element {
@@ -297,7 +297,7 @@ export function Vvnd0200Page(): JSX.Element {
                       <div className="erp-fieldset">
                         <div className="erp-fieldset-head">Adicionar item</div>
                         <div className="erp-fieldset-body">
-                          <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setI("item_code", code ?? 0)} /></div>
+                          <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setI("item_code", String(code ?? ""))} /></div>
                           <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><LookupField value={newItem.warehouse_code} loader={loadWarehouses} entityLabel="depósito" placeholder="Selecionar depósito" onChange={(code) => setI("warehouse_code", code ?? 0)} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={newItem.requested_qty || ""} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>

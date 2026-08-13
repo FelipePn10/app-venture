@@ -15,7 +15,7 @@ const round = (n: number) => Number(n.toFixed(2));
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const EMPTY_ITEM: EntryItemDTO = {
-  sequence: 1, item_code: 0, ncm: "", cfop: "1101", quantity: 1, unit_price: 0, total_price: 0,
+  sequence: 1, item_code: "", ncm: "", cfop: "1101", quantity: 1, unit_price: 0, total_price: 0,
   base_icms: 0, aliq_icms: 0, valor_icms: 0, base_ipi: 0, aliq_ipi: 0, valor_ipi: 0,
   valor_pis: 0, valor_cofins: 0, cst_icms: "00", cst_ipi: "50", cst_pis: "01", cst_cofins: "01",
   gera_credito_icms: true, gera_credito_ipi: true, gera_credito_pis: true, gera_credito_cofins: true,
@@ -281,7 +281,7 @@ export function Vfis0210Page(): JSX.Element {
                     {form.itens.map((it, idx) => (
                       <tr key={idx}>
                         <td>{it.sequence}</td>
-                        <td><input className="erp-input" style={{ height: 30, width: 70 }} type="number" value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: Number(e.target.value) })} /></td>
+                        <td><input className="erp-input" style={{ height: 30, width: 70 }}  value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: e.target.value })} /></td>
                         <td><input className="erp-input" style={{ height: 30, width: 100 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
                         <td><input className="erp-input" style={{ height: 30, width: 70 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
                         <td><input className="erp-input num" style={{ height: 30, width: 60 }} type="number" value={it.quantity} onChange={(e) => setItem(idx, { quantity: Number(e.target.value) })} /></td>

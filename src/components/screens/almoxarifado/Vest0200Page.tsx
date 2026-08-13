@@ -16,7 +16,7 @@ export function Vest0200Page(): JSX.Element {
   const [items, setItems] = useState<Obj[]>([]);
   const [types, setTypes] = useState<MovementTypeDTO[]>([]);
   const [newInv, setNewInv] = useState({ warehouse_id: 0, description: "" });
-  const [countForm, setCountForm] = useState({ item_code: 0, warehouse_id: 0, counted_qty: 0 });
+  const [countForm, setCountForm] = useState({ item_code: "", warehouse_id: 0, counted_qty: 0 });
   const [typeForm, setTypeForm] = useState<MovementTypeDTO>({ sigla: "", description: "", tipo: "IN" });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -42,7 +42,7 @@ export function Vest0200Page(): JSX.Element {
     setItems(await listInventoryItems(id));
     setFeedback({ type: "success", message: "Contagem registrada." });
   }); };
-  const ajustar = (itemCode: number, warehouseId: number) => { const id = selected?.id; if (!id) return; void run(async () => {
+  const ajustar = (itemCode: string, warehouseId: number) => { const id = selected?.id; if (!id) return; void run(async () => {
     await adjustInventoryItem({ inventory_id: id, item_code: itemCode, warehouse_id: warehouseId });
     setItems(await listInventoryItems(id));
     setFeedback({ type: "success", message: "Ajuste aplicado (movimento de acerto gerado)." });
@@ -103,7 +103,7 @@ export function Vest0200Page(): JSX.Element {
         {selected && (
           <>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Inventário {selected.id} — {selected.status}</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={countForm.item_code || ""} onChange={(e) => setCountForm((p) => ({ ...p, item_code: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={countForm.item_code || ""} onChange={(e) => setCountForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Depósito</label><input className="erp-input num" type="number" value={countForm.warehouse_id || ""} onChange={(e) => setCountForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Qtd contada</label><input className="erp-input num" type="number" value={countForm.counted_qty || ""} onChange={(e) => setCountForm((p) => ({ ...p, counted_qty: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
@@ -117,7 +117,7 @@ export function Vest0200Page(): JSX.Element {
                 <tbody>
                   {items.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem contagens.</td></tr>}
                   {items.map((it, i) => {
-                    const item_code = parseNum(it, "item_code", "ItemCode");
+                    const item_code = parseStr(it, "item_code", "ItemCode");
                     const wh = parseNum(it, "warehouse_id", "WarehouseID");
                     const sys = parseNum(it, "system_qty", "SystemQty", "balance_qty");
                     const counted = parseNum(it, "counted_qty", "CountedQty");

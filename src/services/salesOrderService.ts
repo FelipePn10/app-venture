@@ -22,7 +22,7 @@ export interface SalesOrderItemDTO {
   code?: number;
   sales_order_code?: number;
   sequence?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   sales_uom?: string;
   warehouse_code?: number;
@@ -76,7 +76,7 @@ function parseItem(raw: unknown): SalesOrderItemDTO {
     code: parseNum(o, 'code', 'Code'),
     sales_order_code: parseNum(o, 'sales_order_code', 'SalesOrderCode'),
     sequence: parseNum(o, 'sequence', 'Sequence'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask'),
     sales_uom: parseStr(o, 'sales_uom', 'SalesUom'),
     warehouse_code: parseNum(o, 'warehouse_code', 'WarehouseCode'),
@@ -181,7 +181,7 @@ export async function createSalesOrderItem(item: SalesOrderItemDTO): Promise<Sal
   const { data } = await httpClient.post(`${BASE}/items/create`, item);
   return parseItem(data);
 }
-export async function updateSalesOrderItem(itemCode: number, item: SalesOrderItemDTO): Promise<SalesOrderItemDTO> {
+export async function updateSalesOrderItem(itemCode: string, item: SalesOrderItemDTO): Promise<SalesOrderItemDTO> {
   const { data } = await httpClient.put(`${BASE}/items/${itemCode}`, item);
   return parseItem(data);
 }

@@ -110,7 +110,7 @@ function parsePrice(raw: unknown): SalesTablePriceDTO {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID'),
-    item_code: parseStr(o, 'item_code', 'ItemCode') || String(parseNum(o, 'item_code', 'ItemCode') ?? ''),
+    item_code: parseStr(o, 'item_code', 'ItemCode') || String(parseStr(o, 'item_code', 'ItemCode') ?? ''),
     price: parseNum(o, 'price', 'Price'),
     ume: parseStr(o, 'ume', 'Ume') || undefined,
     umc: parseStr(o, 'umc', 'Umc') || undefined,

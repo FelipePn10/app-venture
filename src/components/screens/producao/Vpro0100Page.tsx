@@ -17,7 +17,7 @@ type FeedbackState = { type: "success" | "error" | "info"; message: string } | n
 type Tab = "operacoes" | "roteiros";
 
 const EMPTY_OP: OperationDTO = { name: "", origin: "INTERNA", standard_time: 0 };
-const EMPTY_ROUTE: RouteDTO = { item_code: 0, description: "", alternative: 1, is_standard: true };
+const EMPTY_ROUTE: RouteDTO = { item_code: "", description: "", alternative: 1, is_standard: true };
 const EMPTY_RO: RouteOperationDTO = { operation_id: 0, sequence: 10, work_center_id: undefined, standard_time: undefined, setup_time: undefined, notes: "" };
 const EMPTY_EDGE: EdgeDTO = { predecessor_id: 0, successor_id: 0, overlap_pct: 0 };
 
@@ -86,7 +86,7 @@ export function Vpro0100Page(): JSX.Element {
   const setRF = <K extends keyof RouteDTO>(k: K, v: RouteDTO[K]) => { setRouteForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
 
   async function carregarRoteiros() {
-    const code = Number(itemCode);
+    const code = itemCode.trim();
     if (!code) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     setBusy(true); setFeedback(null); setDetail(null); setLeadTime(null);
     try { setRoutes(await listRoutes(code)); }
@@ -95,7 +95,7 @@ export function Vpro0100Page(): JSX.Element {
   }
 
   async function salvarRoteiro() {
-    const code = Number(itemCode);
+    const code = itemCode.trim();
     if (!code) { setFeedback({ type: "error", message: "Informe o código do item antes de criar o roteiro." }); return; }
     setBusy(true); setFeedback(null);
     try {
@@ -227,7 +227,7 @@ export function Vpro0100Page(): JSX.Element {
         {tab === "roteiros" && (
           <div className="erp-tgroup">
             <span className="erp-tgroup-label">Item</span>
-            <input className="erp-input" style={{ width: 110, height: 32 }} type="number" value={itemCode} placeholder="cód. item" onChange={(e) => setItemCode(e.target.value)} />
+            <input className="erp-input" style={{ width: 110, height: 32 }}  value={itemCode} placeholder="cód. item" onChange={(e) => setItemCode(e.target.value)} />
             <button className="erp-btn erp-btn-primary" onClick={() => void carregarRoteiros()} disabled={busy}>Carregar</button>
           </div>
         )}

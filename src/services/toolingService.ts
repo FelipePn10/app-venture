@@ -42,7 +42,7 @@ export interface ToolSheetOrderDTO {
   order_id?: number;
   order_number?: number;
   order_type?: string;
-  item_code?: number;
+  item_code?: string;
   mask?: string;
   planned_qty?: number;
   start_date?: string;
@@ -100,7 +100,7 @@ function parseSheetOrder(raw: unknown): ToolSheetOrderDTO {
     order_id: parseNum(o, 'order_id', 'OrderID', 'id', 'ID'),
     order_number: parseNum(o, 'order_number', 'OrderNumber'),
     order_type: parseStr(o, 'order_type', 'OrderType') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     planned_qty: parseNum(o, 'planned_qty', 'PlannedQty'),
     start_date: parseStr(o, 'start_date', 'StartDate') || undefined,

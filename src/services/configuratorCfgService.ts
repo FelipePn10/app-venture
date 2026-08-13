@@ -86,13 +86,13 @@ export async function createCharacteristic(dto: CfgCharacteristic): Promise<CfgC
 export async function deleteCharacteristic(id: number): Promise<void> { await httpClient.delete(`${BASE}/characteristics/${id}`); }
 
 // ── Características do item + geração de máscara ──
-export async function listItemCharacteristics(itemCode: number): Promise<Obj[]> { const { data } = await httpClient.get(`${BASE}/items/${itemCode}/characteristics`); return unwrapArray(data).map((r) => unwrapObject(r)); }
-export async function addItemCharacteristic(itemCode: number, characteristicId: number, sequence: number, opts: Obj = {}): Promise<Obj> {
+export async function listItemCharacteristics(itemCode: string): Promise<Obj[]> { const { data } = await httpClient.get(`${BASE}/items/${itemCode}/characteristics`); return unwrapArray(data).map((r) => unwrapObject(r)); }
+export async function addItemCharacteristic(itemCode: string, characteristicId: number, sequence: number, opts: Obj = {}): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/items/${itemCode}/characteristics`, { item_code: itemCode, characteristic_id: characteristicId, sequence, ...opts });
   return unwrapObject(data);
 }
 /** Gera (e opcionalmente persiste) a máscara do item a partir das respostas. */
-export async function generateMask(itemCode: number, answers: CfgMaskAnswer[], persist = false): Promise<Obj> {
+export async function generateMask(itemCode: string, answers: CfgMaskAnswer[], persist = false): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/generate-mask`, { item_code: itemCode, answers, persist, created_by: currentUserId() });
   return unwrapObject(data);
 }

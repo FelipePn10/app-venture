@@ -22,7 +22,7 @@ const MOV_META: Record<string, { label: string; cls: string }> = {
 const movMeta = (s?: string) => (s && MOV_META[s]) || { label: s ?? "—", cls: "draft" };
 
 const EMPTY: RecurringSaleDTO = {
-  enterprise_code: 1, customer_code: 0, item_code: 0, movement_type: "SALE", term_type: "INDEFINITE",
+  enterprise_code: 1, customer_code: 0, item_code: "", movement_type: "SALE", term_type: "INDEFINITE",
   sale_date: today(), next_adjustment_date: today(), quantity: 1, unit_value: 0, grace_months: 0,
 };
 
@@ -157,7 +157,7 @@ export function Vvre0200Page(): JSX.Element {
                   <div className="erp-fieldset-body">
                     <div className="erp-field erp-c3"><label className="erp-label erp-req">Estabelecimento</label><LookupField value={form.enterprise_code} loader={loadEstablishments} entityLabel="estabelecimento" clearable={false} onChange={(c) => setF("enterprise_code", c ?? 1)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label erp-req">Cliente</label><LookupField value={form.customer_code} loader={loadCustomers} entityLabel="cliente" onChange={(c) => setF("customer_code", c ?? 0)} /></div>
-                    <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={form.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setF("item_code", c ?? 0)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={form.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setF("item_code", String(c ?? ""))} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Movimento</label><select className="erp-input" value={form.movement_type} onChange={(e) => setF("movement_type", e.target.value as RecurringSaleDTO["movement_type"])}><option value="SALE">Venda</option><option value="UPGRADE">Upgrade</option></select></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Vigência</label><select className="erp-input" value={form.term_type} onChange={(e) => setF("term_type", e.target.value as RecurringSaleDTO["term_type"])}><option value="INDEFINITE">Indeterminada</option><option value="FIXED">Determinada</option></select></div>
                     <div className="erp-field erp-c2"><label className="erp-label">Qtd</label><input className="erp-input num" type="number" value={form.quantity || ""} onChange={(e) => setF("quantity", Number(e.target.value))} /></div>

@@ -15,7 +15,7 @@ export interface ItemRuleCondition {
 }
 export interface ItemRule {
   id?: number;
-  item_code: number;
+  item_code: string;
   target_table: string;
   target_field: string;
   content: string;
@@ -38,7 +38,7 @@ function parseRule(raw: unknown): ItemRule {
   const conds = o['conditions'] ?? o['Conditions'];
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     target_table: parseStr(o, 'target_table', 'TargetTable'),
     target_field: parseStr(o, 'target_field', 'TargetField'),
     content: parseStr(o, 'content', 'Content'),
@@ -50,7 +50,7 @@ function parseRule(raw: unknown): ItemRule {
 }
 
 /** Regras de um item (`GET /api/configurator/items/{itemCode}/rules`). */
-export async function listItemRules(itemCode: number): Promise<ItemRule[]> {
+export async function listItemRules(itemCode: string): Promise<ItemRule[]> {
   const { data } = await httpClient.get(`/api/configurator/items/${itemCode}/rules`);
   return unwrapArray(data).map(parseRule);
 }
@@ -70,7 +70,7 @@ export async function deleteItemRule(id: number): Promise<void> {
   await httpClient.delete(`${BASE}/${id}`);
 }
 /** Avalia as regras de um item para um conjunto de respostas. */
-export async function evaluateItemRules(itemCode: number, answers: Obj[]): Promise<Obj> {
+export async function evaluateItemRules(itemCode: string, answers: Obj[]): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/evaluate`, { item_code: itemCode, answers });
   return unwrapObject(data);
 }

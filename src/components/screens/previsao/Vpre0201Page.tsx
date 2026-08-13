@@ -17,14 +17,14 @@ export function Vpre0201Page(): JSX.Element {
   const thisYear = new Date().getFullYear();
 
   // manual (semanal)
-  const [mItem, setMItem] = useState<number | undefined>(undefined);
+  const [mItem, setMItem] = useState<string | undefined>(undefined);
   const [mMask, setMMask] = useState("");
   const [mWeek, setMWeek] = useState("1");
   const [mYear, setMYear] = useState(String(thisYear));
   const [mQty, setMQty] = useState("");
 
   // mensal
-  const [nItem, setNItem] = useState<number | undefined>(undefined);
+  const [nItem, setNItem] = useState<string | undefined>(undefined);
   const [nMask, setNMask] = useState("");
   const [nYear, setNYear] = useState(String(thisYear));
   const [nMonth, setNMonth] = useState("1");
@@ -34,7 +34,7 @@ export function Vpre0201Page(): JSX.Element {
 
   // listagem
   const [lYear, setLYear] = useState(String(thisYear));
-  const [lItem, setLItem] = useState<number | undefined>(undefined);
+  const [lItem, setLItem] = useState<string | undefined>(undefined);
   const [rows, setRows] = useState<SalesForecastDTO[]>([]);
 
   const [feedback, setFeedback] = useState<Feedback>(null);

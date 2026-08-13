@@ -9,7 +9,7 @@ const BASE = '/api/third-party-services';
 
 export interface ServicePrice {
   id?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   supplier_code: number;
   operation_id: number;
@@ -22,7 +22,7 @@ export interface ServicePrice {
 function parsePrice(raw: unknown): ServicePrice {
   const o = unwrapObject(raw);
   return {
-    id: parseNum(o, 'id', 'ID') || undefined, item_code: parseNum(o, 'item_code', 'ItemCode'), mask: parseStr(o, 'mask', 'Mask') || undefined,
+    id: parseNum(o, 'id', 'ID') || undefined, item_code: parseStr(o, 'item_code', 'ItemCode'), mask: parseStr(o, 'mask', 'Mask') || undefined,
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode'), operation_id: parseNum(o, 'operation_id', 'OperationID'),
     uom: parseStr(o, 'uom', 'UOM') || undefined, reference_date: parseStr(o, 'reference_date', 'ReferenceDate') || undefined,
     preferred: parseBool(o, 'preferred', 'Preferred'), unit_price: parseStr(o, 'unit_price', 'UnitPrice') || 0, freight_type: parseStr(o, 'freight_type', 'FreightType') || undefined,

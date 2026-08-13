@@ -4,7 +4,7 @@ import { httpClient } from '@/services/httpClient';
 const BASE = '/api/item-calendar-promise';
 
 export interface ItemCalendarDay {
-  item_code: number;
+  item_code: string;
   mask: string;
   year: number;
   month: number;
@@ -14,7 +14,7 @@ export interface ItemCalendarDay {
 }
 
 export interface CreateItemCalendarDayDTO {
-  item_code: number;
+  item_code: string;
   mask: string;
   year: number;
   month: number;
@@ -36,7 +36,7 @@ function parseDay(raw: unknown): ItemCalendarDay | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Obj;
 
-  const item_code = Number(o['item_code'] ?? o['ItemCode'] ?? o['itemCode']);
+  const item_code = String(o['item_code'] ?? o['ItemCode'] ?? o['itemCode'] ?? '');
   const year      = Number(o['year']      ?? o['Year']);
   const month     = Number(o['month']     ?? o['Month']);
   const day       = Number(o['day']       ?? o['Day']);
@@ -71,7 +71,7 @@ function unwrapArray(raw: unknown): unknown[] {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function listItemCalendarMonth(
-  itemCode: number,
+  itemCode: string,
   mask: string,
   year: number,
   month: number,
@@ -97,7 +97,7 @@ export async function upsertItemCalendarDay(dto: CreateItemCalendarDayDTO): Prom
 }
 
 export async function deleteItemCalendarDay(
-  itemCode: number,
+  itemCode: string,
   mask: string,
   year: number,
   month: number,

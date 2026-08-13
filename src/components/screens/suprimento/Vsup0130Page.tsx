@@ -6,10 +6,10 @@ import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const EMPTY: ItemSupplierDTO = { item_code: 0, supplier_code: 0, ranking: 1, supplier_item_code: "", supplier_item_desc: "", supplier_uom: "", lead_time_days: undefined };
+const EMPTY: ItemSupplierDTO = { item_code: "", supplier_code: 0, ranking: 1, supplier_item_code: "", supplier_item_desc: "", supplier_uom: "", lead_time_days: undefined };
 
 export function Vsup0130Page(): JSX.Element {
-  const [item, setItem] = useState<number | undefined>(undefined);
+  const [item, setItem] = useState<string | undefined>(undefined);
   const [list, setList] = useState<ItemSupplierDTO[]>([]);
   const [form, setForm] = useState<ItemSupplierDTO>(EMPTY);
   const [feedback, setFeedback] = useState<FeedbackState>(null);

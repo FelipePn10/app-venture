@@ -6,7 +6,7 @@ const BASE = '/api/delivery-reschedule';
 export interface RescheduleDTO {
   code?: number;
   sales_order_code: number;
-  item_code: number;
+  item_code: string;
   old_date: string;
   new_date: string;
   reason?: string;
@@ -17,7 +17,7 @@ function parseReschedule(raw: unknown): RescheduleDTO {
   return {
     code: parseNum(o, 'code', 'Code'),
     sales_order_code: parseNum(o, 'sales_order_code', 'SalesOrderCode'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     old_date: parseStr(o, 'old_date', 'OldDate'),
     new_date: parseStr(o, 'new_date', 'NewDate'),
     reason: parseStr(o, 'reason', 'Reason'),

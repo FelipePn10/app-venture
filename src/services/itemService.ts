@@ -18,7 +18,8 @@ const BASE = '/api/items';
  */
 export interface ItemDTO {
   id?: number;
-  code?: number;
+  /** Código comercial do item. Nunca converter para número. */
+  code?: string;
   nature?: number;
   description?: string;
   situation?: string;
@@ -35,7 +36,7 @@ export interface ItemDTO {
 }
 
 export interface ActivationReadiness {
-  item_code: number;
+  item_code: string;
   item_type?: string;
   ready: boolean;
   issues: string[];
@@ -50,7 +51,7 @@ function parseItem(raw: unknown): ItemDTO {
   const pl = unwrapObject(o['planning'] ?? o['Planning']);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    code: parseNum(o, 'code', 'Code'),
+    code: parseStr(o, 'code', 'Code') || undefined,
     nature: parseNum(o, 'nature', 'Nature'),
     description: parseStr(pdm, 'description_technique', 'DescriptionTechnique') || parseStr(o, 'description', 'Description') || undefined,
     situation: parseStr(o, 'situation', 'Situation') || undefined,
@@ -72,14 +73,14 @@ export async function listItems(): Promise<ItemDTO[]> {
   return unwrapArray(data).map(parseItem);
 }
 /** Detalhe do item — o endpoint real é `/api/items/search/{code}` (não há `GET /{code}`). */
-export async function getItem(code: number): Promise<ItemDTO> {
-  const { data } = await httpClient.get(`${BASE}/search/${code}`);
+export async function getItem(code: string): Promise<ItemDTO> {
+  const { data } = await httpClient.get(`${BASE}/search/${encodeURIComponent(code)}`);
   return parseItem(data);
 }
 
 /** Detalhe completo, usado para copiar as pastas de um item-base no cadastro. */
-export async function getItemTemplate(code: number): Promise<Obj> {
-  const { data } = await httpClient.get(`${BASE}/search/${code}`);
+export async function getItemTemplate(code: string): Promise<Obj> {
+  const { data } = await httpClient.get(`${BASE}/search/${encodeURIComponent(code)}`);
   return unwrapObject(data);
 }
 export async function listItemsWithMasks(): Promise<ItemDTO[]> {
@@ -88,7 +89,7 @@ export async function listItemsWithMasks(): Promise<ItemDTO[]> {
 }
 
 /** Máscaras configuradas disponíveis para um item, sem exigir digitação manual. */
-export async function listItemMasks(code: number): Promise<string[]> {
+export async function listItemMasks(code: string): Promise<string[]> {
   const { data } = await httpClient.get(`${BASE}/with-masks`);
   const masks = new Set<string>();
   const collect = (value: unknown): void => {
@@ -96,7 +97,7 @@ export async function listItemMasks(code: number): Promise<string[]> {
     if (Array.isArray(value)) { value.forEach(collect); return; }
     if (!value || typeof value !== 'object') return;
     const o = value as Obj;
-    const itemCode = parseNum(o, 'code', 'Code', 'item_code', 'ItemCode');
+    const itemCode = parseStr(o, 'code', 'Code', 'item_code', 'ItemCode');
     if (itemCode && itemCode !== code) return;
     for (const key of ['mask', 'Mask', 'masks', 'Masks', 'item_masks', 'ItemMasks', 'configured_masks']) {
       if (o[key] !== undefined) collect(o[key]);
@@ -109,12 +110,12 @@ export async function listItemMasks(code: number): Promise<string[]> {
   return [...masks].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
-export async function getActivationReadiness(code: number): Promise<ActivationReadiness> {
-  const { data } = await httpClient.get(`${BASE}/${code}/activation-readiness`);
+export async function getActivationReadiness(code: string): Promise<ActivationReadiness> {
+  const { data } = await httpClient.get(`${BASE}/${encodeURIComponent(code)}/activation-readiness`);
   const o = unwrapObject(data);
   const asStrings = (v: unknown): string[] => unwrapArray(v).map((x) => (typeof x === 'string' ? x : parseStr(unwrapObject(x), 'message', 'Message', 'description', 'Description')));
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     item_type: parseStr(o, 'item_type', 'ItemType') || undefined,
     ready: parseBool(o, 'ready', 'Ready'),
     issues: asStrings(o['issues'] ?? o['Issues']),

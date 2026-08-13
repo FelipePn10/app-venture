@@ -17,7 +17,7 @@ export const CONTRACT_STATUSES: ContractStatus[] = ['DRAFT', 'ACTIVE', 'SUSPENDE
 
 export interface ContractItem {
   id?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   unit?: string;
   contracted_qty: number;
@@ -49,7 +49,7 @@ function parseItem(raw: unknown): ContractItem {
   const remaining = parseNum(o, 'remaining_qty', 'RemainingQty') || Math.max(contracted - consumed, 0);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     unit: parseStr(o, 'unit', 'Unit') || undefined,
     contracted_qty: contracted,
@@ -119,7 +119,7 @@ export async function updateContractStatus(id: number, status: ContractStatus): 
   return parseContract(data);
 }
 /** Consome saldo de uma linha (só em contrato ACTIVE; não pode exceder o saldo). */
-export async function consumeContract(id: number, itemCode: number, quantity: number, mask = ''): Promise<SupplierContract> {
+export async function consumeContract(id: number, itemCode: string, quantity: number, mask = ''): Promise<SupplierContract> {
   const { data } = await httpClient.post(`${BASE}/${id}/consume`, { item_code: itemCode, mask, quantity });
   return parseContract(data);
 }

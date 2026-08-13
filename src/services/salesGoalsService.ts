@@ -33,7 +33,7 @@ export interface SalesGoalItemDTO {
   code?: number;
   goal_code?: number;
   target_type?: 'ITEM' | 'CLASSIFICATION' | 'GROUP';
-  item_code?: number;
+  item_code?: string;
   item_classification_code?: number;
   item_group_code?: number;
   sales_uom?: string;
@@ -73,7 +73,7 @@ function parseItem(raw: unknown): SalesGoalItemDTO {
     code: parseNum(o, 'code', 'Code'),
     goal_code: parseNum(o, 'goal_code', 'GoalCode'),
     target_type: (parseStr(o, 'target_type', 'TargetType') || undefined) as SalesGoalItemDTO['target_type'],
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     item_classification_code: parseNum(o, 'item_classification_code', 'ItemClassificationCode'),
     item_group_code: parseNum(o, 'item_group_code', 'ItemGroupCode'),
     sales_uom: parseStr(o, 'sales_uom', 'SalesUom'),

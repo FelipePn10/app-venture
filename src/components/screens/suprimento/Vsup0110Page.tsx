@@ -6,10 +6,10 @@ import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const EMPTY: ItemConversionDTO = { item_code: 0, from_uom: "", to_uom: "", factor: 1 };
+const EMPTY: ItemConversionDTO = { item_code: "", from_uom: "", to_uom: "", factor: 1 };
 
 export function Vsup0110Page(): JSX.Element {
-  const [item, setItem] = useState<number | undefined>(undefined);
+  const [item, setItem] = useState<string | undefined>(undefined);
   const [list, setList] = useState<ItemConversionDTO[]>([]);
   const [form, setForm] = useState<ItemConversionDTO>(EMPTY);
   const [conv, setConv] = useState({ from: "", to: "", qty: "1", result: "" });

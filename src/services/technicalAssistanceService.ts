@@ -55,7 +55,7 @@ export interface TACallItemDTO {
   code?: number;
   call_code?: number;
   sequence: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   serial_number?: string | null;
   quantity: number;
@@ -161,7 +161,7 @@ function parseItem(raw: unknown): TACallItemDTO {
     code: parseNum(o, 'code', 'Code'),
     call_code: parseNum(o, 'call_code', 'CallCode'),
     sequence: parseNum(o, 'sequence', 'Sequence'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     serial_number: parseStr(o, 'serial_number', 'SerialNumber') || null,
     quantity: parseNum(o, 'quantity', 'Quantity'),

@@ -19,7 +19,7 @@ export function Vbom0100Page(): JSX.Element {
   const [masks, setMasks] = useState<string[]>([]);
 
   useEffect(() => {
-    const code = Number(item);
+    const code = item.trim();
     if (!code) { setMasks([]); return; }
     void listItemMasks(code).then(setMasks).catch(() => setMasks([]));
   }, [item]);
@@ -29,14 +29,14 @@ export function Vbom0100Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  const carregar = () => run(async () => { const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setHeaders(await listBomHeaders(it)); });
+  const carregar = () => run(async () => { const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setHeaders(await listBomHeaders(it)); });
   const criar = () => run(async () => {
-    const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; }
+    const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; }
     if (form.mask && !masks.includes(form.mask)) { setFeedback({ type: "error", message: "A máscara selecionada não existe para este item." }); return; }
     await createBomHeader({ item_code: it, mask: form.mask.trim() || undefined, bom_type: form.bom_type, valid_from: form.valid_from || undefined });
     setForm({ mask: "", bom_type: "MBOM", valid_from: "" }); setHeaders(await listBomHeaders(it)); setFeedback({ type: "success", message: "Cabeçalho criado (nova versão)." });
   });
-  const mudarStatus = (id: number | undefined, status: string) => { if (!id) return; void run(async () => { await updateBomHeaderStatus(id, status); setHeaders(await listBomHeaders(Number(item))); setFeedback({ type: "success", message: `Cabeçalho ${id} → ${status}.` }); }); };
+  const mudarStatus = (id: number | undefined, status: string) => { if (!id) return; void run(async () => { await updateBomHeaderStatus(id, status); setHeaders(await listBomHeaders(item.trim())); setFeedback({ type: "success", message: `Cabeçalho ${id} → ${status}.` }); }); };
 
   return (
     <div className="erp-screen">
@@ -50,7 +50,7 @@ export function Vbom0100Page(): JSX.Element {
       </header>
 
       <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div style={{ width: 320 }}><LookupField value={Number(item) || undefined} onChange={(code) => { setItem(code ? String(code) : ""); setForm((f) => ({ ...f, mask: "" })); }} loader={loadItems} entityLabel="item" placeholder="Pesquisar item…" /></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div style={{ width: 320 }}><LookupField value={item.trim() || undefined} onChange={(code) => { setItem(code ? String(code) : ""); setForm((f) => ({ ...f, mask: "" })); }} loader={loadItems} entityLabel="item" placeholder="Pesquisar item…" /></div>
           <button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VBOM0100 — Cabeçalhos de Estrutura" filename="vbom0100" /></div>
       </div>

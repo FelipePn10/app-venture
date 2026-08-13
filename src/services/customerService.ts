@@ -163,6 +163,9 @@ export interface CnpjLookup {
   email?: string;
   phone?: string;
   state_registration?: string;
+  simples_optant?: boolean;
+  mei?: boolean;
+  size?: string;
   address?: { zip_code?: string; street?: string; number?: string; complement?: string; neighborhood?: string; city?: string; uf?: string };
   main_activity?: { code?: string; description?: string };
 }
@@ -183,6 +186,9 @@ export async function lookupCnpj(cnpj: string): Promise<CnpjLookup> {
     email: parseStr(o, 'email', 'Email') || undefined,
     phone: parseStr(o, 'phone', 'Phone') || undefined,
     state_registration: parseStr(o, 'state_registration', 'StateRegistration') || undefined,
+    simples_optant: o['simples_optant'] === true,
+    mei: o['mei'] === true,
+    size: parseStr(o, 'size', 'Size') || undefined,
     address: {
       zip_code: parseStr(addr, 'zip_code', 'ZipCode') || undefined,
       street: parseStr(addr, 'street', 'Street') || undefined,

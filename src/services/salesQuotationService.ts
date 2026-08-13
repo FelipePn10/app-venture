@@ -121,7 +121,7 @@ export interface SalesQuotationItemDTO {
   code?: number;
   sales_quotation_code?: number;
   sequence?: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   sales_uom?: string;
   warehouse_code?: number;
@@ -313,7 +313,7 @@ function parseItem(raw: unknown): SalesQuotationItemDTO {
     code: parseNum(o, 'code', 'Code'),
     sales_quotation_code: parseNum(o, 'sales_quotation_code', 'SalesQuotationCode'),
     sequence: parseNum(o, 'sequence', 'Sequence'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask'),
     sales_uom: optStr(o, 'sales_uom', 'SalesUOM', 'SalesUom'),
     warehouse_code: optNum(o, 'warehouse_code', 'WarehouseCode'),

@@ -6,12 +6,12 @@ import { ExportButton } from "@/components/ui/ExportButton";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const OPERATORS = ["EQUAL", "DIFFERENT", "GREATER", "LESS", "IN", "NOT_IN"];
 const SITUATIONS = ["ATIVO", "INATIVO"];
-const EMPTY = (item: number): ItemRule => ({ item_code: item, target_table: "", target_field: "", content: "", formula: "", description: "", situation: "ATIVO", conditions: [] });
+const EMPTY = (item: string): ItemRule => ({ item_code: item, target_table: "", target_field: "", content: "", formula: "", description: "", situation: "ATIVO", conditions: [] });
 
 export function Vite0118Page(): JSX.Element {
   const [item, setItem] = useState("");
   const [rules, setRules] = useState<ItemRule[]>([]);
-  const [form, setForm] = useState<ItemRule>(EMPTY(0));
+  const [form, setForm] = useState<ItemRule>(EMPTY(""));
   const [editId, setEditId] = useState<number | null>(null);
   const [cond, setCond] = useState<ItemRuleCondition>({ characteristic_id: 0, operator: "EQUAL", variable_id: undefined });
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -23,20 +23,20 @@ export function Vite0118Page(): JSX.Element {
   }, []);
   const setF = <K extends keyof ItemRule>(k: K, v: ItemRule[K]) => setForm((p) => ({ ...p, [k]: v }));
 
-  const carregar = () => run(async () => { const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setRules(await listItemRules(it)); setForm(EMPTY(it)); });
-  const novo = () => { const it = Number(item) || 0; setForm(EMPTY(it)); setEditId(null); };
+  const carregar = () => run(async () => { const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setRules(await listItemRules(it)); setForm(EMPTY(it)); });
+  const novo = () => { const it = item.trim(); setForm(EMPTY(it)); setEditId(null); };
   const selecionar = (r: ItemRule) => { setForm({ ...r }); setEditId(r.id ?? null); };
   const addCond = () => { if (!cond.characteristic_id) { setFeedback({ type: "error", message: "Informe a característica da condição." }); return; } setForm((p) => ({ ...p, conditions: [...p.conditions, cond] })); setCond({ characteristic_id: 0, operator: "EQUAL", variable_id: undefined }); };
 
   const salvar = () => run(async () => {
-    const it = Number(item); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; }
+    const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; }
     if (!form.target_table.trim() || !form.target_field.trim()) { setFeedback({ type: "error", message: "Tabela e campo de destino são obrigatórios." }); return; }
     const dto = { ...form, item_code: it };
     if (editId) { await updateItemRule(editId, dto); setFeedback({ type: "success", message: `Regra ${editId} atualizada.` }); }
     else { const r = await createItemRule(dto); setFeedback({ type: "success", message: `Regra ${r.id ?? ""} criada.` }); }
     setRules(await listItemRules(it)); novo();
   });
-  const remover = (id?: number) => { if (!id) return; void run(async () => { await deleteItemRule(id); setRules(await listItemRules(Number(item))); novo(); setFeedback({ type: "success", message: `Regra ${id} removida.` }); }); };
+  const remover = (id?: number) => { if (!id) return; void run(async () => { await deleteItemRule(id); setRules(await listItemRules(item.trim())); novo(); setFeedback({ type: "success", message: `Regra ${id} removida.` }); }); };
 
   return (
     <div className="erp-screen">
@@ -53,7 +53,7 @@ export function Vite0118Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Item</span>
-          <input className="erp-tinput" style={{ width: 110 }} type="number" value={item} onChange={(e) => setItem(e.target.value)} />
+          <input className="erp-tinput" style={{ width: 110 }} value={item} onChange={(e) => setItem(e.target.value)} />
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button>
           <button className="erp-btn" onClick={novo} disabled={busy}>Nova regra</button>
         </div>

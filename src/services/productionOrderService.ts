@@ -18,7 +18,7 @@ export interface ProductionOrderDTO {
   id?: number;
   order_number?: number;
   planned_order_id?: number | null;
-  item_code: number;
+  item_code: string;
   mask?: string;
   planned_qty: number;
   produced_qty?: number;
@@ -50,7 +50,7 @@ export interface AppointmentDTO {
 export interface ConsumptionDTO {
   id?: number;
   production_order_id: number;
-  item_code: number;
+  item_code: string;
   /** Campo correto no backend é `consumed_qty`. */
   consumed_qty: number;
   warehouse_id?: number;
@@ -84,7 +84,7 @@ export interface CostDTO {
 }
 
 export interface ScrapReturnDTO {
-  scrap_item_code: number;
+  scrap_item_code: string;
   warehouse_id: number;
   quantity: number;
   unit_value: number;
@@ -98,7 +98,7 @@ function parseOrder(raw: unknown): ProductionOrderDTO {
     id: parseNum(o, 'id', 'ID'),
     order_number: parseNum(o, 'order_number', 'OrderNumber'),
     planned_order_id: parseNum(o, 'planned_order_id', 'PlannedOrderID') || null,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask'),
     planned_qty: parseNum(o, 'planned_qty', 'PlannedQty'),
     produced_qty: parseNum(o, 'produced_qty', 'ProducedQty'),
@@ -131,7 +131,7 @@ function parseConsumption(raw: unknown): ConsumptionDTO {
   return {
     id: parseNum(o, 'id', 'ID'),
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     consumed_qty: parseNum(o, 'consumed_qty', 'ConsumedQty'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     lot: parseStr(o, 'lot', 'Lot') || undefined,
@@ -267,7 +267,7 @@ export interface MaterialDTO {
   id?: number;
   production_order_id?: number;
   kind?: MaterialKind;
-  item_code: number;
+  item_code: string;
   quantity: number | string;
   warehouse_id?: number;
   automatic_issue?: boolean;
@@ -287,7 +287,7 @@ export interface ScrapDestinationDTO {
   production_order_id: number;
   destination_kind?: 'DEMAND' | 'FREE';
   production_order_material_id?: number;
-  scrap_item_code: number;
+  scrap_item_code: string;
   warehouse_id: number;
   lot?: string;
   address?: string;
@@ -304,7 +304,7 @@ function parseMaterial(raw: unknown): MaterialDTO {
     id: parseNum(o, 'id', 'ID'),
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID'),
     kind: (parseStr(o, 'kind', 'Kind') || undefined) as MaterialKind | undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     automatic_issue: parseBool(o, 'automatic_issue', 'AutomaticIssue'),
@@ -321,7 +321,7 @@ export async function addMaterial(dto: MaterialDTO): Promise<MaterialDTO> {
   const { data } = await httpClient.post(`${BASE}/materials`, { kind: 'DEMAND', ...dto, created_by: currentUserId() });
   return parseMaterial(data);
 }
-export async function replaceMaterial(materialId: number, replacements: Array<{ item_code: number; quantity: number | string; warehouse_id?: number }>): Promise<Obj> {
+export async function replaceMaterial(materialId: number, replacements: Array<{ item_code: string; quantity: number | string; warehouse_id?: number }>): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/materials/replace`, { material_id: materialId, replacements, created_by: currentUserId() });
   return unwrapObject(data);
 }
@@ -386,4 +386,41 @@ export async function getOperationalConsultation(id: number): Promise<Obj> {
 export async function listDeliveryCandidates(params: Obj = {}): Promise<Obj[]> {
   const { data } = await httpClient.get(`${BASE}/delivery-candidates`, { params });
   return unwrapArray(data).map(unwrapObject);
+}
+
+export type ProductionScanAction = 'RESOLVER' | 'INICIAR' | 'APONTAR' | 'CONCLUIR';
+export interface ProductionScanToken {
+  token: string;
+  barcode_value: string;
+  production_order_id: number;
+  operation_id?: number;
+  valid_until?: string;
+}
+export interface ProductionScanDTO {
+  token: string;
+  action: ProductionScanAction;
+  idempotency_key: string;
+  device_id: string;
+  employee_id?: number;
+  good_quantity?: string;
+  scrap_quantity?: string;
+  hours?: string;
+  scrap_reason?: string;
+  complete_operation?: boolean;
+}
+export interface ProductionScanResult {
+  production_order_id: number;
+  operation_id?: number;
+  order_number?: string;
+  status?: string;
+  operation_status?: string;
+  replayed?: boolean;
+}
+export async function createProductionScanToken(dto: { production_order_id: number; operation_id?: number; valid_until?: string }): Promise<ProductionScanToken> {
+  const { data } = await httpClient.post('/api/production-order/scanner/tokens', dto);
+  return unwrapObject(data) as unknown as ProductionScanToken;
+}
+export async function scanProductionOrder(dto: ProductionScanDTO): Promise<ProductionScanResult> {
+  const { data } = await httpClient.post('/api/production-order/scanner/scan', dto);
+  return unwrapObject(data) as unknown as ProductionScanResult;
 }

@@ -32,7 +32,7 @@ export function Vimp0200Page(): JSX.Element {
 
   const carregar = () => run(async () => { setList(await listImportProcesses()); });
   const abrir = (id: number) => run(async () => { setDetalhe(await getImportProcess(id)); });
-  const addItem = () => { const item_code = Number(itemForm.item_code); if (!item_code) { setFeedback({ type: "error", message: "Item obrigatório." }); return; } setItems((a) => [...a, { item_code, mask: itemForm.mask.trim(), quantity: Number(itemForm.quantity) || 0, weight: Number(itemForm.weight) || 0, fob_unit_price: Number(itemForm.fob_unit_price) || 0 }]); setItemForm({ ...ITEM_INI }); };
+  const addItem = () => { const item_code = itemForm.item_code.trim(); if (!item_code) { setFeedback({ type: "error", message: "Item obrigatório." }); return; } setItems((a) => [...a, { item_code, mask: itemForm.mask.trim(), quantity: Number(itemForm.quantity) || 0, weight: Number(itemForm.weight) || 0, fob_unit_price: Number(itemForm.fob_unit_price) || 0 }]); setItemForm({ ...ITEM_INI }); };
   const addExp = () => { const amount = Number(expForm.amount); if (!amount) { setFeedback({ type: "error", message: "Valor da despesa obrigatório." }); return; } setExpenses((a) => [...a, { expense_type: expForm.expense_type.trim(), amount, in_item_cost: expForm.in_item_cost }]); setExpForm({ ...EXP_INI }); };
 
   const criar = () => run(async () => {
@@ -104,7 +104,7 @@ export function Vimp0200Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Itens ({items.length})</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num" type="number" value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
+                  <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Qtde</label><input className="erp-input num" type="number" value={itemForm.quantity} onChange={(e) => setItemForm((f) => ({ ...f, quantity: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Peso</label><input className="erp-input num" type="number" value={itemForm.weight} onChange={(e) => setItemForm((f) => ({ ...f, weight: e.target.value }))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">FOB unit.</label><input className="erp-input num" type="number" value={itemForm.fob_unit_price} onChange={(e) => setItemForm((f) => ({ ...f, fob_unit_price: e.target.value }))} /></div>

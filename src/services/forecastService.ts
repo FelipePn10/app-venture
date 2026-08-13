@@ -13,7 +13,7 @@ export interface HistoryPoint {
 }
 
 export interface ForecastResult {
-  item_code: number;
+  item_code: string;
   /** Modelo escolhido: AUTO, MOVING_AVERAGE, EXP_SMOOTHING ou HOLT_WINTERS. */
   model: string;
   /** Erro percentual absoluto médio (`mape_pct` no backend). */
@@ -25,7 +25,7 @@ export interface ForecastResult {
 }
 
 export interface ForecastRequest {
-  item_code: number;
+  item_code: string;
   history: HistoryPoint[];
   /** Quantos períodos futuros prever (`periods` no backend). */
   periods: number;
@@ -58,7 +58,7 @@ export async function statisticalForecast(req: ForecastRequest): Promise<Forecas
   };
   const result = parseModel(root['result'] ?? root['Result']);
   return {
-    item_code: parseNum(root, 'item_code', 'ItemCode'),
+    item_code: parseStr(root, 'item_code', 'ItemCode'),
     ...result,
     all_models: unwrapArray(root['all_models'] ?? root['All']).map(parseModel),
   };

@@ -78,7 +78,7 @@ export async function reportGroupedNeeds(params: ReportParams & { plan_code: num
  * `list_mode=TODOS|FILHOS_IMEDIATOS`, `description_type=TECNICA|RESUMIDA`,
  * `consider_item_warehouses`, `production_orders`, `loads`; `quantity` e `at=YYYY-MM-DD`.
  */
-export async function reportExplosion(itemCode: number, params: ReportParams = {}): Promise<MrpReport> {
+export async function reportExplosion(itemCode: string, params: ReportParams = {}): Promise<MrpReport> {
   const { data } = await httpClient.get(`/api/mrp-reports/explosion/${itemCode}`, { params: clean({ quantity: 1, ...params }) });
   return toReport(data);
 }

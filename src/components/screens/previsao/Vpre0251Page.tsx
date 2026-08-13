@@ -13,7 +13,7 @@ type Source = "ORDERS" | "INVOICING" | "BOTH";
 
 export function Vpre0251Page(): JSX.Element {
   const thisYear = new Date().getFullYear();
-  const [item, setItem] = useState<number | undefined>(undefined);
+  const [item, setItem] = useState<string | undefined>(undefined);
   const [mask, setMask] = useState("");
   const [source, setSource] = useState<Source>("ORDERS");
   const [from, setFrom] = useState(`${thisYear - 1}-01-01`);

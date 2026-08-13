@@ -17,7 +17,7 @@ import { listMachines } from '@/services/machineService';
  * (o campo continua utilizável e o usuário vê "nenhum registro").
  */
 export interface LookupOption {
-  code: number;
+  code: string | number;
   /** Rótulo principal (nome/descrição). */
   label: string;
   /** Linha secundária opcional (documento, UM, cidade…). */
@@ -57,7 +57,7 @@ async function loadEndpoint(
     const sub = subKeys.length ? parseStr(o, ...subKeys) || undefined : undefined;
     out.push({ code, label, sub });
   }
-  return out.sort((a, b) => a.code - b.code);
+  return out.sort((a, b) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }));
 }
 
 export const loadCustomers = cached(async () =>
@@ -70,7 +70,7 @@ export const loadCustomers = cached(async () =>
 
 export const loadItems = cached(async () =>
   (await listItems()).map((i) => ({
-    code: i.code ?? 0,
+    code: i.code ?? '',
     label: i.description || `Item ${i.code}`,
     sub: i.uom || undefined,
   })).filter((o) => o.code),
@@ -111,7 +111,7 @@ export const loadPdmModifiers = cached(async () =>
 export const loadBaseItems = cached(async () =>
   (await listItems())
     .filter((i) => i.nature === 2)
-    .map((i) => ({ code: i.code ?? 0, label: i.description || `Item ${i.code}`, sub: i.uom || undefined }))
+    .map((i) => ({ code: i.code ?? '', label: i.description || `Item ${i.code}`, sub: i.uom || undefined }))
     .filter((o) => o.code),
 );
 

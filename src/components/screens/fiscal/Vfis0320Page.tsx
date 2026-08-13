@@ -87,7 +87,7 @@ export function Vfis0320Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label">NCM</label>
               <input className="erp-input" value={form.ncm_code ?? ""} onChange={(e) => setF("ncm_code", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Código Item</label>
-              <input className="erp-input num" type="number" value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value ? Number(e.target.value) : undefined)} /></div>
+              <input className="erp-input num"  value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value ? e.target.value : undefined)} /></div>
             <div className="erp-field erp-c4"><label className="erp-label">Tipo Operação</label>
               <select className="erp-input" value={form.operation_type} onChange={(e) => setF("operation_type", e.target.value as OperationType)}>
                 {OPS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>

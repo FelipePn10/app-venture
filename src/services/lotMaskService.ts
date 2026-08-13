@@ -21,7 +21,7 @@ export interface LotMask {
   id?: number;
   application: string;
   customer_code?: number;
-  item_code?: number;
+  item_code?: string;
   classification_type?: string;
   classification_code?: number;
   zero_on_year_change?: boolean;
@@ -47,7 +47,7 @@ function parseMask(raw: unknown): LotMask {
     id: parseNum(o, 'id', 'ID') || undefined,
     application: parseStr(o, 'application', 'Application'),
     customer_code: parseNum(o, 'customer_code', 'CustomerCode') || undefined,
-    item_code: parseNum(o, 'item_code', 'ItemCode') || undefined,
+    item_code: parseStr(o, 'item_code', 'ItemCode') || undefined,
     classification_type: parseStr(o, 'classification_type', 'ClassificationType') || undefined,
     classification_code: parseNum(o, 'classification_code', 'ClassificationCode') || undefined,
     zero_on_year_change: parseBool(o, 'zero_on_year_change', 'ZeroOnYearChange'),

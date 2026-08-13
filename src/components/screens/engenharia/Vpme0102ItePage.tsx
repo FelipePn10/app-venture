@@ -146,8 +146,8 @@ export function Vpme0102ItePage(): JSX.Element {
   // ── Item search ───────────────────────────────────────────────────────────
 
   async function handleSearchItem() {
-    const code = parseInt(itemCodeInput.trim(), 10);
-    if (isNaN(code) || code <= 0) {
+    const code = itemCodeInput.trim();
+    if (!code) {
       setFeedback({ type: "error", message: "Informe um código de item válido." });
       return;
     }

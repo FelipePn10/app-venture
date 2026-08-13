@@ -44,7 +44,7 @@ export function Vmrp0100Page(): JSX.Element {
   const [profile, setProfile] = useState<MrpProfileRow[]>([]);
   const [ruleItem, setRuleItem] = useState("");
   const [rules, setRules] = useState<ConfiguredRule[]>([]);
-  const [ruleForm, setRuleForm] = useState<ConfiguredRule>({ item_code: 0, table_type: "PLANNING_DATA", field_name: "lead_time", rule_type: "EQUAL", rule_value: "", sequence: 1 });
+  const [ruleForm, setRuleForm] = useState<ConfiguredRule>({ item_code: "", table_type: "PLANNING_DATA", field_name: "lead_time", rule_type: "EQUAL", rule_value: "", sequence: 1 });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
   // Inter-fábrica (empresas de origem cujas ordens INTER_FACTORY entram no cálculo)
@@ -99,12 +99,12 @@ export function Vmrp0100Page(): JSX.Element {
   const firmarPlanejada = (code?: number) => { if (!code) return; void run(async () => { await firmPlannedOrder(code); setFeedback({ type: "success", message: `Ordem planejada ${code} firmada.` }); await carregar(); }); };
 
   const verPerfil = () => run(async () => {
-    const it = Number(profileItem), c = pc();
+    const it = profileItem.trim(), c = pc();
     if (!it || !c) { setFeedback({ type: "error", message: "Informe item e plano." }); return; }
     setProfile(await getMrpProfile(it, c));
   });
 
-  const verRegras = () => run(async () => { const it = Number(ruleItem); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setRules(await listConfiguredRules(it)); setRuleForm((s) => ({ ...s, item_code: it })); });
+  const verRegras = () => run(async () => { const it = ruleItem.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setRules(await listConfiguredRules(it)); setRuleForm((s) => ({ ...s, item_code: it })); });
   const criarRegra = () => run(async () => {
     if (!ruleForm.item_code || !ruleForm.field_name.trim()) { setFeedback({ type: "error", message: "Item e campo são obrigatórios." }); return; }
     await createConfiguredRule(ruleForm);
@@ -133,7 +133,7 @@ export function Vmrp0100Page(): JSX.Element {
 
   // ── Relatórios operacionais ──
   const gerarRelatorio = () => run(async () => {
-    const c = pc(); const it = Number(repItem);
+    const c = pc(); const it = repItem.trim();
     if ((reportKind === "profile" || reportKind === "grouped-needs") && !c) {
       setFeedback({ type: "error", message: `O relatório "${REPORT_LABELS[reportKind]}" exige o código do plano MRP.` });
       return;
@@ -310,7 +310,7 @@ export function Vmrp0100Page(): JSX.Element {
         <div className="erp-fieldset"><div className="erp-fieldset-head">Relatórios operacionais — <span style={{fontWeight:400,opacity:0.65}}>perfil · disponibilidade · necessidades agrupadas · explosão · ponto de reposição</span></div><div className="erp-fieldset-body">
           <div className="erp-field erp-c3"><label className="erp-label">Relatório</label>
             <select className="erp-input" value={reportKind} onChange={(e) => setReportKind(e.target.value as ReportKind)}>{(Object.keys(REPORT_LABELS) as ReportKind[]).map((k) => <option key={k} value={k}>{REPORT_LABELS[k]}</option>)}</select></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Item{reportKind === "explosion" ? " *" : ""}</label><input className="erp-input num" type="number" value={repItem} onChange={(e) => setRepItem(e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Item{reportKind === "explosion" ? " *" : ""}</label><input className="erp-input" value={repItem} onChange={(e) => setRepItem(e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">{reportKind === "explosion" ? "Quantidade" : "De"}</label>{reportKind === "explosion" || reportKind === "availability" ? <input className="erp-input num" type="number" value={repQty} onChange={(e) => setRepQty(e.target.value)} /> : <input className="erp-input" type="date" value={repFrom} onChange={(e) => setRepFrom(e.target.value)} />}</div>
           <div className="erp-field erp-c2"><label className="erp-label">{reportKind === "explosion" ? "Data (at)" : "Até"}</label><input className="erp-input" type="date" value={repTo} onChange={(e) => setRepTo(e.target.value)} /></div>
           <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={gerarRelatorio} disabled={busy}>Gerar relatório</button></div>
