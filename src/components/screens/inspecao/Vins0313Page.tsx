@@ -5,6 +5,12 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const d10 = (s?: string) => s?.slice(0, 10) ?? "—";
+const STATUS_LABELS: Record<string, string> = {
+  PENDING_INSPECTION: "Pendente de inspeção", PENDENTE_INSPECAO: "Pendente de inspeção",
+  IN_INSPECTION: "Em inspeção", EM_INSPECAO: "Em inspeção", APPROVED: "Aprovada",
+  APROVADO: "Aprovada", REJECTED: "Rejeitada", REJEITADO: "Rejeitada",
+};
+const SOURCE_LABELS: Record<string, string> = { MANUAL: "Manual", PURCHASE_RECEIPT: "Recebimento de compra", RECEIVING_NOTICE: "Aviso de recebimento", FISCAL_ENTRY: "Entrada fiscal" };
 
 /** VINS0313 — Consulta de Inspeções de Recebimento (somente leitura sobre as ordens de inspeção). */
 export function Vins0313Page(): JSX.Element {
@@ -33,7 +39,7 @@ export function Vins0313Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Status</span>
-          <input className="erp-tinput" style={{ width: 160 }} placeholder="ex.: PENDING_INSPECTION" value={status} onChange={(e) => setStatus(e.target.value)} />
+          <input className="erp-tinput" style={{ width: 190 }} placeholder="Ex.: Pendente de inspeção" value={status} onChange={(e) => setStatus(e.target.value)} />
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Consultar</button></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VINS0313 — Consulta de Inspeções de Recebimento" filename="vins0313" /></div>
@@ -51,8 +57,8 @@ export function Vins0313Page(): JSX.Element {
                 {orders.map((o, i) => (
                   <tr key={i}>
                     <td><strong>#{parseStr(o, "id", "ID")}</strong></td><td>{parseStr(o, "item_code", "ItemCode")}</td><td>{parseStr(o, "mask", "Mask") || "—"}</td>
-                    <td>{parseNum(o, "quantity", "Quantity")}</td><td>{parseStr(o, "source", "Source")}</td><td>{parseNum(o, "supplier_code", "SupplierCode") || "—"}</td>
-                    <td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td><td>{d10(parseStr(o, "created_at", "CreatedAt"))}</td>
+                    <td>{parseNum(o, "quantity", "Quantity")}</td><td>{SOURCE_LABELS[parseStr(o, "source", "Source")] ?? parseStr(o, "source", "Source")}</td><td>{parseNum(o, "supplier_code", "SupplierCode") || "—"}</td>
+                    <td><span className="erp-badge info">{STATUS_LABELS[parseStr(o, "status", "Status")] ?? parseStr(o, "status", "Status")}</span></td><td>{d10(parseStr(o, "created_at", "CreatedAt"))}</td>
                   </tr>
                 ))}
               </tbody>

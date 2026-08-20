@@ -777,7 +777,7 @@ Para cada caso, diga o motivo:
 | Item com tipo MRP = Projeto | |
 | Item de terceiro | |
 | Não há demanda cadastrada | |
-| BOM em `DRAFT` | |
+| BOM em `RASCUNHO` | |
 
 ---
 
@@ -878,7 +878,7 @@ Item `PA-SUP-SOLD-001` · Momento `PROCESSO` · Amostra 5 · Operação `30 — 
 | Demanda não salva | Data em fim de semana/feriado | Escolher **dia útil** (`VENT0108`) |
 | Item configurado não salva a demanda | Falta a **máscara** | Gerar em `VITE0313` |
 | MRP roda mas **não gera nada** | Sem demanda · estoque suficiente · item não qualificado | Ver a tabela de regras de geração |
-| MRP não explode a BOM | **BOM não está `APPROVED`** | `VBOM0100` |
+| MRP não explode a BOM | **BOM não está `APROVADO`** | `VBOM0100` |
 | Sugestão com data estranha | Item **sem lead time** | `VENT0200` aba Planejamento, ou regra configurada |
 | Quantidade sugerida diferente da pedida | **Lote mínimo / múltiplo** agindo | Comportamento correto |
 | Data empurrada alguns dias | **Calendário** empurrou para o próximo dia útil | Comportamento correto |

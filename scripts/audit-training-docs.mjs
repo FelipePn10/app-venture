@@ -59,6 +59,24 @@ const PRE_REQUISITOS = [
   { tela: 'VENT0200', exige: ['VITE0114', 'VITE0115'], porque: 'o item guarda ponteiro para Grupo e Modificador PDM; sem eles a gravação é recusada' },
 ];
 
+const ORDEM_ROTEIROS = [
+  {
+    arquivo: 'dia-2-suprimentos-estoque/roteiro-cronometrado.md',
+    etapas: ['VSUP0510', 'VSUP0500', 'VSUP0610', 'VSUP0300', 'VSUP0400', 'VPDC0200', 'VAVR0200', 'VINS0200', 'VEST0100'],
+    porque: 'apoios e governança devem ser ensinados antes do fornecedor e do ciclo de compra/recebimento',
+  },
+  {
+    arquivo: 'dia-3-pcp-producao/roteiro-cronometrado.md',
+    etapas: ['VPLA0102', 'VMRP0100', 'VPRO0200', 'VPRO0210', 'VMRP0200', 'VPRO0900'],
+    porque: 'o pipeline integrado só deve aparecer depois de MRP, CRP e APS isolados',
+  },
+  {
+    arquivo: 'dia-4-comercial-fiscal-financeiro/roteiro-cronometrado.md',
+    etapas: ['VCLI0510', 'VCLI0500', 'VCST0202', 'VVND0310', 'VVND0300', 'VVND0200', 'VEXP0100', 'VFIS0200', 'VFIN0210'],
+    porque: 'apoios, preço, orçamento e expedição são pré-requisitos do faturamento e do financeiro',
+  },
+];
+
 const arquivos = [];
 for (const dia of readdirSync(dirTreino)) {
   const d = join(dirTreino, dia);
@@ -133,6 +151,34 @@ for (const caminho of arquivos) {
       if (!ensinaMascara) {
         const linha = texto.slice(0, ondeBom).split('\n').length;
         aviso(rel, linha, 'mascara-fora-de-ordem', 'ensina a estrutura/BOM antes de ensinar a gerar e persistir a máscara na VITE0313');
+      }
+    }
+  }
+
+  // ── 5. Ordem troncal dos roteiros dos demais dias ────────────────────────
+  const regraRoteiro = ORDEM_ROTEIROS.find(({ arquivo }) => rel.endsWith(arquivo));
+  if (regraRoteiro) {
+    let anterior = -1;
+    for (const tela of regraRoteiro.etapas) {
+      const posicao = texto.indexOf(tela, anterior + 1);
+      if (posicao < 0) {
+        aviso(rel, 1, 'etapa-ausente', `${tela} não aparece na sequência troncal — ${regraRoteiro.porque}`);
+        continue;
+      }
+      if (posicao < anterior) {
+        const linha = texto.slice(0, posicao).split('\n').length;
+        aviso(rel, linha, 'ordem-troncal-invertida', `${tela} aparece fora da ordem — ${regraRoteiro.porque}`);
+      }
+      anterior = posicao;
+    }
+
+    for (const bloco of ['A', 'B']) {
+      const minutos = [...texto.matchAll(new RegExp(`^### ${bloco}\\d+\\..*?\\((\\d+) min\\)`, 'gm'))]
+        .map((m) => Number(m[1]));
+      const total = minutos.reduce((soma, valor) => soma + valor, 0);
+      const esperado = bloco === 'A' ? 90 : 75;
+      if (total !== esperado) {
+        aviso(rel, 1, 'tempo-de-bloco-invalido', `Bloco ${bloco} soma ${total} min; a agenda reserva ${esperado} min`);
       }
     }
   }

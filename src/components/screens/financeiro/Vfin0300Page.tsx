@@ -8,7 +8,27 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "realizado" | "projetado" | "saldos";
+type Grouping = "dia" | "semana" | "mes";
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+type ChartPoint = { label: string; entradas: number; saidas: number; saldo: number };
+function dateKey(raw: string, grouping: Grouping): string {
+  const date = new Date(`${raw.slice(0, 10)}T12:00:00`);
+  if (grouping === "mes") return raw.slice(0, 7);
+  if (grouping === "semana") { const day = (date.getDay() + 6) % 7; date.setDate(date.getDate() - day); return date.toISOString().slice(0, 10); }
+  return raw.slice(0, 10);
+}
+function chartData(items: Array<{ date: string; type: string; value: number }>, grouping: Grouping): ChartPoint[] {
+  const groups = new Map<string, { entradas: number; saidas: number }>();
+  items.forEach((item) => { const key = dateKey(item.date, grouping); const current = groups.get(key) ?? { entradas: 0, saidas: 0 }; const cents = Math.round(item.value * 100); if (item.type.toUpperCase().includes("ENTRADA") || item.type.toUpperCase().includes("RECEBER")) current.entradas += cents; else current.saidas += cents; groups.set(key, current); });
+  let balance = 0;
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([label, amounts]) => { balance += amounts.entradas - amounts.saidas; return { label, entradas: amounts.entradas / 100, saidas: amounts.saidas / 100, saldo: balance / 100 }; });
+}
+function CashChart({ points }: { points: ChartPoint[] }): JSX.Element {
+  const maximum = Math.max(1, ...points.flatMap((point) => [point.entradas, point.saidas, Math.abs(point.saldo)]));
+  if (!points.length) return <div className="erp-grid-empty">Sem dados para montar o gráfico no período.</div>;
+  return <div className="erp-cash-chart" role="img" aria-label="Gráfico de entradas, saídas e saldo acumulado">{points.map((point) => <div className="erp-cash-column" key={point.label} title={`${point.label}: entradas ${money(point.entradas)}, saídas ${money(point.saidas)}, saldo ${money(point.saldo)}`}><div className="erp-cash-bars"><span className="erp-cash-bar in" style={{ height: `${Math.max(3, point.entradas / maximum * 100)}%` }}/><span className="erp-cash-bar out" style={{ height: `${Math.max(3, point.saidas / maximum * 100)}%` }}/></div><strong>{point.label.slice(5)}</strong><small>Saldo {money(point.saldo)}</small></div>)}</div>;
+}
 
 function firstDayOfMonth() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); }
 function lastDayOfMonth() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10); }
@@ -27,6 +47,7 @@ export function Vfin0300Page(): JSX.Element {
   const [saldos, setSaldos] = useState<SaldoConta[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  const [grouping, setGrouping] = useState<Grouping>("dia");
 
   const reload = useCallback(async () => {
     setBusy(true); setFeedback(null);
@@ -43,6 +64,9 @@ export function Vfin0300Page(): JSX.Element {
   const entradas = realizado.filter((r) => r.tipo.toUpperCase().includes("ENTRADA")).reduce((s, r) => s + r.valor, 0);
   const saidas = realizado.filter((r) => !r.tipo.toUpperCase().includes("ENTRADA")).reduce((s, r) => s + r.valor, 0);
   const totalSaldos = saldos.reduce((s, c) => s + c.saldo_atual, 0);
+  const points = chartData(tab === "realizado"
+    ? realizado.map((item) => ({ date: item.data, type: item.tipo, value: item.valor }))
+    : projetado.map((item) => ({ date: item.data_vencimento, type: item.tipo, value: item.valor })), grouping);
 
   return (
     <div className="erp-screen">
@@ -63,6 +87,7 @@ export function Vfin0300Page(): JSX.Element {
             </>}
           </div>
         )}
+        {tab !== "saldos" && <div className="erp-tgroup"><span className="erp-tgroup-label">Agrupar gráfico</span><select className="erp-input" style={{ width: 120, height: 32 }} value={grouping} onChange={(e) => setGrouping(e.target.value as Grouping)}><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option></select></div>}
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Ações</span>
           <button className="erp-btn erp-btn-primary" onClick={() => void reload()} disabled={busy}>{busy ? "Carregando..." : "Consultar"}</button>
@@ -87,6 +112,7 @@ export function Vfin0300Page(): JSX.Element {
 
           {tab === "realizado" && (
             <>
+              <div className="erp-fieldset-body"><CashChart points={points}/><div className="erp-chart-legend"><span><i className="in"/>Entradas</span><span><i className="out"/>Saídas</span><span>Saldo acumulado nos rótulos</span></div></div>
               <div className="erp-fieldset-body" style={{ paddingBottom: 0 }}>
                 <div className="erp-metrics">
                   <div className="erp-metric"><div className="erp-metric-label">Entradas</div><div className="erp-metric-value" style={{ color: "#1e6030" }}>{money(entradas)}</div></div>
@@ -111,7 +137,7 @@ export function Vfin0300Page(): JSX.Element {
           )}
 
           {tab === "projetado" && (
-            <div className="erp-fieldset-body">
+            <div className="erp-fieldset-body"><CashChart points={points}/><div className="erp-chart-legend"><span><i className="in"/>Entradas previstas</span><span><i className="out"/>Saídas previstas</span><span>Saldo projetado acumulado</span></div>
               <table className="erp-grid">
                 <thead><tr><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr></thead>
                 <tbody>

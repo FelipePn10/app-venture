@@ -130,6 +130,8 @@ import { Vbom0100Page } from "./engenharia/Vbom0100Page";
 import { Vlot0100Page } from "./almoxarifado/Vlot0100Page";
 import { Vaud0100Page } from "./cadastros/Vaud0100Page";
 import { Vusr0100Page } from "./cadastros/Vusr0100Page";
+import { Vnot0100Page } from "./cadastros/Vnot0100Page";
+import { Vest0500Page } from "./almoxarifado/Vest0500Page";
 import { WindowControls } from "@/components/window/WindowControls";
 import { OperationalRoutinePage } from "./OperationalRoutinePage";
 import { EntityLookupAssist } from "@/components/ui/EntityLookupAssist";
@@ -148,6 +150,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VLOT0100: <Vlot0100Page />,
   VAUD0100: <Vaud0100Page />,
   VUSR0100: <Vusr0100Page />,
+  VNOT0100: <Vnot0100Page />,
+  VEST0500: <Vest0500Page />,
   // Engenharia
   VENT0108: <Vent0108Page />,
   VPME0102: <Vpme0102Page />,

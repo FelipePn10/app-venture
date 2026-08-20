@@ -776,7 +776,7 @@ Na `VBOM0100`, a máscara é escolhida em uma lista: não copie nem digite sequ�
 ```
 1. VBOM0100 / VENG0300 → cria o CABEÇALHO (a versão)
 2. VENT0210            → adiciona as LINHAS (os componentes)
-3. VBOM0100 / VENG0300 → muda o STATUS para APPROVED
+3. VBOM0100 / VENG0300 → muda o STATUS para APROVADO
 ```
 
 > **Se inverter, você aprova uma BOM vazia — e BOM vazia aprovada é pior que BOM em rascunho, porque o MRP acredita nela.**
@@ -802,7 +802,7 @@ Na `VBOM0100`, a máscara é escolhida em uma lista: não copie nem digite sequ�
 > **Quem manda no MRP e na produção é a MBOM.**
 
 ⚠️ **Três regras que evitam retrabalho**
-1. **Só a versão `APPROVED` vigente é considerada** pelo MRP e pela produção.
+1. **Só a versão `APROVADO` vigente é considerada** pelo MRP e pela produção.
 2. **Criar um cabeçalho novo NÃO copia as linhas** da versão anterior — monte a estrutura de novo em `VENT0210`.
 3. **Tornar obsoleta não apaga histórico** nem altera ordens já firmadas.
 
@@ -1098,11 +1098,11 @@ Para cada item, marque o **Tipo** correto e diga **o que o MRP vai gerar**:
 |:-:|:--|:--|:-:|
 | 1 | Cadastrar os itens faltantes, com UM e tipo corretos | `VENT0200` | ☐ |
 | 2 | Conferir a prontidão (vai dar ⚠️ — é esperado) | `VITM0100` | ☐ |
-| 3 | Criar o **cabeçalho** da estrutura (tipo `MBOM`, status `DRAFT`) | `VBOM0100` | ☐ |
+| 3 | Criar o **cabeçalho** da estrutura (tipo `MBOM`, status `RASCUNHO`) | `VBOM0100` | ☐ |
 | 4 | Montar a **estrutura** com quantidades e **perda** | `VENT0210` | ☐ |
 | 5 | Criar o **roteiro** com 2+ operações, CT e tempos — marcar **Padrão** | `VPRO0100` | ☐ |
 | 6 | Ligar a **dependência** entre as operações (overlap `0`) | `VENG0600` | ☐ |
-| 7 | **Aprovar** a estrutura (status `APPROVED`) | `VBOM0100` | ☐ |
+| 7 | **Aprovar** a estrutura (status `APROVADO`) | `VBOM0100` | ☐ |
 | 8 | Conferir a prontidão de novo — agora deve dar ✅ | `VITM0100` | ☐ |
 
 ### Ficha do produto: Suporte Soldado
@@ -1151,7 +1151,7 @@ Para cada item, marque o **Tipo** correto e diga **o que o MRP vai gerar**:
 ```
 
 ### ✅ Entregável
-> **Produto com BOM `APPROVED` + roteiro com tempos + prontidão ✅ em `VITM0100`.**
+> **Produto com BOM `APROVADO` + roteiro com tempos + prontidão ✅ em `VITM0100`.**
 
 ---
 
@@ -1259,7 +1259,7 @@ F2 = Novo     F8 = Processar     F9 = Salvar
 | **CPM** | *Critical Path Method* — cálculo do caminho crítico e do lead time |
 | **CRP** | *Capacity Requirements Planning* — carga × capacidade dos centros de trabalho |
 | **CT** | Centro de Trabalho — onde a operação acontece |
-| **DRAFT / APPROVED / OBSOLETE** | Estados da BOM. Só **APPROVED** vigente vale para o MRP |
+| **RASCUNHO / APROVADO / OBSOLETO** | Estados da BOM. Só **APROVADO** vigente vale para o MRP |
 | **EBOM** | Estrutura de **engenharia** — como o produto foi projetado |
 | **Efetividade / Vigência** | Data a partir da qual uma versão de estrutura vale |
 | **Firmar** | Aprovar uma sugestão do MRP, transformando-a em ordem real |

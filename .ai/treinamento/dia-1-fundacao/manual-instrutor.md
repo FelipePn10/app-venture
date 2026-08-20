@@ -47,7 +47,7 @@ Ao final do Dia 1, o participante deve ser capaz de — **na tela, sem ajuda**:
 | 4 | Diferenciar **Comprado × Fabricado × De terceiro × Serviço** | Explica o que cada tipo gera no MRP |
 | 5 | Rodar o **checklist de prontidão** do item | Item aparece ✅ pronto em `VITM0100` |
 | 6 | Montar a descrição técnica via **PDM** (Grupo + Modificador + Atributos) | Objeto `pdm` colado no item |
-| 7 | Criar **cabeçalho de BOM** e mover status `DRAFT → APPROVED` | Versão APPROVED vigente |
+| 7 | Criar **cabeçalho de BOM** e mover status `RASCUNHO → APROVADO` | Versão APROVADO vigente |
 | 8 | Montar a **estrutura (BOM)** com quantidades e perdas | Árvore com ≥ 2 componentes |
 | 9 | Cadastrar **tipos de máquina** e **máquinas** com capacidade e eficiência | Máquina criada e tempo calculado |
 | 10 | Montar o **roteiro de fabricação** com operações, CT e tempos | Roteiro marcado como **Padrão** |
@@ -111,7 +111,7 @@ As 44 telas do escopo, em 3 níveis de profundidade. **Nada do Dia 1 fica de for
 |:--|:--|:--|
 | `VENT0200` | Cadastro de Itens | Cadastro mais importante do ERP; 7 abas alimentam todos os módulos |
 | `VITM0100` | Item & Prontidão para o MRP | Checklist que diz se o item "roda" no planejamento |
-| `VBOM0100` | Cabeçalhos de Estrutura (BOM) | Versiona a BOM; só `APPROVED` conta para o MRP |
+| `VBOM0100` | Cabeçalhos de Estrutura (BOM) | Versiona a BOM; só `APROVADO` conta para o MRP |
 | `VENT0210` | Estrutura de Produtos (BOM) | As linhas da receita: componente, quantidade, perda |
 | `VENG0300` | Cabeçalho e Situação da BOM | Tipo `EBOM`/`MBOM`, vigência e transição de status |
 | `VPRO0100` | Roteiro de Fabricação (PCP) | Operações, CT, dependências e **lead time CPM** |
@@ -561,7 +561,7 @@ Antes de iniciar, se o produto for **Configurado**, abra `VITE0313`, selecione a
 ```
 1. VBOM0100 / VENG0300 → cria o CABEÇALHO (a versão)
 2. VENT0210            → adiciona as LINHAS (os componentes)
-3. VBOM0100 / VENG0300 → muda o STATUS para APPROVED
+3. VBOM0100 / VENG0300 → muda o STATUS para APROVADO
 ```
 
 🗣 *"Cabeçalho primeiro, componentes depois, aprovar por último. Se inverter, você aprova uma BOM vazia — e BOM vazia aprovada é pior que BOM em rascunho, porque o MRP acredita nela."*
@@ -579,7 +579,7 @@ Antes de iniciar, se o produto for **Configurado**, abra `VITE0313`, selecione a
 O usuário responsável vem automaticamente da sessão. Nunca peça UUID à turma. Para vigência, explique o formato visual **dia/mês/ano** e escolha a data no calendário.
 
 ⚠️ **Três avisos obrigatórios:**
-1. **Só a versão `APPROVED` vigente é considerada pelo MRP e pela produção.**
+1. **Só a versão `APROVADO` vigente é considerada pelo MRP e pela produção.**
 2. **Criar um cabeçalho novo NÃO copia as linhas da versão anterior** — depois de criar, é preciso montar a estrutura na `VENT0210`.
 3. **Tornar obsoleta não apaga histórico** nem altera ordens já firmadas.
 
@@ -622,11 +622,11 @@ Demonstre a árvore hierárquica:
 
 #### Passo 3 — Aprovar
 
-Volte em `VBOM0100` / `VENG0300` e mude o status para **`APPROVED`**.
+Volte em `VBOM0100` / `VENG0300` e mude o status para **`APROVADO`**.
 
 ⚠️ **Não aprove BOM sem componentes, quantidades, unidades e efetividade validados.**
 
-🗣 *"Repara no que acabou de acontecer: até esse clique, essa estrutura não existia para o resto do sistema. O MRP não olhava para ela. Agora ela é lei. É por isso que a BOM presa em DRAFT é um dos erros mais comuns — a pessoa monta tudo certinho e esquece de aprovar."*
+🗣 *"Repara no que acabou de acontecer: até esse clique, essa estrutura não existia para o resto do sistema. O MRP não olhava para ela. Agora ela é lei. É por isso que a BOM presa em RASCUNHO é um dos erros mais comuns — a pessoa monta tudo certinho e esquece de aprovar."*
 
 #### `VENG0500` — Consulta e Manutenção Avançada de Estruturas (5 min)
 
@@ -835,18 +835,18 @@ Cada dupla recebe a ficha do **Anexo A** — o **suporte soldado**: 1 chapa + 2 
 |:-:|:--|:--|:--|
 | 1 | Cadastrar os itens faltantes, com UM e tipo corretos | `VENT0200` | Tipo `Comprado` para MP, `Fabricado` para PA |
 | 2 | Conferir a prontidão (deve dar ⚠️) | `VITM0100` | Pendência de BOM/roteiro |
-| 3 | Criar o **cabeçalho** da estrutura | `VBOM0100` | Tipo `MBOM`, status `DRAFT` |
+| 3 | Criar o **cabeçalho** da estrutura | `VBOM0100` | Tipo `MBOM`, status `RASCUNHO` |
 | 4 | Montar a **estrutura** com quantidades e perdas | `VENT0210` | 3 componentes, perda na chapa |
 | 5 | Criar o **roteiro** com 2+ operações, CT e tempos | `VPRO0100` | Marcado como **Padrão** |
 | 6 | Ligar a **dependência** entre as operações | `VENG0600` | Overlap `0` |
-| 7 | **Aprovar** a estrutura | `VBOM0100` | Status `APPROVED` |
+| 7 | **Aprovar** a estrutura | `VBOM0100` | Status `APROVADO` |
 | 8 | Conferir a prontidão de novo (deve dar ✅) | `VITM0100` | ✅ pronto |
 
 #### Gabarito para o instrutor validar (em cada máquina)
 
 - [ ] Item `PA-SUP-SOLD-001` existe, tipo **Fabricado**, UM `PC`, origem fiscal preenchida
 - [ ] Itens de MP existem, tipo **Comprado**, UM correta
-- [ ] Cabeçalho de BOM com tipo **MBOM** e status **`APPROVED`**
+- [ ] Cabeçalho de BOM com tipo **MBOM** e status **`APROVADO`**
 - [ ] Estrutura com **≥ 2 componentes**, quantidades preenchidas e **perda na chapa**
 - [ ] Roteiro com **≥ 2 operações**, cada uma com **centro de trabalho** e **tempo ≠ 0**
 - [ ] Roteiro marcado como **Padrão**
@@ -878,7 +878,7 @@ Passe de máquina em máquina com o gabarito acima. Para cada dupla, marque o qu
 ### Recapitulação em 3 frases (2 min)
 
 1. **O item** é o átomo do ERP — e o interruptor **comprado × fabricado** decide o destino dele.
-2. **A BOM** é a receita (o quê e quanto) — e só vale quando está **`APPROVED`**.
+2. **A BOM** é a receita (o quê e quanto) — e só vale quando está **`APROVADO`**.
 3. **O roteiro** é o modo de preparo (como e em quanto tempo) — e é ele que alimenta capacidade e custo.
 
 ### Volte ao flip chart da abertura (2 min)
@@ -1081,7 +1081,7 @@ R: Não, e isso é proposital. Cobrimos o **fluxo troncal** de cada setor — as
 | **CPM** | *Critical Path Method* — cálculo do caminho crítico e do lead time do roteiro |
 | **CRP** | *Capacity Requirements Planning* — confronta carga × capacidade dos centros de trabalho |
 | **CT** | Centro de Trabalho — onde a operação do roteiro acontece |
-| **DRAFT / APPROVED / OBSOLETE** | Estados do cabeçalho da BOM. Só **APPROVED** vigente vale para o MRP |
+| **RASCUNHO / APROVADO / OBSOLETO** | Estados do cabeçalho da BOM. Só **APROVADO** vigente vale para o MRP |
 | **EBOM** | Estrutura de **engenharia** — como o produto foi projetado |
 | **Efetividade / Vigência** | Data a partir da qual uma versão de estrutura vale |
 | **Firmar** | Aprovar uma sugestão do MRP, transformando-a em ordem real |

@@ -12,7 +12,7 @@ import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadEstablishments } from "@/services/lookups";
-import { lookupCnpj } from "@/services/customerService";
+import { lookupCnpj, type CnpjLookup } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Folder = "dados" | "endereco" | "telefones" | "emails" | "vencimentos" | "contatos" | "empresas";
@@ -41,6 +41,7 @@ export function Vsup0500Page(): JSX.Element {
   const [detail, setDetail] = useState<Obj | null>(null);
   const [enterprises, setEnterprises] = useState<EnterpriseLinkDTO[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [cnpjData, setCnpjData] = useState<CnpjLookup | null>(null);
   const [busy, setBusy] = useState(false);
 
   const [addrForm, setAddrForm] = useState({ zip_code: "", street: "", number: "", complement: "", district: "", city: "", uf: "", country: "BR" });
@@ -64,10 +65,11 @@ export function Vsup0500Page(): JSX.Element {
   const setF = <K extends keyof SupplierDTO>(k: K, v: SupplierDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
   const kindOf = (code?: number) => types.find((t) => t.code === code)?.kind;
 
-  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEnterprises([]); setFolder("dados"); setEditMode(true); setFeedback(null); }
+  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEnterprises([]); setCnpjData(null); setFolder("dados"); setEditMode(true); setFeedback(null); }
 
   async function abrir(code: number) {
     setBusy(true); setFeedback(null);
+    setCnpjData(null);
     try {
       const raw = await getSupplier(code); setDetail(raw); const parsed = raw as Obj;
       setForm({
@@ -140,6 +142,7 @@ export function Vsup0500Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       const data = await lookupCnpj(form.document_number);
+      setCnpjData(data);
       setForm((current) => ({
         ...current,
         name: data.legal_name || current.name,
@@ -157,6 +160,8 @@ export function Vsup0500Page(): JSX.Element {
         city: data.address?.city || current.city,
         uf: data.address?.uf || current.uf,
       }));
+      setPhoneForm((current) => ({ ...current, number: data.phone || current.number }));
+      setEmailForm((current) => ({ ...current, email: data.email || current.email }));
       setFeedback({ type: "info", message: "Dados consultados. Revise as informações antes de salvar o fornecedor." });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -224,6 +229,7 @@ export function Vsup0500Page(): JSX.Element {
 
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
+        {cnpjData && editMode && <div className="erp-note"><strong>Consulta cadastral:</strong> situação {cnpjData.registration_status || "não informada"}; abertura {cnpjData.opening_date || "não informada"}; natureza jurídica {cnpjData.legal_nature || "não informada"}; porte {cnpjData.size || "não informado"}; CNAE principal {cnpjData.main_activity?.code || "não informado"} {cnpjData.main_activity?.description ? `— ${cnpjData.main_activity.description}` : ""}; CNAEs secundários {cnpjData.secondary_activities.map((item) => item.code).filter(Boolean).join(", ") || "não informados"}; IEs {cnpjData.state_registrations.map((item) => `${item.uf} ${item.number}${item.enabled ? " ativa" : " inativa"}`).join(", ") || cnpjData.state_registration || "não informadas"}; endereço {[cnpjData.address?.street, cnpjData.address?.number, cnpjData.address?.neighborhood, cnpjData.address?.city, cnpjData.address?.uf, cnpjData.address?.zip_code].filter(Boolean).join(", ") || "não informado"}; telefone {cnpjData.phone || "não informado"}; e-mail {cnpjData.email || "não informado"}; Simples Nacional {cnpjData.simples_optant ? "sim" : "não"}; MEI {cnpjData.mei ? "sim" : "não"}. Os campos disponíveis foram preenchidos e permanecem editáveis para conferência.</div>}
         <div className="erp-main">
           <aside className="erp-list-panel">
             <div className="erp-panel-head">

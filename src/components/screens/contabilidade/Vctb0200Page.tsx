@@ -78,7 +78,7 @@ export function Vctb0200Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Competência</span>
-          <input className="erp-input" style={{ width: 110, height: 32 }} value={period} placeholder="YYYY-MM" onChange={(e) => setPeriod(e.target.value)} /></div>
+          <input className="erp-input" style={{ width: 110, height: 32 }} value={period} placeholder="AAAA-MM" onChange={(e) => setPeriod(e.target.value)} /></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCTB0200 — Contabilidade" filename="vctb0200" /></div>
       </div>

@@ -46,7 +46,7 @@
 | 5 | Conduzir uma **cotação**: convidar, precificar, selecionar, gerar pedidos | Vencedor selecionado por item |
 | 6 | Emitir e **aprovar** um pedido de compra respeitando a **alçada** | Pedido aprovado (ou bloqueado, com autorização) |
 | 7 | Aprovar/rejeitar **sugestões do MRP** na aba Sugestões | Sugestão vira pedido firme |
-| 8 | Registrar **aviso de recebimento** e avançar o ciclo de status | `SCHEDULED → ARRIVED → IN_CONFERENCE → RELEASED` |
+| 8 | Registrar **aviso de recebimento** e avançar o ciclo de status | `PROGRAMADO → RECEBIDO → EM_CONFERENCIA → LIBERADO` |
 | 9 | Registrar **divergência** de recebimento com resolução | Divergência com "afeta IQF" marcada |
 | 10 | Criar **roteiro de inspeção** e gerar/analisar a ordem | Ordem analisada, com destinação |
 | 11 | Dar **entrada no estoque** com lote e almoxarifado | Movimento IN registrado |
@@ -354,6 +354,8 @@ Encontra **preços efetivamente praticados** e atualiza a tabela a partir deles.
 
 > **Este é o tronco do dia.** Execute ponta a ponta ao vivo e depois deixe a turma repetir.
 
+**Antes de criar a solicitação**, reserve os primeiros minutos para abrir `VSUP0610` e `VPCT0100`: relembre a alçada e simule a tolerância que já foram preparadas. Só então execute solicitação → cotação → pedido → aprovação. O A4 aprofunda a manutenção dessas regras; aqui a turma precisa conhecê-las antes de vê-las bloquear ou liberar o pedido.
+
 #### `VSUP0300` — Solicitação de Compra (10 min)
 
 **O que é:** onde a necessidade nasce — manualmente ou vinda do MRP (Dia 3).
@@ -454,7 +456,7 @@ Status inicial: **Pendente**.
 5. Informe **fim de validade** para regras temporárias e documente a justificativa.
 
 **Parâmetros**
-- Por **domínio**, informe Chave, Valor e **Tipo** (`TEXT`, `NUMBER`, `BOOLEAN`…).
+- Por **domínio**, informe Chave, Valor e **Tipo** (`TEXTO`, `NUMERO`, `LOGICO`…).
 - ⚠️ Booleanos usam `true/false`; números **sem** símbolo de moeda e **sem** separador de milhar.
 
 ⚠️ **Alçadas e parâmetros exigem ADMIN.** Uma alçada incorreta pode bloquear ou liberar pedidos indevidamente — **valide em `VPDC0210` com um pedido de teste**.
@@ -490,7 +492,7 @@ Status inicial: **Pendente**.
 **O modelo real:** capa (fornecedor, número, status, moeda, vigência, índice de reajuste) + **linhas** (item, quantidade contratada, preço, pedido mínimo).
 
 ```
-DRAFT → ACTIVE → (SUSPENDED) → CLOSED / CANCELLED
+RASCUNHO → ATIVO → (SUSPENSO) → ENCERRADO / CANCELADO
 ```
 
 | Tela | O que faz |
@@ -503,9 +505,9 @@ DRAFT → ACTIVE → (SUSPENDED) → CLOSED / CANCELLED
 ⭐ **A mecânica do saldo:** `saldo = contratada − consumida`. Conforme os pedidos consomem, a linha acumula quantidade consumida.
 
 ⚠️ **Três regras:**
-1. Só linhas de contrato **`ACTIVE`** podem ter saldo consumido.
+1. Só linhas de contrato **`ATIVO`** podem ter saldo consumido.
 2. O consumo é **rejeitado** se exceder o saldo.
-3. O cancelamento (`CANCELLED`) é **irreversível** pela tela.
+3. O cancelamento (`CANCELADO`) é **irreversível** pela tela.
 
 🗣 *"Não existe 'cancelamento de item' avulso. O encerramento é mudança de status, e a baixa é consumo de saldo. É mais simples do que parece — e mais honesto, porque o histórico fica."*
 
@@ -521,7 +523,7 @@ Preço/Custo (VTER0100) → OF com operação externa → Ordem de terceiro (VTE
 | `VTPS0100` | Preços de serviço por fornecedor (item + fornecedor + operação = preço) e ordens de serviço |
 | `VTER0100` | Preços, **resolução** e **cálculo de custo** com vigência, frete e impostos |
 | `VTER0200` | Ordens de serviço de terceiros — **Gerar pela OF** (ADMIN) |
-| `VTER0300` | Remessas, retornos e histórico — tipos `SHIPMENT` / `RETURN` / `RECEIPT` / `ADJUSTMENT` |
+| `VTER0300` | Remessas, retornos e histórico — tipos `REMESSA` / `RETORNO` / `RECEBIMENTO` / `AJUSTE` |
 | `VTER0400` | Conversões globais de UM para serviços |
 
 ⚠️ **`VTER0300` exige chave de idempotência estável** (ex.: `OS15-REMESSA-NF123-1`). Execute **uma vez**; se houver timeout, **consulte antes de repetir** com a mesma chave.
@@ -556,16 +558,16 @@ VAVR0200   divergências   VINS0201    almoxarifados   VEST0100
 **Passo a passo**
 1. **Novo aviso:** informe **Fornecedor** e/ou **Pedido de compra**, **Doca**, **Nº NF**, **Agendado para** e observações.
 2. Em cada linha: **Item**, **Qtd esperada** e (opcional) **Máscara**/**UM** → **+ item**.
-3. **Criar aviso** → nasce em **`SCHEDULED`**.
+3. **Criar aviso** → nasce em **`PROGRAMADO`**.
 4. **Listar** e **Abrir** para ver o detalhe.
 5. **Avance o status** pelo seletor **Avançar**.
 
 ⭐ **O ciclo de status — desenhe no quadro:**
 ```
-SCHEDULED ──▶ ARRIVED ──▶ IN_CONFERENCE ──▶ RELEASED
+PROGRAMADO ──▶ RECEBIDO ──▶ EM_CONFERENCIA ──▶ LIBERADO
  agendado     chegou       conferindo        liberado
-                                    └──▶ BLOCKED  (bloqueado)
-                                    └──▶ CANCELLED
+                                    └──▶ BLOQUEADO  (bloqueado)
+                                    └──▶ CANCELADO
 ```
 
 #### Divergências ⭐ — o coração do tópico
@@ -621,8 +623,8 @@ Para cada etapa, informe nome, espécie, forma de apontamento, amostra e limites
 
 | Campo | Opções | O que significa |
 |:--|:--|:--|
-| **Espécie** | `VALUE` (medição) · `ATTRIBUTE` (passa/não passa) · `STRUCTURE` | A natureza da verificação |
-| **Apontamento** | `ALL_MEASUREMENTS` · `SINGLE_INTERVAL` · `MULTIPLE_INTERVAL` · `STATUS_ONLY` | Como o resultado é registrado |
+| **Espécie** | `VALOR` (medição) · `ATRIBUTO` (passa/não passa) · `ESTRUTURA` | A natureza da verificação |
+| **Apontamento** | `TODAS_MEDICOES` · `SINGLE_INTERVAL` · `MULTIPLE_INTERVAL` · `STATUS_ONLY` | Como o resultado é registrado |
 | **Amostra** | número | Tamanho da amostra |
 | **Nominal / Mín / Máx** | número | Faixa de aceitação (etapas de medição) |
 
@@ -630,9 +632,9 @@ Para cada etapa, informe nome, espécie, forma de apontamento, amostra e limites
 
 | Seq | Etapa | Espécie | Nominal | Mín | Máx | Amostra |
 |:-:|:--|:--|:-:|:-:|:-:|:-:|
-| 10 | Espessura da chapa (mm) | `VALUE` | 6,35 | 6,20 | 6,50 | 5 |
-| 20 | Certificado de qualidade | `ATTRIBUTE` | — | — | — | 1 |
-| 30 | Aspecto superficial | `ATTRIBUTE` | — | — | — | 5 |
+| 10 | Espessura da chapa (mm) | `VALOR` | 6,35 | 6,20 | 6,50 | 5 |
+| 20 | Certificado de qualidade | `ATRIBUTO` | — | — | — | 1 |
+| 30 | Aspecto superficial | `ATRIBUTO` | — | — | — | 5 |
 
 ⭐ **Duas automações que a turma precisa entender:**
 1. Ao receber mercadoria com **roteiro ativo**, o sistema **abre a ordem de inspeção automaticamente** e a mercadoria segue para o **almoxarifado de inspeção**.
@@ -813,7 +815,7 @@ Painel: **Em mãos** · **Reservado** · **Disponível**
 #### `VEST0200` — Inventário e Tipos de Movimento (3 min)
 
 **Inventário:** `criar → contar → ajustar → fechar`
-1. **Novo inventário:** depósito + descrição → nasce **`OPEN`**.
+1. **Novo inventário:** depósito + descrição → nasce **`ABERTO`**.
 2. Abra e **registre contagens** por item/depósito.
 3. **Ajuste** as diferenças por item — ⭐ *cada ajuste gera um **movimento de acerto** de saldo*.
 4. **Feche** o inventário.
@@ -836,7 +838,7 @@ Painel: **Em mãos** · **Reservado** · **Disponível**
 | Tela | O que faz |
 |:--|:--|
 | `VIMP0200` | Console de processos: capa (moeda, câmbio, incoterm, **base de rateio**), itens (FOB, qtd, peso) e **despesas** |
-| `VIMP0101` | Painel de status logístico: `OPEN → NATIONALIZED → CANCELLED` |
+| `VIMP0101` | Painel de status logístico: `ABERTO → NACIONALIZADO → CANCELADO` |
 | `VIMP0102` | CT-e — cadastrar, consultar e **autorizar** |
 | `VIMP0300` | Importação e custo nacionalizado (visão operacional, com **Recalcular**) |
 
@@ -845,7 +847,7 @@ Painel: **Em mãos** · **Reservado** · **Disponível**
 custo nacionalizado = FOB convertido pelo câmbio + rateio das despesas ÷ quantidade
 ```
 
-**Bases de rateio:** `VALUE` · `QUANTITY` · `WEIGHT`
+**Bases de rateio:** `VALOR` · `QUANTIDADE` · `PESO`
 
 ⚠️ **Só despesas marcadas "Compõe custo do item" entram no rateio** — as demais ficam informativas.
 ⚠️ Use **Recalcular** sempre que câmbio, item ou despesa mudar. **Não recalcule processos fechados sem autorização.**
@@ -876,7 +878,7 @@ Cada dupla precisa abastecer o material do produto do Dia 1 — **a chapa e os p
 | 8 | Gerar **cotação**, precificar e selecionar vencedor | `VSUP0400` | Status Cotada + vencedor por item |
 | 9 | **Gerar o pedido** a partir da cotação | `VSUP0400` → `VSUP0200` | Pedido criado |
 | 10 | **Aprovar** o pedido (ver a alçada agir) | `VPDC0210` | Aprovado ou bloqueado |
-| 11 | Registrar o **aviso de recebimento** e avançar o status | `VAVR0200` | `RELEASED` |
+| 11 | Registrar o **aviso de recebimento** e avançar o status | `VAVR0200` | `LIBERADO` |
 | 12 | Registrar **1 divergência** com resolução | `VAVR0200` | Tipo + resolução preenchidos |
 | 13 | Criar **roteiro de inspeção** e gerar a ordem | `VINS0200` / `VINS0201` | Ordem gerada |
 | 14 | **Analisar** a ordem com **Movimentar estoque** | `VINS0201` | Quantidades distribuídas |
@@ -892,7 +894,7 @@ Cada dupla precisa abastecer o material do produto do Dia 1 — **a chapa e os p
 - [ ] Solicitação com status **Parcial** ou **Atendido** (não Aberto)
 - [ ] Cotação com **vencedor selecionado por item**
 - [ ] Pedido de compra criado a partir da cotação
-- [ ] Aviso de recebimento em **`RELEASED`**
+- [ ] Aviso de recebimento em **`LIBERADO`**
 - [ ] **≥ 1 divergência** registrada com tipo e resolução
 - [ ] Ordem de inspeção **analisada**, com soma ≤ quantidade da ordem
 - [ ] Movimento de estoque `IN` com **lote** preenchido
@@ -971,7 +973,7 @@ Passe de máquina em máquina com o gabarito acima. Para cada dupla, marque o qu
 | Quantidade interna zerada no pedido | Falta conversão de UM | `VSUP0110` |
 | Alçada bloqueando tudo | Limite mal cadastrado | Validar com pedido de teste em `VPDC0210` |
 | Tolerância barrando entrega correta | Intervalos sobrepostos | Usar o simulador do `VPCT0100` |
-| Contrato não deixa consumir saldo | Contrato não está `ACTIVE` | Mudar status em `VCON0400` |
+| Contrato não deixa consumir saldo | Contrato não está `ATIVO` | Mudar status em `VCON0400` |
 | Consumo de contrato recusado | Excede o saldo | Conferir `contratada − consumida` |
 | EDI com divergência | Fora da tolerância cadastrada | Tratar antes de aprovar/receber |
 | Ordem de terceiro duplicada | Gerou pela OF duas vezes | ⚠️ Conferir antes de gerar |
@@ -1029,7 +1031,7 @@ R: Sim — use a base **`CLASSIFICATION`**. A busca prefere o específico por it
 R: `VSUP0650` — Histórico de Movimentos de Compra. Comece com limite baixo (100) e filtre por fornecedor e/ou item.
 
 **P: Posso apagar um contrato?**
-R: Não. Contratos são **encerrados** (status `CLOSED`) ou **cancelados** (`CANCELLED`, irreversível pela tela).
+R: Não. Contratos são **encerrados** (status `ENCERRADO`) ou **cancelados** (`CANCELADO`, irreversível pela tela).
 
 **P: Quando devo marcar "afeta IQF" numa divergência?**
 R: Quando a **não conformidade for responsabilidade do fornecedor**. Se não for, não marque — divergências marcadas como "não afeta IQF" não devem penalizá-lo.
@@ -1122,9 +1124,9 @@ R: Quando a **não conformidade for responsabilidade do fornecedor**. Se não fo
 
 | Seq | Etapa | Espécie | Apontamento | Nominal | Mín | Máx | Amostra |
 |:-:|:--|:--|:--|:-:|:-:|:-:|:-:|
-| 10 | Espessura (mm) | `VALUE` | `ALL_MEASUREMENTS` | 6,35 | 6,20 | 6,50 | 5 |
-| 20 | Certificado de qualidade | `ATTRIBUTE` | `STATUS_ONLY` | — | — | — | 1 |
-| 30 | Aspecto superficial | `ATTRIBUTE` | `STATUS_ONLY` | — | — | — | 5 |
+| 10 | Espessura (mm) | `VALOR` | `TODAS_MEDICOES` | 6,35 | 6,20 | 6,50 | 5 |
+| 20 | Certificado de qualidade | `ATRIBUTO` | `STATUS_ONLY` | — | — | — | 1 |
+| 30 | Aspecto superficial | `ATRIBUTO` | `STATUS_ONLY` | — | — | — | 5 |
 
 ### Máscara de lote (`VEST0300` / `VLOT0100`)
 

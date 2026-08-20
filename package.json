@@ -1,6 +1,6 @@
 {
   "name": "erp-desktop-frontend",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "private": true,
   "type": "module",
   "scripts": {
@@ -30,6 +30,7 @@
     "audit:drift": "node scripts/audit-frontend-drift.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-ghost-routes",
     "e2e:orcamentos": "node scripts/e2e/comercial-orcamentos.mjs",
     "e2e:fundacao": "node scripts/e2e/cadastros-fundacao.mjs",
+    "e2e:notificacoes": "node scripts/e2e/notificacoes-contagem.mjs",
     "audit:treinamento": "node scripts/audit-training-docs.mjs",
     "audit:scroll": "node scripts/audit-scroll-traps.mjs",
     "audit:usability": "node scripts/audit-frontend-usability.mjs",
@@ -37,6 +38,7 @@
     "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp} --fail-on-missing",
     "test:versioning": "node scripts/test-versioning.mjs",
     "test:download-notice": "node scripts/test-download-notice.mjs",
+    "test:screen-search": "node scripts/test-screen-search.mjs",
     "version:sync": "node scripts/set-release-version.mjs"
   },
   "dependencies": {
@@ -50,7 +52,7 @@
     "jsbarcode": "^3.12.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.24.1",
+    "react-router-dom": "^7.18.2",
     "zustand": "^4.5.4"
   },
   "devDependencies": {
@@ -65,6 +67,9 @@
     "eslint-plugin-react-refresh": "^0.4.7",
     "playwright-core": "^1.60.0",
     "typescript": "^5.5.3",
-    "vite": "^5.3.4"
+    "vite": "^7.3.5"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
   }
 }

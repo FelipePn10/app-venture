@@ -439,7 +439,7 @@ export function Vent0200Page(): JSX.Element {
           automatic_low: form.automaticLow,
           minimum_stock: Number(form.cyclicalCountMinStock) || 0,
           ...(form.cyclicalCount
-            ? { cyclical_count_config: { days: Number(form.cyclicalCountDays) || 0, minimum_stock: Number(form.cyclicalCountMinStock) || 0 } }
+            ? { cyclical_count_config: { days_interval: Number(form.cyclicalCountDays) || 0 } }
             : {}),
         },
         engineering: {
@@ -709,6 +709,25 @@ export function Vent0200Page(): JSX.Element {
         }
         .it-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
         .it-select:disabled { background-color: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
+
+        @media (max-width: 700px) {
+          .it-root { width: 100%; min-width: 0; overflow-x: hidden; }
+          .it-topbar { min-height: 52px; height: auto; padding: 8px 12px; }
+          .it-app-name { display: none; }
+          .it-screen-title { margin-left: 0; padding-left: 10px; font-size: 11.5px; }
+          .it-actionbar { height: auto; min-width: 0; padding: 7px 10px; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+          .it-action-group { max-width: 100%; margin: 0; padding: 0; border-right: 0; flex-wrap: wrap; }
+          .it-action-label { width: 100%; margin: 0 0 2px; }
+          .it-body { min-width: 0; padding: 10px; overflow-x: hidden; }
+          .it-card { width: 100%; min-width: 0; }
+          .it-card-header { align-items: flex-start; gap: 8px; padding: 10px 12px; flex-wrap: wrap; }
+          .it-tabs { width: 100%; min-width: 0; overscroll-behavior-x: contain; }
+          .it-tab { flex: 0 0 auto; padding: 10px 13px; }
+          .it-tab-body { min-width: 0; padding: 14px 12px; }
+          .it-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+          .it-grid > [class*="it-col-"] { grid-column: 1 / -1; min-width: 0; }
+          .it-field { min-width: 0; }
+        }
 
         .it-input-wrap { position: relative; display: flex; }
         .it-input-btn { height: 36px; width: 34px; flex-shrink: 0; background: #edf5ea; border: 1.5px solid #d4e8cc; border-left: none; border-radius: 0 7px 7px 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #4a8060; transition: background 0.12s; }

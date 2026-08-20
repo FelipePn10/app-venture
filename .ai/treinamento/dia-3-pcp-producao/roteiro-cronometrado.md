@@ -30,7 +30,7 @@
 
 ## Bloco A — Planejar (0:15–1:45)
 
-### A1. Fontes de demanda (15 min) — de onde nasce a necessidade
+### A1. Fontes de demanda (17 min) — de onde nasce a necessidade
 | Tela | O que é |
 |:--|:--|
 | `VPRE0201` / `VPRE0251` | Cadastro / Geração de **Previsão de Vendas** |
@@ -40,7 +40,7 @@
 
 🗣 **Fala:** *"O MRP não inventa necessidade — ele responde a uma demanda. Ela vem de três lugares: o pedido de venda (Dia 4), a previsão de vendas e a demanda independente. Hoje a gente prepara a previsão pra ter o que planejar."*
 
-### A2. MRP — Planejamento de Materiais (30 min) ⭐ o disparo central
+### A2. MRP — Planejamento de Materiais (35 min) ⭐ o disparo central
 **Telas:** `VMRP0100` — MRP · `VPRO0700` — Alertas de Exceções MRP
 
 ▶ **O que fazer (ao vivo):**
@@ -63,10 +63,11 @@
 
 ▶ **O que fazer:** calcular o **sequenciamento**, ler o **quadro/Gantt** (ordens por máquina no tempo), e **remanejar** uma ordem (arrastar sequência / trocar centro).
 
-**Pipeline (mostrar):** `VMRP0200` / `VPLN0100` — roda **MRP → CRP → APS em um disparo** com parecer de viabilidade.
-**Carga (mostrar):** `VPLC0200` Montagem de Carga, `VPLC0211` Orientações de Entrega.
-
 🗣 **Fala:** *"O APS é a agenda da fábrica: cada máquina, cada hora, o que ela faz. E é vivo — quebrou uma máquina, atrasou um material, você remaneja aqui e o sistema recalcula as datas."*
+
+### A5. Pipeline integrado (3 min)
+
+`VMRP0200` / `VPLN0100` executa **MRP → CRP → APS** em um disparo e apresenta o parecer de viabilidade. Use somente depois de a turma compreender cada etapa isoladamente.
 
 ---
 
@@ -112,7 +113,7 @@
 | `VMAN0202` / `VMAN0401` | Apontamento / Consulta de Ordens de Serviço |
 | `VAPS0300` | Paradas de Máquinas |
 
-▶ **O que fazer:** criar um **plano preventivo** (descrição obrigatória) e gerar/avançar uma **ordem** (`PLANNED → IN_PROGRESS → DONE`).
+▶ **O que fazer:** criar um **plano preventivo** (descrição obrigatória) e gerar/avançar uma **ordem** (`PLANEJADO → EM_ANDAMENTO → CONCLUIDO`).
 
 🗣 **Fala:** *"A manutenção não é um setor à parte: máquina parada derruba o APS que a gente montou de manhã. Preventiva bem-feita é o que segura o plano de pé."*
 

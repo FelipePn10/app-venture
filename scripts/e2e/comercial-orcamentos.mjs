@@ -57,6 +57,14 @@ function record(label, ok, status, note = '') {
   return ok;
 }
 
+function rows(payload) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of ['data', 'items', 'results', 'records']) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  return [];
+}
+
 async function call(method, path, body, { expect = [200, 201, 204], label = '', raw = false, headers = {} } = {}) {
   if (!RUN_WRITES && method !== 'GET') return { status: 0, json: null, skipped: true };
   const opts = { method, headers: { ...headers } };
@@ -240,16 +248,20 @@ async function cicloDoOrcamento() {
   record('status padrão do novo orçamento é OV', created.json.status === 'OV', 'OK', `status=${created.json.status}`);
   record('backend assumiu a empresa do login', Number(created.json.enterprise_code) > 0, 'OK', `enterprise=${created.json.enterprise_code}`);
 
-  // Estabelecimento diferente do tenant tem de ser recusado.
-  await expectRejection('POST com enterprise_code de outro tenant deve falhar', 'POST', `${BASE}/create`,
-    { enterprise_code: Number(created.json.enterprise_code) + 777, customer_code: customer, quotation_type: 'VENDA' });
+  // Compatibilidade instalada: o middleware ignora/substitui a empresa enviada
+  // e a resposta precisa continuar pertencendo ao tenant autenticado.
+  const tenantGuard = await call('POST', `${BASE}/create`,
+    { enterprise_code: Number(created.json.enterprise_code) + 777, customer_code: customer, quotation_type: 'VENDA' },
+    { expect: [201], label: 'POST com empresa externa é reescrito para o tenant' });
+  record('empresa externa não altera o tenant do orçamento', Number(tenantGuard.json?.enterprise_code) === Number(created.json.enterprise_code), 'OK', `enterprise=${tenantGuard.json?.enterprise_code}`);
   // Tipo de frete fora da lista tem de ser recusado.
   await expectRejection('POST com freight_type inválido deve falhar', 'POST', `${BASE}/create`,
     { customer_code: customer, quotation_type: 'VENDA', freight_type: 'FRETE_MALUCO' });
 
   // ── Itens ────────────────────────────────────────────────────────────────
   const items = await call('GET', '/api/items', undefined, { label: 'GET itens (fixture)' });
-  const itemCode = items.json?.[0]?.code ?? items.json?.[0]?.Code;
+  const availableItems = rows(items.json);
+  const itemCode = availableItems[0]?.code ?? availableItems[0]?.Code;
   if (itemCode) {
     const item = await call('POST', `${BASE}/items/create`, {
       sales_quotation_code: fx.code, sequence: 1, item_code: itemCode, mask: '',

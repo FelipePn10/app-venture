@@ -1,7 +1,7 @@
 # HELP - Telas do ERP Venture
 
 > Documentação completa de todas as telas do sistema ERP Venture Desktop.
-> Total de telas documentadas: **199**
+> Total de telas documentadas: **201**
 > Estilo: Processos de negócio com fluxos, pré-requisitos e passo a passo.
 > Última atualização: Julho 2026
 
@@ -10668,6 +10668,24 @@ O log é imutável: não há edição nem exclusão por aqui. Usuário sem perfi
 O usuário solicita informando o **motivo** (obrigatório). Um administrador então **aprova** ou **rejeita** a solicitação na listagem. Com a solicitação aprovada, a troca é concluída informando o **id da solicitação**, a **senha atual**, a **nova senha** e a **confirmação** — a tela recusa quando nova senha e confirmação não conferem.
 
 A senha só muda no passo de conclusão: aprovar apenas libera a troca. Uma solicitação rejeitada não pode ser concluída — abra uma nova.
+
+### VNOT0100 — Central de Alertas
+
+**Objetivo.** Administrar alertas internos e resumos por e-mail da empresa, sem expor credenciais do servidor de envio.
+
+Na aba **Configuração**, habilite a central, defina horário do resumo, fuso, retenção e limites. O botão de teste apenas enfileira o envio; confira o resultado na aba **Histórico**. Em **Assinaturas**, escolha o evento, uma cadência permitida e destinatários internos por papel. Eventos pontuais avisam um acontecimento; pendências podem lembrar diariamente enquanto a causa continuar aberta.
+
+As abas **Alertas**, **Histórico** e **Falhas esgotadas** servem para acompanhar situações abertas e entregas. E-mails ficam mascarados, erros são sanitizados e o reenvio preserva as tentativas anteriores. A tela nunca solicita endereço externo nem usuário/senha SMTP.
+
+### VEST0500 — Programação e Execução de Contagem Cíclica
+
+**Objetivo.** Executar as conferências periódicas cuja política foi definida no cadastro do item e conduzir cada contagem até sua conclusão e aprovação.
+
+Não é o mesmo cadastro repetido: no item ficam a habilitação e o intervalo em dias — a regra permanente. Nesta rotina ficam cada ocorrência com data, almoxarifado, lote/endereço, quantidade esperada, quantidade encontrada, divergência, responsável e auditoria.
+
+Informe almoxarifado, código comercial do item e data programada; endereço, máscara e lote são opcionais. Depois selecione a contagem e avance pelas etapas permitidas: **Programada → Em contagem → Concluída/Divergente → Aprovada**. Cancelamentos só estão disponíveis antes da conclusão.
+
+Ao concluir, informe a quantidade física como decimal. O backend confronta o saldo esperado e as tolerâncias configuradas. Somente administrador pode aprovar; códigos alfanuméricos e zeros à esquerda devem ser preservados.
 
 ## Permissões e mensagens
 

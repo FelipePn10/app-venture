@@ -471,8 +471,8 @@ Rascunho (R) ──confirmar──▶ Confirmado (P) ──NF-e autorizada──
 
 ### ⭐ Ciclo do chamado
 ```
-PENDING → IN_ANALYSIS → WAITING_RETURN / WAITING_ORDER → ATTENDED → CLOSED
-                                                              (ou CANCELLED)
+PENDENTE → EM_ANALISE → AGUARDANDO_RETORNO / AGUARDANDO_PEDIDO → ATENDIDO → ENCERRADO
+                                                              (ou CANCELADO)
 ```
 
 ⭐ Cada item calcula automaticamente `warranty_until` / `in_warranty` a partir da **data da NF de compra + dias de garantia**.
@@ -492,22 +492,22 @@ PENDING → IN_ANALYSIS → WAITING_RETURN / WAITING_ORDER → ATTENDED → CLOS
 
 ### Passo a passo
 1. ⭐ **Auto-fill:** informe o código do **pedido de venda** → **Gerar**. O romaneio nasce **Aberto** já com os itens.
-2. **Separar (reserva):** reserva o estoque (`OPEN → SEPARATED`).
+2. **Separar (reserva):** reserva o estoque (`ABERTO → SEPARADO`).
 3. **Conferir itens:** registre a quantidade conferida de cada item.
    ⚠️ *Sobra/falta gera **divergência** (⚠️), que **bloqueia o despacho** salvo aceite explícito.*
-4. **Conferir romaneio** (exige **todos** os itens conferidos): `SEPARATED → CONFERRED`.
+4. **Conferir romaneio** (exige **todos** os itens conferidos): `SEPARADO → CONFERIDO`.
 5. **Packing:** adicione **volumes** (Caixa, Pallet, Fardo… com peso e dimensões).
    ⭐ *A cubagem é calculada de L×A×C.*
 6. **Transporte:** modalidade de frete (CIF/FOB…), valor, placa, motorista, **ANTT**, lacres, previsão de entrega.
 7. Emita a **NF-e de saída** e **Vincule a NF-e** ao romaneio.
-8. **Despachar** (`CONFERRED → SHIPPED`): consome as reservas. Se houver divergência, marque **aceitar divergência**.
+8. **Despachar** (`CONFERIDO → DESPACHADO`): consome as reservas. Se houver divergência, marque **aceitar divergência**.
 9. **Exporte** em **PDF** ou **Excel**.
 
 ### Ciclo de vida
 ```
-OPEN ──separar──► SEPARATED ──conferir──► CONFERRED ──despachar──► SHIPPED
+ABERTO ──separar──► SEPARADO ──conferir──► CONFERIDO ──despachar──► DESPACHADO
   │  (reserva)         │  (todos itens)        │  (sem divergência
-  └──────────────── CANCELLED (libera reservas) ─────── ou aceite)
+  └──────────────── CANCELADO (libera reservas) ─────── ou aceite)
 ```
 
 ## ⭐⭐ A frase que resolve a maior confusão do dia
@@ -530,7 +530,7 @@ OPEN ──separar──► SEPARATED ──conferir──► CONFERRED ──de
 
 ### Ciclo obrigatório da carga
 ```
-OPEN → RELEASED → LOADING → LOADED → SHIPPED
+ABERTO → LIBERADO → EM_CARREGAMENTO → CARREGADO → DESPACHADO
 ```
 
 ⚠️ **Antes de criar a carga, conclua separação e conferência dos romaneios.**
@@ -1017,7 +1017,7 @@ Para cada erro, marque o que resolve:
 | 5 | Criar **orçamento** e **converter em pedido** | `VVND0300` | ☐ |
 | 6 | **Confirmar** o pedido | `VVND0200` | ☐ |
 | 7 | Observar as **3 automações** (veja o ATP cair) | `VVND0200` / `VEST0100` | ☐ |
-| 8 | Gerar o **romaneio** e levá-lo até `CONFERRED` | `VEXP0100` | ☐ |
+| 8 | Gerar o **romaneio** e levá-lo até `CONFERIDO` | `VEXP0100` | ☐ |
 | 9 | **Emitir a NF-e de saída** (rascunho) | `VFIS0200` | ☐ |
 | 10 | **Autorizar** na SEFAZ (homologação) | `VFIS0200` | ☐ |
 | 11 | **Vincular a NF-e** ao romaneio e **despachar** | `VEXP0100` | ☐ |
@@ -1366,7 +1366,7 @@ DINHEIRO NO CAIXA               VFIN0300
 - [ ] Trato um pedido bloqueado por crédito
 
 **Expedição**
-- [ ] Gero romaneio por auto-fill e percorro até `SHIPPED`
+- [ ] Gero romaneio por auto-fill e percorro até `DESPACHADO`
 - [ ] **Sei que o romaneio reserva e a NF-e baixa**
 - [ ] Trato divergência de conferência
 

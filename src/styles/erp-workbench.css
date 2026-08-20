@@ -58,7 +58,7 @@
   display: flex; align-items: center; gap: 6px; padding: 7px 14px; flex-wrap: wrap; flex-shrink: 0;
   box-shadow: var(--v-shadow-sm);
 }
-.erp-tgroup { display: flex; align-items: center; gap: 6px; padding-right: 12px; }
+.erp-tgroup { display: flex; align-items: center; gap: 6px; min-width: 0; padding-right: 12px; flex-wrap: wrap; }
 .erp-tgroup + .erp-tgroup { border-left: 1px solid var(--v-border); padding-left: 12px; }
 .erp-tgroup-label {
   font-size: 9.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase;
@@ -100,10 +100,10 @@
   background-repeat: no-repeat; background-position: right 9px center; }
 
 /* ── CONTENT (feedback + main), fills the 1fr grid row ────────────────────── */
-.erp-content { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.erp-content { width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
 /* ── MAIN SPLIT ────────────────────────────────────────────────────────────── */
-.erp-main { flex: 1; display: grid; grid-template-columns: 380px 1fr; min-height: 0; overflow: hidden; }
+.erp-main { width: 100%; min-width: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); min-height: 0; overflow: hidden; }
 .erp-list-panel {
   display: flex; flex-direction: column; min-height: 0;
   background: var(--v-surface); border-right: 1px solid var(--v-border-strong);
@@ -238,15 +238,18 @@
   .erp-crumbs { min-width: 0; flex-wrap: wrap; }
   .erp-crumb-mut, .erp-crumb-sep, .erp-titlebar-meta { display: none; }
   .erp-crumb-cur { max-width: 205px; white-space: normal; }
-  .erp-toolbar { align-items: flex-start; padding: 7px 14px; overflow: visible; }
-  .erp-tgroup { flex-wrap: wrap; max-width: 100%; padding: 0; }
+  .erp-toolbar { align-items: flex-start; padding: 7px 14px; overflow: visible; min-width: 0; }
+  .erp-tgroup { flex: 1 1 100%; flex-wrap: wrap; min-width: 0; max-width: 100%; padding: 0; }
+  .erp-tgroup .erp-btn { max-width: 100%; }
   .erp-tgroup + .erp-tgroup { border-left: 0; padding-left: 0; }
   .erp-tspacer { display: none; }
   .erp-tinput, .erp-tselect { max-width: 170px; }
   .erp-content { overflow: visible; min-height: auto; }
-  .erp-main { display: flex; flex-direction: column; overflow: visible; min-height: auto; }
-  .erp-list-panel { min-height: 220px; max-height: 320px; border-right: 0; border-bottom: 1px solid var(--v-border-strong); }
-  .erp-detail-panel, .erp-detail-body { overflow: visible; min-height: auto; }
+  .erp-main { width: 100%; min-width: 0; display: flex; flex-direction: column; overflow: visible; min-height: auto; }
+  .erp-list-panel { width: 100%; min-width: 0; min-height: 220px; max-height: 320px; border-right: 0; border-bottom: 1px solid var(--v-border-strong); overflow-x: hidden; }
+  .erp-detail-panel, .erp-detail-body { width: 100%; min-width: 0; overflow: visible; min-height: auto; }
+  .erp-list-panel > .erp-fieldset,
+  .erp-detail-panel > .erp-fieldset { width: 100%; min-width: 0; }
   .erp-fieldset-body { grid-template-columns: minmax(0, 1fr); }
   .erp-fieldset-body > [class*="erp-c"] { grid-column: 1 / -1; }
   .erp-tabs { overflow-x: auto; }
@@ -258,7 +261,7 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
   background-repeat: no-repeat; background-position: right 9px center; }
 
 /* ── DATA GRID (line items) ───────────────────────────────────────────────── */
-.erp-grid-wrap { border: 1px solid var(--v-border-strong); border-radius: var(--v-r-md); overflow: hidden; box-shadow: var(--v-shadow-sm); background: var(--v-surface); }
+.erp-grid-wrap { width: 100%; min-width: 0; max-width: 100%; border: 1px solid var(--v-border-strong); border-radius: var(--v-r-md); overflow: hidden; box-shadow: var(--v-shadow-sm); background: var(--v-surface); }
 .erp-grid { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
 .erp-grid thead th {
   position: sticky; top: 0; background: var(--v-ink); color: #bcd6c4; text-align: left;
@@ -455,3 +458,12 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
   font-size: 17px; line-height: 1.1; cursor: pointer;
 }
 .erp-dl-notice-close:hover { opacity: 1; }
+.erp-cash-chart { min-height: 220px; display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding: 14px 8px 4px; border-bottom: 1px solid var(--erp-border, #dbe5df); }
+.erp-cash-column { min-width: 64px; flex: 1 0 64px; display: grid; grid-template-rows: 170px auto auto; gap: 4px; text-align: center; color: #52685b; font-size: 11px; }
+.erp-cash-bars { display: flex; align-items: flex-end; justify-content: center; gap: 5px; height: 170px; border-bottom: 1px solid #aabdb1; }
+.erp-cash-bar { width: min(22px, 38%); min-height: 3px; border-radius: 3px 3px 0 0; }
+.erp-cash-bar.in, .erp-chart-legend i.in { background: #248451; }
+.erp-cash-bar.out, .erp-chart-legend i.out { background: #c74747; }
+.erp-chart-legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 9px 8px 0; color: #52685b; font-size: 12px; }
+.erp-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.erp-chart-legend i { width: 10px; height: 10px; border-radius: 2px; }
