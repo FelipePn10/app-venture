@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.9] — 2026-08-20
+
 ## Novidades
 - Adicionamos uma Central de Alertas para configurar avisos internos, acompanhar entregas de e-mail e reenviar mensagens que falharam.
 - A nova rotina de Contagem Cíclica permite acompanhar e executar as conferências geradas automaticamente pelas políticas dos itens.
