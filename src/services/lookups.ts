@@ -85,7 +85,7 @@ export const loadMachines = cached(async () =>
 );
 
 export const loadEstablishments = cached(() =>
-  loadEndpoint('/api/enterprise', ['nome_fantasia', 'razao_social', 'name', 'nome'], ['cnpj', 'matriz_cnpj', 'municipio']),
+  loadEndpoint('/api/enterprise/list', ['nome_fantasia', 'razao_social', 'name', 'nome'], ['cnpj', 'matriz_cnpj', 'municipio']),
 );
 
 /**

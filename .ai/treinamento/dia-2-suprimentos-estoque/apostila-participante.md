@@ -253,6 +253,12 @@ Encontra **preços efetivamente praticados** e atualiza a tabela a partir deles.
 
 # PARTE 4 — O ciclo de aquisição
 
+## 4.0 Antes do pedido: confira a governança
+
+Antes de iniciar a solicitação, consulte `VSUP0610` e confirme a **alçada** que decidirá quem pode aprovar o pedido. Em seguida, simule em `VPCT0100`/`VSUP0630` a **tolerância** que será aplicada no recebimento. A Parte 5 aprofunda esses cadastros, mas a regra precisa estar conhecida **antes** de aprovar ou receber.
+
+Ordem segura: **alçada/tolerância → solicitação → cotação → pedido → aprovação → recebimento**.
+
 ## 4.1 `VSUP0300` — Solicitação de Compra
 
 **O que é:** onde a necessidade nasce.
@@ -365,7 +371,7 @@ Filtros **cumulativos**: intervalo de pedido, fornecedor, item, comprador, tipo 
 5. **Fim de validade** para regras temporárias — documente a justificativa.
 
 ### Parâmetros
-Por **domínio**: Chave, Valor e **Tipo** (`TEXT`, `NUMBER`, `BOOLEAN`…).
+Por **domínio**: Chave, Valor e **Tipo** (`TEXTO`, `NUMERO`, `LOGICO`…).
 
 ⚠️ Booleanos usam `true/false`. Números **sem** símbolo de moeda e **sem** separador de milhar.
 
@@ -408,7 +414,7 @@ O `VPCT0100` tem o painel de **avaliação**: informe o **valor esperado** e o *
 **Capa** (fornecedor, número, status, moeda, vigência, índice de reajuste) + **linhas** (item, quantidade contratada, preço, pedido mínimo).
 
 ```
-DRAFT → ACTIVE → (SUSPENDED) → CLOSED / CANCELLED
+RASCUNHO → ATIVO → (SUSPENSO) → ENCERRADO / CANCELADO
 ```
 
 | Tela | O que faz |
@@ -428,7 +434,7 @@ DRAFT → ACTIVE → (SUSPENDED) → CLOSED / CANCELLED
 1. Informe o **nº interno** do contrato → **Abrir**.
 2. A tabela mostra **contratada**, **consumida** e **saldo**.
 3. **Selecionar** a linha → informe a **quantidade a baixar** → **Baixar saldo**.
-4. **Cancelar contrato** muda o status para `CANCELLED`.
+4. **Cancelar contrato** muda o status para `CANCELADO`.
 
 ### ⭐ A mecânica
 ```
@@ -436,9 +442,9 @@ saldo = contratada − consumida
 ```
 
 ⚠️ **Três regras**
-1. Só linhas de contrato **`ACTIVE`** podem ter saldo consumido.
+1. Só linhas de contrato **`ATIVO`** podem ter saldo consumido.
 2. O consumo é **rejeitado** se exceder o saldo.
-3. O cancelamento (`CANCELLED`) é **irreversível** pela tela.
+3. O cancelamento (`CANCELADO`) é **irreversível** pela tela.
 
 > Não existe "cancelamento de item" avulso. O encerramento é **mudança de status**, e a baixa é **consumo de saldo**.
 
@@ -459,7 +465,7 @@ Preço/Custo (VTER0100) → OF com operação externa → Ordem de terceiro (VTE
 | `VTPS0100` | **Preços:** item + fornecedor + operação = preço unitário, com UM, tipo de frete e **preferencial**. **Ordens de serviço:** listagem e mudança de status |
 | `VTER0100` | Preços com vigência, **Resolver preço** e **Calcular custo** (bruto, frete, impostos recuperáveis, conversão, custo efetivo). Reajuste, cópia e movimentação |
 | `VTER0200` | Ordens de serviço de terceiros — **Gerar pela OF** (ADMIN) |
-| `VTER0300` | Remessas, retornos e histórico — tipos `SHIPMENT` / `RETURN` / `RECEIPT` / `ADJUSTMENT` |
+| `VTER0300` | Remessas, retornos e histórico — tipos `REMESSA` / `RETORNO` / `RECEBIMENTO` / `AJUSTE` |
 | `VTER0400` | **Conversões globais** de UM para serviços |
 
 ### ⚠️ Dois cuidados críticos
@@ -481,16 +487,16 @@ Preço/Custo (VTER0100) → OF com operação externa → Ordem de terceiro (VTE
 ### Passo a passo
 1. **Novo aviso:** **Fornecedor** e/ou **Pedido de compra**, **Doca**, **Nº NF**, **Agendado para**, observações.
 2. Em cada linha: **Item**, **Qtd esperada** e (opcional) **Máscara**/**UM** → **+ item**.
-3. **Criar aviso** → nasce em **`SCHEDULED`**.
+3. **Criar aviso** → nasce em **`PROGRAMADO`**.
 4. **Listar** e **Abrir** para ver o detalhe.
 5. **Avance o status** pelo seletor **Avançar**.
 
 ### ⭐ O ciclo de status
 ```
-SCHEDULED ──▶ ARRIVED ──▶ IN_CONFERENCE ──▶ RELEASED
+PROGRAMADO ──▶ RECEBIDO ──▶ EM_CONFERENCIA ──▶ LIBERADO
  agendado     chegou       conferindo        liberado
-                                    └──▶ BLOCKED   (bloqueado)
-                                    └──▶ CANCELLED
+                                    └──▶ BLOQUEADO   (bloqueado)
+                                    └──▶ CANCELADO
 ```
 
 ## ⭐ Divergências — o coração do recebimento
@@ -547,8 +553,8 @@ Marque quando a **não conformidade for responsabilidade do fornecedor**. Se o c
 
 | Campo | Opções | O que significa |
 |:--|:--|:--|
-| **Espécie** | `VALUE` (medição) · `ATTRIBUTE` (passa/não passa) · `STRUCTURE` | A natureza da verificação |
-| **Apontamento** | `ALL_MEASUREMENTS` · `SINGLE_INTERVAL` · `MULTIPLE_INTERVAL` · `STATUS_ONLY` | Como o resultado é registrado |
+| **Espécie** | `VALOR` (medição) · `ATRIBUTO` (passa/não passa) · `ESTRUTURA` | A natureza da verificação |
+| **Apontamento** | `TODAS_MEDICOES` · `SINGLE_INTERVAL` · `MULTIPLE_INTERVAL` · `STATUS_ONLY` | Como o resultado é registrado |
 | **Amostra** | número | Tamanho da amostra |
 | **Nominal / Mín / Máx** | número | Faixa de aceitação (etapas de medição) |
 
@@ -556,9 +562,9 @@ Marque quando a **não conformidade for responsabilidade do fornecedor**. Se o c
 
 | Seq | Etapa | Espécie | Nominal | Mín | Máx | Amostra |
 |:-:|:--|:--|:-:|:-:|:-:|:-:|
-| 10 | Espessura da chapa (mm) | `VALUE` | 6,35 | 6,20 | 6,50 | 5 |
-| 20 | Certificado de qualidade | `ATTRIBUTE` | — | — | — | 1 |
-| 30 | Aspecto superficial | `ATTRIBUTE` | — | — | — | 5 |
+| 10 | Espessura da chapa (mm) | `VALOR` | 6,35 | 6,20 | 6,50 | 5 |
+| 20 | Certificado de qualidade | `ATRIBUTO` | — | — | — | 1 |
+| 30 | Aspecto superficial | `ATRIBUTO` | — | — | — | 5 |
 
 ### ⭐ Duas automações importantes
 1. Ao receber mercadoria com **roteiro ativo**, o sistema **abre a ordem de inspeção automaticamente** e a mercadoria segue para o **almoxarifado de inspeção**.
@@ -669,7 +675,7 @@ Use **Cadastrar scorecard** apenas quando houver **avaliação externa** ou **im
 
 ## 10.3 `VAVF0101` — Parâmetros de Avaliação
 
-Domínio `SUPPLIER_EVALUATION` e outros, como pares **chave/valor tipados** (`STRING`/`NUMBER`/`BOOL`/`DATE`) por empresa. ⚠️ **Escrita restrita a ADMIN.**
+Domínio `SUPPLIER_EVALUATION` e outros, como pares **chave/valor tipados** (`TEXTO`/`NUMERO`/`LOGICO`/`DATA`) por empresa. ⚠️ **Escrita restrita a ADMIN.**
 
 > **Inspeção é o filtro** que impede material ruim de entrar na linha. **O IQF é a memória:** fornecedor que entrega ruim aparece no scorecard, e a próxima compra já leva isso em conta.
 
@@ -787,7 +793,7 @@ ATP = saldo em mãos − reservas
 ## 11.4 `VEST0200` — Inventário e Tipos de Movimento
 
 ### Inventário: `criar → contar → ajustar → fechar`
-1. **Novo inventário:** depósito + descrição → nasce **`OPEN`**.
+1. **Novo inventário:** depósito + descrição → nasce **`ABERTO`**.
 2. Abra e **registre contagens** por item/depósito (quantidade contada).
 3. **Ajuste** as diferenças por item — ⭐ *cada ajuste gera um **movimento de acerto** de saldo*.
 4. **Feche** o inventário quando terminar.
@@ -817,7 +823,7 @@ Cadastre com **Sigla** e **Descrição** (e tipo IN/OUT) — classificam os lan�
 | Tela | O que faz |
 |:--|:--|
 | `VIMP0200` | Console de processos: capa (moeda, câmbio, incoterm, **base de rateio**), **itens** (FOB, qtd, peso) e **despesas** |
-| `VIMP0101` | Painel de status logístico: `OPEN → NATIONALIZED → CANCELLED` |
+| `VIMP0101` | Painel de status logístico: `ABERTO → NACIONALIZADO → CANCELADO` |
 | `VIMP0102` | **CT-e** — cadastrar, consultar e **autorizar** |
 | `VIMP0300` | Importação e custo nacionalizado (visão operacional, com **Recalcular**) |
 
@@ -826,14 +832,14 @@ Cadastre com **Sigla** e **Descrição** (e tipo IN/OUT) — classificam os lan�
 2. **Itens:** item, quantidade, peso e **FOB unitário**.
 3. **Despesas:** tipo e valor, marcando **"No custo do item"** quando a despesa deve ser rateada.
 4. **Criar processo** → o detalhe mostra o **custo nacionalizado unitário** por item.
-5. **Recalcular landed** após ajustes; mude o **status** (`OPEN → NATIONALIZED / CANCELLED`).
+5. **Recalcular landed** após ajustes; mude o **status** (`ABERTO → NACIONALIZADO / CANCELADO`).
 
 ### ⭐ A conta
 ```
 custo nacionalizado = FOB convertido pelo câmbio + rateio das despesas ÷ quantidade
 ```
 
-**Bases de rateio:** `VALUE` · `QUANTITY` · `WEIGHT`
+**Bases de rateio:** `VALOR` · `QUANTIDADE` · `PESO`
 
 ⚠️ **Só despesas marcadas "Compõe custo do item" entram no rateio** — as demais ficam informativas.
 ⚠️ **Não recalcule processos fechados sem autorização.**
@@ -898,7 +904,7 @@ Por quê? ______________________________________________
 | 8 | Gerar **cotação**, precificar e selecionar o vencedor | `VSUP0400` | ☐ |
 | 9 | **Gerar o pedido** a partir da cotação | `VSUP0200` | ☐ |
 | 10 | **Aprovar** o pedido (veja a alçada agir) | `VPDC0210` | ☐ |
-| 11 | Registrar o **aviso de recebimento** e avançar até `RELEASED` | `VAVR0200` | ☐ |
+| 11 | Registrar o **aviso de recebimento** e avançar até `LIBERADO` | `VAVR0200` | ☐ |
 | 12 | Registrar **1 divergência** com resolução | `VAVR0200` | ☐ |
 | 13 | Criar **roteiro de inspeção** e gerar a ordem | `VINS0200`/`VINS0201` | ☐ |
 | 14 | **Analisar** a ordem com **Movimentar estoque** | `VINS0201` | ☐ |
@@ -935,9 +941,9 @@ Por quê? ______________________________________________
 
 | Seq | Etapa | Espécie | Nominal | Mín | Máx | Amostra |
 |:-:|:--|:--|:-:|:-:|:-:|:-:|
-| 10 | Espessura (mm) | `VALUE` | 6,35 | 6,20 | 6,50 | 5 |
-| 20 | Certificado de qualidade | `ATTRIBUTE` | — | — | — | 1 |
-| 30 | Aspecto superficial | `ATTRIBUTE` | — | — | — | 5 |
+| 10 | Espessura (mm) | `VALOR` | 6,35 | 6,20 | 6,50 | 5 |
+| 20 | Certificado de qualidade | `ATRIBUTO` | — | — | — | 1 |
+| 30 | Aspecto superficial | `ATRIBUTO` | — | — | — | 5 |
 
 **O que acontece**
 
@@ -984,7 +990,7 @@ Por quê? ______________________________________________
 | Solicitação não gera pedido | Sem fornecedor e sem preferencial | `VSUP0130` |
 | Pedido bloqueado ao aprovar | **Alçada** — comportamento esperado | ADMIN usa **Autorizar alçada** |
 | Recebimento recusa a quantidade | Acima do saldo + tolerância | Conferir `VSUP0630` |
-| Contrato não deixa consumir | Não está `ACTIVE` | Mudar status em `VCON0400` |
+| Contrato não deixa consumir | Não está `ATIVO` | Mudar status em `VCON0400` |
 | Consumo de contrato recusado | Excede o saldo | Conferir `contratada − consumida` |
 | Ordem de terceiro duplicada | Gerou pela OF duas vezes | ⚠️ Conferir antes de gerar |
 | Movimento de terceiro duplicado | Repetiu sem chave de idempotência | Consultar antes de repetir |

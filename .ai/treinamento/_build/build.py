@@ -508,6 +508,7 @@ TIPOS = {
     "manual-instrutor": ("Manual do Instrutor", "Documento de condução"),
     "apostila-participante": ("Apostila do Participante", "Material do aluno"),
     "roteiro-cronometrado": ("Roteiro Cronometrado", "Agenda de bolso"),
+    "guia-autonomia": ("Guia de Autonomia", "Consulta operacional pós-treinamento"),
 }
 
 

@@ -160,14 +160,19 @@ export interface CnpjLookup {
   legal_name: string;
   trade_name: string;
   registration_status?: string;
+  legal_nature?: string;
+  opening_date?: string;
   email?: string;
   phone?: string;
   state_registration?: string;
+  state_registrations: Array<{ uf: string; number: string; enabled: boolean }>;
   simples_optant?: boolean;
   mei?: boolean;
   size?: string;
   address?: { zip_code?: string; street?: string; number?: string; complement?: string; neighborhood?: string; city?: string; uf?: string };
   main_activity?: { code?: string; description?: string };
+  secondary_activities: Array<{ code?: string; description?: string }>;
+  source?: string;
 }
 
 /** Auto-fill: consulta a Receita pelo CNPJ para pré-preencher o cadastro. */
@@ -178,14 +183,26 @@ export async function lookupCnpj(cnpj: string): Promise<CnpjLookup> {
   const o = unwrapObject(root['data'] ?? root);
   const addr = unwrapObject(o['address'] ?? o['Address']);
   const act = unwrapObject(o['main_activity'] ?? o['MainActivity']);
+  const stateRegistrations = unwrapArray(o['state_registrations'] ?? o['StateRegistrations']);
+  const secondaryActivities = unwrapArray(o['secondary_activities'] ?? o['SecondaryActivities']);
   return {
     cnpj: parseStr(o, 'cnpj', 'Cnpj'),
     legal_name: parseStr(o, 'legal_name', 'LegalName'),
     trade_name: parseStr(o, 'trade_name', 'TradeName'),
     registration_status: parseStr(o, 'registration_status', 'RegistrationStatus') || undefined,
+    legal_nature: parseStr(o, 'legal_nature', 'LegalNature') || undefined,
+    opening_date: parseStr(o, 'opening_date', 'OpeningDate') || undefined,
     email: parseStr(o, 'email', 'Email') || undefined,
     phone: parseStr(o, 'phone', 'Phone') || undefined,
     state_registration: parseStr(o, 'state_registration', 'StateRegistration') || undefined,
+    state_registrations: stateRegistrations.map((raw) => {
+      const registration = unwrapObject(raw);
+      return {
+        uf: parseStr(registration, 'uf', 'UF'),
+        number: parseStr(registration, 'number', 'Number'),
+        enabled: parseBool(registration, 'enabled', 'Enabled'),
+      };
+    }),
     simples_optant: o['simples_optant'] === true,
     mei: o['mei'] === true,
     size: parseStr(o, 'size', 'Size') || undefined,
@@ -199,6 +216,11 @@ export async function lookupCnpj(cnpj: string): Promise<CnpjLookup> {
       uf: parseStr(addr, 'uf', 'Uf') || undefined,
     },
     main_activity: { code: parseStr(act, 'code', 'Code') || undefined, description: parseStr(act, 'description', 'Description') || undefined },
+    secondary_activities: secondaryActivities.map((raw) => {
+      const activity = unwrapObject(raw);
+      return { code: parseStr(activity, 'code', 'Code') || undefined, description: parseStr(activity, 'description', 'Description') || undefined };
+    }),
+    source: parseStr(o, 'source', 'Source') || undefined,
   };
 }
 

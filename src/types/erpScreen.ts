@@ -85,7 +85,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VPCT0100",
     title: "Tolerâncias de Pedido de Compra",
-    description: "Faixas de tolerância (quantidade/preço/total) por operação e fornecedor, com ação BLOCK/WARN, e avaliação.",
+    description: "Faixas de tolerância de quantidade, preço e total por operação e fornecedor, com bloqueio ou alerta.",
     module: "suprimento",
   },
   {
@@ -101,27 +101,15 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "suprimento",
   },
   {
-    code: "VCFG0100",
-    title: "Configurador de Produto",
-    description: "Conjuntos, variáveis e características do configurador cfg_*; vincular características ao item e gerar a máscara.",
-    module: "engenharia",
-  },
-  {
     code: "VPLN0100",
     title: "Pipeline de Planejamento (MRP→CRP→APS)",
     description: "Executar MRP, CRP e APS num único disparo com parecer de viabilidade, e manter parâmetros de planejamento.",
     module: "planejamento",
   },
   {
-    code: "VRES0100",
-    title: "Motivos de Restrição",
-    description: "Cadastrar os motivos usados nas restrições/dependências do configurador.",
-    module: "producao",
-  },
-  {
     code: "VBOM0100",
     title: "Cabeçalhos de Estrutura (BOM)",
-    description: "Versão, tipo (EBOM/MBOM) e status (DRAFT→APPROVED→OBSOLETE) da estrutura por item.",
+    description: "Versão, tipo de estrutura de engenharia/fabricação e situação por item.",
     module: "engenharia",
   },
   {
@@ -141,6 +129,18 @@ export const ERP_SCREENS: ErpScreen[] = [
     title: "Solicitações de Troca de Senha",
     description: "Solicitar, aprovar, concluir ou rejeitar solicitações de troca de senha de usuários.",
     module: "cadastros",
+  },
+  {
+    code: "VNOT0100",
+    title: "Central de Alertas",
+    description: "Configurar alertas internos, assinaturas, resumos por e-mail, histórico de entregas e reenvios.",
+    module: "cadastros",
+  },
+  {
+    code: "VEST0500",
+    title: "Programação e Execução de Contagem Cíclica",
+    description: "Executar a política definida no item: programar conferências, registrar quantidades, tratar divergências e aprovar.",
+    module: "almoxarifado",
   },
   // ── Comercial
   {
@@ -684,7 +684,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VIMP0101",
     title: "Status Logístico da Carga",
-    description: "Acompanhar o status logístico dos processos de importação (OPEN → NATIONALIZED → CANCELLED).",
+    description: "Acompanhar a situação logística dos processos de importação: aberto, nacionalizado ou cancelado.",
     module: "importacao",
   },
 

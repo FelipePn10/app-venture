@@ -8,6 +8,8 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const SOURCES: InspectionOrderSource[] = ["MANUAL", "PURCHASE_RECEIPT", "RECEIVING_NOTICE", "FISCAL_ENTRY"];
+const SOURCE_LABELS: Record<string, string> = { MANUAL: "Manual", PURCHASE_RECEIPT: "Recebimento de compra", RECEIVING_NOTICE: "Aviso de recebimento", FISCAL_ENTRY: "Entrada fiscal" };
+const TREATMENT_LABELS: Record<string, string> = { ACCEPT: "Aceitar", REWORK: "Retrabalhar", RETURN: "Devolver", SCRAP: "Sucatear", CONDITIONAL: "Aceitar com ressalva" };
 const GEN_INI = { source: "MANUAL" as InspectionOrderSource, item_code: "", mask: "", warehouse_id: "", quantity: "", supplier_code: "", lot: "" };
 const AN_INI = { conform_qty: "", rejected_qty: "", rework_qty: "", restricted_qty: "", treatment: "ACCEPT", affects_supplier_score: true, move_stock: false, destination_warehouse_id: "", rejection_warehouse_id: "" };
 
@@ -80,7 +82,7 @@ export function Vins0201Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Gerar ordem de inspeção</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c3"><label className="erp-label">Origem</label><select className="erp-input" value={gen.source} onChange={(e) => setGen((f) => ({ ...f, source: e.target.value as InspectionOrderSource }))}>{SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Origem</label><select className="erp-input" value={gen.source} onChange={(e) => setGen((f) => ({ ...f, source: e.target.value as InspectionOrderSource }))}>{SOURCES.map((s) => <option key={s} value={s}>{SOURCE_LABELS[s] ?? s}</option>)}</select></div>
                   <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={gen.item_code} onChange={(e) => setGen((f) => ({ ...f, item_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={gen.mask} onChange={(e) => setGen((f) => ({ ...f, mask: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label erp-req">Almox.</label><input className="erp-input num" type="number" value={gen.warehouse_id} onChange={(e) => setGen((f) => ({ ...f, warehouse_id: e.target.value }))} /></div>
@@ -98,7 +100,7 @@ export function Vins0201Page(): JSX.Element {
                   <div className="erp-field erp-c2"><label className="erp-label">Rejeitada</label><input className="erp-input num" type="number" value={an.rejected_qty} onChange={(e) => setAn((f) => ({ ...f, rejected_qty: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Retrabalho</label><input className="erp-input num" type="number" value={an.rework_qty} onChange={(e) => setAn((f) => ({ ...f, rework_qty: e.target.value }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Restrita</label><input className="erp-input num" type="number" value={an.restricted_qty} onChange={(e) => setAn((f) => ({ ...f, restricted_qty: e.target.value }))} /></div>
-                  <div className="erp-field erp-c4"><label className="erp-label">Tratamento</label><select className="erp-input" value={an.treatment} onChange={(e) => setAn((f) => ({ ...f, treatment: e.target.value }))}>{INSPECTION_TREATMENTS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                  <div className="erp-field erp-c4"><label className="erp-label">Tratamento</label><select className="erp-input" value={an.treatment} onChange={(e) => setAn((f) => ({ ...f, treatment: e.target.value }))}>{INSPECTION_TREATMENTS.map((t) => <option key={t} value={t}>{TREATMENT_LABELS[t] ?? t}</option>)}</select></div>
                   <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={an.affects_supplier_score} onChange={(e) => setAn((f) => ({ ...f, affects_supplier_score: e.target.checked }))} /> Afeta IQF</label></div>
                   <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={an.move_stock} onChange={(e) => setAn((f) => ({ ...f, move_stock: e.target.checked }))} /> Movimentar estoque</label></div>
                   {an.move_stock && <>

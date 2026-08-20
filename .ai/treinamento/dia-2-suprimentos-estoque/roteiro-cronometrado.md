@@ -31,13 +31,13 @@
 ### A1. Cadastro de Fornecedor (25 min)
 | Ordem | Tela | O que é |
 |:-:|:--|:--|
-| 1 | `VSUP0500` | Cadastro de Fornecedor (dados principais) |
-| 2 | `VSUP0510` / `VSUP0660` | Apoio do Fornecedor — parâmetros e contatos |
+| 1 | `VSUP0510` / `VSUP0660` | Apoio do Fornecedor — tipos, parâmetros e contatos (**pré-requisito**) |
+| 2 | `VSUP0500` | Cadastro de Fornecedor (dados principais) |
 | 3 | `VSUP0670` | Itens e Qualidade do Fornecedor |
 | 4 | `VVOR0202` | Cadastro de Itens por Fornecedor (o que cada um fornece) |
 | 5 | `VSUP0130` | Fornecedor Preferencial por Item |
 
-▶ **O que criar:** um fornecedor de matéria-prima (ex.: distribuidor de chapas), com contato, e **vincular** os itens que ele fornece (`VVOR0202`) marcando o **preferencial** (`VSUP0130`).
+▶ **O que criar:** primeiro confirme/crie o tipo e os contatos em `VSUP0510`; depois cadastre um fornecedor de matéria-prima, vincule os itens que ele fornece (`VVOR0202`) e marque o preferencial (`VSUP0130`).
 
 🗣 **Fala:** *"O fornecedor aqui não é só um nome: é a ponte entre o item do Dia 1 e a compra. Quando você vincula o item ao fornecedor, o sistema já sabe de quem comprar e por quanto."*
 
@@ -51,7 +51,20 @@
 
 🗣 **Fala:** *"Lembra da unidade que a gente definiu ontem? É aqui que ela vira conta: o sistema compra em quilo, mas sabe quantas peças aquilo dá. Sem isso, o estoque e o custo saem errados."*
 
-### A3. O fluxo de compra — requisição → cotação → pedido (35 min) ⭐ troncal
+### A3. Governança da compra — antes de aprovar (15 min)
+
+| Tela | O que definir antes do pedido |
+|:--|:--|
+| `VSUP0610` | Alçadas: quem pode aprovar e até qual valor |
+| `VPCT0100` / `VSUP0630` | Tolerâncias de quantidade e preço; simule antes de ativar |
+| `VCON0200` / `VCON0400` / `VCON0202` | Contratos e controle do saldo contratado |
+| `VTPS0100` / `VTER0100`–`VTER0400` | Serviços de terceiros, como zincagem e usinagem externa |
+
+▶ **O que fazer:** confira a alçada e a tolerância que serão usadas no exercício. Só depois crie e aprove o pedido, para que o bloqueio observado tenha uma regra já conhecida pela turma.
+
+🗣 **Fala:** *"Alçada não é desconfiança: é proteção. Você tem autonomia até o seu limite; acima disso, o sistema pede um segundo olhar."*
+
+### A4. O fluxo de compra — requisição → cotação → pedido (35 min) ⭐ troncal
 | Ordem | Tela | O que é / o que fazer |
 |:-:|:--|:--|
 | 1 | `VSUP0300` | **Solicitação de Compra** — a necessidade nasce aqui (ou vem do MRP no Dia 3) |
@@ -65,14 +78,6 @@
 3. `VPDC0200`: gerar o **pedido de compra** a partir da cotação.
 4. `VPDC0210`: **aprovar/autorizar** o pedido (mostrar as alçadas).
 
-**Parametrização de apoio (mostrar onde ficam):**
-- `VSUP0610` — Alçadas e Parâmetros de Compras (quem aprova até quanto).
-- `VPCT0100` / `VSUP0630` — Tolerâncias de Pedido de Compra (quanto pode divergir sem travar).
-- `VCON0200` / `VCON0400` / `VCON0202` — Contratos de Fornecedores (compra recorrente por contrato + baixa de saldo).
-- `VTPS0100` / `VTER0100`–`VTER0400` — Serviços de Terceiros (ex.: mandar peça para zincagem/usinagem externa — comum na metalurgia).
-
-🗣 **Fala (alçadas — desmistificar):** *"Alçada não é desconfiança: é proteção. Ela garante que ninguém, sozinho, aprove uma compra grande por engano. Você tem autonomia até o seu limite — acima disso, o sistema pede um segundo olhar."*
-
 ---
 
 ## Bloco B — Receber, inspecionar e estocar (2:00–3:15)
@@ -82,7 +87,7 @@
 ### B1. Recebimento (15 min)
 **Tela:** `VAVR0200` — Aviso de Recebimento
 
-▶ **O que criar:** registrar a **chegada** do material (aviso), conferir capa e itens, avançar o status (`SCHEDULED → ARRIVED → IN_CONFERENCE → RELEASED/BLOCKED`) e tratar **divergências** (falta, excesso, avaria).
+▶ **O que criar:** registrar a **chegada** do material (aviso), conferir capa e itens, avançar o status (`PROGRAMADO → RECEBIDO → EM_CONFERENCIA → LIBERADO/BLOQUEADO`) e tratar **divergências** (falta, excesso, avaria).
 
 🗣 **Fala:** *"Aqui é o pedágio da fábrica. O que entra errado aqui contamina tudo pra frente. Divergiu? Registra a divergência — não empurra pro sistema um número que não é verdade."*
 
@@ -114,7 +119,11 @@
 
 🗣 **Fala (saldo → PCP):** *"Esse saldo que acabou de aparecer aqui é exatamente o número que o MRP vai olhar amanhã pra decidir o que ainda falta comprar. Estoque certo aqui = MRP certo lá."*
 
-**Importação (pincelada, 5 min):** `VIMP0200` Console de Processos de Importação, `VIMP0300` Custo Nacionalizado — para quem importa insumo (landed cost).
+### B4. Consultas, inventário e importação (10 min)
+
+- `VEST0200` — mostre o ciclo **criar → contar → ajustar → fechar** do inventário.
+- `VEST0400` — confirme saldo, lote e almoxarifado após a entrada.
+- `VIMP0200` / `VIMP0300` — apresente o console de importação e o custo nacionalizado para insumos importados.
 
 ## 🎯 Dinâmica de fixação — "Da compra à prateleira" (30 min)
 

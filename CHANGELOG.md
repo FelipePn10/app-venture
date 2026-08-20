@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## Novidades
+- Adicionamos uma Central de Alertas para configurar avisos internos, acompanhar entregas de e-mail e reenviar mensagens que falharam.
+- A nova rotina de Contagem Cíclica permite acompanhar e executar as conferências geradas automaticamente pelas políticas dos itens.
+
+## Melhorias
+- A consulta de CNPJ agora preenche também inscrição estadual, endereço, telefone, e-mail e demais informações cadastrais disponíveis.
+- A busca de telas ficou mais precisa e coloca primeiro o código ou nome pesquisado, sem resultados repetidos ou sem relação.
+- Deixamos os formulários e materiais de treinamento mais claros, com termos em português e orientações para trabalhar com autonomia.
+
+## Correções
+- Corrigimos campos e botões sobrepostos, conteúdo cortado e problemas de navegação em diferentes tamanhos de janela.
+- Reforçamos a integração com itens alfanuméricos, parametrização fiscal, estoque, máquinas e plano de corte.
+
 ## [v1.1.8] — 2026-08-13
 
 ## Melhorias

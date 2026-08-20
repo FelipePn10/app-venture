@@ -875,7 +875,7 @@ Usando o produto e o material dos Dias 1 e 2, cada dupla leva o **suporte soldad
 |:--|:--|:--|
 | Demanda não salva | Data em fim de semana/feriado | Escolher dia útil (`VENT0108`) |
 | MRP roda mas **não gera nada** | Sem demanda, ou estoque suficiente, ou item não é Fabricado/Comprado | Conferir a tabela de regras de geração |
-| MRP não explode a BOM | **BOM não está `APPROVED`** (Dia 1!) | `VBOM0100` |
+| MRP não explode a BOM | **BOM não está `APROVADO`** (Dia 1!) | `VBOM0100` |
 | Sugestão sem data coerente | Item sem **lead time** | `VENT0200` aba Planejamento, ou regra configurada no MRP |
 | Firmou e não achou a OF | Numerações **independentes** | Abrir a OF criada para confirmar o vínculo |
 | CRP sem sobrecarga nenhuma | Demanda baixa demais para a capacidade | Aumentar a quantidade da demanda |
@@ -933,7 +933,7 @@ Abra `VEST0100` e mostre os dois movimentos gerados pela OF: o **OUT** da chapa 
 |:--|:--|:--|
 | MRP não gera sugestão nenhuma | Sem demanda registrada | Cadastrar demanda (`VPLA0102`) ou previsão |
 | MRP ignora um item | Item de terceiro, tipo Projeto, estrutura Comercial ou estoque suficiente | Comportamento correto |
-| BOM não é explodida | Status **≠ `APPROVED`** | `VBOM0100` |
+| BOM não é explodida | Status **≠ `APROVADO`** | `VBOM0100` |
 | Datas todas no mesmo dia | Item sem lead time | `VENT0200` ou regra configurada |
 | Quantidade sugerida diferente da pedida | **Lote mínimo/múltiplo** agindo | Comportamento correto |
 | Data empurrada alguns dias | **Calendário** empurrou para o próximo dia útil | Comportamento correto |

@@ -146,7 +146,7 @@ export function Vcus0100Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">Base de alocação (critério de rateio)</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={baseForm.code || ""} onChange={(e) => setBaseForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={baseForm.description} onChange={(e) => setBaseForm((p) => ({ ...p, description: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Período</label><input className="erp-input" placeholder="YYYY-MM" value={baseForm.period ?? ""} onChange={(e) => setBaseForm((p) => ({ ...p, period: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Período</label><input className="erp-input" placeholder="AAAA-MM" value={baseForm.period ?? ""} onChange={(e) => setBaseForm((p) => ({ ...p, period: e.target.value }))} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarBase} disabled={busy}>Criar base</button></div>
               <div className="erp-field erp-c12"><table className="erp-grid">
                 <thead><tr><th>Código</th><th>Descrição</th><th>Período</th></tr></thead>

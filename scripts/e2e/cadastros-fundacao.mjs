@@ -34,6 +34,7 @@ const PASSWORD = process.env.PASSWORD ?? '';
 const RUN_WRITES = process.env.RUN_WRITES === '1';
 
 let token = '';
+let authenticatedUserId = '';
 const results = [];
 
 function record(label, ok, status, note = '') {
@@ -106,6 +107,10 @@ async function login() {
     });
     const json = await res.json().catch(() => null);
     token = json?.token ?? json?.access_token ?? json?.data?.token ?? '';
+    if (token) {
+      const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+      authenticatedUserId = claims.sub ?? claims.user_id ?? claims.id ?? '';
+    }
     record('POST /users/login', res.status === 200 && !!token, res.status, token ? 'token OK' : 'sem token');
   } catch (e) {
     record('POST /users/login', false, 'ERR', e.message);
@@ -237,10 +242,10 @@ async function pdmEItem() {
     const nextGroup = grupos.reduce((max, g) => Math.max(max, Number(g.code ?? g.Code ?? 0)), 0) + 1;
     const sufixo = Date.now().toString().slice(-8);
     const criadoGrupo = await call('POST', '/api/pdm/create-group', {
-      code: nextGroup, description: `E2E GRUPO ${sufixo}`, enterprise_id: 1,
+      code: nextGroup, description: `E2E GRUPO ${sufixo}`, enterprise_id: 1, created_by: authenticatedUserId,
     }, { expect: [200, 201], label: `VITE0114 — cria grupo com código automático ${nextGroup}` });
     const criadoMod = await call('POST', '/api/pdm/create-modifier', {
-      description: `E2E MODIFICADOR ${sufixo}`,
+      description: `E2E MODIFICADOR ${sufixo}`, created_by: authenticatedUserId,
     }, { expect: [200, 201], label: 'VITE0115 — cria modificador com código automático' });
 
     const grupoNovo = criadoGrupo.json?.data ?? criadoGrupo.json;
@@ -267,11 +272,11 @@ async function pdmEItem() {
   await expectRejection('VENT0200 — recusa item com código zero',
     'POST', '/api/items/create', corpoItem(0, { group_code: grupos[0]?.code ?? 1, modifier_code: mods[0]?.id ?? 1 }));
 
-  // Enum: a UM tem lista fechada (`TypeUnitOfMeasurementItem.IsValid`). A tela
-  // antiga oferecia "L", "CX", "PC", "GL", "PAR" — nenhuma delas existe.
-  await expectRejection('VENT0200 — recusa unidade de medida fora do enum (ex.: "CX")',
+  // Usa um valor inequivocamente inexistente: UMs como CX podem ser válidas no
+  // mestre atual da empresa e não servem como fixture negativa estável.
+  await expectRejection('VENT0200 — recusa unidade de medida inexistente',
     'POST', '/api/items/create',
-    corpoItem(proximoItem, { group_code: grupos[0]?.code ?? 1, modifier_code: mods[0]?.id ?? 1, uom: 'CX' }));
+    corpoItem(proximoItem, { group_code: grupos[0]?.code ?? 1, modifier_code: mods[0]?.id ?? 1, uom: 'UNIDADE_INVALIDA_E2E' }));
 
   if (RUN_WRITES && grupos.length && mods.length) {
     const groupCode = Number(grupos[0].code ?? grupos[0].Code);
@@ -280,7 +285,12 @@ async function pdmEItem() {
       corpoItem(proximoItem + 1, { group_code: groupCode, modifier_code: modifierCode, nature: 1, semItemBase: true }),
       { expect: [200, 201], label: 'VENT0200 — cria Configurado sem item-base obrigatório' });
     const criado = await call('POST', '/api/items/create',
-      corpoItem(proximoItem, { group_code: groupCode, modifier_code: modifierCode, pastasCompletas: true }),
+      corpoItem(proximoItem, {
+        group_code: groupCode,
+        modifier_code: modifierCode,
+        pastasCompletas: true,
+        cyclicalCountDays: 1,
+      }),
       { expect: [200, 201], label: `VENT0200 — cria item ${proximoItem} com PDM válido` });
     if (criado.ok) {
       const consultado = await call('GET', `/api/items/search/${proximoItem}`, undefined,
@@ -315,22 +325,50 @@ async function pdmEItem() {
         'PUT', `/api/items/${proximoItem}`, { accounting: { cest: '123' } });
       await call('GET', `/api/items/${proximoItem}/activation-readiness`, undefined,
         { expect: [200], label: `VITM0100 — prontidão do item ${proximoItem}` });
+
+      // A política permanente fica no item. O worker do backend é quem deve
+      // materializá-la como ocorrência operacional; o Desktop não cria essa
+      // programação automática pela rota de contagens.
+      await new Promise((resolve) => setTimeout(resolve, 6500));
+      const contagens = arr((await call('GET', '/api/stock/cycle-counts?limit=200&offset=0', undefined,
+        { expect: [200], label: 'VEST0500 — lista ocorrências após política do item' })).json);
+      const ocorrenciaAutomatica = contagens.find((c) => String(c.item_code) === String(proximoItem));
+      record('VENT0200 → VEST0500 — política gera ocorrência operacional automaticamente',
+        !!ocorrenciaAutomatica, ocorrenciaAutomatica ? 'OK' : 'AUSENTE',
+        ocorrenciaAutomatica
+          ? `item=${ocorrenciaAutomatica.item_code}; estado=${ocorrenciaAutomatica.state}`
+          : 'nenhuma ocorrência criada pelo scheduler após 6,5 s');
     }
   }
 }
 
 /** Corpo do item no formato que `Vent0200Page` monta. */
-function corpoItem(code, { group_code, modifier_code, uom = 'UN', nature = 2, semItemBase = false, pastasCompletas = false }) {
+function corpoItem(code, {
+  group_code,
+  modifier_code,
+  uom = 'UN',
+  nature = 2,
+  semItemBase = false,
+  pastasCompletas = false,
+  cyclicalCountDays,
+}) {
   return {
-    code,
+    code: String(code),
+    created_by: authenticatedUserId,
     name: `E2E Item ${code}`,
     nature,
     situation: 'LINHA',
     health: 'ATIVO',
     pdm: { group_code, modifier_code, attributes: [], description_technique: `E2E Item ${code}` },
-    warehouse: { warehouse_code: 1, unit_of_measurement: uom, automatic_low: false, minimum_stock: 0 },
+    warehouse: {
+      warehouse_code: 1,
+      unit_of_measurement: uom,
+      automatic_low: false,
+      minimum_stock: 0,
+      ...(cyclicalCountDays ? { cyclical_count_config: { days_interval: cyclicalCountDays } } : {}),
+    },
     engineering: {
-      ...(nature !== 2 && !semItemBase ? { item_base_cod: 1 } : {}),
+      ...(nature !== 2 && !semItemBase ? { item_base_cod: '1' } : {}),
       weight: { gross: 1, net: 1, unit: 'KG' },
       type: 'COMPRADO', type_struct: 'INDUSTRIAL', oem: false,
     },
@@ -347,7 +385,6 @@ function corpoItem(code, { group_code, modifier_code, uom = 'UN', nature = 2, se
         export_packaging: false, classification_code: 'E2E', notes: 'Teste completo do item',
       },
       accounting: {
-        sale_fiscal_classification_code: '85043111', purchase_fiscal_classification_code: '85043111',
         origin: 0, sale_ipi_type: 'PERCENTUAL', sale_ipi_rate: 5,
         purchase_ipi_type: 'PERCENTUAL', purchase_ipi_rate: 5, icms_rate: 18,
         sale_unit_of_measurement: 'UN', purchase_unit_of_measurement: 'UN',

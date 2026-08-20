@@ -3,7 +3,7 @@ import {
   type CustomerDTO, type SupportRef, type CustomerDocType, type PaymentCondVisibility, type AddressType,
   DOC_TYPES, VISIBILITIES, ADDRESS_TYPES,
   listRefs, listCustomers, getCustomer, createCustomer, updateCustomer, blockCustomer, unblockCustomer,
-  addCustomerAddress, addCustomerContact, listEstablishments, lookupCnpj, exportCustomers,
+  addCustomerAddress, addCustomerContact, listEstablishments, lookupCnpj, exportCustomers, type CnpjLookup,
 } from "@/services/customerService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
@@ -30,6 +30,7 @@ export function Vcli0500Page(): JSX.Element {
   const [addr, setAddr] = useState({ address_type: "COBRANCA" as AddressType, zip_code: "", street: "", number: "", complement: "", neighborhood: "", city: "", uf: "", country: "Brasil", is_default: true });
   const [contact, setContact] = useState({ contact_type_code: "", name: "", email: "", phone: "", mobile: "", position: "", is_primary: true });
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [cnpjData, setCnpjData] = useState<CnpjLookup | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
@@ -48,7 +49,7 @@ export function Vcli0500Page(): JSX.Element {
   useEffect(() => { void reload(); }, [reload]);
 
   const setF = <K extends keyof CustomerDTO>(k: K, v: CustomerDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
-  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setFolder("dados"); setMode("edit"); setFeedback(null); }
+  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setCnpjData(null); setFolder("dados"); setMode("edit"); setFeedback(null); }
 
   async function buscarCnpj() {
     if (form.document_type !== "CNPJ") { setFeedback({ type: "error", message: "Auto-fill disponível apenas para CNPJ." }); return; }
@@ -57,6 +58,7 @@ export function Vcli0500Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       const c = await lookupCnpj(digits);
+      setCnpjData(c);
       setForm((p) => ({
         ...p,
         name: c.legal_name || p.name,
@@ -64,6 +66,17 @@ export function Vcli0500Page(): JSX.Element {
         state_registration: c.state_registration || p.state_registration,
         website: p.website,
       }));
+      setAddr((p) => ({
+        ...p,
+        zip_code: c.address?.zip_code || p.zip_code,
+        street: c.address?.street || p.street,
+        number: c.address?.number || p.number,
+        complement: c.address?.complement || p.complement,
+        neighborhood: c.address?.neighborhood || p.neighborhood,
+        city: c.address?.city || p.city,
+        uf: c.address?.uf || p.uf,
+      }));
+      setContact((p) => ({ ...p, email: c.email || p.email, phone: c.phone || p.phone }));
       setFeedback({ type: "success", message: `Dados da Receita carregados (${c.registration_status ?? "OK"}). Confira antes de salvar.` });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -74,6 +87,7 @@ export function Vcli0500Page(): JSX.Element {
 
   async function abrir(code: number) {
     setBusy(true); setFeedback(null);
+    setCnpjData(null);
     try {
       const raw = await getCustomer(code); setDetail(raw);
       const p = raw as Obj;
@@ -193,6 +207,7 @@ export function Vcli0500Page(): JSX.Element {
           </div>
           <div className="erp-detail-body">
             {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+            {cnpjData && mode === "edit" && <div className="erp-note"><strong>Consulta cadastral:</strong> situação {cnpjData.registration_status || "não informada"}; abertura {cnpjData.opening_date || "não informada"}; natureza jurídica {cnpjData.legal_nature || "não informada"}; porte {cnpjData.size || "não informado"}; CNAE principal {cnpjData.main_activity?.code || "não informado"} {cnpjData.main_activity?.description ? `— ${cnpjData.main_activity.description}` : ""}; CNAEs secundários {cnpjData.secondary_activities.map((item) => item.code).filter(Boolean).join(", ") || "não informados"}; IEs {cnpjData.state_registrations.map((item) => `${item.uf} ${item.number}${item.enabled ? " ativa" : " inativa"}`).join(", ") || cnpjData.state_registration || "não informadas"}; endereço {[cnpjData.address?.street, cnpjData.address?.number, cnpjData.address?.neighborhood, cnpjData.address?.city, cnpjData.address?.uf, cnpjData.address?.zip_code].filter(Boolean).join(", ") || "não informado"}; telefone {cnpjData.phone || "não informado"}; e-mail {cnpjData.email || "não informado"}; Simples Nacional {cnpjData.simples_optant ? "sim" : "não"}; MEI {cnpjData.mei ? "sim" : "não"}. Os campos disponíveis foram preenchidos e permanecem editáveis para conferência.</div>}
 
             {mode === "list" && (
               <div className="erp-fieldset"><div className="erp-fieldset-head">Clientes ({list.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">

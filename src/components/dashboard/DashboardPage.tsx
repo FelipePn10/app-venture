@@ -14,6 +14,7 @@ import {
 import { openErpScreenWindow } from "@/utils/windowManager";
 import { useAuthStore } from "@/store/authStore";
 import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
+import { searchErpScreens } from "@/utils/screenSearch";
 
 const MAX_RECENTS   = 5;
 const MAX_FAVORITES = 8;
@@ -73,18 +74,7 @@ export function DashboardPage(): JSX.Element {
   }, []);
 
   const filteredScreens = useMemo((): ErpScreen[] => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return ERP_SCREENS
-      .filter(s => s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q))
-      .sort((a, b) => {
-        const codeA = a.code.toLowerCase(), codeB = b.code.toLowerCase();
-        const titleA = a.title.toLowerCase(), titleB = b.title.toLowerCase();
-        const rank = (code: string, title: string) =>
-          code === q ? 0 : code.startsWith(q) ? 1 : title === q ? 2 : title.startsWith(q) ? 3 : 4;
-        return rank(codeA, titleA) - rank(codeB, titleB)
-          || codeA.localeCompare(codeB, 'pt-BR');
-      });
+    return searchErpScreens(ERP_SCREENS, searchQuery);
   }, [searchQuery]);
 
   function getNameByCode(code: string): string { return ERP_SCREENS.find(s => s.code === code)?.title ?? code; }
