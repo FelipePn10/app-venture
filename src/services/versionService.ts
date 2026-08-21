@@ -1,4 +1,3 @@
-import { getVersion } from '@tauri-apps/api/app';
 import { isTauri } from '@tauri-apps/api/core';
 import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -25,9 +24,7 @@ export async function getBackendVersion(): Promise<BackendVersion> {
   return response.data;
 }
 
-export async function getClientVersion(): Promise<string> {
-  return isTauri() ? getVersion() : 'dev';
-}
+export { getClientVersion } from '@/services/clientVersion';
 
 export async function checkDesktopUpdate(): Promise<Update | null> {
   if (!isTauri()) return null;
