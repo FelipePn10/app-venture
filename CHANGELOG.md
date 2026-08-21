@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.10] — 2026-08-21
+
 ## Melhorias
 - O sistema agora verifica a compatibilidade da versão durante todo o uso, inclusive em telas que já estavam abertas.
 - Quando uma atualização for indispensável para operar com segurança, o ERP bloqueia novas operações e oferece a instalação antes de continuar.
