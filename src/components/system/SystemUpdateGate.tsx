@@ -9,6 +9,10 @@ import {
   getClientVersion,
   installDesktopUpdate,
 } from '@/services/versionService';
+import {
+  CLIENT_UPGRADE_REQUIRED_EVENT,
+  type ClientUpgradeRequiredDetail,
+} from '@/services/versionCompatibility';
 
 type GateState = 'checking' | 'ready' | 'blocked' | 'unavailable';
 
@@ -74,6 +78,19 @@ export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Ele
     if (gated) void validate();
   }, [gated, validate]);
 
+  useEffect(() => {
+    const handleUpgradeRequired = (event: Event) => {
+      const detail = (event as CustomEvent<ClientUpgradeRequiredDetail>).detail;
+      const requirement = detail?.minClient ? ` O servidor exige no mínimo v${detail.minClient}.` : '';
+      setMessage(detail?.message || `Esta versão do VentureERP não pode mais realizar operações.${requirement}`);
+      setState('blocked');
+      void checkDesktopUpdate().then(setUpdate).catch(() => setUpdate(null));
+    };
+
+    window.addEventListener(CLIENT_UPGRADE_REQUIRED_EVENT, handleUpgradeRequired);
+    return () => window.removeEventListener(CLIENT_UPGRADE_REQUIRED_EVENT, handleUpgradeRequired);
+  }, []);
+
   async function install(): Promise<void> {
     if (!update) return;
     setInstalling(true);
@@ -85,8 +102,9 @@ export function SystemUpdateGate({ children }: { children: ReactNode }): JSX.Ele
     }
   }
 
-  // Janelas de tela (screen-*) não passam pela trava: renderizam direto.
-  if (!gated) return <>{children}</>;
+  // Janelas de tela (screen-*) pulam apenas a validação inicial. Se uma chamada
+  // receber 426, esta instância também bloqueia imediatamente.
+  if (!gated && state === 'ready') return <>{children}</>;
 
   if (state !== 'ready') {
     return (

@@ -51,6 +51,22 @@ Ao abrir, o app consulta `/api/version`. Se sua versão for menor que `min_clien
 
 Se a API estiver inacessível, a tela oferece nova tentativa em vez de operar sem confirmar compatibilidade. Se apenas o GitHub estiver indisponível, uma versão já compatível continua funcionando.
 
+Em cada chamada à API, o desktop envia `X-ERP-Client-Version`. O backend também
+valida esse valor contra `min_client`, para cobrir aplicativos que permaneceram
+abertos durante uma atualização. Uma versão incompatível recebe HTTP 426; todas
+as janelas bloqueiam novas operações e oferecem somente a instalação obrigatória.
+
+`version` e `min_client` são independentes. Por exemplo, o backend `1.1.7` pode
+aceitar o desktop `1.1.9` (e versões anteriores) enquanto seu `min_client`
+permanecer abaixo ou igual à versão instalada. Eleve `min_client` somente quando
+uma mudança for realmente incompatível e apenas depois que o instalador exigido
+estiver publicado e validado.
+
+Na primeira implantação deste contrato, publique o backend (mantendo o
+`min_client` atual) antes do novo desktop, pois o backend precisa liberar o novo
+cabeçalho no CORS. Só eleve `min_client` em uma release posterior, depois que o
+novo desktop estiver disponível no catálogo assinado.
+
 ## Diagnóstico
 
 - Ausência de atualização: confira a GitHub Release pública e seu `latest.json`.

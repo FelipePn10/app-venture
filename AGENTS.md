@@ -10,6 +10,15 @@ O updater usa a chave pública de `tauri.conf.json`; a privada existe somente no
 
 No boot, `SystemUpdateGate` consulta `/api/version`, aplica `min_client` e só então verifica o catálogo assinado. A trava só é **obrigatória no build de produção** (`import.meta.env.MODE === 'production'`); em desenvolvimento, demo e treinamento o app segue mesmo com o backend inacessível ou incompatível, para não travar testes locais. Em `MODE === 'training'` o `checkDesktopUpdate()` nem consulta o catálogo: o updater aponta para as releases de produção, e instalar aquele build tiraria a turma do ambiente isolado (ver `TRAINING.md`). Browser/dev não chama plugins nativos. O banner do backend é exclusivo de `ADMIN` e chama somente os endpoints da API; o desktop nunca acessa SSH/Docker.
 
+Em produção, toda chamada do desktop envia `X-ERP-Client-Version`. Se o backend
+responder HTTP `426`/`CLIENT_UPGRADE_REQUIRED`, todas as janelas devem bloquear
+novas operações e oferecer a instalação assinada; esse bloqueio não pode ter a
+opção “Depois”. `version` do backend, versão mais recente do desktop e
+`min_client` são valores independentes. Mantenha atualizações compatíveis como
+opcionais e eleve `min_client` somente para incompatibilidade real, depois que o
+instalador requerido estiver publicado e validado. No primeiro rollout do
+cabeçalho, publique o backend com o mínimo atual antes do desktop `1.1.10`.
+
 Antes de modificar releases/updater, leia `RELEASES.md`. Depois rode `npm run test:versioning`, lint, build de produção, `cargo test --locked` e valide no Windows. Não publique tags para testar CI; use branches/PRs.
 
 ## Novidades (release notes) — como escrever
