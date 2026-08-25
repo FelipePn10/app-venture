@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## [v1.1.11] — 2026-08-25
+
+## Correções
+- A consulta de CNPJ do cadastro de cliente agora preenche corretamente a inscrição estadual e mostra o endereço encontrado, que é salvo junto com o cadastro.
+
 ## [v1.1.10] — 2026-08-21
 
 ## Melhorias

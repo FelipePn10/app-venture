@@ -67,6 +67,8 @@ autorizar a NF-e já baixa o estoque e gera o título financeiro.
 ### Como as telas são nomeadas
 
 Cada tela tem um **código** (ex.: `VVND0200`) e um **título** (ex.: "Pedido de Venda").
+
+Nas listas e nos detalhes, entidades relacionadas são apresentadas preferencialmente como **Nome (código)** — por exemplo, `Matriz São Paulo (1)` — para facilitar a leitura sem perder a referência usada em documentos e integrações. Campos de cadastro usam pesquisa assistida para cliente, item, estabelecimento, fornecedor, representante e depósito sempre que o respectivo cadastro estiver disponível.
 O prefixo indica a área: `VCLI`=Cliente, `VSUP`=Fornecedor/Compras, `VVND`=Vendas,
 `VPRO`=Produção/PCP, `VEST`=Estoque, `VFIS`=Fiscal, `VFIN`=Financeiro, `VMAQ`=Máquinas,
 `VMRP`=Planejamento MRP, `VCUS`=Custos, `VITM`=Item, `VCUT`=Plano de Corte, etc. Você
@@ -4052,6 +4054,8 @@ O fluxo acima é **linear e sequencial**: não se pode faturar um pedido que nã
 
 #### VENT0100 — Consulta de Pedido de Venda
 
+> Correção operacional: **Consultar** carrega a carteira completa; **Abrir pedido** abre somente o código informado; **Consultar itens** usa o pedido informado e mostra exclusivamente suas linhas. Datas, cliente e indicadores são apresentados em português, e valores lógicos aparecem como **Sim/Não**.
+
 ##### Objetivo
 
 Consultar todos os pedidos de venda cadastrados no sistema. Esta tela é **exclusivamente de consulta** (read-only) — não permite criar, editar ou excluir pedidos. Fornece visão consolidada com filtros flexíveis por número do pedido, cliente, período de datas e status, exibindo os resultados com indicadores visuais (pills coloridas) de situação.
@@ -4289,7 +4293,8 @@ Antes de cadastrar um cliente, os seguintes cadastros de apoio devem existir:
    - **Nome Fantasia**: nome comercial, se diferente.
    - **Tipo Documento**: selecione CNPJ (pessoa jurídica) ou CPF (pessoa física).
    - **Documento** (obrigatório): informe o número. O sistema valida o dígito verificador automaticamente.
-   - **Inscrição Estadual**: para contribuintes de ICMS.
+   - **Consultar CNPJ**: com um CNPJ válido preenchido, clique em **Consultar CNPJ** para pré-preencher automaticamente razão social, fantasia, inscrição estadual, e-mail e telefone, além do endereço na seção **Endereço principal** (salvo junto com o cadastro).
+   - **Inscrição Estadual**: para contribuintes de ICMS (preenchida pela consulta de CNPJ quando disponível).
    - **Inscrição Municipal**: para prestadores de serviço.
    - **Código SUFRAMA**: para clientes da Zona Franca de Manaus.
    - **Corporate (Matriz/Filial)**: ative o toggle para indicar que este cliente é matriz ou filial.
@@ -4314,6 +4319,7 @@ Antes de cadastrar um cliente, os seguintes cadastros de apoio devem existir:
    - Selecione o **Tipo**: Cobrança, Entrega ou Faturamento.
    - Preencha CEP, Logradouro, Número, Bairro, Cidade, UF e País.
    - Marque um endereço como **padrão**.
+   - Se você usou **Consultar CNPJ**, o endereço já aparece preenchido na seção **Endereço principal** da aba **Dados** e é salvo junto com o cadastro.
 7. Na aba **Contatos**, adicione contatos do cliente:
    - Clique em **Adicionar Contato**.
    - Informe Tipo, Nome, Email, Telefone, Celular e Cargo.
@@ -5055,6 +5061,8 @@ Cadastrar **políticas de frete** que determinam o valor do frete no pedido: cá
 ---
 
 #### VPDV0200 — Cadastro de Pedido de Venda
+
+> Esta é a rotina de manutenção do pedido (criação, itens, confirmação, bloqueio e cancelamento). Para consulta sem alterações use a VENT0100; para acompanhamento gerencial por situação, itens, saldos e reprogramações use a VPDV0253.
 
 ##### Objetivo
 
@@ -7729,6 +7737,8 @@ status **Rascunho (R) → Confirmado (P) → Faturado (F)**, além de **bloqueio
 ---
 
 #### VVND0300 — Orçamento de Venda
+
+> O campo **Moeda** é uma seleção controlada (Real, Dólar ou Euro), evitando códigos livres inválidos. O estabelecimento deve ser escolhido pelo nome na pesquisa assistida.
 
 ##### Objetivo
 
