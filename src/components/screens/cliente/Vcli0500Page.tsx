@@ -14,6 +14,7 @@ type Mode = "list" | "edit";
 type Folder = "dados" | "enderecos" | "contatos";
 const SYS = "00000000-0000-0000-0000-000000000000";
 const EMPTY: CustomerDTO = { name: "", document_type: "CNPJ", document_number: "", payment_cond_visibility: "SOMENTE_VINCULADOS", is_corporate: false };
+const EMPTY_ADDR = { address_type: "COBRANCA" as AddressType, zip_code: "", street: "", number: "", complement: "", neighborhood: "", city: "", uf: "", country: "Brasil", is_default: true };
 
 interface Refs { regions: SupportRef[]; segments: SupportRef[]; ctypes: SupportRef[]; payconds: SupportRef[]; tables: SupportRef[]; carriers: SupportRef[]; cgroups: SupportRef[]; invtypes: SupportRef[]; taxtypes: SupportRef[]; }
 const EMPTY_REFS: Refs = { regions: [], segments: [], ctypes: [], payconds: [], tables: [], carriers: [], cgroups: [], invtypes: [], taxtypes: [] };
@@ -27,7 +28,7 @@ export function Vcli0500Page(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [detail, setDetail] = useState<Obj | null>(null);
   const [estabs, setEstabs] = useState<CustomerDTO[]>([]);
-  const [addr, setAddr] = useState({ address_type: "COBRANCA" as AddressType, zip_code: "", street: "", number: "", complement: "", neighborhood: "", city: "", uf: "", country: "Brasil", is_default: true });
+  const [addr, setAddr] = useState(EMPTY_ADDR);
   const [contact, setContact] = useState({ contact_type_code: "", name: "", email: "", phone: "", mobile: "", position: "", is_primary: true });
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [cnpjData, setCnpjData] = useState<CnpjLookup | null>(null);
@@ -49,7 +50,7 @@ export function Vcli0500Page(): JSX.Element {
   useEffect(() => { void reload(); }, [reload]);
 
   const setF = <K extends keyof CustomerDTO>(k: K, v: CustomerDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
-  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setCnpjData(null); setFolder("dados"); setMode("edit"); setFeedback(null); }
+  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setCnpjData(null); setAddr(EMPTY_ADDR); setFolder("dados"); setMode("edit"); setFeedback(null); }
 
   async function buscarCnpj() {
     if (form.document_type !== "CNPJ") { setFeedback({ type: "error", message: "Auto-fill disponível apenas para CNPJ." }); return; }
@@ -88,6 +89,7 @@ export function Vcli0500Page(): JSX.Element {
   async function abrir(code: number) {
     setBusy(true); setFeedback(null);
     setCnpjData(null);
+    setAddr(EMPTY_ADDR);
     try {
       const raw = await getCustomer(code); setDetail(raw);
       const p = raw as Obj;
@@ -128,7 +130,17 @@ export function Vcli0500Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       if (editing) { await updateCustomer(form); setFeedback({ type: "success", message: "Cliente atualizado." }); await reload(); }
-      else { const c = await createCustomer({ ...form, created_by: SYS }); if (c?.code) { setFeedback({ type: "success", message: `Cliente ${c.code} criado.` }); await reload(); await abrir(c.code); return; } }
+      else {
+        const c = await createCustomer({ ...form, created_by: SYS });
+        if (c?.code) {
+          let addrWarn = "";
+          if (addr.street || addr.city || addr.zip_code || addr.uf) {
+            try { await addCustomerAddress(c.code, { customer_code: c.code, ...addr }); }
+            catch { addrWarn = " (endereço não foi salvo)"; }
+          }
+          setFeedback({ type: "success", message: `Cliente ${c.code} criado.${addrWarn}` }); await reload(); await abrir(c.code); return;
+        }
+      }
     } catch (e) {
       const msg = errMessage(e);
       setFeedback({ type: "error", message: /409|conflit|duplicad/i.test(msg) ? `Documento já cadastrado. ${msg}` : msg });
@@ -226,6 +238,7 @@ export function Vcli0500Page(): JSX.Element {
             )}
 
             {mode === "edit" && folder === "dados" && (
+              <>
               <div className="erp-fieldset"><div className="erp-fieldset-head">Dados do cliente</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" value={form.code ?? ""} disabled={editing} onChange={(e) => setF("code", e.target.value ? Number(e.target.value) : undefined)} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label erp-req">Razão social / Nome</label><input className="erp-input" value={form.name} onChange={(e) => setF("name", e.target.value)} /></div>
@@ -256,6 +269,17 @@ export function Vcli0500Page(): JSX.Element {
                 <div className="erp-field erp-c5"><label className="erp-label">Website</label><input className="erp-input" value={form.website ?? ""} onChange={(e) => setF("website", e.target.value)} /></div>
                 {estabs.length > 0 && <div className="erp-field erp-c12"><span className="erp-field-hint">Filiais: {estabs.map((e) => `${e.code} ${e.name}`).join(" · ")}</span></div>}
               </div></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head">Endereço principal</div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c2"><label className="erp-label">CEP</label><input className="erp-input" value={addr.zip_code} onChange={(e) => setAddr((p) => ({ ...p, zip_code: e.target.value }))} /></div>
+                <div className="erp-field erp-c5"><label className="erp-label">Logradouro</label><input className="erp-input" value={addr.street} onChange={(e) => setAddr((p) => ({ ...p, street: e.target.value }))} /></div>
+                <div className="erp-field erp-c1"><label className="erp-label">Nº</label><input className="erp-input" value={addr.number} onChange={(e) => setAddr((p) => ({ ...p, number: e.target.value }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Compl.</label><input className="erp-input" value={addr.complement} onChange={(e) => setAddr((p) => ({ ...p, complement: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Bairro</label><input className="erp-input" value={addr.neighborhood} onChange={(e) => setAddr((p) => ({ ...p, neighborhood: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Cidade</label><input className="erp-input" value={addr.city} onChange={(e) => setAddr((p) => ({ ...p, city: e.target.value }))} /></div>
+                <div className="erp-field erp-c1"><label className="erp-label">UF</label><input className="erp-input" maxLength={2} value={addr.uf} onChange={(e) => setAddr((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} /></div>
+                <div className="erp-field erp-c12"><span className="erp-field-hint">Preenchido automaticamente ao consultar o CNPJ; salvo junto com o cadastro como endereço de cobrança padrão.</span></div>
+              </div></div>
+              </>
             )}
 
             {mode === "edit" && folder === "enderecos" && (
