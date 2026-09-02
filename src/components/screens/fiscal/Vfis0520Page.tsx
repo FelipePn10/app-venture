@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -76,7 +77,7 @@ export function Vfis0520Page(): JSX.Element {
               <input className="erp-input" maxLength={2} value={form.uf} onChange={(e) => setF("uf", e.target.value.toUpperCase())} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Tabela</label>
               <select className="erp-input" value={form.table_ref} onChange={(e) => setF("table_ref", e.target.value as TabelaAjusteRef)}>
-                {TABS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                {TABS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">Vigência</label>
               <input className="erp-input" type="date" value={(form.valid_from ?? "").slice(0, 10)} onChange={(e) => setF("valid_from", e.target.value)} /></div>
             <div className="erp-field erp-c12"><label className="erp-label erp-req">Descrição</label>

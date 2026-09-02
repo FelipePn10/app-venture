@@ -26,6 +26,7 @@ export interface SalesOrderItemDTO {
   mask?: string;
   sales_uom?: string;
   warehouse_code?: number;
+  price_table_code?: number;
   requested_qty: number;
   unit_price: number;
   attended_qty?: number;
@@ -54,6 +55,7 @@ export interface SalesOrderDTO {
   customer_code: number;
   currency_code?: string;
   payment_term_code?: number;
+  price_table_code?: number;
   commission_pct?: number;
   additional_days?: number;
   total_gross?: number;
@@ -112,6 +114,7 @@ function parseOrder(raw: unknown): SalesOrderDTO {
     customer_code: parseNum(o, 'customer_code', 'CustomerCode'),
     currency_code: parseStr(o, 'currency_code', 'CurrencyCode'),
     payment_term_code: parseNum(o, 'payment_term_code', 'PaymentTermCode'),
+    price_table_code: parseNum(o, 'price_table_code', 'PriceTableCode'),
     commission_pct: parseNum(o, 'commission_pct', 'CommissionPct'),
     additional_days: parseNum(o, 'additional_days', 'AdditionalDays'),
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),
@@ -148,15 +151,16 @@ export async function listSalesOrdersByStatus(status: string): Promise<SalesOrde
   return unwrapArray(data).map(parseOrder);
 }
 export async function createSalesOrder(dto: SalesOrderDTO): Promise<SalesOrderDTO> {
-  const { data } = await httpClient.post(`${BASE}/create`, dto);
+  const payload = { ...dto, payment_term_code: dto.payment_term_code || undefined };
+  const { data } = await httpClient.post(`${BASE}/create`, payload);
   return parseOrder(data);
 }
 export async function updateSalesOrder(code: number, dto: SalesOrderDTO): Promise<SalesOrderDTO> {
   const { data } = await httpClient.put(`${BASE}/${code}`, dto);
   return parseOrder(data);
 }
-export async function cancelSalesOrder(code: number): Promise<void> {
-  await httpClient.delete(`${BASE}/${code}/cancel`);
+export async function cancelSalesOrder(code: number, reason: string, complement?: string): Promise<void> {
+  await httpClient.delete(`${BASE}/${code}/cancel`, { data: { reason, complement: complement || undefined } });
 }
 export async function blockSalesOrder(code: number, reason?: string): Promise<Obj> {
   const { data } = await httpClient.patch(`${BASE}/${code}/block`, reason ? { reason } : {});

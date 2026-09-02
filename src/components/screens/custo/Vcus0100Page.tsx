@@ -19,6 +19,8 @@ import {
 } from "@/services/allocationsService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadWorkCenters } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
@@ -67,7 +69,7 @@ export function Vcus0100Page(): JSX.Element {
   const rodarRollup = () => run(async () => {
     if (!rollupItem) { setFeedback({ type: "error", message: "Informe o item." }); return; }
     setRollup(await calculateStandardCost(rollupItem));
-    setFeedback({ type: "success", message: `Rollup do item ${rollupItem} recalculado.` });
+    setFeedback({ type: "success", message: `Composição de custos do item ${rollupItem} recalculada.` });
   });
   const salvarBase = () => run(async () => {
     if (!baseForm.code || !baseForm.description.trim()) { setFeedback({ type: "error", message: "Código e descrição são obrigatórios." }); return; }
@@ -88,7 +90,7 @@ export function Vcus0100Page(): JSX.Element {
     });
     setOvhForm({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100 });
     setOvhs(await listOverheadAllocations());
-    setFeedback({ type: "success", message: "Alocação de overhead criada." });
+    setFeedback({ type: "success", message: "Rateio de custos indiretos criado." });
   });
 
   return (
@@ -110,9 +112,9 @@ export function Vcus0100Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">Custos</button></div>
           <div className="erp-detail-body">
 
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Custo padrão — rollup</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input" value={rollupItem} onChange={(e) => setRollupItem(e.target.value)} /></div>
-              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={rodarRollup} disabled={busy}>Recalcular (rollup)</button></div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Composição do custo padrão</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={rollupItem} loader={loadItems} entityLabel="item" onChange={(code) => setRollupItem(String(code ?? ""))} /></div>
+              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={rodarRollup} disabled={busy}>Recalcular composição</button></div>
               {rollup && <>
                 <div className="erp-field erp-c2"><label className="erp-label">Material</label><input className="erp-input num" value={money(rollup.material_cost)} readOnly /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Operação</label><input className="erp-input num" value={money(rollup.operation_cost)} readOnly /></div>
@@ -121,7 +123,7 @@ export function Vcus0100Page(): JSX.Element {
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Custo/hora por centro de trabalho</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro de trabalho (ID)</label><input className="erp-input num" type="number" value={wccForm.work_center_id || ""} onChange={(e) => setWccForm((p) => ({ ...p, work_center_id: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro de trabalho</label><LookupField value={wccForm.work_center_id || undefined} loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Selecionar ou informar o código…" onChange={(code) => setWccForm((p) => ({ ...p, work_center_id: Number(code ?? 0) }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Custo/hora</label><input className="erp-input num" type="number" step="0.01" value={wccForm.cost_per_hour || ""} onChange={(e) => setWccForm((p) => ({ ...p, cost_per_hour: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarWcc} disabled={busy}>Salvar custo/hora</button></div>
               <div className="erp-field erp-c12"><table className="erp-grid">
@@ -134,7 +136,7 @@ export function Vcus0100Page(): JSX.Element {
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Custo de compra por item</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={pcForm.item_code || ""} onChange={(e) => setPcForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
+              <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={pcForm.item_code} loader={loadItems} entityLabel="item" onChange={(code) => setPcForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Custo</label><input className="erp-input num" type="number" step="0.01" value={pcForm.cost || ""} onChange={(e) => setPcForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c6" style={{ flexDirection: "row", gap: 8, alignItems: "flex-end" }}>
                 <button className="erp-btn erp-btn-primary" onClick={salvarPc} disabled={busy}>Salvar custo</button>
@@ -157,18 +159,18 @@ export function Vcus0100Page(): JSX.Element {
               </table></div>
             </div></div>
 
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Alocação de overhead</div><div className="erp-fieldset-body">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Rateio de custos indiretos</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Centro de custo</label><input className="erp-input num" type="number" value={ovhForm.cost_center_code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, cost_center_code: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Início</label><input className="erp-input" type="date" value={ovhForm.period_start} onChange={(e) => setOvhForm((p) => ({ ...p, period_start: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Fim</label><input className="erp-input" type="date" value={ovhForm.period_end} onChange={(e) => setOvhForm((p) => ({ ...p, period_end: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Alvo (centro)</label><input className="erp-input num" type="number" value={ovhForm.target_cost_center || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_cost_center: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Alvo %</label><input className="erp-input num" type="number" step="0.01" value={ovhForm.target_pct || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_pct: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Descrição</label><input className="erp-input" value={ovhForm.description} onChange={(e) => setOvhForm((p) => ({ ...p, description: e.target.value }))} /></div>
-              <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={salvarOvh} disabled={busy}>Criar alocação de overhead</button></div>
+              <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={salvarOvh} disabled={busy}>Criar rateio</button></div>
               <div className="erp-field erp-c12"><table className="erp-grid">
                 <thead><tr><th>Centro custo</th><th>Período</th><th>Tipo</th><th>Alvos</th></tr></thead>
                 <tbody>
-                  {ovhs.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma alocação de overhead.</td></tr>}
+                  {ovhs.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum rateio de custos indiretos.</td></tr>}
                   {ovhs.map((o, i) => <tr key={o.id ?? i}><td>{o.cost_center_code}</td><td>{o.period_start?.slice(0, 10)} → {o.period_end?.slice(0, 10)}</td><td>{o.allocation_type ?? "—"}</td><td>{o.targets?.length ?? 0}</td></tr>)}
                 </tbody>
               </table></div>

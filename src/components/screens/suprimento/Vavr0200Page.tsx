@@ -7,6 +7,7 @@ import {
 } from "@/services/procurementService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const dt = (s?: string) => (s ? s.replace("T", " ").slice(0, 16) : "—");
@@ -54,7 +55,7 @@ export function Vavr0200Page(): JSX.Element {
       notes: capa.notes.trim() || undefined,
       items,
     });
-    setFeedback({ type: "success", message: `Aviso ${n.notice_number ?? n.id} criado (${n.status}).` });
+    setFeedback({ type: "success", message: `Aviso ${n.notice_number ?? n.id} criado (${enumLabel(n.status)}).` });
     setCapa({ ...CAPA_INI }); setItems([]);
     setNotices(await listReceivingNotices());
   });
@@ -63,7 +64,7 @@ export function Vavr0200Page(): JSX.Element {
   const avancar = () => { if (!detalhe?.id) return; void run(async () => {
     const n = await updateNoticeStatus(detalhe.id!, novoStatus, novoStatus === "BLOCKED");
     setDetalhe(n); setNotices(await listReceivingNotices());
-    setFeedback({ type: "success", message: `Aviso ${n.notice_number ?? n.id} → ${n.status}${n.blocked ? " (bloqueado)" : ""}.` });
+    setFeedback({ type: "success", message: `Aviso ${n.notice_number ?? n.id} → ${enumLabel(n.status)}${n.blocked ? " (bloqueado)" : ""}.` });
   }); };
   const addDiv = () => { if (!detalhe?.id) return; const item_code = divForm.item_code.trim(); const eq = Number(divForm.expected_qty), aq = Number(divForm.actual_qty);
     void run(async () => {
@@ -73,7 +74,7 @@ export function Vavr0200Page(): JSX.Element {
     }); };
   const resolver = (id: number | undefined, resolution: DivergenceResolution) => { if (!id) return; void run(async () => {
     await resolveDivergence(id, resolution); if (detalhe?.id) setDivs(await listReceivingDivergences({ notice_id: detalhe.id }));
-    setFeedback({ type: "success", message: `Divergência ${id} → ${resolution}.` });
+    setFeedback({ type: "success", message: `Divergência ${id} → ${enumLabel(resolution)}.` });
   }); };
 
   return (
@@ -131,7 +132,7 @@ export function Vavr0200Page(): JSX.Element {
               {notices.map((n) => (
                 <tr key={n.id} className={detalhe?.id === n.id ? "erp-row-sel" : ""}>
                   <td style={{ fontWeight: 600 }}>{n.notice_number ?? n.id}</td><td>{n.supplier_code ?? "—"}</td><td>{n.purchase_order_code ?? "—"}</td>
-                  <td>{n.dock || "—"}</td><td>{dt(n.scheduled_at)}</td><td>{n.status}{n.blocked ? " 🔒" : ""}</td>
+                  <td>{n.dock || "—"}</td><td>{dt(n.scheduled_at)}</td><td>{enumLabel(n.status)}{n.blocked ? " 🔒" : ""}</td>
                   <td><button className="erp-btn" onClick={() => abrir(n.id)} disabled={busy}>Abrir</button></td>
                 </tr>
               ))}
@@ -142,7 +143,7 @@ export function Vavr0200Page(): JSX.Element {
 
         {detalhe && (
           <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Aviso {detalhe.notice_number ?? detalhe.id} — {detalhe.status} <span className="erp-tgroup-label">Avançar</span> <select className="erp-input" style={{ height: 28, width: 150 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as NoticeStatus)}>{NOTICE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={avancar} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Aviso {detalhe.notice_number ?? detalhe.id} — {enumLabel(detalhe.status)} <span className="erp-tgroup-label">Avançar</span> <select className="erp-input" style={{ height: 28, width: 150 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as NoticeStatus)}>{NOTICE_STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={avancar} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Item</th><th>Máscara</th><th>Esperada</th><th>Recebida</th><th>UM</th></tr></thead>
                 <tbody>{(detalhe.items ?? []).map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.expected_qty}</td><td>{it.received_qty ?? 0}</td><td>{it.unit || "—"}</td></tr>)}</tbody>
@@ -152,7 +153,7 @@ export function Vavr0200Page(): JSX.Element {
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Divergências ({divs.length}) — <span style={{fontWeight:400,opacity:0.65}}>falta/sobra/avaria/preço… alimentam o IQF do fornecedor</span></div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num"  value={divForm.item_code} onChange={(e) => setDivForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={divForm.divergence_type} onChange={(e) => setDivForm((f) => ({ ...f, divergence_type: e.target.value as DivergenceType }))}>{DIVERGENCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={divForm.divergence_type} onChange={(e) => setDivForm((f) => ({ ...f, divergence_type: e.target.value as DivergenceType }))}>{DIVERGENCE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
               <div className="erp-field erp-c2"><label className="erp-label">Esperada</label><input className="erp-input num" type="number" value={divForm.expected_qty} onChange={(e) => setDivForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Real</label><input className="erp-input num" type="number" value={divForm.actual_qty} onChange={(e) => setDivForm((f) => ({ ...f, actual_qty: e.target.value }))} /></div>
               <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><label className="erp-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={divForm.affects_supplier_score} onChange={(e) => setDivForm((f) => ({ ...f, affects_supplier_score: e.target.checked }))} />Afeta IQF</label></div>
@@ -162,10 +163,10 @@ export function Vavr0200Page(): JSX.Element {
               <table className="erp-grid" style={{ marginTop: 10 }}>
                 <thead><tr><th>Item</th><th>Tipo</th><th>Esperada</th><th>Real</th><th>Resolução</th><th></th></tr></thead>
                 <tbody>{divs.map((d) => (
-                  <tr key={d.id}><td>{d.item_code ?? "—"}</td><td>{d.divergence_type}</td><td>{d.expected_qty}</td><td>{d.actual_qty}</td><td>{d.resolution}</td>
+                  <tr key={d.id}><td>{d.item_code ?? "—"}</td><td>{enumLabel(d.divergence_type)}</td><td>{d.expected_qty}</td><td>{d.actual_qty}</td><td>{enumLabel(d.resolution)}</td>
                     <td>{d.resolution === "PENDING" && (
                       <select className="erp-input" style={{ height: 26 }} defaultValue="" onChange={(e) => { if (e.target.value) resolver(d.id, e.target.value as DivergenceResolution); }}>
-                        <option value="">resolver…</option>{DIVERGENCE_RESOLUTIONS.filter((r) => r !== "PENDING").map((r) => <option key={r} value={r}>{r}</option>)}
+                        <option value="">resolver…</option>{DIVERGENCE_RESOLUTIONS.filter((r) => r !== "PENDING").map((r) => <option key={r} value={r}>{enumLabel(r)}</option>)}
                       </select>)}</td></tr>
                 ))}</tbody>
               </table>

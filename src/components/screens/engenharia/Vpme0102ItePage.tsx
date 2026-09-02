@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { enumLabel } from "@/utils/enumLabels";
 import { humanizeApiError } from '@/services/apiError';
 import {
   listItemCalendarMonth,
@@ -763,7 +764,7 @@ export function Vpme0102ItePage(): JSX.Element {
                     disabled={isLoadingCal || isSaving}
                     onChange={(e) => setAno(Number(e.target.value))}
                   >
-                    {anos.map((a) => <option key={a} value={a}>{a}</option>)}
+                    {anos.map((a) => <option key={a} value={a}>{enumLabel(a)}</option>)}
                   </select>
                 </div>
 

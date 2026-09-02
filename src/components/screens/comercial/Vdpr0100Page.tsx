@@ -72,7 +72,8 @@ export function Vdpr0100Page(): JSX.Element {
   });
 
   const reprogramar = () => run(async () => {
-    const r = await rescheduleBatch({ from: rsFrom || undefined, to: rsTo || undefined, customer_code: rsCustomer, new_date: rsNewDate });
+    if (!rsNewDate) { setFeedback({ type: "error", message: "Informe a nova data de entrega." }); return; }
+    const r = await rescheduleBatch({ delivery_from: rsFrom || undefined, delivery_to: rsTo || undefined, customer_code: rsCustomer, new_date: rsNewDate });
     setRescheduleResult(r);
     const o = unwrapObject(r);
     setFeedback({ type: "success", message: `Reprogramação: ${parseNum(o, "rescheduled_orders", "RescheduledOrders") ?? 0} pedido(s) / ${parseNum(o, "rescheduled_items", "RescheduledItems") ?? 0} item(ns) alterados.` });
@@ -181,7 +182,16 @@ export function Vdpr0100Page(): JSX.Element {
             <button className="erp-btn erp-btn-danger" onClick={cancelarReserva} disabled={busy || !cancelCode}>Cancelar reserva</button>
             <button className="erp-btn" onClick={expirar} disabled={busy}>Expirar vencidas</button>
           </div>
-          {reservationResult && <div className="erp-feedback info" style={{ marginTop: 10 }}>Resultado: {Object.entries(unwrapObject(reservationResult)).slice(0, 5).map(([k, v]) => `${k}=${String(v)}`).join(" · ")}</div>}
+          {reservationResult && (() => { const result = unwrapObject(reservationResult); const allocations = Array.isArray(result.allocations) ? result.allocations : []; const warnings = Array.isArray(result.warnings) ? result.warnings : []; return <div className="erp-fieldset" style={{ marginTop: 10 }}>
+            <div className="erp-fieldset-head">Resultado da {commit ? "reserva" : "simulação"}</div>
+            <div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label">Gravada</label><strong>{result.committed ? "Sim" : "Não"}</strong></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Data solicitada</label><strong>{String(result.requested_delivery_date ?? "—").slice(0, 10)}</strong></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Validade</label><strong>{String(result.expires_at ?? "—").slice(0, 10)}</strong></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Alocações</label><strong>{allocations.length}</strong></div>
+              {warnings.length > 0 && <div className="erp-field erp-c12"><div className="erp-feedback info">{warnings.map((warning, index) => <div key={index}>{String(warning).replace(/item (\d+) has no planning tank; using tank 0/i, "O item $1 não possui tanque de planejamento; será usado o tanque 0.")}</div>)}</div></div>}
+            </div>
+          </div>; })()}
         </>
       )}
 

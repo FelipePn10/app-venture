@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalAdvancedService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FindForm = { uf: string; item_id: string; customer_id: string; op_type: IcmsOpType };
 const EMPTY_FIND: FindForm = { uf: "", item_id: "", customer_id: "", op_type: "SAIDA" };
@@ -121,7 +122,7 @@ export function Vfis0330Page(): JSX.Element {
               <input className="erp-input" maxLength={2} value={form.uf} onChange={(e) => setF("uf", e.target.value.toUpperCase())} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo Operação</label>
               <select className="erp-input" value={form.operation_type} onChange={(e) => setF("operation_type", e.target.value as IcmsOpType)}>
-                {OPS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                {OPS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">NCM</label>
               <input className="erp-input" value={form.ncm_code ?? ""} onChange={(e) => setF("ncm_code", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Item (ID)</label>
@@ -156,7 +157,7 @@ export function Vfis0330Page(): JSX.Element {
               <input className="erp-input num" type="number" step="0.01" value={form.icms_red_pct_contrib ?? ""} onChange={(e) => setOptNum("icms_red_pct_contrib", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Alvo Redução</label>
               <select className="erp-input" value={form.icms_red_target_contrib ?? ""} onChange={(e) => setF("icms_red_target_contrib", (e.target.value || undefined) as RedTarget | undefined)}>
-                <option value="">—</option>{TARGETS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                <option value="">—</option>{TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">% Diferimento</label>
               <input className="erp-input num" type="number" step="0.01" value={form.icms_deferral_pct ?? ""} onChange={(e) => setOptNum("icms_deferral_pct", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">% Substituição</label>
@@ -175,7 +176,7 @@ export function Vfis0330Page(): JSX.Element {
               <input className="erp-input num" type="number" value={findForm.customer_id} onChange={(e) => setFind("customer_id", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Operação</label>
               <select className="erp-input" value={findForm.op_type} onChange={(e) => setFind("op_type", e.target.value as IcmsOpType)}>
-                {OPS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                {OPS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
             <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
               <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void buscarPrioritaria()} disabled={busy}>Buscar</button></div>
           

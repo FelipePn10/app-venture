@@ -178,7 +178,11 @@ export async function listPolicySpecificItems(code: number): Promise<CommercialP
   return unwrapArray(data).map(parseSpecificItem);
 }
 export async function addPolicySpecificItem(code: number, dto: CommercialPolicySpecificItemDTO): Promise<CommercialPolicySpecificItemDTO> {
-  const { data } = await httpClient.post(`${BASE}/${code}/specific-items`, dto);
+  const { data } = await httpClient.post(`${BASE}/${code}/specific-items`, {
+    ...dto,
+    item_code: dto.item_code ? String(dto.item_code).trim() : undefined,
+    item_mask: dto.item_mask?.trim() || undefined,
+  });
   return parseSpecificItem(data);
 }
 

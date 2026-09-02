@@ -105,3 +105,7 @@ export async function updateSalesDivision(code: number, dto: SalesDivisionDTO): 
 export async function deleteSalesDivision(code: number): Promise<void> {
   await httpClient.delete(`${BASE}/${code}`);
 }
+export async function setSalesDivisionStatus(code: number, isActive: boolean): Promise<SalesDivisionDTO> {
+  const { data } = await httpClient.patch(`${BASE}/${code}/status`, { is_active: isActive });
+  return parseDivision(data);
+}

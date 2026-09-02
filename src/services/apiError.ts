@@ -180,6 +180,11 @@ export function humanizeApiError(e: unknown, fallback = 'Ocorreu um erro inesper
 
 /** Traduções de validações de domínio que ainda chegam em inglês pela API. */
 function translateCommonValidation(text: string): string | undefined {
+  if (/referenced resource not found/i.test(text)) return 'Um dos cadastros informados não foi encontrado. Limpe os campos opcionais vazios ou selecione novamente os registros nas listas.';
+  if (/description\s+is\s+required/i.test(text)) return 'Informe a descrição.';
+  const missingPrice = text.match(/sales table price not found for table\s+(\d+)\s+item\s+(\S+)/i);
+  if (missingPrice) return `Preço não encontrado na tabela ${missingPrice[1]} para o item ${missingPrice[2]}. Cadastre o preço antes de continuar.`;
+  if (/no rows in result set/i.test(text)) return 'Registro não encontrado. Selecione um cadastro existente e tente novamente.';
   if (/item\s+name\s+(is\s+)?required|name\s+(is\s+)?required/i.test(text)) {
     return 'Informe o nome do item.';
   }

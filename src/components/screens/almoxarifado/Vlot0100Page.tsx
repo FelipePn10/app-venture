@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { type LotMask, type LotMaskPart, PART_TYPES, listLotMasks, getLotMask, createLotMask, deleteLotMask, addLotMaskPart, generateLot } from "@/services/lotMaskService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const CAPA = { application: "", description: "", item_code: "", customer_code: "" };
@@ -79,7 +80,7 @@ export function Vlot0100Page(): JSX.Element {
                 <div className="erp-fieldset"><div className="erp-fieldset-head">Partes de #{sel.id} — {sel.application}
                   <button className="erp-btn erp-btn-sm" style={{ float: "right" }} onClick={gerar} disabled={busy}>Gerar próximo lote</button></div>
                   <div className="erp-fieldset-body">
-                    <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={part.part_type} onChange={(e) => setPart((p) => ({ ...p, part_type: e.target.value }))}>{PART_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={part.part_type} onChange={(e) => setPart((p) => ({ ...p, part_type: e.target.value }))}>{PART_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
                     <div className="erp-field erp-c4"><label className="erp-label">Valor / formato</label><input className="erp-input" value={part.value} onChange={(e) => setPart((p) => ({ ...p, value: e.target.value }))} /></div>
                     <div className="erp-field erp-c2"><label className="erp-label">Tamanho</label><input className="erp-input num" type="number" value={part.size} onChange={(e) => setPart((p) => ({ ...p, size: e.target.value }))} /></div>
                     <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addParte} disabled={busy}>+ parte</button></div>

@@ -5,6 +5,7 @@ import {
 } from "@/services/purchaseRequisitionService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadEstablishments } from "@/services/lookups";
 
@@ -111,7 +112,7 @@ export function Vsup0300Page(): JSX.Element {
                   <span className="erp-list-code">#{r.code}</span>
                   <span className="erp-list-sub">Estab. {r.enterprise_code} · {(r.emission_date ?? "").slice(0, 10)}</span>
                   <div className="erp-list-meta">
-                    <span className="erp-badge draft">{r.status}</span>
+                    <span className="erp-badge draft">{enumLabel(r.status)}</span>
                     {r.items?.length != null && <span className="erp-badge ok">{r.items.length} itens</span>}
                   </div>
                 </div>
@@ -177,7 +178,7 @@ export function Vsup0300Page(): JSX.Element {
                               <td className="num" style={{ fontWeight: 600 }}>{it.item_code}</td>
                               <td className="num">{it.quantity}</td><td className="num">{it.attended_qty ?? 0}</td>
                               <td className="num" style={{ fontWeight: 700 }}>{sld}</td>
-                              <td><span className="erp-badge draft">{it.status}</span></td>
+                              <td><span className="erp-badge draft">{enumLabel(it.status)}</span></td>
                               <td><input className="erp-input num" style={{ height: 28, width: 74 }} type="number" value={g.qty} disabled={sld <= 0} onChange={(e) => setGen((p) => ({ ...p, [it.id!]: { ...g, qty: e.target.value } }))} /></td>
                               <td><input className="erp-input num" style={{ height: 28, width: 90 }} type="number" placeholder="preferencial" value={g.supplier} disabled={sld <= 0} onChange={(e) => setGen((p) => ({ ...p, [it.id!]: { ...g, supplier: e.target.value } }))} /></td>
                             </tr>

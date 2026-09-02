@@ -306,10 +306,13 @@ check('transições manuais de status', () => {
 // ─── 6. Migration 000241 (fonte da verdade dos CHECKs) ───────────────────────
 
 const migration = read('migrations/000241_sales_quotation_completion.up.sql');
+const eventMigrationPath = path.join(BACKEND, 'migrations/000318_sales_quotation_item_events.up.sql');
+const eventMigration = fs.existsSync(eventMigrationPath) ? fs.readFileSync(eventMigrationPath, 'utf8') : migration;
 
 /** Valores de um `CHECK (coluna IN ('a','b',...))` da migration. */
 function migrationCheckValues(column) {
-  const m = migration.match(new RegExp(`${column} IN \\(([^)]*)\\)`));
+  const source = column === 'event_type' ? eventMigration : migration;
+  const m = source.match(new RegExp(`${column} IN \\(([^)]*)\\)`));
   if (!m) throw new Error(`CHECK de ${column} não encontrado na migration 000241`);
   return new Set([...m[1].matchAll(/'([^']+)'/g)].map((v) => v[1]));
 }
@@ -317,7 +320,7 @@ function migrationCheckValues(column) {
 check('status × CHECK da migration 000241', () =>
   assertSameSet(migrationCheckValues('status'), tsListValues(service, 'QUOTATION_STATUS'), 'status'));
 
-check('tipos de evento × CHECK da migration 000241', () => {
+check('tipos de evento × CHECK vigente', () => {
   const body = service.match(/EVENT_TYPE_LABEL[^=]*=\s*\{([\s\S]*?)\};/)[1];
   const labelled = new Set([...body.matchAll(/^\s*(\w+):/gm)].map((m) => m[1]));
   return assertSameSet(migrationCheckValues('event_type'), labelled, 'tipos de evento');
@@ -367,8 +370,10 @@ check('descancelamento reusa o motivo do cancelamento', () => {
 check('tipos de item do cadastro (VITM0100)', () => {
   const go = read('internal/domain/enums/types/ItemType.go');
   const backendTypes = new Set([...go.matchAll(/return "(\w+)"/g)].map((m) => m[1]).filter((v) => v !== 'UNKNOWN'));
-  const screen = readFront('src/components/screens/engenharia/Vitm0100Page.tsx');
-  const front = new Set([...screen.match(/const ENG_TYPES = \[[\s\S]*?\];/)[0].matchAll(/label: "(\w+)"/g)].map((m) => m[1]));
+  const screen = readFront('src/components/screens/engenharia/Vent0200Page.tsx');
+  const block = screen.match(/const TIPOS_ITEM[^=]*=\s*\[([\s\S]*?)\];/)?.[1];
+  if (!block) throw new Error('TIPOS_ITEM não encontrado na tela de cadastro de item');
+  const front = new Set([...block.matchAll(/value:\s*"(\w+)"/g)].map((m) => m[1]));
   return assertSameSet(backendTypes, front, 'tipos de item');
 });
 

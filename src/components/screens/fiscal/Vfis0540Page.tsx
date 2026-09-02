@@ -10,6 +10,7 @@ import {
 } from "@/services/fiscalAdvancedService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -193,7 +194,7 @@ export function Vfis0540Page(): JSX.Element {
               
                 <div className="erp-field erp-c3"><label className="erp-label">Indicador</label>
                   <select className="erp-input" value={adicForm.arrecadacao_indicator} onChange={(e) => setAdicForm((p) => ({ ...p, arrecadacao_indicator: e.target.value as ArrecadacaoIndicator }))}>
-                    {INDS.map((i) => <option key={i} value={i}>{i}</option>)}</select></div>
+                    {INDS.map((i) => <option key={i} value={i}>{enumLabel(i)}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Processo</label>
                   <input className="erp-input" value={adicForm.processo ?? ""} onChange={(e) => setAdicForm((p) => ({ ...p, processo: e.target.value }))} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label">Descrição</label>

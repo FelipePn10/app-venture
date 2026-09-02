@@ -71,7 +71,7 @@ export function Vpre0301Page(): JSX.Element {
 
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
-        <div className="erp-feedback info">O realizado (pedidos/faturamento) não é exposto por <code>/api/sales-forecast</code>; a coluna fica marcada como pendente de integração de endpoint.</div>
+        <div className="erp-feedback info">O valor realizado (pedidos e faturamento) ainda não está integrado a esta consulta. Ele será preenchido automaticamente assim que o vínculo estiver disponível.</div>
 
         <div className="erp-grid-wrap">
           <table className="erp-grid">
@@ -79,7 +79,7 @@ export function Vpre0301Page(): JSX.Element {
             <tbody>
               {consolidated.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem previsões. Informe o ano e clique em <strong>Consultar</strong>.</td></tr>}
               {consolidated.map((r, i) => (
-                <tr key={i}><td className="num">{r.item_code}</td><td>{r.mask || "—"}</td><td className="num">{r.weeks}</td><td className="num">{r.qty}</td><td className="num" style={{ color: "var(--v-text-3)" }}>n/d</td></tr>
+                <tr key={i}><td className="num">{r.item_code}</td><td>{r.mask || "—"}</td><td className="num">{r.weeks}</td><td className="num">{r.qty}</td><td className="num" style={{ color: "var(--v-text-3)" }}>—</td></tr>
               ))}
             </tbody>
             {consolidated.length > 0 && <tfoot><tr><td colSpan={3} className="num">Total previsto</td><td className="num">{totalPrev}</td><td></td></tr></tfoot>}

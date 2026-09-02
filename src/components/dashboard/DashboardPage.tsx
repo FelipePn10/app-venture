@@ -148,7 +148,7 @@ export function DashboardPage(): JSX.Element {
       .sd{width:6px;height:6px;background:#4fbf6c;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 3px rgba(79,191,108,.2)}
       .ui{display:flex;flex-direction:column;align-items:flex-end;min-width:0}
       .un{font-size:13px;font-weight:600;color:#dceee1;line-height:1.2;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ur{font-size:10.5px;color:#7ba187;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      @media (max-width:1180px){.tc{display:none}}
+      @media (max-width:1400px){.tc{display:none}}
       @media (max-width:960px){.sbadge{display:none}}
       @media (max-width:820px){.ui{display:none}}
       .av{width:34px;height:34px;background:rgba(47,125,71,.24);border:1.5px solid rgba(47,125,71,.45);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#8fce9f;flex-shrink:0}

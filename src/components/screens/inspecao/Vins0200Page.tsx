@@ -5,6 +5,9 @@ import {
 } from "@/services/procurementService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadItemMasks, loadItemClassifications, loadEstablishments, loadWarehouses } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const BASES: InspectionBasis[] = ["ITEM", "CLASSIFICATION"];
@@ -97,13 +100,13 @@ export function Vins0200Page(): JSX.Element {
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Capa do roteiro (por item ou classificação)</div>
               <div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={capa.enterprise_code} onChange={(e) => setC("enterprise_code", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Base</label><select className="erp-input" value={capa.basis} onChange={(e) => setC("basis", e.target.value)}>{BASES.map((b) => <option key={b} value={b}>{b}</option>)}</select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><LookupField value={capa.enterprise_code ? Number(capa.enterprise_code) : undefined} loader={loadEstablishments} entityLabel="empresa" onChange={(code) => setC("enterprise_code", code ? String(code) : "")} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Base</label><select className="erp-input" value={capa.basis} onChange={(e) => setC("basis", e.target.value)}>{BASES.map((b) => <option key={b} value={b}>{enumLabel(b)}</option>)}</select></div>
                 {capa.basis === "ITEM"
-                  ? <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={capa.item_code} onChange={(e) => setC("item_code", e.target.value)} /></div>
-                  : <div className="erp-field erp-c2"><label className="erp-label erp-req">Classificação</label><input className="erp-input" value={capa.classification_code} onChange={(e) => setC("classification_code", e.target.value)} /></div>}
-                <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={capa.mask} onChange={(e) => setC("mask", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Almox. inspeção</label><input className="erp-input num" type="number" value={capa.inspection_warehouse_id} onChange={(e) => setC("inspection_warehouse_id", e.target.value)} /></div>
+                  ? <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={capa.item_code} loader={loadItems} entityLabel="item" onChange={(code) => setC("item_code", String(code ?? ""))} /></div>
+                  : <div className="erp-field erp-c2"><label className="erp-label erp-req">Classificação</label><LookupField value={capa.classification_code} loader={loadItemClassifications} entityLabel="classificação" onChange={(code) => setC("classification_code", code ? String(code) : "")} /></div>}
+                <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><LookupField value={capa.mask} loader={loadItemMasks} entityLabel="máscara" onChange={(code) => setC("mask", code ? String(code) : "")} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Almox. inspeção</label><LookupField value={capa.inspection_warehouse_id ? Number(capa.inspection_warehouse_id) : undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(code) => setC("inspection_warehouse_id", code ? String(code) : "")} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Tipo roteiro</label><input className="erp-input" value={capa.route_type} onChange={(e) => setC("route_type", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Tipo inspeção</label><input className="erp-input" value={capa.inspection_type} onChange={(e) => setC("inspection_type", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Tipo mercado</label><input className="erp-input" value={capa.market_type} onChange={(e) => setC("market_type", e.target.value)} /></div>
@@ -116,8 +119,8 @@ export function Vins0200Page(): JSX.Element {
               <div className="erp-fieldset-head">Etapas de inspeção ({steps.length})</div>
               <div className="erp-fieldset-body">
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Inspeção</label><input className="erp-input" value={stepForm.inspection_name} onChange={(e) => setStepForm((f) => ({ ...f, inspection_name: e.target.value }))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Espécie</label><select className="erp-input" value={stepForm.kind} onChange={(e) => setStepForm((f) => ({ ...f, kind: e.target.value as InspectionStepKind }))}>{KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Apontamento</label><select className="erp-input" value={stepForm.appointment_mode} onChange={(e) => setStepForm((f) => ({ ...f, appointment_mode: e.target.value as InspectionAppointmentMode }))}>{MODES.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Espécie</label><select className="erp-input" value={stepForm.kind} onChange={(e) => setStepForm((f) => ({ ...f, kind: e.target.value as InspectionStepKind }))}>{KINDS.map((k) => <option key={k} value={k}>{enumLabel(k)}</option>)}</select></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Apontamento</label><select className="erp-input" value={stepForm.appointment_mode} onChange={(e) => setStepForm((f) => ({ ...f, appointment_mode: e.target.value as InspectionAppointmentMode }))}>{MODES.map((m) => <option key={m} value={m}>{enumLabel(m)}</option>)}</select></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Amostra</label><input className="erp-input num" type="number" value={stepForm.sample_qty} onChange={(e) => setStepForm((f) => ({ ...f, sample_qty: e.target.value }))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Nominal</label><input className="erp-input num" type="number" value={stepForm.nominal_value} onChange={(e) => setStepForm((f) => ({ ...f, nominal_value: e.target.value }))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Mín</label><input className="erp-input num" type="number" value={stepForm.min_value} onChange={(e) => setStepForm((f) => ({ ...f, min_value: e.target.value }))} /></div>

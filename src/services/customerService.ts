@@ -92,7 +92,9 @@ export async function createSupport(resource: string, dto: Record<string, unknow
 }
 
 export async function updateSupport(resource: string, dto: Record<string, unknown>): Promise<Obj> {
-  const { data } = await httpClient.put(`${SUPPORT}/${resource}`, dto);
+  const code = Number(dto.code);
+  const path = resource !== 'regions' && code ? `${SUPPORT}/${resource}/${code}` : `${SUPPORT}/${resource}`;
+  const { data } = await httpClient.put(path, dto);
   return unwrapObject(data);
 }
 
@@ -228,4 +230,9 @@ export async function lookupCnpj(cnpj: string): Promise<CnpjLookup> {
 export async function exportCustomers(fmt: 'xlsx' | 'pdf' | 'csv'): Promise<void> {
   const { data } = await httpClient.get(BASE, { params: { format: fmt }, responseType: 'blob' });
   downloadBlob(data as Blob, `clientes.${fmt}`);
+}
+
+export async function exportCustomerPDF(code: number, name?: string): Promise<void> {
+  const { data } = await httpClient.get(`${BASE}/${code}/report/pdf`, { responseType: 'blob' });
+  downloadBlob(data as Blob, `cliente-${code}-${(name || 'ficha').replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}.pdf`);
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { enumLabel } from "@/utils/enumLabels";
 import { listSupport, createSupport, updateSupport } from "@/services/customerService";
 import { errMessage, parseStr, parseNum, parseBool, type Obj } from "@/services/fiscalShared";
 
@@ -30,6 +31,7 @@ interface Props {
   fields: FieldSpec[];
   columns: ColumnSpec[];
   title?: string;
+  editable?: boolean;
 }
 
 type FormState = Record<string, unknown>;
@@ -40,7 +42,7 @@ function initForm(fields: FieldSpec[]): FormState {
   return f;
 }
 
-export function SupportCrud({ resource, fields, columns, title }: Props): JSX.Element {
+export function SupportCrud({ resource, fields, columns, title, editable = false }: Props): JSX.Element {
   const [list, setList] = useState<Obj[]>([]);
   const [form, setForm] = useState<FormState>(() => initForm(fields));
   const [editingCode, setEditingCode] = useState<number | null>(null);
@@ -91,7 +93,10 @@ export function SupportCrud({ resource, fields, columns, title }: Props): JSX.El
   function edit(rec: Obj) {
     const f: FormState = {};
     for (const fs of fields) {
-      f[fs.key] = fs.kind === "bool" ? parseBool(rec, fs.key) : (rec[fs.key] ?? "");
+      const pascal = fs.key.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
+      f[fs.key] = fs.kind === "bool" ? parseBool(rec, fs.key, pascal)
+        : fs.kind === "number" ? (parseNum(rec, fs.key, pascal) || "")
+        : parseStr(rec, fs.key, pascal);
     }
     setForm(f);
     setEditingCode(parseNum(rec, "code", "Code", "id", "ID") || null);
@@ -118,7 +123,7 @@ export function SupportCrud({ resource, fields, columns, title }: Props): JSX.El
             ) : fs.kind === "select" ? (
               <select className="erp-input" value={String(form[fs.key] ?? "")} onChange={(e) => set(fs.key, e.target.value)}>
                 <option value="">—</option>
-                {(fs.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                {(fs.options ?? []).map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}
               </select>
             ) : fs.kind === "textarea" ? (
               <textarea className="erp-textarea" value={String(form[fs.key] ?? "")} placeholder={fs.placeholder} onChange={(e) => set(fs.key, e.target.value)} />
@@ -145,11 +150,11 @@ export function SupportCrud({ resource, fields, columns, title }: Props): JSX.El
             <thead>
               <tr>
                 {columns.map((c) => <th key={c.key}>{c.label}</th>)}
-                <th style={{ width: 70 }}>Ações</th>
+                {editable && <th style={{ width: 70 }}>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={columns.length + 1} className="erp-grid-empty">Nenhum registro cadastrado.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={columns.length + (editable ? 1 : 0)} className="erp-grid-empty">Nenhum registro cadastrado.</td></tr>}
               {list.map((rec, i) => (
                 <tr key={i}>
                   {columns.map((c) => (
@@ -157,7 +162,7 @@ export function SupportCrud({ resource, fields, columns, title }: Props): JSX.El
                       {c.kind === "bool" ? (parseBool(rec, c.key) ? "Sim" : "Não") : c.kind === "number" ? parseNum(rec, c.key) : parseStr(rec, c.key)}
                     </td>
                   ))}
-                  <td><button className="erp-btn erp-btn-sm" onClick={() => edit(rec)}>Editar</button></td>
+                  {editable && <td><button className="erp-btn erp-btn-sm" onClick={() => edit(rec)}>Editar</button></td>}
                 </tr>
               ))}
             </tbody>

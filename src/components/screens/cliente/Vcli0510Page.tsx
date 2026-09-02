@@ -43,22 +43,27 @@ export function Vcli0510Page(): JSX.Element {
           </div>
 
           {tab === "regiao" && <SupportCrud resource="regions"
+            editable
             fields={[{ key: "description", label: "Descrição", col: 6, required: true }, { key: "uf", label: "UF", col: 2, required: true }, { key: "city", label: "Cidade", col: 4, required: true }]}
             columns={[{ key: "description", label: "Descrição" }, { key: "uf", label: "UF" }, { key: "city", label: "Cidade" }]} />}
 
           {tab === "segmento" && <SupportCrud resource="market-segments"
+            editable
             fields={[{ key: "description", label: "Descrição", col: 5, required: true }, { key: "parent_code", label: "Pai (cód.)", kind: "number", col: 2 }, { key: "has_pis_cofins_retention", label: "Retém PIS/COFINS", kind: "bool", col: 3 }, { key: "retention_indicator", label: "Indicador retenção", col: 2 }]}
             columns={[{ key: "description", label: "Descrição" }, { key: "has_pis_cofins_retention", label: "Retém", kind: "bool" }, { key: "retention_indicator", label: "Indicador" }]} />}
 
           {tab === "tcontato" && <SupportCrud resource="contact-types"
+            editable
             fields={[{ key: "description", label: "Descrição", col: 10, required: true }]}
             columns={[{ key: "description", label: "Descrição" }]} />}
 
           {tab === "tcliente" && <SupportCrud resource="customer-types"
+            editable
             fields={[{ key: "code", label: "Código", kind: "number", col: 2, required: true }, { key: "description", label: "Descrição", col: 4, required: true }, { key: "category", label: "Categoria", kind: "select", options: ["NORMAL", "CONSUMIDOR"], col: 3 }, { key: "delivery_days", label: "Dias entrega", kind: "number", col: 2 }]}
             columns={[{ key: "description", label: "Descrição" }, { key: "category", label: "Categoria" }, { key: "delivery_days", label: "Dias entrega", kind: "number" }]} />}
 
           {tab === "portador" && <SupportCrud resource="carriers"
+            editable
             fields={[
               { key: "description", label: "Descrição", col: 5, required: true },
               { key: "billing_type", label: "Cobrança", kind: "select", options: ["CARTEIRA", "COBRANCA_ESCRITURAL", "BOLETO"], col: 3 },
@@ -73,6 +78,7 @@ export function Vcli0510Page(): JSX.Element {
           {tab === "grupo" && (
             <>
               <SupportCrud resource="carrier-groups"
+                editable
                 fields={[{ key: "description", label: "Descrição", col: 10, required: true }]}
                 columns={[{ key: "description", label: "Descrição" }]} />
               <div className="erp-fieldset-body" style={{ borderTop: "1px solid #e2e8e4" }}>

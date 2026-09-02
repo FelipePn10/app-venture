@@ -8,6 +8,7 @@ import {
 } from "@/services/toolingService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "sheet" | "tools";
@@ -243,7 +244,7 @@ export function Vpro1000Page(): JSX.Element {
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={toolForm.name} onChange={(e) => setToolForm((p) => ({ ...p, name: e.target.value }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Tipo</label><input className="erp-input" value={toolForm.tool_type ?? ""} onChange={(e) => setToolForm((p) => ({ ...p, tool_type: e.target.value }))} placeholder="MATRIZ, MOLDE…" /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Vida (tipo)</label>
-                    <select className="erp-tselect" value={toolForm.life_type} onChange={(e) => setToolForm((p) => ({ ...p, life_type: e.target.value as ToolLifeType }))}>{TOOL_LIFE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                    <select className="erp-tselect" value={toolForm.life_type} onChange={(e) => setToolForm((p) => ({ ...p, life_type: e.target.value as ToolLifeType }))}>{TOOL_LIFE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select>
                   </div>
                   <div className="erp-field erp-c4"><label className="erp-label">Limite de vida</label><input className="erp-input num" type="number" value={toolForm.life_limit || ""} onChange={(e) => setToolForm((p) => ({ ...p, life_limit: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Custo</label><input className="erp-input num" type="number" value={toolForm.cost || ""} onChange={(e) => setToolForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
@@ -289,9 +290,9 @@ export function Vpro1000Page(): JSX.Element {
                     <div className="erp-fieldset-head">Nova série (cópia física)</div>
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c4"><label className="erp-label erp-req">Nº série</label><input className="erp-input" value={serialForm.serial_number} onChange={(e) => setSerialForm((p) => ({ ...p, serial_number: e.target.value }))} /></div>
-                      <div className="erp-field erp-c3"><label className="erp-label">Status</label><select className="erp-tselect" value={serialForm.status} onChange={(e) => setSerialForm((p) => ({ ...p, status: e.target.value as ToolStatus }))}>{TOOL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Status</label><select className="erp-tselect" value={serialForm.status} onChange={(e) => setSerialForm((p) => ({ ...p, status: e.target.value as ToolStatus }))}>{TOOL_STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Localização</label><input className="erp-input" value={serialForm.location ?? ""} onChange={(e) => setSerialForm((p) => ({ ...p, location: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarSerial} disabled={busy}>Add</button></div>
+                      <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarSerial} disabled={busy}>Adicionar</button></div>
                     </div>
                   </div>
                   <div className="erp-grid-wrap">
@@ -301,7 +302,7 @@ export function Vpro1000Page(): JSX.Element {
                         {serials.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma série.</td></tr>}
                         {serials.map((s) => (
                           <tr key={s.id}><td>{s.serial_number}</td><td>{statusBadge(s.status)}</td><td>{s.location || "—"}</td><td className="num">{s.life_used ?? 0}</td>
-                            <td><select className="erp-tselect" value={s.status} onChange={(e) => trocarStatusSerial(s, e.target.value as ToolStatus)}>{TOOL_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}</select></td>
+                            <td><select className="erp-tselect" value={s.status} onChange={(e) => trocarStatusSerial(s, e.target.value as ToolStatus)}>{TOOL_STATUSES.map((st) => <option key={st} value={st}>{enumLabel(st)}</option>)}</select></td>
                           </tr>
                         ))}
                       </tbody>

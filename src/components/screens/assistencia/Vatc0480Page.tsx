@@ -5,6 +5,8 @@ import {
 } from "@/services/technicalAssistanceService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadTechnicalAssistanceCalls } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const STATUS_META: Record<string, { label: string; badge: string }> = {
@@ -20,6 +22,7 @@ export function Vatc0480Page(): JSX.Element {
   const [fStatus, setFStatus] = useState("");
   const [fCustomer, setFCustomer] = useState("");
   const [fText, setFText] = useState("");
+  const [directCode, setDirectCode] = useState<number | undefined>();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -64,13 +67,14 @@ export function Vatc0480Page(): JSX.Element {
           <input className="erp-tinput" style={{ width: 160 }} placeholder="Assunto/consumidor/nº" value={fText} onChange={(e) => setFText(e.target.value)} />
           <button className="erp-btn" onClick={() => carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Atualizar</button>
         </div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Abrir chamado</span><div style={{ width: 300 }}><LookupField value={directCode} loader={loadTechnicalAssistanceCalls} entityLabel="chamado de assistência" placeholder="Pesquisar ou informar o código" onChange={(code) => { const next = typeof code === "number" ? code : undefined; setDirectCode(next); if (next) abrir(next); }} /></div></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VATC0480 — Consulta de Chamados" filename="vatc0480" /></div>
       </div>
 
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
-        <div className="erp-main">
+        <div className="erp-main" style={{ gridTemplateColumns: "minmax(520px, .9fr) minmax(420px, 1.1fr)" }}>
           <div className="erp-list-panel">
             <div className="erp-grid-wrap">
               <table className="erp-grid">
@@ -99,17 +103,18 @@ export function Vatc0480Page(): JSX.Element {
                     <div className="erp-field erp-c3"><label className="erp-label">Prometido</label><input className="erp-input" readOnly value={selected.promised_date?.slice(0, 10) ?? "—"} /></div>
                     <div className="erp-field erp-c6"><label className="erp-label">Assunto</label><input className="erp-input" readOnly value={selected.subject} /></div>
                     <div className="erp-field erp-c6"><label className="erp-label">Consumidor</label><input className="erp-input" readOnly value={selected.consumer_name ?? "—"} /></div>
+                    <div className="erp-field erp-c12"><label className="erp-label">Descrição</label><input className="erp-input" readOnly value={selected.description ?? "—"} /></div>
                     <div className="erp-field erp-c6"><label className="erp-label">Diagnóstico</label><input className="erp-input" readOnly value={selected.diagnosis ?? "—"} /></div>
                     <div className="erp-field erp-c6"><label className="erp-label">Solução</label><input className="erp-input" readOnly value={selected.solution ?? "—"} /></div>
                   </div>
                 </div>
                 <div className="erp-grid-wrap">
                   <table className="erp-grid">
-                    <thead><tr><th className="num">#</th><th className="num">Item</th><th>Série</th><th className="num">Qtd</th><th className="num">Motivo</th><th className="num">Garantia</th><th>Situação</th></tr></thead>
+                    <thead><tr><th className="num">#</th><th className="num">Item</th><th>Série</th><th className="num">Qtd</th><th className="num">Motivo</th><th>Complemento</th><th className="num">Garantia</th><th>Situação</th></tr></thead>
                     <tbody>
-                      {(selected.items ?? []).length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Sem itens.</td></tr>}
+                      {(selected.items ?? []).length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Sem itens.</td></tr>}
                       {(selected.items ?? []).map((it, i) => (
-                        <tr key={i}><td className="num">{it.sequence}</td><td className="num">{it.item_code}</td><td>{it.serial_number || "—"}</td><td className="num">{it.quantity}</td><td className="num">{it.defect_reason_code ?? "—"}</td><td className="num">{it.warranty_days ?? 0}</td>
+                        <tr key={i}><td className="num">{it.sequence}</td><td className="num">{it.item_code}</td><td>{it.serial_number || "—"}</td><td className="num">{it.quantity}</td><td className="num">{it.defect_reason_code ?? "—"}</td><td>{it.defect_complement || "—"}</td><td className="num">{it.warranty_days ?? 0}</td>
                           <td>{it.in_warranty ? <span className="erp-badge ok">Em garantia</span> : (it.warranty_until ? <span className="erp-badge warn">Fora</span> : "—")}</td></tr>
                       ))}
                     </tbody>
@@ -117,7 +122,7 @@ export function Vatc0480Page(): JSX.Element {
                 </div>
               </>
             ) : (
-              <div className="erp-fieldset"><div className="erp-fieldset-body"><p style={{ padding: 12, color: "var(--v-text-3)" }}>Selecione um chamado para ver os detalhes.</p></div></div>
+              <div className="erp-detail-empty"><div className="erp-detail-empty-title">Nenhum chamado selecionado</div><div className="erp-detail-empty-sub">Selecione um chamado na lista para consultar os detalhes.</div></div>
             )}
           </div>
         </div>

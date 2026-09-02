@@ -2,11 +2,14 @@ import { useState, useCallback, useEffect } from "react";
 import {
   type CommercialPolicyDTO, type CommercialPolicyLineDTO, type CommercialPolicySpecificItemDTO,
   type CalcType, type ChoiceType,
-  listCommercialPolicies, createCommercialPolicy, getCommercialPolicy,
+  listCommercialPolicies, createCommercialPolicy, updateCommercialPolicy, getCommercialPolicy,
   listPolicyLines, addPolicyLine, listPolicySpecificItems, addPolicySpecificItem, evaluatePolicies,
 } from "@/services/commercialPolicyService";
 import { errMessage, parseNum, unwrapObject } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { commercialCalculationLabel, commercialResultLabel, commercialResultValue } from "./commercialResult";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadItemMasks } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "policies" | "evaluate";
@@ -48,13 +51,14 @@ export function Vpdv0108Page(): JSX.Element {
 
   const gravar = () => run(async () => {
     if (!form.description.trim()) { setFeedback({ type: "error", message: "Informe a descrição." }); return; }
-    await createCommercialPolicy({ ...form, kind: "DISCOUNT", validity_start: iso(vFrom), validity_end: iso(vTo) });
+    if (form.code) await updateCommercialPolicy(form.code, { ...form, kind: "DISCOUNT", validity_start: iso(vFrom), validity_end: iso(vTo) });
+    else await createCommercialPolicy({ ...form, kind: "DISCOUNT", validity_start: iso(vFrom), validity_end: iso(vTo) });
     setForm(EMPTY_POLICY); setFeedback({ type: "success", message: "Política de desconto criada." });
     await carregar();
   });
   const abrir = (code?: number) => { if (!code) return; void run(async () => {
     const [p, ls, its] = await Promise.all([getCommercialPolicy(code), listPolicyLines(code), listPolicySpecificItems(code)]);
-    setSel(p); setLines(ls); setItems(its);
+    setSel(p); setForm(p); setLines(ls); setItems(its);
   }); };
   const gravarLinha = () => run(async () => {
     if (!sel?.code) return;
@@ -119,7 +123,7 @@ export function Vpdv0108Page(): JSX.Element {
                   <div className="erp-field erp-c4" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><input id="apr" className="erp-check" type="checkbox" checked={!!form.requires_approval} onChange={(e) => setForm((p) => ({ ...p, requires_approval: e.target.checked }))} /><label htmlFor="apr" className="erp-label" style={{ margin: 0 }}>Requer aprovação</label></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Válida de</label><input className="erp-input" type="date" value={vFrom} onChange={(e) => setVFrom(e.target.value)} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Válida até</label><input className="erp-input" type="date" value={vTo} onChange={(e) => setVTo(e.target.value)} /></div>
-                  <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={gravar} disabled={busy}>Criar política</button><button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => carregar()} disabled={busy}>Atualizar</button></div>
+                  <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={gravar} disabled={busy}>{form.code ? "Salvar alterações" : "Criar política"}</button>{form.code && <button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => setForm(EMPTY_POLICY)} disabled={busy}>Nova política</button>}<button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => carregar()} disabled={busy}>Atualizar</button></div>
                 </div>
               </div>
               <div className="erp-grid-wrap">
@@ -155,15 +159,15 @@ export function Vpdv0108Page(): JSX.Element {
                       <thead><tr><th className="num">Faixa</th><th>Cálculo</th><th className="num">%</th><th className="num">Mín/Máx</th></tr></thead>
                       <tbody>
                         {lines.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Sem faixas.</td></tr>}
-                        {lines.map((l) => <tr key={l.id}><td className="num">{l.line_number}</td><td>{l.calc_type}</td><td className="num">{l.percent_value ?? 0}%</td><td className="num">{money(l.min_value)} / {money(l.max_value)}</td></tr>)}
+                        {lines.map((l) => <tr key={l.id}><td className="num">{l.line_number}</td><td>{commercialCalculationLabel(l.calc_type)}</td><td className="num">{l.percent_value ?? 0}%</td><td className="num">{money(l.min_value)} / {money(l.max_value)}</td></tr>)}
                       </tbody>
                     </table>
                   </div>
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Itens específicos</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><input className="erp-input" value={itemForm.item_code} onChange={(e) => setItemForm((i) => ({ ...i, item_code: e.target.value }))} /></div>
-                      <div className="erp-field erp-c3"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.item_mask ?? ""} onChange={(e) => setItemForm((i) => ({ ...i, item_mask: e.target.value }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" onChange={(code) => setItemForm((i) => ({ ...i, item_code: String(code ?? "") }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Máscara</label><LookupField value={itemForm.item_mask} loader={loadItemMasks} entityLabel="máscara" placeholder="Sem máscara" onChange={(code) => setItemForm((i) => ({ ...i, item_mask: code ? String(code) : undefined }))} /></div>
                       <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><input id="bd" className="erp-check" type="checkbox" checked={!!itemForm.block_discount} onChange={(e) => setItemForm((i) => ({ ...i, block_discount: e.target.checked }))} /><label htmlFor="bd" className="erp-label" style={{ margin: 0 }}>Bloquear desconto</label></div>
                       <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-sm" onClick={gravarItem} disabled={busy}>Adicionar</button></div>
                       <div className="erp-field erp-c12">
@@ -191,7 +195,7 @@ export function Vpdv0108Page(): JSX.Element {
               {evResult && (
                 <div className="erp-field erp-c12">
                   <div className="erp-grid-wrap"><table className="erp-grid">
-                    <tbody>{Object.entries(evResult).filter(([k]) => k !== "effects").map(([k, v]) => <tr key={k}><td style={{ fontWeight: 600 }}>{k}</td><td>{typeof v === "object" ? JSON.stringify(v) : String(v)}</td></tr>)}</tbody>
+                    <tbody>{Object.entries(evResult).filter(([k]) => k !== "effects").map(([k, v]) => <tr key={k}><td style={{ fontWeight: 600 }}>{commercialResultLabel(k)}</td><td>{commercialResultValue(v)}</td></tr>)}</tbody>
                   </table></div>
                 </div>
               )}

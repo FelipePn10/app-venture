@@ -34,6 +34,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { Code128Barcode } from "@/components/ui/Code128Barcode";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadMachines, loadWarehouses } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -108,13 +110,13 @@ export function Vpro0900Page(): JSX.Element {
   const consumir = () => { const id = selected?.id; if (!id) return; void run(async () => {
     if (!cons.item_code || !cons.consumed_qty) { setFeedback({ type: "error", message: "Item e quantidade consumida são obrigatórios." }); return; }
     await addConsumption({ ...cons, production_order_id: id });
-    await loadDetails(id); setFeedback({ type: "success", message: "Consumo registrado (OUT no estoque)." });
+    await loadDetails(id); setFeedback({ type: "success", message: "Consumo registrado (saída do estoque)." });
   }); };
 
   const concluir = () => { const id = selected?.id; if (!id) return; void run(async () => {
     await completeProductionOrder(id, Number(completeWh) || undefined, completeLot || undefined);
     setCompleteLot(""); await loadDetails(id); setOrders(await listProductionOrders());
-    setFeedback({ type: "success", message: `OF ${id} concluída (IN do acabado${completeLot ? ` · lote ${completeLot}` : ""}).` });
+    setFeedback({ type: "success", message: `OF ${id} concluída (entrada do acabado${completeLot ? ` · lote ${completeLot}` : ""}).` });
   }); };
 
   const explodir = () => { const id = selected?.id; if (!id) return; void run(async () => {
@@ -190,10 +192,10 @@ export function Vpro0900Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {/* Nova OF */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Nova ordem (OPEN)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={newOf.item_code || ""} onChange={(e) => setNewOf((p) => ({ ...p, item_code: e.target.value }))} /></div>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Nova ordem (Aberto)</div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={newOf.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setNewOf((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd planejada</label><input className="erp-input num" type="number" value={newOf.planned_qty || ""} onChange={(e) => setNewOf((p) => ({ ...p, planned_qty: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Máquina</label><input className="erp-input num" type="number" value={newOf.machine_id || ""} onChange={(e) => setNewOf((p) => ({ ...p, machine_id: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Máquina</label><LookupField value={newOf.machine_id || undefined} loader={loadMachines} entityLabel="máquina" onChange={(code) => setNewOf((p) => ({ ...p, machine_id: code }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Centro custo</label><input className="erp-input num" type="number" value={newOf.cost_center_id || ""} onChange={(e) => setNewOf((p) => ({ ...p, cost_center_id: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Prioridade</label><input className="erp-input" value={newOf.priority ?? ""} onChange={(e) => setNewOf((p) => ({ ...p, priority: e.target.value }))} /></div>
           <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar OF</button></div>
@@ -242,19 +244,19 @@ export function Vpro0900Page(): JSX.Element {
               </div>
               <div className="erp-c6">
                 <div className="erp-fieldset"><div className="erp-fieldset-head">Consumo de insumo</div><div className="erp-fieldset-body">
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item insumo</label><input className="erp-input num"  value={cons.item_code || ""} onChange={(e) => setCons((p) => ({ ...p, item_code: e.target.value }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item insumo</label><LookupField value={cons.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setCons((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Qtd consumida</label><input className="erp-input num" type="number" value={cons.consumed_qty || ""} onChange={(e) => setCons((p) => ({ ...p, consumed_qty: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Depósito</label><input className="erp-input num" type="number" value={cons.warehouse_id || ""} onChange={(e) => setCons((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Depósito</label><LookupField value={cons.warehouse_id || undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setCons((p) => ({ ...p, warehouse_id: code }))} /></div>
                   <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
-                    <button className="erp-btn erp-btn-primary" onClick={consumir} disabled={busy || st !== "IN_PROGRESS"}>Consumir (OUT)</button>
-                    <button className="erp-btn" onClick={retornarSucata} disabled={busy}>Retornar sucata (IN)</button>
+                    <button className="erp-btn erp-btn-primary" onClick={consumir} disabled={busy || st !== "IN_PROGRESS"}>Consumir (saída)</button>
+                    <button className="erp-btn" onClick={retornarSucata} disabled={busy}>Retornar sucata (entrada)</button>
                   </div>
                 </div></div>
               </div>
             </div>
 
             {/* Conclusão */}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Conclusão (IN do acabado + lote)</div><div className="erp-fieldset-body">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Conclusão (entrada do acabado + lote)</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c3"><label className="erp-label">Depósito acabado</label><input className="erp-input num" type="number" value={completeWh} onChange={(e) => setCompleteWh(e.target.value)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Lote (rastreabilidade)</label><input className="erp-input" value={completeLot} onChange={(e) => setCompleteLot(e.target.value)} /></div>
               <div className="erp-field erp-c6" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={concluir} disabled={busy || st !== "IN_PROGRESS"}>Concluir (→ Concluída)</button></div>
@@ -311,9 +313,9 @@ export function Vpro0900Page(): JSX.Element {
             {/* Materiais da OF (MRP): demanda, alocação de lotes, destino de sucata */}
             <div className="erp-fieldset"><div className="erp-fieldset-head">Materiais da OF ({materials.length})</div><div className="erp-fieldset-body">
               
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={matForm.item_code} onChange={(e) => setMatForm((m) => ({ ...m, item_code: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={matForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setMatForm((m) => ({ ...m, item_code: String(code ?? "") }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={matForm.quantity} onChange={(e) => setMatForm((m) => ({ ...m, quantity: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><input className="erp-input num" type="number" value={matForm.warehouse_id} onChange={(e) => setMatForm((m) => ({ ...m, warehouse_id: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><LookupField value={matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setMatForm((m) => ({ ...m, warehouse_id: code ? String(code) : "" }))} /></div>
                 <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={matForm.automatic_issue} onChange={(e) => setMatForm((m) => ({ ...m, automatic_issue: e.target.checked }))} />baixa auto</label>
                   <button className="erp-btn erp-btn-primary" onClick={incluirMaterial} disabled={busy}>Incluir</button>

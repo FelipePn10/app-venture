@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/recurring-sales';
 
@@ -42,6 +42,29 @@ export interface RecurringSaleDTO {
   quantity: number;
   unit_value: number;
   order_code?: number;
+  source_recurring_sale_code?: number;
+  lifecycle_status?: string;
+  effective_from?: string;
+  effective_until?: string;
+  cancellation_effective_date?: string;
+  future_orders_policy?: string;
+  frequency?: string;
+  price_table_code?: number;
+  currency_code?: string;
+  adjustment_index?: string;
+  adjustment_period_months?: number;
+  adjustment_floor_pct?: number;
+  adjustment_cap_pct?: number;
+  billing_policy?: Obj;
+  delivery_policy?: Obj;
+  tax_policy?: Obj;
+  cost_center_code?: number;
+  renewal_policy?: string;
+  missing_preconditions?: string[];
+  can_generate_order?: boolean;
+  can_cancel?: boolean;
+  can_adjust?: boolean;
+  allowed_actions?: string[];
   is_active?: boolean;
   representatives?: RecurringSaleRepresentativeDTO[];
 }
@@ -85,8 +108,31 @@ function parseSale(raw: unknown): RecurringSaleDTO {
     payment_value: parseNum(o, 'payment_value', 'PaymentValue'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
     unit_value: parseNum(o, 'unit_value', 'UnitValue'),
-    order_code: parseNum(o, 'order_code', 'OrderCode'),
+    order_code: parseNum(o, 'generated_order_code', 'GeneratedOrderCode', 'order_code', 'OrderCode'),
+    source_recurring_sale_code: parseNum(o, 'source_recurring_sale_code', 'SourceRecurringSaleCode') || undefined,
+    lifecycle_status: parseStr(o, 'lifecycle_status', 'LifecycleStatus') || undefined,
+    effective_from: parseStr(o, 'effective_from', 'EffectiveFrom') || undefined,
+    effective_until: parseStr(o, 'effective_until', 'EffectiveUntil') || undefined,
+    cancellation_effective_date: parseStr(o, 'cancellation_effective_date', 'CancellationEffectiveDate') || undefined,
+    future_orders_policy: parseStr(o, 'future_orders_policy', 'FutureOrdersPolicy') || undefined,
+    frequency: parseStr(o, 'frequency', 'Frequency') || undefined,
+    price_table_code: parseNum(o, 'price_table_code', 'PriceTableCode') || undefined,
+    currency_code: parseStr(o, 'currency_code', 'CurrencyCode') || undefined,
+    adjustment_index: parseStr(o, 'adjustment_index', 'AdjustmentIndex') || undefined,
+    adjustment_period_months: parseNum(o, 'adjustment_period_months', 'AdjustmentPeriodMonths') || undefined,
+    adjustment_floor_pct: parseNum(o, 'adjustment_floor_pct', 'AdjustmentFloorPct'),
+    adjustment_cap_pct: parseNum(o, 'adjustment_cap_pct', 'AdjustmentCapPct'),
+    billing_policy: unwrapObject(o.billing_policy ?? o.BillingPolicy),
+    delivery_policy: unwrapObject(o.delivery_policy ?? o.DeliveryPolicy),
+    tax_policy: unwrapObject(o.tax_policy ?? o.TaxPolicy),
+    cost_center_code: parseNum(o, 'cost_center_code', 'CostCenterCode') || undefined,
+    renewal_policy: parseStr(o, 'renewal_policy', 'RenewalPolicy') || undefined,
     is_active: parseBool(o, 'is_active', 'IsActive'),
+    missing_preconditions: unwrapArray(o.missing_preconditions ?? o.MissingPreconditions).map(String),
+    can_generate_order: parseBool(o, 'can_generate_order', 'CanGenerateOrder'),
+    can_cancel: parseBool(o, 'can_cancel', 'CanCancel'),
+    can_adjust: parseBool(o, 'can_adjust', 'CanAdjust'),
+    allowed_actions: unwrapArray(o.allowed_actions ?? o.AllowedActions).map(String),
     representatives: Array.isArray(reps) ? reps.map(parseRep) : undefined,
   };
 }
@@ -105,7 +151,7 @@ export async function getRecurringSale(code: number): Promise<RecurringSaleDTO> 
   return parseSale(data);
 }
 export async function createRecurringSale(dto: RecurringSaleDTO): Promise<RecurringSaleDTO> {
-  const { data } = await httpClient.post(`${BASE}/create`, { ...dto, created_by: currentUserId() });
+  const { data } = await httpClient.post(`${BASE}/create`, dto);
   return parseSale(data);
 }
 export async function updateRecurringSale(code: number, dto: RecurringSaleDTO): Promise<RecurringSaleDTO> {
@@ -117,14 +163,14 @@ export async function addRecurringRepresentative(code: number, payload: Recurrin
   return unwrapObject(data);
 }
 export async function generateRecurringOrder(code: number, payload: Obj = {}): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/${code}/generate-order`, { ...payload, created_by: currentUserId() });
+  const { data } = await httpClient.post(`${BASE}/${code}/generate-order`, payload, { headers: { 'Idempotency-Key': crypto.randomUUID() } });
   return unwrapObject(data);
 }
 export async function removeGeneratedOrder(code: number): Promise<void> {
   await httpClient.delete(`${BASE}/${code}/generated-order`);
 }
-export async function cancelRecurringSale(code: number, reason?: string): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/${code}/cancel`, { reason: reason ?? null, created_by: currentUserId() });
+export async function cancelRecurringSale(code: number, payload: { reason: string; effective_date: string; future_orders_policy: string; correlation_id?: string }): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/${code}/cancel`, payload);
   return unwrapObject(data);
 }
 
@@ -134,7 +180,7 @@ export async function getRecurringParameters(enterpriseCode: number): Promise<Ob
   return unwrapObject(data);
 }
 export async function upsertRecurringParameters(payload: Obj): Promise<Obj> {
-  const { data } = await httpClient.put(`${BASE}/parameters`, { ...payload, updated_by: currentUserId() });
+  const { data } = await httpClient.put(`${BASE}/parameters`, payload);
   return unwrapObject(data);
 }
 
@@ -146,11 +192,11 @@ export async function listAdjustmentDates(filters: { customer_code?: number } = 
   return unwrapArray(data).map(unwrapObject);
 }
 export async function createAdjustmentDate(payload: Obj): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/adjustment-dates`, { ...payload, created_by: currentUserId() });
+  const { data } = await httpClient.post(`${BASE}/adjustment-dates`, payload);
   return unwrapObject(data);
 }
 export async function calculateAdjustment(payload: Obj): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/adjustments/calculate`, { ...payload, created_by: currentUserId() });
+  const { data } = await httpClient.post(`${BASE}/adjustments/calculate`, payload, { headers: { 'Idempotency-Key': crypto.randomUUID() } });
   return unwrapObject(data);
 }
 

@@ -6,6 +6,7 @@ import {
 } from "@/services/fiscalAdvancedService";
 import { errMessage, type Obj, parseStr } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -152,7 +153,7 @@ export function Vfis0350Page(): JSX.Element {
               <input className="erp-input num" type="number" step="0.01" value={form.ipi_rate ?? 0} onChange={(e) => setF("ipi_rate", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Indicador IPI</label>
               <select className="erp-input" value={form.ipi_indicator ?? "PERCENTUAL"} onChange={(e) => setF("ipi_indicator", e.target.value as IpiIndicator)}>
-                {INDS.map((i) => <option key={i} value={i}>{i}</option>)}</select></div>
+                {INDS.map((i) => <option key={i} value={i}>{enumLabel(i)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">Alíq. PIS</label>
               <input className="erp-input num" type="number" step="0.0001" value={form.pis_rate ?? 0} onChange={(e) => setF("pis_rate", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Alíq. COFINS</label>

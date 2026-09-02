@@ -39,6 +39,12 @@
     "test:versioning": "node scripts/test-versioning.mjs",
     "test:download-notice": "node scripts/test-download-notice.mjs",
     "test:screen-search": "node scripts/test-screen-search.mjs",
+    "test:commercial-regressions": "node scripts/validate-commercial-regressions.mjs",
+    "test:commercial-round2": "node scripts/validate-commercial-round2.mjs",
+    "test:engineering": "node scripts/validate-engineering.mjs",
+    "test:suprimentos": "node scripts/validate-suprimentos.mjs",
+    "test:almoxarifado": "node scripts/validate-almoxarifado.mjs",
+    "test:planejamento": "node scripts/validate-planejamento.mjs",
     "version:sync": "node scripts/set-release-version.mjs"
   },
   "dependencies": {

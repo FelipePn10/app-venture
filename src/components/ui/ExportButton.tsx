@@ -43,12 +43,32 @@ export interface ExportButtonProps {
 
 const ACTION_HEADER = /^(a[çc][aã]o(es|ões)?|actions?)$/i;
 
+/** Lê uma lista `.erp-list` (divs) como tabela — fallback quando a tela não usa `.erp-grid`. */
+function scrapeList(scope: Element | Document): ExportTable | null {
+  const rows: ExportCell[][] = [];
+  for (const row of Array.from(scope.querySelectorAll('.erp-list .erp-list-row'))) {
+    const code = (row.querySelector('.erp-list-code')?.textContent ?? '').trim();
+    const sub = (row.querySelector('.erp-list-sub')?.textContent ?? '').trim();
+    const money = (row.querySelector('.erp-list-money')?.textContent ?? '').trim();
+    const badges = Array.from(row.querySelectorAll('.erp-list-meta .erp-badge'))
+      .map((b) => (b.textContent ?? '').trim())
+      .filter(Boolean)
+      .join(' · ');
+    const rest = (row.querySelector('.erp-list-meta')?.textContent ?? '')
+      .replace(new RegExp(badges.split(' · ').map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'), '')
+      .trim();
+    rows.push([code, sub, money, badges || rest]);
+  }
+  if (!rows.length) return null;
+  return { columns: ['Código', 'Descrição', 'Valor', 'Situação/Etiquetas'], rows };
+}
+
 /** Lê a tabela `.erp-grid` visível dentro do escopo da tela, ignorando "Ações". */
 function scrapeTable(scope: Element | Document): ExportTable | null {
   const tables = Array.from(scope.querySelectorAll<HTMLTableElement>('table.erp-grid'));
   const table =
     tables.find((t) => t.querySelector('tbody tr td:not(.erp-grid-empty)')) ?? tables[0];
-  if (!table) return null;
+  if (!table) return scrapeList(scope);
 
   const headers = Array.from(table.querySelectorAll('thead th')).map(
     (th) => (th.textContent ?? '').trim(),
@@ -66,7 +86,8 @@ function scrapeTable(scope: Element | Document): ExportTable | null {
       .filter((_, i) => !skip.has(i));
     rows.push(vals);
   }
-  return columns.length ? { columns, rows } : null;
+  if (columns.length && rows.length) return { columns, rows };
+  return scrapeList(scope);
 }
 
 const DownloadIcon = (): JSX.Element => (

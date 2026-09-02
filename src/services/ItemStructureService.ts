@@ -191,10 +191,29 @@ export async function resolveChildLevel(
   return flattenLevel(res.data.components ?? []);
 }
 
-/** POST /api/items/structure/create */
+/** POST /api/items/structure/create — o backend lê a posição via campo `sequence`. */
 export async function createComponent(payload: CreateStructurePayload): Promise<StructureComponent> {
-  const res = await httpClient.post<RawComponent>('/api/items/structure/create', payload);
+  const res = await httpClient.post<RawComponent>('/api/items/structure/create', {
+    ...payload,
+    sequence: payload.position,
+  });
   return mapComponent(res.data, 1, false);
+}
+
+/** PUT /api/items/structure/update — atualiza quantidade/UM/perda/posição/notas do componente. */
+export async function updateComponent(payload: CreateStructurePayload): Promise<StructureComponent> {
+  const res = await httpClient.put<RawComponent>('/api/items/structure/update', payload);
+  return mapComponent(res.data, 1, false);
+}
+
+/** DELETE /api/items/structure/{parentCode}/{childCode} — remove o componente da estrutura. */
+export async function deleteComponent(parentCode: string, childCode: string, mask?: string | null): Promise<void> {
+  const params: Record<string, string> = {};
+  if (mask) params['mask'] = mask;
+  await httpClient.delete(
+    `/api/items/structure/${encodeURIComponent(parentCode)}/${encodeURIComponent(childCode)}`,
+    { params },
+  );
 }
 
 /** Validates mask: GET /api/items/search/{code}?mask={mask} — adjust if backend has dedicated route */

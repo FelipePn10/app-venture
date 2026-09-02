@@ -19,6 +19,8 @@ import { createMachineSchedule } from "@/services/machineScheduleService";
 import { errMessage } from "@/services/fiscalShared";
 import { useAuthStore } from "@/store/authStore";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadItemMasks, loadMachines } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -123,12 +125,11 @@ export function Vmaq0200Page(): JSX.Element {
 
         {/* ── Cálculo de tempo de produção (§3) ──────────────────────────── */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Cálculo de tempo de produção</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={calc.item_code || ""} onChange={(e) => setCalc((p) => ({ ...p, item_code: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={calc.mask} onChange={(e) => setCalc((p) => ({ ...p, mask: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={calc.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setCalc((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><LookupField value={calc.mask || undefined} loader={loadItemMasks} entityLabel="máscara" onChange={(code) => setCalc((p) => ({ ...p, mask: code ? String(code) : "" }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Máquina</label>
-            <select className="erp-input" value={calc.machine_code || ""} onChange={(e) => setCalc((p) => ({ ...p, machine_code: Number(e.target.value) }))}>
-              <option value="">—</option>{machines.map((m) => <option key={m.code} value={m.code}>{m.code} · {m.name}</option>)}
-            </select></div>
+            <LookupField value={calc.machine_code || undefined} loader={loadMachines} entityLabel="máquina" onChange={(code) => setCalc((p) => ({ ...p, machine_code: code ?? 0 }))} />
+          </div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={calc.demand_qty || ""} onChange={(e) => setCalc((p) => ({ ...p, demand_qty: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c4" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={calcular} disabled={busy}>Calcular tempo</button></div>
         
@@ -184,12 +185,11 @@ export function Vmaq0200Page(): JSX.Element {
 
         {/* ── Tempo item × máquina ───────────────────────────────────────── */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Tempo por item × máquina (cadastro central do cálculo)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={tForm.item_code || ""} onChange={(e) => setTForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={tForm.mask ?? ""} onChange={(e) => setTForm((p) => ({ ...p, mask: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={tForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setTForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><LookupField value={tForm.mask || undefined} loader={loadItemMasks} entityLabel="máscara" onChange={(code) => setTForm((p) => ({ ...p, mask: code ? String(code) : null }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Máquina</label>
-            <select className="erp-input" value={tForm.machine_code || ""} onChange={(e) => setTForm((p) => ({ ...p, machine_code: Number(e.target.value) }))}>
-              <option value="">—</option>{machines.map((m) => <option key={m.code} value={m.code}>{m.code} · {m.name}</option>)}
-            </select></div>
+            <LookupField value={tForm.machine_code || undefined} loader={loadMachines} entityLabel="máquina" onChange={(code) => setTForm((p) => ({ ...p, machine_code: code ?? 0 }))} />
+          </div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Tempo ciclo</label><input className="erp-input num" type="number" value={tForm.production_time || ""} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Unidade tempo</label>
             <select className="erp-input" value={tForm.production_time_unit} onChange={(e) => setTForm((p) => ({ ...p, production_time_unit: e.target.value }))}>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { enumLabel } from "@/utils/enumLabels";
 import {
   type InspectionOrderSource, INSPECTION_TREATMENTS,
   listInspectionOrders, createInspectionOrder, analyzeInspectionOrder,
@@ -70,7 +71,7 @@ export function Vins0201Page(): JSX.Element {
               {orders.map((o, i) => { const id = parseNum(o, "id", "ID"); return (
                 <div key={i} className={`erp-list-row${parseNum(sel ?? {}, "id", "ID") === id ? " erp-row-sel" : ""}`} onClick={() => setSel(o)}>
                   <span className="erp-list-code">#{id} · item {parseStr(o, "item_code", "ItemCode")}</span>
-                  <span className="erp-list-sub">{parseStr(o, "status", "Status")} · qtd {parseNum(o, "quantity", "Quantity")}</span>
+                  <span className="erp-list-sub">{enumLabel(parseStr(o, "status", "Status"))} · qtd {parseNum(o, "quantity", "Quantity")}</span>
                 </div>
               ); })}
             </div>

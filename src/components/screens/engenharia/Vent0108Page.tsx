@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { enumLabel } from "@/utils/enumLabels";
 import { humanizeApiError } from '@/services/apiError';
 import {
   getCalendarMonth,
@@ -703,7 +704,7 @@ export function Vent0108Page(): JSX.Element {
                     onChange={(e) => setAnoSelecionado(Number(e.target.value))}
                   >
                     {anos.map((a) => (
-                      <option key={a} value={a}>{a}</option>
+                      <option key={a} value={a}>{enumLabel(a)}</option>
                     ))}
                   </select>
                 </div>

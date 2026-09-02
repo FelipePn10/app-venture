@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
+import { enumLabel } from "@/utils/enumLabels";
 import {
   type CustomerDTO, type SupportRef, type CustomerDocType, type PaymentCondVisibility, type AddressType,
   DOC_TYPES, VISIBILITIES, ADDRESS_TYPES,
   listRefs, listCustomers, getCustomer, createCustomer, updateCustomer, blockCustomer, unblockCustomer,
-  addCustomerAddress, addCustomerContact, listEstablishments, lookupCnpj, exportCustomers, type CnpjLookup,
+  addCustomerAddress, addCustomerContact, listEstablishments, lookupCnpj, exportCustomers, exportCustomerPDF, type CnpjLookup,
 } from "@/services/customerService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
-import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Mode = "list" | "edit";
@@ -16,8 +16,8 @@ const SYS = "00000000-0000-0000-0000-000000000000";
 const EMPTY: CustomerDTO = { name: "", document_type: "CNPJ", document_number: "", payment_cond_visibility: "SOMENTE_VINCULADOS", is_corporate: false };
 const EMPTY_ADDR = { address_type: "COBRANCA" as AddressType, zip_code: "", street: "", number: "", complement: "", neighborhood: "", city: "", uf: "", country: "Brasil", is_default: true };
 
-interface Refs { regions: SupportRef[]; segments: SupportRef[]; ctypes: SupportRef[]; payconds: SupportRef[]; tables: SupportRef[]; carriers: SupportRef[]; cgroups: SupportRef[]; invtypes: SupportRef[]; taxtypes: SupportRef[]; }
-const EMPTY_REFS: Refs = { regions: [], segments: [], ctypes: [], payconds: [], tables: [], carriers: [], cgroups: [], invtypes: [], taxtypes: [] };
+interface Refs { regions: SupportRef[]; segments: SupportRef[]; ctypes: SupportRef[]; contactTypes: SupportRef[]; payconds: SupportRef[]; tables: SupportRef[]; carriers: SupportRef[]; cgroups: SupportRef[]; invtypes: SupportRef[]; taxtypes: SupportRef[]; }
+const EMPTY_REFS: Refs = { regions: [], segments: [], ctypes: [], contactTypes: [], payconds: [], tables: [], carriers: [], cgroups: [], invtypes: [], taxtypes: [] };
 
 export function Vcli0500Page(): JSX.Element {
   const [mode, setMode] = useState<Mode>("list");
@@ -37,13 +37,14 @@ export function Vcli0500Page(): JSX.Element {
   const reload = useCallback(async () => {
     setBusy(true);
     try {
-      const [cs, regions, segments, ctypes, payconds, tables, carriers, cgroups, invtypes, taxtypes] = await Promise.all([
+      const [cs, regions, segments, ctypes, contactTypes, payconds, tables, carriers, cgroups, invtypes, taxtypes] = await Promise.all([
         listCustomers(),
         listRefs("regions").catch(() => []), listRefs("market-segments").catch(() => []), listRefs("customer-types").catch(() => []),
+        listRefs("contact-types").catch(() => []),
         listRefs("payment-conditions").catch(() => []), listRefs("sales-tables").catch(() => []), listRefs("carriers").catch(() => []),
         listRefs("carrier-groups").catch(() => []), listRefs("invoice-types").catch(() => []), listRefs("tax-types").catch(() => []),
       ]);
-      setList(cs); setRefs({ regions, segments, ctypes, payconds, tables, carriers, cgroups, invtypes, taxtypes });
+      setList(cs); setRefs({ regions, segments, ctypes, contactTypes, payconds, tables, carriers, cgroups, invtypes, taxtypes });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao carregar clientes.") }); }
     finally { setBusy(false); }
   }, []);
@@ -85,8 +86,14 @@ export function Vcli0500Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try { await exportCustomers(fmt); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
+  async function runCustomerReport(code: number, name: string) {
+    setBusy(true); setFeedback(null);
+    try { await exportCustomerPDF(code, name); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e, "Não foi possível gerar a ficha do cliente.") }); }
+    finally { setBusy(false); }
+  }
 
-  async function abrir(code: number) {
+  async function abrir(code: number, targetFolder: Folder = "dados") {
     setBusy(true); setFeedback(null);
     setCnpjData(null);
     setAddr(EMPTY_ADDR);
@@ -112,7 +119,7 @@ export function Vcli0500Page(): JSX.Element {
         credit_limit: parseNum(p, "credit_limit", "CreditLimit"), website: parseStr(p, "website", "Website"),
         blocked: (p.blocked ?? p.Blocked) as boolean ?? false,
       });
-      setEditing(true); setFolder("dados"); setMode("edit");
+      setEditing(true); setFolder(targetFolder); setMode("edit");
       const isCorp = (p.is_corporate ?? p.IsCorporate) as boolean;
       setEstabs(isCorp ? await listEstablishments(code).catch(() => []) : []);
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
@@ -158,14 +165,14 @@ export function Vcli0500Page(): JSX.Element {
   async function salvarEndereco() {
     if (!form.code) return;
     setBusy(true); setFeedback(null);
-    try { await addCustomerAddress(form.code, { customer_code: form.code, ...addr }); setFeedback({ type: "success", message: "Endereço salvo." }); await abrir(form.code); }
+    try { await addCustomerAddress(form.code, { customer_code: form.code, ...addr }); await abrir(form.code, "enderecos"); setAddr(EMPTY_ADDR); setFeedback({ type: "success", message: "Endereço salvo e incluído na lista." }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function salvarContato() {
     if (!form.code) return;
     if (!contact.name.trim()) { setFeedback({ type: "error", message: "Nome do contato é obrigatório." }); return; }
     setBusy(true); setFeedback(null);
-    try { await addCustomerContact(form.code, { customer_code: form.code, name: contact.name, email: contact.email, phone: contact.phone, mobile: contact.mobile, position: contact.position, is_primary: contact.is_primary, contact_type_code: contact.contact_type_code ? Number(contact.contact_type_code) : undefined }); setFeedback({ type: "success", message: "Contato salvo." }); await abrir(form.code); }
+    try { await addCustomerContact(form.code, { customer_code: form.code, name: contact.name, email: contact.email, phone: contact.phone, mobile: contact.mobile, position: contact.position, is_primary: contact.is_primary, contact_type_code: contact.contact_type_code ? Number(contact.contact_type_code) : undefined }); await abrir(form.code, "contatos"); setContact({ contact_type_code: "", name: "", email: "", phone: "", mobile: "", position: "", is_primary: true }); setFeedback({ type: "success", message: "Contato salvo e incluído na lista." }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -199,11 +206,11 @@ export function Vcli0500Page(): JSX.Element {
             {form.code && <button className="erp-btn" onClick={() => void toggleBlock()} disabled={busy}>{form.blocked ? "Desbloquear" : "Bloquear"}</button>}
           </div>
         )}
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Exportar lista</span>
+        {mode === "list" && <div className="erp-tgroup"><span className="erp-tgroup-label">Exportar lista</span>
           <button className="erp-btn" onClick={() => void exportar("xlsx")} disabled={busy}>Excel</button>
           <button className="erp-btn" onClick={() => void exportar("pdf")} disabled={busy}>PDF</button>
-          <button className="erp-btn" onClick={() => void exportar("csv")} disabled={busy}>CSV</button></div>
-        <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VCLI0500 — Cadastro de Cliente" filename="vcli0500" /></div>
+          <button className="erp-btn" onClick={() => void exportar("csv")} disabled={busy}>CSV</button></div>}
+        <div className="erp-tspacer" />
       </div>
 
       <div className="erp-content">
@@ -224,13 +231,13 @@ export function Vcli0500Page(): JSX.Element {
             {mode === "list" && (
               <div className="erp-fieldset"><div className="erp-fieldset-head">Clientes ({list.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
                 <table className="erp-grid">
-                  <thead><tr><th>Código</th><th>Razão social</th><th>Documento</th><th>Situação</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                  <thead><tr><th>Código</th><th>Razão social</th><th>Documento</th><th>Situação</th><th style={{ width: 170 }}>Ações</th></tr></thead>
                   <tbody>
                     {list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum cliente.</td></tr>}
                     {list.map((c) => (
                       <tr key={c.code}><td style={{ fontWeight: 600 }}>{c.code}</td><td>{c.name}<br /><small style={{ color: "#8aa894" }}>{c.trade_name}</small></td>
                         <td>{c.document_number}</td><td>{c.blocked ? <span className="erp-badge err">Bloqueado</span> : <span className="erp-badge ok">Ativo</span>}</td>
-                        <td><button className="erp-btn erp-btn-sm" onClick={() => c.code && void abrir(c.code)}>Abrir</button></td></tr>
+                        <td><div style={{display:'flex',gap:6}}><button className="erp-btn erp-btn-sm" onClick={() => c.code && void abrir(c.code)}>Abrir</button><button className="erp-btn erp-btn-sm" onClick={() => c.code && void runCustomerReport(c.code, c.name)} disabled={busy}>Ficha PDF</button></div></td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -243,7 +250,7 @@ export function Vcli0500Page(): JSX.Element {
                 <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" value={form.code ?? ""} disabled={editing} onChange={(e) => setF("code", e.target.value ? Number(e.target.value) : undefined)} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label erp-req">Razão social / Nome</label><input className="erp-input" value={form.name} onChange={(e) => setF("name", e.target.value)} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label">Fantasia</label><input className="erp-input" value={form.trade_name ?? ""} onChange={(e) => setF("trade_name", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Tipo doc.</label><select className="erp-input" value={form.document_type} onChange={(e) => setF("document_type", e.target.value as CustomerDocType)}>{DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Tipo doc.</label><select className="erp-input" value={form.document_type} onChange={(e) => setF("document_type", e.target.value as CustomerDocType)}>{DOC_TYPES.map((d) => <option key={d} value={d}>{enumLabel(d)}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ/CPF</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input className="erp-input" value={form.document_number} onChange={(e) => setF("document_number", e.target.value)} />
@@ -264,7 +271,7 @@ export function Vcli0500Page(): JSX.Element {
                 {refSelect("Grupo Portadores", "carrier_group_code", refs.cgroups)}
                 {refSelect("Tipo de NF", "invoice_type_code", refs.invtypes)}
                 {refSelect("Tipo de Imposto", "tax_type_code", refs.taxtypes)}
-                <div className="erp-field erp-c4"><label className="erp-label">Visib. cond. pagto</label><select className="erp-input" value={form.payment_cond_visibility} onChange={(e) => setF("payment_cond_visibility", e.target.value as PaymentCondVisibility)}>{VISIBILITIES.map((v) => <option key={v} value={v}>{v}</option>)}</select></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Visib. cond. pagto</label><select className="erp-input" value={form.payment_cond_visibility} onChange={(e) => setF("payment_cond_visibility", e.target.value as PaymentCondVisibility)}>{VISIBILITIES.map((v) => <option key={v} value={v}>{enumLabel(v)}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Limite de crédito</label><input className="erp-input num" type="number" step="0.01" value={form.credit_limit ?? ""} onChange={(e) => setF("credit_limit", e.target.value ? Number(e.target.value) : undefined)} /></div>
                 <div className="erp-field erp-c5"><label className="erp-label">Website</label><input className="erp-input" value={form.website ?? ""} onChange={(e) => setF("website", e.target.value)} /></div>
                 {estabs.length > 0 && <div className="erp-field erp-c12"><span className="erp-field-hint">Filiais: {estabs.map((e) => `${e.code} ${e.name}`).join(" · ")}</span></div>}
@@ -285,7 +292,7 @@ export function Vcli0500Page(): JSX.Element {
             {mode === "edit" && folder === "enderecos" && (
               <>
                 <div className="erp-fieldset"><div className="erp-fieldset-head">Novo endereço</div><div className="erp-fieldset-body">
-                  <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={addr.address_type} onChange={(e) => setAddr((p) => ({ ...p, address_type: e.target.value as AddressType }))}>{ADDRESS_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                  <div className="erp-field erp-c2"><label className="erp-label">Tipo</label><select className="erp-input" value={addr.address_type} onChange={(e) => setAddr((p) => ({ ...p, address_type: e.target.value as AddressType }))}>{ADDRESS_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
                   <div className="erp-field erp-c2"><label className="erp-label">CEP</label><input className="erp-input" value={addr.zip_code} onChange={(e) => setAddr((p) => ({ ...p, zip_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c5"><label className="erp-label">Logradouro</label><input className="erp-input" value={addr.street} onChange={(e) => setAddr((p) => ({ ...p, street: e.target.value }))} /></div>
                   <div className="erp-field erp-c1"><label className="erp-label">Nº</label><input className="erp-input" value={addr.number} onChange={(e) => setAddr((p) => ({ ...p, number: e.target.value }))} /></div>
@@ -309,7 +316,7 @@ export function Vcli0500Page(): JSX.Element {
               <>
                 <div className="erp-fieldset"><div className="erp-fieldset-head">Novo contato</div><div className="erp-fieldset-body">
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Tipo contato (cód.)</label><input className="erp-input num" type="number" value={contact.contact_type_code} onChange={(e) => setContact((p) => ({ ...p, contact_type_code: e.target.value }))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Tipo de contato</label><select className="erp-input" value={contact.contact_type_code} onChange={(e) => setContact((p) => ({ ...p, contact_type_code: e.target.value }))}><option value="">—</option>{refs.contactTypes.map((type) => <option key={type.code} value={type.code}>{type.code} · {type.description}</option>)}</select></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Cargo</label><input className="erp-input" value={contact.position} onChange={(e) => setContact((p) => ({ ...p, position: e.target.value }))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">E-mail</label><input className="erp-input" value={contact.email} onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Telefone</label><input className="erp-input" value={contact.phone} onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))} /></div>

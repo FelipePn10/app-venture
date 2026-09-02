@@ -11,6 +11,7 @@ import {
 } from "@/services/cuttingPlanService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const pct = (n?: number) => `${(n ?? 0).toFixed(1)}%`;
@@ -107,7 +108,7 @@ export function Vcut0100Page(): JSX.Element {
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Novo plano de corte</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Matéria-prima (item)</label><input className="erp-input num"  value={newPlan.material_item_code || ""} onChange={(e) => setNewPlan((s) => ({ ...s, material_item_code: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Tipo de corte</label><select className="erp-input" value={newPlan.cut_type} onChange={(e) => setNewPlan((s) => ({ ...s, cut_type: e.target.value }))}>{CUT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Tipo de corte</label><select className="erp-input" value={newPlan.cut_type} onChange={(e) => setNewPlan((s) => ({ ...s, cut_type: e.target.value }))}>{CUT_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
               <div className="erp-field erp-c3"><label className="erp-label">Descrição</label><input className="erp-input" value={newPlan.description ?? ""} onChange={(e) => setNewPlan((s) => ({ ...s, description: e.target.value }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Kerf</label><input className="erp-input num" type="number" value={newPlan.kerf_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, kerf_mm: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Refile</label><input className="erp-input num" type="number" value={newPlan.trim_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, trim_mm: Number(e.target.value) }))} /></div>
@@ -127,7 +128,7 @@ export function Vcut0100Page(): JSX.Element {
                   {plans.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum plano. Clique em Listar.</td></tr>}
                   {plans.map((pl) => (
                     <tr key={pl.id} className={p?.id === pl.id ? "erp-row-sel" : ""}>
-                      <td>{pl.code}</td><td>{pl.description || "—"}</td><td>{pl.cut_type}</td><td>{pl.material_item_code}</td>
+                      <td>{pl.code}</td><td>{pl.description || "—"}</td><td>{enumLabel(pl.cut_type)}</td><td>{pl.material_item_code}</td>
                       <td>{STATUS_LABEL[pl.status ?? ""] ?? pl.status}</td><td>{pct(pl.utilization_pct)}</td>
                       <td><button className="erp-btn erp-btn-sm" onClick={() => abrir(pl.id)} disabled={busy}>Abrir</button></td>
                     </tr>
@@ -138,7 +139,7 @@ export function Vcut0100Page(): JSX.Element {
 
             {detail && p && (
               <>
-                <div className="erp-fieldset"><div className="erp-fieldset-head">Plano {p.code} — {STATUS_LABEL[p.status ?? ""] ?? p.status} · {p.cut_type}</div><div className="erp-fieldset-body">
+                <div className="erp-fieldset"><div className="erp-fieldset-head">Plano {p.code} — {STATUS_LABEL[p.status ?? ""] ?? p.status} · {enumLabel(p.cut_type)}</div><div className="erp-fieldset-body">
                   <div className="erp-field erp-c2"><label className="erp-label">Aproveitamento</label><input className="erp-input num" value={pct(p.utilization_pct)} readOnly /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Sucata</label><input className="erp-input num" value={pct(p.scrap_pct)} readOnly /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Estoque usado</label><input className="erp-input num" value={p.stock_used_count ?? 0} readOnly /></div>

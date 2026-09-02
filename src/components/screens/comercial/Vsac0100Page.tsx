@@ -12,7 +12,7 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadEstablishments } from "@/services/lookups";
+import { loadConsumers, loadEstablishments } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "consumers" | "calls" | "support";
@@ -21,6 +21,13 @@ const today = () => new Date().toISOString().slice(0, 10);
 const POSITION_META: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "Pendente", cls: "warn" }, SCHEDULED: { label: "Agendado", cls: "info" }, RESOLVED: { label: "Resolvido", cls: "ok" },
 };
+const SITUATION_META: Record<string, string> = {
+  OTHER: "Outro",
+  ORDER: "Pedido",
+  DISCONTINUED_ORDER: "Pedido descontinuado",
+  TECHNICAL_VISIT: "Visita técnica",
+};
+const situationLabel = (s?: string) => SITUATION_META[s ?? ""] ?? s ?? "—";
 const EMPTY_CONSUMER: ConsumerDTO = { name: "", person_type: "F", is_active: true };
 const EMPTY_CALL: ConsumerCallDTO = { enterprise_code: 1, consumer_code: 0, call_type_code: 0, direction: "RECEIVED", position: "PENDING", situation: "OTHER", subject: "", opened_at: today() };
 
@@ -36,7 +43,7 @@ export function Vsac0100Page(): JSX.Element {
   const [callForm, setCallForm] = useState<ConsumerCallDTO>(EMPTY_CALL);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [ret, setRet] = useState({ contact_type: "PHONE", description: "" });
+  const [ret, setRet] = useState({ contact_type: "PHONE", description: "", next_return_at: "" });
   const [typeForm, setTypeForm] = useState<CallTypeDTO>({ description: "", is_complaint: false });
   const [knowForm, setKnowForm] = useState<KnowledgeSourceDTO>({ description: "" });
   const [search, setSearch] = useState("");
@@ -76,11 +83,11 @@ export function Vsac0100Page(): JSX.Element {
   });
   const addTel = () => { const code = selConsumer?.code; if (!code) return; void run(async () => {
     if (!phone.trim()) return; await addConsumerPhone(code, { phone_type: "MOBILE", number: phone, is_primary: true });
-    setPhone(""); setFeedback({ type: "success", message: "Telefone adicionado." });
+    setPhone(""); setSelConsumer(await getConsumer(code)); setFeedback({ type: "success", message: "Telefone adicionado." });
   }); };
   const addMail = () => { const code = selConsumer?.code; if (!code) return; void run(async () => {
     if (!email.trim()) return; await addConsumerEmail(code, { email, is_primary: true });
-    setEmail(""); setFeedback({ type: "success", message: "E-mail adicionado." });
+    setEmail(""); setSelConsumer(await getConsumer(code)); setFeedback({ type: "success", message: "E-mail adicionado." });
   }); };
 
   const criarChamado = () => run(async () => {
@@ -94,13 +101,15 @@ export function Vsac0100Page(): JSX.Element {
     setFeedback({ type: "success", message: `Chamado ${created.code} aberto.` });
   });
   const mudarPosicao = (pos: ConsumerCallDTO["position"]) => { const c = selCall; if (!c?.code) return; void run(async () => {
-    await updateCall(c.code!, { ...c, position: pos }); setSelCall(await getCall(c.code!));
+    const updated = await updateCall(c.code!, { ...c, position: pos }); setSelCall(updated);
+    setCalls((current) => current.map((call) => call.code === c.code ? { ...call, ...updated } : call));
     setFeedback({ type: "success", message: `Chamado marcado como ${POSITION_META[pos].label}.` });
   }); };
   const registrarRetorno = () => { const c = selCall; if (!c?.code) return; void run(async () => {
     if (!ret.description.trim()) { setFeedback({ type: "error", message: "Descreva o retorno." }); return; }
-    await addCallReturn(c.code!, { contacted_at: today(), contact_type: ret.contact_type, description: ret.description });
-    setRet({ contact_type: "PHONE", description: "" });
+    await addCallReturn(c.code!, { contacted_at: new Date().toISOString(), contact_type: ret.contact_type, description: ret.description, next_return_at: ret.next_return_at || undefined });
+    setRet({ contact_type: "PHONE", description: "", next_return_at: "" });
+    setSelCall(await getCall(c.code!));
     setFeedback({ type: "success", message: "Retorno registrado no chamado." });
   }); };
 
@@ -153,7 +162,9 @@ export function Vsac0100Page(): JSX.Element {
           <button className="erp-btn" onClick={listarChamados} disabled={busy}>Listar</button>
           <button className="erp-btn" onClick={relatorio} disabled={busy}>Relatório</button>
         </div>}
-        <div className="erp-tgroup"><ExportButton title="VSAC0100 — SAC" filename="vsac0100" /></div>
+        <div className="erp-tgroup"><ExportButton title="VSAC0100 — SAC" filename="vsac0100" build={() => view === "calls"
+          ? { columns: ["Código", "Assunto", "Consumidor", "Posição", "Situação", "Aberto em"], rows: calls.map((c) => [String(c.code ?? ""), c.subject, consumerName(c.consumer_code), (POSITION_META[c.position] ?? { label: c.position }).label, situationLabel(c.situation), c.opened_at?.slice(0, 10) ?? "—"]), subtitle: "Chamados" }
+          : { columns: ["Código", "Nome", "Pessoa", "Documento", "UF", "Cidade"], rows: visibleConsumers.map((c) => [String(c.code ?? ""), c.name, c.person_type === "F" ? "Física" : "Jurídica", c.cpf || c.cnpj || "—", c.state ?? "—", c.city ?? "—"]), subtitle: "Consumidores" }} /></div>
       </div>
 
       <div className="erp-content">
@@ -242,12 +253,19 @@ export function Vsac0100Page(): JSX.Element {
                     </div>
                   </div>
                   <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Contatos cadastrados</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c6"><label className="erp-label">Telefones</label><div>{selConsumer.phones?.length ? selConsumer.phones.map((item) => <div key={item.code ?? item.number}>{item.number}{item.is_primary ? " · principal" : ""}</div>) : "Nenhum telefone cadastrado."}</div></div>
+                      <div className="erp-field erp-c6"><label className="erp-label">E-mails</label><div>{selConsumer.emails?.length ? selConsumer.emails.map((item) => <div key={item.code ?? item.email}>{item.email}{item.is_primary ? " · principal" : ""}</div>) : "Nenhum e-mail cadastrado."}</div></div>
+                    </div>
+                  </div>
+                  <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Adicionar contato</div>
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c4"><label className="erp-label">Telefone</label><input className="erp-input" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addTel} disabled={busy}>Add telefone</button></div>
+                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addTel} disabled={busy}>Adicionar telefone</button></div>
                       <div className="erp-field erp-c4"><label className="erp-label">E-mail</label><input className="erp-input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addMail} disabled={busy}>Add e-mail</button></div>
+                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addMail} disabled={busy}>Adicionar e-mail</button></div>
                     </div>
                   </div>
                 </div>
@@ -278,12 +296,12 @@ export function Vsac0100Page(): JSX.Element {
                     <div className="erp-fieldset-head">Abertura do chamado</div>
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c3"><label className="erp-label erp-req">Estabelecimento</label><LookupField value={callForm.enterprise_code} loader={loadEstablishments} entityLabel="estabelecimento" clearable={false} onChange={(c) => setK("enterprise_code", c ?? 1)} /></div>
-                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Consumidor (código)</label><input className="erp-input num" type="number" value={callForm.consumer_code || ""} onChange={(e) => setK("consumer_code", Number(e.target.value))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Consumidor</label><LookupField value={callForm.consumer_code || undefined} loader={loadConsumers} entityLabel="consumidor" onChange={(code) => setK("consumer_code", code ?? 0)} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label erp-req">Tipo</label><select className="erp-input" value={callForm.call_type_code || ""} onChange={(e) => setK("call_type_code", Number(e.target.value))}><option value="">Selecionar…</option>{callTypes.map((t) => <option key={t.code} value={t.code}>{t.description}</option>)}</select></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Direção</label><select className="erp-input" value={callForm.direction} onChange={(e) => setK("direction", e.target.value as ConsumerCallDTO["direction"])}><option value="RECEIVED">Recebido</option><option value="MADE">Efetuado</option><option value="WARRANTY">Garantia</option></select></div>
                       <div className="erp-field erp-c6"><label className="erp-label erp-req">Assunto</label><input className="erp-input" value={callForm.subject} onChange={(e) => setK("subject", e.target.value)} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Posição</label><select className="erp-input" value={callForm.position} onChange={(e) => setK("position", e.target.value as ConsumerCallDTO["position"])}>{Object.entries(POSITION_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-                      <div className="erp-field erp-c3"><label className="erp-label">Situação</label><select className="erp-input" value={callForm.situation} onChange={(e) => setK("situation", e.target.value as ConsumerCallDTO["situation"])}><option value="OTHER">Outro</option><option value="ORDER">Pedido</option><option value="DISCONTINUED_ORDER">Pedido descont.</option><option value="TECHNICAL_VISIT">Visita técnica</option></select></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Situação</label><select className="erp-input" value={callForm.situation} onChange={(e) => setK("situation", e.target.value as ConsumerCallDTO["situation"])}><option value="OTHER">Outro</option><option value="ORDER">Pedido</option><option value="DISCONTINUED_ORDER">Pedido descontinuado</option><option value="TECHNICAL_VISIT">Visita técnica</option></select></div>
                       {callForm.situation === "TECHNICAL_VISIT" && <div className="erp-field erp-c3"><label className="erp-label erp-req">Data da visita</label><input className="erp-input" type="date" value={callForm.visit_requested_date ?? ""} onChange={(e) => setK("visit_requested_date", e.target.value)} /></div>}
                       {isComplaint && <div className="erp-field erp-c12"><label className="erp-label erp-req">Sintomas (reclamação)</label><input className="erp-input" value={callForm.symptoms ?? ""} onChange={(e) => setK("symptoms", e.target.value)} /></div>}
                       <div className="erp-field erp-c12"><label className="erp-label">Descrição</label><input className="erp-input" value={callForm.description ?? ""} onChange={(e) => setK("description", e.target.value)} /></div>
@@ -300,22 +318,24 @@ export function Vsac0100Page(): JSX.Element {
                     <div className="erp-fieldset-head">{selCall.subject} <span className={`erp-badge ${(POSITION_META[selCall.position] ?? { cls: "draft" }).cls}`} style={{ marginLeft: 4 }}>{(POSITION_META[selCall.position] ?? { label: selCall.position }).label}</span></div>
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c4"><label className="erp-label">Consumidor</label><input className="erp-input" value={consumerName(selCall.consumer_code)} readOnly /></div>
-                      <div className="erp-field erp-c4"><label className="erp-label">Situação</label><input className="erp-input" value={selCall.situation} readOnly /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Situação</label><input className="erp-input" value={situationLabel(selCall.situation)} readOnly /></div>
                       <div className="erp-field erp-c4"><label className="erp-label">Aberto em</label><input className="erp-input" value={selCall.opened_at?.slice(0, 10) ?? "—"} readOnly /></div>
                       <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8 }}>
                         <button className="erp-btn" onClick={() => mudarPosicao("SCHEDULED")} disabled={busy}>Agendar</button>
-                        <button className="erp-btn erp-btn-dark" onClick={() => mudarPosicao("RESOLVED")} disabled={busy}>Resolver</button>
+                        <button className="erp-btn erp-btn-dark" onClick={() => mudarPosicao("RESOLVED")} disabled={busy || selCall.position === "RESOLVED"}>{selCall.position === "RESOLVED" ? "Resolvido" : "Resolver"}</button>
                       </div>
                     </div>
                   </div>
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Registrar retorno / contato</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><input className="erp-input" value={ret.contact_type} onChange={(e) => setRet((p) => ({ ...p, contact_type: e.target.value }))} /></div>
-                      <div className="erp-field erp-c7"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={ret.description} onChange={(e) => setRet((p) => ({ ...p, description: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={registrarRetorno} disabled={busy}>Registrar</button></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={ret.contact_type} onChange={(e) => setRet((p) => ({ ...p, contact_type: e.target.value }))}><option value="PHONE">Telefone</option><option value="EMAIL">E-mail</option><option value="WHATSAPP">WhatsApp</option><option value="IN_PERSON">Presencial</option></select></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Próximo contato</label><input className="erp-input" type="date" value={ret.next_return_at} onChange={(e) => setRet((p) => ({ ...p, next_return_at: e.target.value }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={ret.description} onChange={(e) => setRet((p) => ({ ...p, description: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={registrarRetorno} disabled={busy}>Registrar contato</button></div>
                     </div>
                   </div>
+                  <div className="erp-fieldset"><div className="erp-fieldset-head">Histórico de retornos ({selCall.returns?.length ?? 0})</div><div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Próximo contato</th></tr></thead><tbody>{!selCall.returns?.length && <tr><td colSpan={4} className="erp-grid-empty">Nenhum retorno registrado.</td></tr>}{selCall.returns?.map((item) => <tr key={item.code}><td>{item.contacted_at ? new Date(item.contacted_at).toLocaleString("pt-BR") : "—"}</td><td>{item.contact_type === "PHONE" ? "Telefone" : item.contact_type === "EMAIL" ? "E-mail" : item.contact_type === "IN_PERSON" ? "Presencial" : item.contact_type ?? "—"}</td><td>{item.description || "—"}</td><td>{item.next_return_at ? new Date(item.next_return_at).toLocaleDateString("pt-BR") : "—"}</td></tr>)}</tbody></table></div></div>
                 </div>
               </>
             ) : <div className="erp-detail-empty"><div className="erp-detail-empty-title">Nenhum chamado selecionado</div><div className="erp-detail-empty-sub">Selecione na lista ou clique em <strong>Novo chamado</strong>.</div></div>}

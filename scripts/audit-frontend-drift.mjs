@@ -81,6 +81,16 @@ const braces = (line) => {
 };
 const routeStack = [];
 const backendRoutes = new Set();
+function addMountedHandlerRoutes(prefix, handlerVariable) {
+  const stem = handlerVariable.replace(/Handler$/, '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+  const handlerDir = join(BACKEND, 'internal/interfaces/http/handler');
+  const file = readdirSync(handlerDir).find((name) => name === `${stem}.go`);
+  if (!file) return;
+  const source = readFileSync(join(handlerDir, file), 'utf8');
+  for (const mounted of source.matchAll(/\br\.(Get|Post|Put|Patch|Delete)\("([^"]+)"/g)) {
+    backendRoutes.add(`${mounted[1].toUpperCase()} ${normalize(`${prefix}${mounted[2]}`)}`);
+  }
+}
 let depth = 0;
 for (const line of apiLines) {
   while (routeStack.length && depth < routeStack.at(-1).depth) routeStack.pop();
@@ -95,6 +105,8 @@ for (const line of apiLines) {
     const prefix = routeStack.length ? routeStack.at(-1).full : '';
     backendRoutes.add(`${method[1].toUpperCase()} ${normalize(raw.startsWith('/api/') || raw.startsWith('/users') ? raw : `${prefix}${raw}`)}`);
   }
+  const mount = line.match(/r\.Mount\("\/",\s*([A-Za-z]\w*Handler)\.Routes\(\)\)/);
+  if (mount && routeStack.length) addMountedHandlerRoutes(routeStack.at(-1).full, mount[1]);
   depth += braces(line);
 }
 

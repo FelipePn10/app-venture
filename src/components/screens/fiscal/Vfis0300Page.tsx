@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const UTIL: CfopUtilization[] = ["INDUSTRIALIZACAO_COMERCIO", "IMOBILIZADO", "USO_CONSUMO"];
@@ -66,9 +67,9 @@ export function Vfis0300Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">{editing ? `Editando CFOP ${form.code}` : "Novo CFOP"}</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setF("code", Number(e.target.value))} /></div>
               <div className="erp-field erp-c10"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
-              <div className="erp-field erp-c4"><label className="erp-label">Utilização</label><select className="erp-input" value={form.utilization} onChange={(e) => setF("utilization", e.target.value as CfopUtilization)}>{UTIL.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
-              <div className="erp-field erp-c4"><label className="erp-label">Ind. Operação</label><select className="erp-input" value={form.ind_operacao} onChange={(e) => setF("ind_operacao", e.target.value as CfopIndOperacao)}>{IND.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
-              <div className="erp-field erp-c4"><label className="erp-label">Tipo Utilização</label><select className="erp-input" value={form.tipo_utilizacao} onChange={(e) => setF("tipo_utilizacao", e.target.value as CfopTipoUtil)}>{TIPO.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Utilização</label><select className="erp-input" value={form.utilization} onChange={(e) => setF("utilization", e.target.value as CfopUtilization)}>{UTIL.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}</select></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Ind. Operação</label><select className="erp-input" value={form.ind_operacao} onChange={(e) => setF("ind_operacao", e.target.value as CfopIndOperacao)}>{IND.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}</select></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Tipo Utilização</label><select className="erp-input" value={form.tipo_utilizacao} onChange={(e) => setF("tipo_utilizacao", e.target.value as CfopTipoUtil)}>{TIPO.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}</select></div>
               <div className="erp-field erp-c3"><label className="erp-label">DIFAL</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.difal} onChange={(e) => setF("difal", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.difal ? "Sim" : "Não"}</span></div></div>
               <div className="erp-field erp-c3"><label className="erp-label">Doação</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.doacao} onChange={(e) => setF("doacao", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.doacao ? "Sim" : "Não"}</span></div></div>
             </div></div>

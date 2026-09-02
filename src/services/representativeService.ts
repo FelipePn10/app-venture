@@ -36,7 +36,24 @@ export interface RepresentativeDTO {
   is_active?: boolean;
   is_blocked?: boolean;
   block_reason?: string;
+  main_phone?: string;
+  main_email?: string;
+  enterprises?: RepresentativeEnterpriseDTO[];
+  segments?: RepresentativeSegmentDTO[];
+  sales_plans?: RepresentativeSalesPlanDTO[];
+  interests?: RepresentativeInterestDTO[];
+  phones?: RepresentativePhoneDTO[];
+  emails?: RepresentativeEmailDTO[];
+  correspondence_addresses?: RepresentativeAddressDTO[];
 }
+
+export interface RepresentativeEnterpriseDTO { id?: number; enterprise_code: number; enterprise_name?: string; commission_pct?: number; is_default?: boolean; is_active?: boolean; }
+export interface RepresentativeSegmentDTO { id?: number; market_segment_code: number; is_active?: boolean; }
+export interface RepresentativeSalesPlanDTO { id?: number; sales_plan_code: number; is_active?: boolean; }
+export interface RepresentativeInterestDTO { id?: number; item_classification_code: number; is_active?: boolean; }
+export interface RepresentativePhoneDTO { id?: number; ddi?: string; ddd?: string; phone: string; phone_type?: string; ranking?: number; }
+export interface RepresentativeEmailDTO { id?: number; email: string; ranking?: number; }
+export interface RepresentativeAddressDTO { id?: number; postal_code?: string; city?: string; state?: string; full_address?: string; street?: string; street_number?: string; district?: string; is_default?: boolean; }
 
 export interface RepresentativeTypeDTO {
   code?: number;
@@ -69,6 +86,7 @@ export interface RepresentativeFollowUpFilters {
 
 function parseRep(raw: unknown): RepresentativeDTO {
   const o = unwrapObject(raw);
+  const rows = (key: string, pascal: string) => unwrapArray(o[key] ?? o[pascal]).map(unwrapObject);
   return {
     code: parseNum(o, 'code', 'Code'),
     is_customer: parseBool(o, 'is_customer', 'IsCustomer'),
@@ -92,9 +110,23 @@ function parseRep(raw: unknown): RepresentativeDTO {
     district: parseStr(o, 'district', 'District'),
     device_quantity: parseNum(o, 'device_quantity', 'DeviceQuantity'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
-    is_blocked: parseBool(o, 'is_blocked', 'IsBlocked'),
+    is_blocked: parseBool(o, 'blocked', 'Blocked', 'is_blocked', 'IsBlocked'),
     block_reason: parseStr(o, 'block_reason', 'BlockReason'),
+    main_phone: parseStr(o, 'main_phone', 'MainPhone'),
+    main_email: parseStr(o, 'main_email', 'MainEmail'),
+    enterprises: rows('enterprises', 'Enterprises').map((v) => ({ id: parseNum(v, 'id', 'ID'), enterprise_code: parseNum(v, 'enterprise_code', 'EnterpriseCode'), enterprise_name: parseStr(v, 'enterprise_name', 'EnterpriseName'), commission_pct: parseNum(v, 'commission_pct', 'CommissionPct'), is_default: parseBool(v, 'is_default', 'IsDefault'), is_active: parseBool(v, 'is_active', 'IsActive') })),
+    segments: rows('segments', 'Segments').map((v) => ({ id: parseNum(v, 'id', 'ID'), market_segment_code: parseNum(v, 'market_segment_code', 'MarketSegmentCode'), is_active: parseBool(v, 'is_active', 'IsActive') })),
+    sales_plans: rows('sales_plans', 'SalesPlans').map((v) => ({ id: parseNum(v, 'id', 'ID'), sales_plan_code: parseNum(v, 'sales_plan_code', 'SalesPlanCode'), is_active: parseBool(v, 'is_active', 'IsActive') })),
+    interests: rows('interests', 'Interests').map((v) => ({ id: parseNum(v, 'id', 'ID'), item_classification_code: parseNum(v, 'item_classification_code', 'ItemClassificationCode'), is_active: parseBool(v, 'is_active', 'IsActive') })),
+    phones: rows('phones', 'Phones').map((v) => ({ id: parseNum(v, 'id', 'ID'), ddi: parseStr(v, 'ddi', 'DDI'), ddd: parseStr(v, 'ddd', 'DDD'), phone: parseStr(v, 'phone', 'Phone'), phone_type: parseStr(v, 'phone_type', 'PhoneType'), ranking: parseNum(v, 'ranking', 'Ranking') })),
+    emails: rows('emails', 'Emails').map((v) => ({ id: parseNum(v, 'id', 'ID'), email: parseStr(v, 'email', 'Email'), ranking: parseNum(v, 'ranking', 'Ranking') })),
+    correspondence_addresses: rows('correspondence_addresses', 'CorrespondenceAddresses').map((v) => ({ id: parseNum(v, 'id', 'ID'), postal_code: parseStr(v, 'postal_code', 'PostalCode'), city: parseStr(v, 'city', 'City'), state: parseStr(v, 'state', 'State'), full_address: parseStr(v, 'full_address', 'FullAddress'), street: parseStr(v, 'street', 'Street'), street_number: parseStr(v, 'street_number', 'StreetNumber'), district: parseStr(v, 'district', 'District'), is_default: parseBool(v, 'is_default', 'IsDefault') })),
   };
+}
+
+export async function listRepresentativeSalesPlans(): Promise<number[]> {
+  const { data } = await httpClient.get(`${BASE}/sales-plans`);
+  return unwrapArray(data).map((raw) => parseNum(unwrapObject(raw), 'code', 'Code')).filter((code) => code > 0);
 }
 
 function parseType(raw: unknown): RepresentativeTypeDTO {

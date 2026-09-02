@@ -25,8 +25,8 @@ export interface TankReservationRequest {
   lines: TankReservationLine[];
 }
 export interface RescheduleRequest {
-  from?: string;
-  to?: string;
+  delivery_from?: string;
+  delivery_to?: string;
   customer_code?: number;
   representative_code?: number;
   order_codes?: number[];

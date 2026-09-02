@@ -48,6 +48,7 @@ export function Vcli0520Page(): JSX.Element {
           {tab === "condicao" && (
             <>
               <SupportCrud resource="payment-conditions"
+                editable
                 fields={[
                   { key: "description", label: "Descrição", col: 4, required: true },
                   { key: "carrier_code", label: "Portador (cód.)", kind: "number", col: 2 },
@@ -75,6 +76,7 @@ export function Vcli0520Page(): JSX.Element {
           )}
 
           {tab === "tabela" && <SupportCrud resource="sales-tables"
+            editable
             fields={[
               { key: "description", label: "Descrição", col: 5, required: true },
               { key: "validity_start", label: "Vigência início (ISO)", col: 3, placeholder: "2025-01-01T00:00:00Z" },

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RECORD_TYPES, listRecords, createRecord, updateRecordStatus } from "@/services/procurementService";
 import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const STATUSES = ["DRAFT", "OPEN", "CLOSED", "CANCELLED"];
@@ -46,7 +47,7 @@ export function Vins0106Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Tipo</span>
-          <select className="erp-tselect" value={filterType} onChange={(e) => setFilterType(e.target.value)}><option value="">todos</option>{RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+          <select className="erp-tselect" value={filterType} onChange={(e) => setFilterType(e.target.value)}><option value="">todos</option>{RECORD_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select>
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button>
         </div>
         <div className="erp-tspacer" />
@@ -64,8 +65,8 @@ export function Vins0106Page(): JSX.Element {
                 const id = parseNum(r, "id", "ID");
                 return (
                   <div key={i} className="erp-list-row" style={{ cursor: "default" }}>
-                    <span className="erp-list-code">{parseStr(r, "record_type", "RecordType")}</span>
-                    <span className="erp-list-sub">#{id} · {parseStr(r, "status", "Status")}</span>
+                    <span className="erp-list-code">{enumLabel(parseStr(r, "record_type", "RecordType"))}</span>
+                    <span className="erp-list-sub">#{id} · {enumLabel(parseStr(r, "status", "Status"))}</span>
                     <div className="erp-list-meta">
                       {parseStr(r, "status", "Status") !== "CLOSED" && <button className="erp-btn erp-btn-sm" style={{ marginLeft: "auto" }} onClick={() => void mudarStatus(id, "CLOSED")} disabled={busy}>Encerrar</button>}
                     </div>
@@ -81,8 +82,8 @@ export function Vins0106Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Dados da ocorrência</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c4"><label className="erp-label erp-req">Tipo</label><select className="erp-input" value={form.record_type} onChange={(e) => setForm((f) => ({ ...f, record_type: e.target.value }))}>{RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
-                  <div className="erp-field erp-c4"><label className="erp-label">Status</label><select className="erp-input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                  <div className="erp-field erp-c4"><label className="erp-label erp-req">Tipo</label><select className="erp-input" value={form.record_type} onChange={(e) => setForm((f) => ({ ...f, record_type: e.target.value }))}>{RECORD_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
+                  <div className="erp-field erp-c4"><label className="erp-label">Status</label><select className="erp-input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>{STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Fornecedor</label><input className="erp-input num" type="number" value={form.supplier_code} onChange={(e) => setForm((f) => ({ ...f, supplier_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Item</label><input className="erp-input num"  value={form.item_code} onChange={(e) => setForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Quantidade</label><input className="erp-input num" type="number" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} /></div>

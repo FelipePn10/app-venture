@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   type SalesDivisionDTO,
   DIVISION_ANALYSIS,
-  listSalesDivisions, createSalesDivision, updateSalesDivision, deleteSalesDivision,
+  listSalesDivisions, createSalesDivision, updateSalesDivision, deleteSalesDivision, setSalesDivisionStatus,
 } from "@/services/salesDivisionService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -23,6 +23,7 @@ export function Vvnd0100Page(): JSX.Element {
   const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<SalesDivisionDTO | null>(null);
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -48,8 +49,25 @@ export function Vvnd0100Page(): JSX.Element {
   }
   async function remover(code: number) {
     setBusy(true); setFeedback(null);
-    try { await deleteSalesDivision(code); setFeedback({ type: "success", message: `Divisão ${code} excluída.` }); if (form.code === code) novo(); await reload(); }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+    try { await deleteSalesDivision(code); setDeleteCandidate(null); if (form.code === code) novo(); await reload(); setFeedback({ type: "success", message: `A divisão ${code} foi excluída.` }); }
+    catch (e) {
+      const message = errMessage(e);
+      setFeedback({ type: "error", message: /403|unauthor|permiss/i.test(message)
+        ? "Seu usuário não possui permissão para excluir divisões de vendas. Solicite a exclusão a um administrador."
+        : /409|constraint|refer|uso|vinculad/i.test(message)
+          ? "Esta divisão não pode ser excluída porque já está vinculada a outros registros. Desative-a ou remova primeiro os vínculos existentes."
+          : message });
+    } finally { setBusy(false); }
+  }
+  async function alterarSituacao(division: SalesDivisionDTO, active: boolean) {
+    setBusy(true); setFeedback(null);
+    try {
+      const updated = await setSalesDivisionStatus(division.code, active);
+      setDeleteCandidate(null); setForm((current) => current.code === updated.code ? { ...current, ...updated } : current);
+      await reload();
+      setFeedback({ type: "success", message: `Divisão ${division.code} ${active ? "reativada" : "desativada"}.` });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e, "Não foi possível alterar a situação da divisão.") }); }
+    finally { setBusy(false); }
   }
 
   const visible = useMemo(() => {
@@ -82,7 +100,8 @@ export function Vvnd0100Page(): JSX.Element {
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Registro</span>
           <button className="erp-btn erp-btn-dark" onClick={() => void salvar()} disabled={busy}>{busy && <span className="erp-spin" />}{editing ? "Atualizar" : "Salvar"}</button>
-          {editing && <button className="erp-btn erp-btn-danger" onClick={() => void remover(form.code)} disabled={busy}>Excluir</button>}
+          {editing && <button className="erp-btn" onClick={() => void alterarSituacao(form, form.is_active === false)} disabled={busy}>{form.is_active === false ? "Reativar" : "Desativar"}</button>}
+          {editing && <button className="erp-btn erp-btn-danger" onClick={() => setDeleteCandidate(form)} disabled={busy}>Excluir</button>}
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VVND0100 — Divisão de Vendas" filename="vvnd0100" /></div>
@@ -109,6 +128,7 @@ export function Vvnd0100Page(): JSX.Element {
                   <span className="erp-badge draft">{analysisLabel(d.commercial_analysis)}</span>
                   {d.consider_mrp && <span className="erp-badge ok">MRP</span>}
                   {d.allow_free_payment_terms && <span className="erp-badge info">Cond. livre</span>}
+                  <span className={`erp-badge ${d.is_active === false ? "err" : "ok"}`}>{d.is_active === false ? "Inativa" : "Ativa"}</span>
                 </div>
               </div>
             ))}
@@ -116,7 +136,7 @@ export function Vvnd0100Page(): JSX.Element {
         </aside>
 
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editando divisão #${form.code}` : "Nova divisão"}</button></div>
+          <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editando divisão #${form.code} · ${form.is_active === false ? "Inativa" : "Ativa"}` : "Nova divisão"}</button></div>
           <div className="erp-detail-body">
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Identificação</div>
@@ -175,6 +195,16 @@ export function Vvnd0100Page(): JSX.Element {
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
+      {deleteCandidate && <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-division-title" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteCandidate(null); }}>
+        <div className="erp-modal" style={{ width: "min(520px, 94vw)" }}>
+          <div className="erp-modal-head"><div><strong id="delete-division-title">Excluir definitivamente a divisão?</strong><div className="erp-field-hint">Excluir remove fisicamente o cadastro; desativar permite reativação posterior.</div></div><button className="erp-btn erp-btn-sm" onClick={() => setDeleteCandidate(null)} disabled={busy}>Fechar</button></div>
+          <div className="erp-modal-body">
+            <p style={{ margin: "0 0 10px" }}>Você está excluindo <strong>{deleteCandidate.code} · {deleteCandidate.description}</strong>.</p>
+            <div className="erp-note">A exclusão definitiva só é permitida quando não existem vínculos. Se a divisão já foi usada em pedidos ou cadastros, desative-a para preservar o histórico e impedir novas utilizações.</div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16, flexWrap: "wrap" }}><button className="erp-btn" onClick={() => setDeleteCandidate(null)} disabled={busy}>Manter divisão</button>{deleteCandidate.is_active !== false && <button className="erp-btn" onClick={() => void alterarSituacao(deleteCandidate, false)} disabled={busy}>Desativar e preservar histórico</button>}<button className="erp-btn erp-btn-danger" onClick={() => void remover(deleteCandidate.code)} disabled={busy}>{busy && <span className="erp-spin" />}Excluir definitivamente</button></div>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }
