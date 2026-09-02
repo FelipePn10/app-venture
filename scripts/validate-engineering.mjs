@@ -21,6 +21,7 @@ const routinePage = read('src/components/screens/OperationalRoutinePage.tsx');
 const routineCatalog = read('src/components/screens/operationalRoutines.ts');
 const lookups = read('src/services/lookups.ts');
 const structure = read('src/services/ItemStructureService.ts');
+const classifications = read('src/services/itemClassificationService.ts');
 
 check('VENT0200 removeu botões Nav e PDM', !/className="it-nav-btn"/.test(vent0200) && !/>PDM<\/button>/.test(vent0200));
 check('VENT0200 removeu texto "Focco"', !/Focco/i.test(vent0200));
@@ -33,6 +34,7 @@ check('VENT0210 preenche descrição/UM do filho automaticamente', /handleChildC
 check('VENT0210 atualiza componente (updateComponent)', /updateComponent/.test(structure) && /updateComponent\(toPayload/.test(vent0210));
 check('VENT0210 remove componente persistido (deleteComponent)', /deleteComponent/.test(structure) && /deleteComponent\(row\.parentCode/.test(vent0210));
 check('criação de componente envia posição como sequence', /sequence: payload\.position/.test(structure));
+check('VCLA0100 preserva código pai textual e omite raiz vazia', /parent_code: dto\.parent_code\?\.trim\(\) \|\| undefined/.test(classifications));
 check('VENT0210 posição obrigatória validada', /invalidPos/.test(vent0210));
 check('VPRO0100 origem de operação traduzida', /enumLabel\(o\)/.test(vpro0100) && /enumLabel\(o\.origin\)/.test(vpro0100));
 check('VPRO0100 item usa modal', /loader=\{loadItems\}/.test(vpro0100));
