@@ -33,8 +33,8 @@ export async function updateMask(dto: ClassificationMaskDTO): Promise<Classifica
   const { data } = await httpClient.put(`${BASE}/masks/`, dto);
   return parseMask(data);
 }
-export async function listMaskClassifications(maskId: number): Promise<ClassificationDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/masks/${maskId}/items`);
+export async function listMaskClassifications(maskCode: number): Promise<ClassificationDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/masks/${maskCode}/items`);
   return unwrapArray(data).map(parseClassification);
 }
 
@@ -60,7 +60,12 @@ function parseClassification(raw: unknown): ClassificationDTO {
 }
 
 export async function createClassification(dto: ClassificationDTO): Promise<ClassificationDTO> {
-  const { data } = await httpClient.post(`${BASE}/`, dto);
+  const { data } = await httpClient.post(`${BASE}/`, {
+    ...dto,
+    code: dto.code.trim(),
+    description: dto.description.trim(),
+    parent_code: dto.parent_code?.trim() || undefined,
+  });
   return parseClassification(data);
 }
 export async function updateClassification(dto: ClassificationDTO): Promise<ClassificationDTO> {
