@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [v1.1.13] — 2026-09-02
+
+## Correções
+- Corrigimos o cadastro de classificações em níveis para reconhecer o código da classificação pai.
+- Classificações principais agora são salvas sem uma referência de pai vazia.
+- Os filtros de classificação do planejamento e do MRP deixam de ser confundidos com códigos de itens.
+
 ## [v1.1.12] — 2026-09-02
 
 ## Melhorias
