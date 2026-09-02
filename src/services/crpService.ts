@@ -30,6 +30,26 @@ function parseEntry(raw: unknown): CrpEntry {
   };
 }
 
+export interface CrpPlanOption {
+  plan_code: number;
+  name?: string;
+  total_entries?: number;
+  calculated?: boolean;
+}
+
+export async function listCrpPlans(onlyCalculated = false): Promise<CrpPlanOption[]> {
+  const { data } = await httpClient.get(`${BASE}/plans`, { params: onlyCalculated ? { only_calculated: 'true' } : undefined });
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    return {
+      plan_code: parseNum(o, 'plan_code', 'PlanCode'),
+      name: parseStr(o, 'name', 'Name') || undefined,
+      total_entries: parseNum(o, 'total_entries', 'TotalEntries'),
+      calculated: parseBool(o, 'calculated', 'Calculated'),
+    };
+  }).filter((p) => p.plan_code);
+}
+
 export async function calculateCrp(planCode: number): Promise<CrpSummary> {
   const { data } = await httpClient.post(`${BASE}/calculate`, { plan_code: planCode });
   const o = unwrapObject(data);

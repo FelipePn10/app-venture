@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { type SupplierContract, getContract, consumeContract, updateContractStatus } from "@/services/supplierContractService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
@@ -56,7 +57,7 @@ export function Vcon0202Page(): JSX.Element {
 
         {contrato && (
           <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">{contrato.contract_number} — {contrato.status} — <span style={{fontWeight:400,opacity:0.65}}>fornecedor {contrato.supplier_code}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">{contrato.contract_number} — {enumLabel(contrato.status)} — <span style={{fontWeight:400,opacity:0.65}}>fornecedor {contrato.supplier_code}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Item</th><th>Máscara</th><th>Contratada</th><th>Consumida</th><th>Saldo</th><th></th></tr></thead>
                 <tbody>

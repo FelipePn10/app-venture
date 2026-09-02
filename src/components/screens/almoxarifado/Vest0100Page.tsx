@@ -10,9 +10,15 @@ import {
 } from "@/services/stockService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { EntityName } from "@/components/ui/EntityName";
+import { loadItems, loadWarehouses } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+const MOVEMENT_LABEL: Record<string, string> = { IN: "Entrada", OUT: "Saída", TRANSFER: "Transferência", ADJUSTMENT: "Ajuste", RESERVATION: "Reserva", RELEASE: "Liberação" };
+const REFERENCE_LABEL: Record<string, string> = { MANUAL: "Manual", SALES_ORDER: "Pedido de venda", PURCHASE_ORDER: "Pedido de compra", PRODUCTION_ORDER: "Ordem de produção", SHIPMENT: "Expedição" };
 
 const EMPTY_MOV: MovementDTO = { item_code: "", warehouse_id: 0, movement_type: "IN", quantity: 0, unit_price: 0, lot: "" };
 
@@ -57,7 +63,7 @@ export function Vest0100Page(): JSX.Element {
     if (!resForm.item_code || !resForm.warehouse_id || !resForm.quantity) { setFeedback({ type: "error", message: "Item, depósito e quantidade são obrigatórios." }); return; }
     const r = await createReservation(resForm);
     setResId(String(r.id ?? ""));
-    setFeedback({ type: "success", message: `Reserva ${r.id} criada (ACTIVE) — ATP reduzido.` });
+    setFeedback({ type: "success", message: `Reserva ${r.id} criada (Ativo) — ATP reduzido.` });
     if (itemCode) await getAtp(itemCode.trim()).then(setAtp);
   });
   const liberar = () => run(async () => { const id = Number(resId); if (!id) return; await releaseReservation(id); setFeedback({ type: "success", message: `Reserva ${id} liberada.` }); if (itemCode) await getAtp(itemCode.trim()).then(setAtp); });
@@ -120,17 +126,17 @@ export function Vest0100Page(): JSX.Element {
           <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
             <table className="erp-grid">
               <thead><tr><th>Depósito</th><th>Saldo</th><th>Reservado</th><th>Disponível</th><th>Custo médio</th></tr></thead>
-              <tbody>{balances.map((b, i) => <tr key={i}><td>{b.warehouse_id}</td><td>{num(b.quantity)}</td><td>{num(b.reserved_qty)}</td><td>{num(b.available_qty)}</td><td>{num(b.avg_cost)}</td></tr>)}</tbody>
+              <tbody>{balances.map((b, i) => <tr key={i}><td><EntityName code={b.warehouse_id} loader={loadWarehouses} prefix="Depósito" /></td><td>{num(b.quantity)}</td><td>{num(b.reserved_qty)}</td><td>{num(b.available_qty)}</td><td>{num(b.avg_cost)}</td></tr>)}</tbody>
             </table>
           </div></div></div>
         )}
 
         {/* Lançar movimento */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Lançar movimento</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={movForm.item_code || ""} onChange={(e) => setMovForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Depósito</label><input className="erp-input num" type="number" value={movForm.warehouse_id || ""} onChange={(e) => setMovForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={movForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setMovForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Depósito</label><LookupField value={movForm.warehouse_id || undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setMovForm((p) => ({ ...p, warehouse_id: code ? Number(code) : 0 }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Tipo</label>
-            <select className="erp-input" value={movForm.movement_type} onChange={(e) => setMovForm((p) => ({ ...p, movement_type: e.target.value }))}>{MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+            <select className="erp-input" value={movForm.movement_type} onChange={(e) => setMovForm((p) => ({ ...p, movement_type: e.target.value }))}>{MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={movForm.quantity || ""} onChange={(e) => setMovForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Preço unit.</label><input className="erp-input num" type="number" step="0.01" value={movForm.unit_price || ""} onChange={(e) => setMovForm((p) => ({ ...p, unit_price: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" value={movForm.lot ?? ""} onChange={(e) => setMovForm((p) => ({ ...p, lot: e.target.value }))} /></div>
@@ -143,7 +149,7 @@ export function Vest0100Page(): JSX.Element {
             <thead><tr><th>ID</th><th>Item</th><th>Depósito</th><th>Tipo</th><th>Qtd</th><th>Lote</th><th>Origem</th><th>Data</th></tr></thead>
             <tbody>
               {movements.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhum movimento. Consulte um item ou carregue os últimos.</td></tr>}
-              {movements.slice(0, 100).map((m) => <tr key={m.id}><td>{m.id}</td><td>{m.item_code}</td><td>{m.warehouse_id}</td><td>{m.movement_type}</td><td>{num(m.quantity)}</td><td>{m.lot || "—"}</td><td>{m.reference_type ? `${m.reference_type} ${m.reference_code ?? ""}` : "—"}</td><td>{m.created_at?.slice(0, 10) ?? "—"}</td></tr>)}
+              {movements.slice(0, 100).map((m) => <tr key={m.id}><td>{m.id}</td><td><EntityName code={m.item_code} loader={loadItems} prefix="Item" /></td><td><EntityName code={m.warehouse_id} loader={loadWarehouses} prefix="Depósito" /></td><td>{MOVEMENT_LABEL[m.movement_type] ?? m.movement_type}</td><td>{num(m.quantity)}</td><td>{m.lot || "—"}</td><td>{m.reference_type ? `${REFERENCE_LABEL[m.reference_type] ?? m.reference_type} ${m.reference_code ?? ""}` : "—"}</td><td>{m.created_at?.slice(0, 10) ?? "—"}</td></tr>)}
             </tbody>
           </table>
         </div></div></div>

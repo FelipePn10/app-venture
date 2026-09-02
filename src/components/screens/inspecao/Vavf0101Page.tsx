@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getProcurementParameters, upsertProcurementParameter } from "@/services/procurementService";
 import { errMessage, parseStr, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const DOMAINS = ["SUPPLIER_EVALUATION", "INSPECTION", "RECEIVING_NOTICE", "CONTRACT", "SUPPLIER", "PURCHASE_ORDER", "QUOTATION", "REQUISITION", "PURCHASE_TABLE", "NF_ENTRY"];
@@ -45,7 +46,7 @@ export function Vavf0101Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Domínio</span>
-          <select className="erp-tselect" value={domain} onChange={(e) => setDomain(e.target.value)}>{DOMAINS.map((d) => <option key={d} value={d}>{d}</option>)}</select>
+          <select className="erp-tselect" value={domain} onChange={(e) => setDomain(e.target.value)}>{DOMAINS.map((d) => <option key={d} value={d}>{enumLabel(d)}</option>)}</select>
           <span className="erp-tgroup-label">Empresa</span>
           <input className="erp-tinput" style={{ width: 70 }} type="number" value={enterprise} onChange={(e) => setEnterprise(e.target.value)} />
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button>
@@ -78,7 +79,7 @@ export function Vavf0101Page(): JSX.Element {
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c4"><label className="erp-label erp-req">Chave</label><input className="erp-input" value={form.param_key} onChange={(e) => setForm((f) => ({ ...f, param_key: e.target.value }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Valor</label><input className="erp-input" value={form.param_value} onChange={(e) => setForm((f) => ({ ...f, param_value: e.target.value }))} /></div>
-                  <div className="erp-field erp-c4"><label className="erp-label">Tipo</label><select className="erp-input" value={form.value_type} onChange={(e) => setForm((f) => ({ ...f, value_type: e.target.value }))}>{VALUE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                  <div className="erp-field erp-c4"><label className="erp-label">Tipo</label><select className="erp-input" value={form.value_type} onChange={(e) => setForm((f) => ({ ...f, value_type: e.target.value }))}>{VALUE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
                   <div className="erp-field erp-c8"><label className="erp-label">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
                   <div className="erp-field erp-c4" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>Salvar parâmetro</button></div>
                 </div>

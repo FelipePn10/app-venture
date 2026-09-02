@@ -1,9 +1,14 @@
 import { useState, useCallback, useRef, memo } from 'react';
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
 import {
   findItemByCode,
   resolveStructure,
   resolveChildLevel,
   createComponent,
+  updateComponent,
+  deleteComponent,
   validateMask,
   type StructureComponent,
   type CreateStructurePayload,
@@ -91,9 +96,10 @@ const HEALTH_COLOR: Record<Health, string> = {
 interface DetailPanelProps {
   row: LocalRow | null;
   onUpdate: (patch: Partial<LocalRow>) => void;
+  onChildCodeBlur: (code: string) => void;
 }
 
-const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProps) {
+const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }: DetailPanelProps) {
   if (!row) {
     return (
       <div className="fe-detail-empty">
@@ -113,10 +119,11 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
 
       <div className="fe-d-row">
         <div className="fe-d-field">
-          <label className="fe-d-label">Cód. Filho (int64)</label>
+          <label className="fe-d-label">Cód. Filho</label>
           <input className="fe-d-input"
             value={row.childCode || ''}
             onChange={(e) => onUpdate({ childCode: e.target.value })}
+            onBlur={(e) => onChildCodeBlur(e.target.value)}
             placeholder="Ex: 2206" style={{ textAlign: 'right' }}/>
         </div>
         <div className="fe-d-field">
@@ -150,7 +157,7 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
           <label className="fe-d-label">Unid. Medida</label>
           <select className="fe-d-select" value={row.unitOfMeasurement}
             onChange={(e) => onUpdate({ unitOfMeasurement: e.target.value as UnitOfMeasurement })}>
-            {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{u}</option>)}
+            {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
           </select>
         </div>
       </div>
@@ -167,7 +174,7 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate }: DetailPanelProp
           <label className="fe-d-label">Health</label>
           <select className="fe-d-select" value={row.health}
             onChange={(e) => onUpdate({ health: e.target.value as Health })}>
-            {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}
+            {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{enumLabel(h)}</option>)}
           </select>
         </div>
       </div>
@@ -288,7 +295,10 @@ export function Vent0210Page(): JSX.Element {
   // ── search root item ─────────────────────────────────────────────────────────
 
   async function handleSearchRoot() {
-    const codeStr = rootCodigo.trim();
+    await buscarItemPai(rootCodigo.trim());
+  }
+
+  async function buscarItemPai(codeStr: string) {
     if (!codeStr) return;
     setIsLoading(true);
     setFeedback(null);
@@ -358,8 +368,14 @@ export function Vent0210Page(): JSX.Element {
   }
 
   function handleDeleteRow(localId: string) {
+    const row = rows.find((r) => r.localId === localId);
     setRows((p) => p.filter((r) => r.localId !== localId));
     if (selectedLocalId === localId) setSelectedLocalId(null);
+    if (row && !row.isNew && row.childCode) {
+      void deleteComponent(row.parentCode, row.childCode, rootMascara || null)
+        .then(() => setFeedback({ type: 'success', msg: 'Componente removido da estrutura.' }))
+        .catch((e) => setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Falha ao remover componente.' }));
+    }
   }
 
   function handleMoveRow(localId: string, dir: 'up' | 'down') {
@@ -379,6 +395,15 @@ export function Vent0210Page(): JSX.Element {
     );
   }, []);
 
+  /** Ao informar o código do filho, puxa descrição e UM do cadastro do item. */
+  const handleChildCodeBlur = useCallback((localId: string, code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    void findItemByCode(trimmed)
+      .then((info) => updateRow(localId, { childDescription: info.name, unitOfMeasurement: info.unit }))
+      .catch(() => undefined);
+  }, [updateRow]);
+
   // ── save ──────────────────────────────────────────────────────────────────────
 
   async function handleSalvar() {
@@ -391,8 +416,14 @@ export function Vent0210Page(): JSX.Element {
       return;
     }
     const newRows = rows.filter((r) => r.dirty && r.isNew);
-    if (newRows.length === 0) {
+    const editRows = rows.filter((r) => r.dirty && !r.isNew);
+    if (newRows.length === 0 && editRows.length === 0) {
       setFeedback({ type: 'success', msg: 'Nenhuma alteração pendente.' });
+      return;
+    }
+    const invalidPos = rows.find((r) => r.dirty && (!r.position || r.position <= 0));
+    if (invalidPos) {
+      setFeedback({ type: 'error', msg: 'A posição de todos os itens deve ser um número positivo.' });
       return;
     }
     setIsSaving(true);
@@ -400,15 +431,19 @@ export function Vent0210Page(): JSX.Element {
     try {
       const mask = rootMascara.trim() || null;
       const created = await Promise.all(newRows.map((r) => createComponent(toPayload(r, mask))));
+      const updated = await Promise.all(editRows.map((r) => updateComponent(toPayload(r, mask))));
       const createdMap = new Map(newRows.map((r, i) => [r.localId, created[i]]));
+      const updatedMap = new Map(editRows.map((r, i) => [r.localId, updated[i]]));
       setRows((prev) =>
         prev.map((r) => {
           const c = createdMap.get(r.localId);
-          if (!c) return r;
-          return { ...c, localId: String(c.id), dirty: false, isNew: false };
+          if (c) return { ...c, localId: String(c.id), dirty: false, isNew: false };
+          const u = updatedMap.get(r.localId);
+          if (u) return { ...r, ...u, localId: String(u.id), dirty: false, isNew: false };
+          return r;
         })
       );
-      setFeedback({ type: 'success', msg: `${created.length} item(ns) salvo(s) com sucesso.` });
+      setFeedback({ type: 'success', msg: `${created.length} item(ns) criado(s) e ${updated.length} atualizado(s).` });
       // Reload to get fresh data
       if (breadcrumb.length === 0 && rootInfo) {
         await loadRoot(rootInfo.code, mask);
@@ -607,15 +642,6 @@ export function Vent0210Page(): JSX.Element {
         {/* ACTION BAR */}
         <div className="fe-actionbar">
           <div className="fe-action-group">
-            <span className="fe-action-label">Nav</span>
-            {[{ t:'Primeiro', d:'M9 2L3 6l6 4M2 2v8' }, { t:'Anterior', d:'M8 2L4 6l4 4' }, { t:'Próximo', d:'M4 2l4 4-4 4' }, { t:'Último', d:'M3 2l6 4-6 4M10 2v8' }].map(({ t, d }) => (
-              <button key={t} className="fe-nav-btn" title={t}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d={d} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            ))}
-          </div>
-
-          <div className="fe-action-group">
             <span className="fe-action-label">Ações</span>
             <button className="fe-btn fe-btn-primary" onClick={handleSalvar} disabled={isSaving || !hasRoot}>
               {isSaving
@@ -632,13 +658,6 @@ export function Vent0210Page(): JSX.Element {
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Limpar
             </button>
-          </div>
-
-          <div className="fe-action-group">
-            <span className="fe-action-label">Ferramentas</span>
-            {['Configurador', 'Alternativos', 'Ajuda'].map((l) => (
-              <button key={l} className="fe-btn fe-btn-ghost fe-btn-sm">{l}</button>
-            ))}
           </div>
         </div>
 
@@ -681,17 +700,16 @@ export function Vent0210Page(): JSX.Element {
             <div className="fe-header-card-body">
               <div className="fe-h-field" style={{ minWidth: 180 }}>
                 <label className="fe-h-label">Código do Item Pai <span style={{ color: '#c84040' }}>*</span></label>
-                <div className="fe-h-input-wrap">
-                  <input
-                    className="fe-h-input"
-                    style={{ borderRadius: '7px 0 0 7px', width: 140 }}
-                    value={rootCodigo}
-                    onChange={(e) => setRootCodigo(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearchRoot(); }}
-                    placeholder="Ex: 2205"
-                    type="number"
-                    min={1}
-                  />
+                <div className="fe-h-input-wrap" style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <LookupField
+                      value={rootCodigo || undefined}
+                      onChange={(code) => { const c = code ? String(code) : ''; setRootCodigo(c); if (c) void buscarItemPai(c); }}
+                      loader={loadItems}
+                      entityLabel="item"
+                      placeholder="Buscar item pai"
+                    />
+                  </div>
                   <button className="fe-h-input-btn" onClick={handleSearchRoot} title="Buscar item" disabled={isLoading}>
                     {isLoading && !rows.length
                       ? <div className="fe-spinner-g"/>
@@ -813,6 +831,7 @@ export function Vent0210Page(): JSX.Element {
                                 <input className="fe-ci"
                                   value={row.childCode || ''}
                                   onChange={(e) => updateRow(row.localId, { childCode: e.target.value })}
+                                  onBlur={(e) => handleChildCodeBlur(row.localId, e.target.value)}
                                   placeholder="Código"
                                   onClick={(e) => e.stopPropagation()}
                                   onDoubleClick={(e) => e.stopPropagation()}
@@ -834,7 +853,7 @@ export function Vent0210Page(): JSX.Element {
                                   onChange={(e) => updateRow(row.localId, { unitOfMeasurement: e.target.value as UnitOfMeasurement })}
                                   onClick={(e) => e.stopPropagation()}
                                   onDoubleClick={(e) => e.stopPropagation()}>
-                                  {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{u}</option>)}
+                                  {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
                                 </select>
                               </div></td>
 
@@ -862,7 +881,7 @@ export function Vent0210Page(): JSX.Element {
                                   onClick={(e) => e.stopPropagation()}
                                   onDoubleClick={(e) => e.stopPropagation()}
                                   style={{ color: HEALTH_COLOR[row.health] }}>
-                                  {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}
+                                  {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{enumLabel(h)}</option>)}
                                 </select>
                               </div></td>
 
@@ -918,6 +937,7 @@ export function Vent0210Page(): JSX.Element {
                 <DetailPanel
                   row={selectedRow}
                   onUpdate={(patch) => { if (selectedLocalId) updateRow(selectedLocalId, patch); }}
+                  onChildCodeBlur={(code) => { if (selectedLocalId) handleChildCodeBlur(selectedLocalId, code); }}
                 />
               </div>
             </div>

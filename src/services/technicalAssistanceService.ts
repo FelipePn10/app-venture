@@ -88,6 +88,8 @@ export interface TACallDTO {
   status?: string;
   diagnosis?: string | null;
   solution?: string | null;
+  sales_order_code?: number;
+  production_order_id?: number;
   items?: TACallItemDTO[];
 }
 
@@ -198,6 +200,8 @@ function parseCall(raw: unknown): TACallDTO {
     status: parseStr(o, 'status', 'Status') || undefined,
     diagnosis: parseStr(o, 'diagnosis', 'Diagnosis') || null,
     solution: parseStr(o, 'solution', 'Solution') || null,
+    sales_order_code: parseNum(o, 'sales_order_code', 'SalesOrderCode') || undefined,
+    production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID') || undefined,
     items: Array.isArray(rawItems) ? rawItems.map(parseItem) : undefined,
   };
 }

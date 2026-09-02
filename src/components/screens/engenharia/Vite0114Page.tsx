@@ -78,9 +78,8 @@ export function Vite0114Page(): JSX.Element {
             <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editar grupo ${form.code}` : "Novo grupo"}</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo PDM (código sugerido automaticamente e imutável; sem exclusão)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" value={form.code || "Carregue a lista"} disabled /><span className="erp-hint">Próximo código livre</span></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" min={1} value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder={proximoCodigo()} disabled={editing} /><span className="erp-field-hint">Deixe vazio para gerar automaticamente na sequência.</span></div>
                 <div className="erp-field erp-c7"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={form.enterprise_id} onChange={(e) => setForm((f) => ({ ...f, enterprise_id: e.target.value }))} /></div>
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{editing ? "Atualizar" : "Criar"}</button></div>
               </div></div>
             </div>

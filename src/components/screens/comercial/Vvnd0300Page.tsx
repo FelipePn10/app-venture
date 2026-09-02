@@ -9,7 +9,8 @@ import {
   type QuotationAttachmentDTO,
   QUOTATION_STATUS,
   QUOTATION_STATUS_TRANSITIONS,
-  QUOTATION_TYPES,
+  EDITABLE_QUOTATION_TYPES,
+  QUOTATION_TYPE_LABEL,
   RELEASE_STATUS,
   FREIGHT_TYPES,
   FREIGHT_TYPES_WITHOUT_CHARGE,
@@ -41,13 +42,18 @@ import {
   findReasonByDescription,
   isDuplicateSequenceError,
 } from "@/services/salesQuotationService";
-import { errMessage } from "@/services/fiscalShared";
+import { errMessage, parseNum } from "@/services/fiscalShared";
+import { findSalesTablesForItem } from "@/services/salesPricingService";
+import { getCustomer } from "@/services/customerService";
+import { getRepresentative } from "@/services/representativeService";
 import { downloadBlob } from "@/services/fileDownload";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
+import { EntityName } from "@/components/ui/EntityName";
 import {
   loadCustomers, loadEstablishments, loadItems, loadWarehouses, loadRepresentatives,
-  loadCarriers, loadPaymentConditions, loadSalesTables, loadSalesDivisions,
+  loadCarriers, loadPaymentConditions, loadSalesDivisions,
+  type LookupOption,
 } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
@@ -66,6 +72,16 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFraction
 const qty = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 const dateTime = (s?: string) => (s ? new Date(s).toLocaleString("pt-BR") : "—");
 const fileSize = (n?: number) => (!n ? "—" : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`);
+const eventDetails = (event: QuotationEventDTO): string => {
+  if (!event.complement || !event.event_type?.startsWith("ITEM_")) return event.complement || "—";
+  try {
+    const payload = JSON.parse(event.complement) as { previous?: Record<string, unknown>; current?: Record<string, unknown> };
+    const describe = (item?: Record<string, unknown>) => item
+      ? `item ${String(item.item_code ?? "—")}, sequência ${String(item.sequence ?? "—")}, tabela ${String(item.price_table_code ?? "—")}, quantidade ${qty(Number(item.quantity ?? 0))}, preço R$ ${money(Number(item.unit_price ?? 0))}`
+      : "—";
+    return payload.previous ? `Antes: ${describe(payload.previous)} · Agora: ${describe(payload.current)}` : describe(payload.current);
+  } catch { return "Detalhes da alteração registrados."; }
+};
 
 const statusMeta = (s?: string) => QUOTATION_STATUS.find((x) => x.value === s) ?? { value: s ?? "", label: s ?? "—", cls: "draft" };
 const releaseMeta = (s?: string) => RELEASE_STATUS.find((x) => x.value === s) ?? { value: s ?? "", label: s ?? "—", cls: "draft" };
@@ -114,6 +130,8 @@ export function Vvnd0300Page(): JSX.Element {
   const [reasonText, setReasonText] = useState("");
   const [complement, setComplement] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const [itemTableOptions, setItemTableOptions] = useState<LookupOption[]>([]);
+  const [itemTablePrices, setItemTablePrices] = useState<Record<number, number>>({});
 
   const PAGE_SIZE = 100;
 
@@ -126,15 +144,71 @@ export function Vvnd0300Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
+  const selecionarItem = (code: string | number | undefined) => {
+    const itemCode = String(code ?? "");
+    setNewItem((current) => ({ ...current, item_code: itemCode, price_table_code: undefined, unit_price: 0 })); setItemTableOptions([]); setItemTablePrices({});
+    if (itemCode) void run(async () => {
+      const candidates = await findSalesTablesForItem(itemCode, {
+        customerCode: form.customer_code,
+        quantity: newItem.requested_qty,
+        unit: newItem.sales_uom,
+        currency: form.currency_code,
+        referenceDate: form.emission_date,
+      });
+      setItemTableOptions(candidates.map(({ table, price }) => ({ code: table.code!, label: table.description || `Tabela ${table.code}`, sub: `Preço: R$ ${money(price.price)}` })));
+      setItemTablePrices(Object.fromEntries(candidates.map(({ table, price }) => [table.code!, price.price])));
+      const preferred = candidates.find((candidate) => candidate.autoSelected)
+        ?? candidates.find(({ table }) => table.code === form.price_table_code)
+        ?? (candidates.length === 1 ? candidates[0] : undefined);
+      if (preferred) setNewItem((current) => ({ ...current, price_table_code: preferred.table.code, unit_price: preferred.price.price, sales_uom: preferred.price.ume || current.sales_uom }));
+      else if (candidates.length === 0) setFeedback({ type: "error", message: `O item ${itemCode} não possui preço ativo em nenhuma tabela de venda.` });
+      else setFeedback({ type: "info", message: "O item existe em mais de uma tabela. Selecione uma das tabelas válidas." });
+    });
+  };
+
+  /** Ao escolher o cliente, resolve a tabela padrão para usar como preferencial por linha. */
+  const selecionarCliente = (code: string | number | undefined) => {
+    const customerCode = code ? Number(code) : undefined;
+    setForm((current) => {
+      const finalConsumer = !!customerCode && customerCode === parameters?.final_consumer_customer_code;
+      return { ...current, customer_code: customerCode, ...(finalConsumer ? {} : { foreign_document: undefined, street: undefined, street_number: undefined }) };
+    });
+    if (customerCode) void run(async () => {
+      try {
+        const customer = await getCustomer(customerCode);
+        const tableCode = parseNum(customer, "sales_table_code", "SalesTableCode", "sales_table_id", "SalesTableID");
+        if (tableCode) setForm((current) => ({ ...current, price_table_code: tableCode }));
+      } catch { /* tabela padrão é opcional */ }
+    });
+  };
+
+  /** Comissão vem do vínculo vigente do representante (não é editável pelo usuário). */
+  const selecionarRepresentante = (code: string | number | undefined) => {
+    const representativeCode = code ? Number(code) : undefined;
+    setForm((current) => ({ ...current, representative_code: representativeCode }));
+    if (representativeCode) void run(async () => {
+      try {
+        const rep = await getRepresentative(representativeCode);
+        const link = (rep.enterprises ?? []).find((e) => e.enterprise_code === form.enterprise_code)
+          ?? (rep.enterprises ?? []).find((e) => e.is_default)
+          ?? (rep.enterprises ?? [])[0];
+        if (link?.commission_pct != null) setForm((current) => ({ ...current, commission_pct: link.commission_pct }));
+      } catch { /* comissão opcional */ }
+    });
+  };
+
   // Parâmetros (rótulos configuráveis) e motivos de cancelamento são cadastros
   // de apoio da tela — carregam uma vez e falham em silêncio (a tela segue útil).
   useEffect(() => {
     void getSalesQuotationParameters().then(setParameters).catch(() => setParameters(null));
     void listCancellationReasons().then(setReasons).catch(() => setReasons([]));
+    void fetchList(0).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const purchaseOrderLabel = parameters?.purchase_order_prompt || "Ordem de Compra";
   const deliveryAuthLabel = parameters?.delivery_authorization_prompt || "Autorização de Entr.";
+  const isFinalConsumer = !!form.customer_code && form.customer_code === parameters?.final_consumer_customer_code;
 
   const loadDetail = useCallback(async (code: number) => {
     const q = await getSalesQuotation(code);
@@ -184,7 +258,7 @@ export function Vvnd0300Page(): JSX.Element {
   };
 
   const salvar = () => run(async () => {
-    if (!form.customer_code) { setFeedback({ type: "error", message: "Cliente é obrigatório." }); return; }
+    if (form.quotation_type !== "CONSULTA" && !form.customer_code) { setFeedback({ type: "error", message: "Cliente é obrigatório para venda e negociação." }); return; }
     if (creating) {
       const created = await createSalesQuotation(form);
       await fetchList(page);
@@ -273,19 +347,29 @@ export function Vvnd0300Page(): JSX.Element {
   // ─── Itens ─────────────────────────────────────────────────────────────────
   const adicionarItem = () => { const code = selected?.code; if (!code) return; void run(async () => {
     if (!newItem.item_code) { setFeedback({ type: "error", message: "Informe o item." }); return; }
+    if (!newItem.price_table_code) { setFeedback({ type: "error", message: "Selecione uma tabela que possua preço válido para o item." }); return; }
+    const validTables = await findSalesTablesForItem(newItem.item_code, {
+      customerCode: form.customer_code,
+      quantity: newItem.requested_qty,
+      unit: newItem.sales_uom,
+      currency: form.currency_code,
+      referenceDate: form.emission_date,
+    });
+    const resolved = validTables.find(({ table }) => table.code === newItem.price_table_code);
+    if (!resolved) { setFeedback({ type: "error", message: "A tabela selecionada não possui preço válido para este item nas condições atuais." }); return; }
     // A sequência é UNIQUE por orçamento e itens cancelados somem da listagem sem
     // liberar o número — então tenta o próximo livre até achar um que o banco aceite.
     let sequence = newItem.sequence || nextSequence;
     for (let attempt = 0; ; attempt++) {
       try {
-        await createSalesQuotationItem({ ...newItem, sales_quotation_code: code, sequence });
+        await createSalesQuotationItem({ ...newItem, sales_quotation_code: code, sequence, price_table_code: resolved.table.code, unit_price: resolved.price.price });
         break;
       } catch (e) {
         if (attempt >= 25 || !isDuplicateSequenceError(e)) throw e;
         sequence += 1;
       }
     }
-    setNewItem(EMPTY_ITEM); await loadDetail(code);
+    setNewItem(EMPTY_ITEM); setItemTableOptions([]); setItemTablePrices({}); await loadDetail(code);
     setFeedback({ type: "success", message: `Item adicionado na sequência ${sequence} — totais do orçamento recalculados.` });
   }); };
   const salvarItem = () => { const code = selected?.code; const it = editItem; if (!code || !it?.code) return; void run(async () => {
@@ -373,7 +457,7 @@ export function Vvnd0300Page(): JSX.Element {
             Novo orçamento
           </button>
           <button className="erp-btn erp-btn-dark" onClick={salvar} disabled={busy || (!creating && !selected) || (!creating && locked)}>
-            {busy && <span className="erp-spin" />}{creating ? "Criar orçamento" : "Salvar capa"}
+            {busy && <span className="erp-spin" />}{creating ? "Criar orçamento" : "Salvar"}
           </button>
         </div>
         <div className="erp-tgroup">
@@ -412,7 +496,7 @@ export function Vvnd0300Page(): JSX.Element {
           </select>
           <select className="erp-tselect" style={{ width: 130 }} value={filters.type} onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}>
             <option value="">Todos tipos</option>
-            {QUOTATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {EDITABLE_QUOTATION_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
           </select>
           <input className="erp-tinput num" style={{ width: 84 }} type="number" placeholder="Divisão" value={filters.division} onChange={(e) => setFilters((f) => ({ ...f, division: e.target.value }))} />
           <input className="erp-tinput" style={{ width: 110 }} placeholder={purchaseOrderLabel} title={purchaseOrderLabel} value={filters.purchase_order} onChange={(e) => setFilters((f) => ({ ...f, purchase_order: e.target.value }))} />
@@ -422,7 +506,11 @@ export function Vvnd0300Page(): JSX.Element {
           <button className="erp-btn" onClick={gerarRelatorio} disabled={busy}>Relatório</button>
         </div>
         <div className="erp-tgroup">
-          <ExportButton title="VVND0300 — Orçamento de Venda" filename="vvnd0300" />
+          <ExportButton title="VVND0300 — Orçamento de Venda" filename="vvnd0300" build={() => ({
+            columns: ["Nº", "Cliente", "Tipo", "Situação", "Liberação", "Emissão", "Válido até", "Total líquido", "Convertido"],
+            rows: visible.map((o) => [String(o.quotation_number ?? o.code ?? ""), String(o.customer_code ?? ""), QUOTATION_TYPE_LABEL[o.quotation_type ?? ""] ?? o.quotation_type ?? "—", statusMeta(o.status).label, releaseMeta(o.release_status).label, o.emission_date?.slice(0, 10) ?? "—", o.valid_until ?? "—", money(o.total_net), o.converted_sales_order_code ? `Pedido ${o.converted_sales_order_code}` : "—"]),
+            subtitle: "Orçamentos filtrados",
+          })} />
         </div>
       </div>
 
@@ -450,7 +538,7 @@ export function Vvnd0300Page(): JSX.Element {
               return (
                 <div key={o.code} className={`erp-list-row${selected?.code === o.code ? " sel" : ""}`} onClick={() => abrir(o.code)}>
                   <span className="erp-list-code">#{o.quotation_number || o.code}</span>
-                  <span className="erp-list-sub">Cliente {o.customer_code ?? "—"}</span>
+                  <span className="erp-list-sub"><EntityName code={o.customer_code} loader={loadCustomers} prefix="Cliente" /></span>
                   <span className="erp-list-money">R$ {money(o.total_net)}</span>
                   <div className="erp-list-meta">
                     <span className={`erp-badge ${m.cls}`}>{m.label}</span>
@@ -596,23 +684,26 @@ export function Vvnd0300Page(): JSX.Element {
                         </div>
                         <div className="erp-field erp-c3">
                           <label className="erp-label">Estabelecimento</label>
-                          <LookupField value={form.enterprise_code} loader={loadEstablishments} entityLabel="estabelecimento" placeholder="Assumido do login" disabled={!creating} onChange={(code) => setQ("enterprise_code", code ?? 0)} />
-                          {creating && <span className="erp-field-hint">Em branco assume a empresa do seu login; o backend recusa um estabelecimento diferente.</span>}
+                          {creating
+                            ? <input className="erp-input" value="Empresa autenticada" readOnly />
+                            : <EntityName code={form.enterprise_code} loader={loadEstablishments} prefix="Estabelecimento" />}
+                          <span className="erp-field-hint">Definido automaticamente conforme o acesso atual.</span>
                         </div>
                         <div className="erp-field erp-c3">
-                          <label className="erp-label erp-req">Cliente</label>
-                          <LookupField value={form.customer_code} loader={loadCustomers} entityLabel="cliente" placeholder="Selecionar cliente" disabled={!editable} onChange={(code) => setQ("customer_code", code ?? undefined)} />
+                          <label className={`erp-label${form.quotation_type === "CONSULTA" ? "" : " erp-req"}`}>Cliente</label>
+                          <LookupField value={form.customer_code} loader={loadCustomers} entityLabel="cliente" placeholder="Selecionar cliente" disabled={!editable} onChange={selecionarCliente} />
                         </div>
                         <div className="erp-field erp-c3">
                           <label className="erp-label">Tipo</label>
                           <select className="erp-input" value={form.quotation_type ?? "VENDA"} disabled={!editable} onChange={(e) => setQ("quotation_type", e.target.value)}>
-                            {QUOTATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            {!EDITABLE_QUOTATION_TYPES.some((type) => type.value === form.quotation_type) && form.quotation_type && <option value={form.quotation_type}>{QUOTATION_TYPE_LABEL[form.quotation_type] ?? form.quotation_type} (origem do sistema)</option>}
+                            {EDITABLE_QUOTATION_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
                           </select>
                           {form.quotation_type === "CONSULTA" && <span className="erp-field-hint">Orçamento de consulta não pode ser convertido em pedido.</span>}
                         </div>
                         <div className="erp-field erp-c3">
                           <label className="erp-label">Representante</label>
-                          <LookupField value={form.representative_code} loader={loadRepresentatives} entityLabel="representante" placeholder="Selecionar representante" disabled={!editable} onChange={(code) => setQ("representative_code", code ?? undefined)} />
+                          <LookupField value={form.representative_code} loader={loadRepresentatives} entityLabel="representante" placeholder="Selecionar representante" disabled={!editable} onChange={selecionarRepresentante} />
                         </div>
                         <div className="erp-field erp-c3">
                           <label className="erp-label">Divisão de vendas</label>
@@ -631,12 +722,8 @@ export function Vvnd0300Page(): JSX.Element {
                           <label className="erp-label">Cond. pagamento</label>
                           <LookupField value={form.payment_term_code} loader={loadPaymentConditions} entityLabel="condição de pagamento" placeholder="Padrão do cliente" disabled={!editable} onChange={(code) => setQ("payment_term_code", code ?? undefined)} />
                         </div>
-                        <div className="erp-field erp-c3">
-                          <label className="erp-label">Tabela de preço</label>
-                          <LookupField value={form.price_table_code} loader={loadSalesTables} entityLabel="tabela de preço" placeholder="Padrão do cliente" disabled={!editable} onChange={(code) => setQ("price_table_code", code ?? undefined)} />
-                        </div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Moeda</label><input className="erp-input" value={form.currency_code ?? "BRL"} disabled={!editable} onChange={(e) => setQ("currency_code", e.target.value.toUpperCase())} /></div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" step="0.01" value={form.commission_pct ?? 0} disabled={!editable} onChange={(e) => setQ("commission_pct", Number(e.target.value))} /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Moeda</label><select className="erp-input" value={form.currency_code ?? "BRL"} disabled={!editable} onChange={(e) => setQ("currency_code", e.target.value)}><option value="BRL">Real (BRL)</option><option value="USD">Dólar (USD)</option><option value="EUR">Euro (EUR)</option></select></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" step="0.01" value={form.commission_pct ?? 0} readOnly title="Comissão herdada do vínculo do representante — não é editável" /><span className="erp-field-hint">Herança automática do representante.</span></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Probabilidade %</label><input className="erp-input num" type="number" step="0.01" value={form.probability_pct ?? 0} disabled={!editable} onChange={(e) => setQ("probability_pct", Number(e.target.value))} /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" type="date" value={form.emission_date ?? ""} disabled={!creating} onChange={(e) => setQ("emission_date", e.target.value)} /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Válido até</label><input className="erp-input" type="date" value={form.valid_until ?? ""} disabled={!editable} onChange={(e) => setQ("valid_until", e.target.value)} /></div>
@@ -653,7 +740,7 @@ export function Vvnd0300Page(): JSX.Element {
                           <label className="erp-label">Entrega com recibo</label>
                           <label className="erp-check"><input type="checkbox" checked={!!form.delivery_with_receipt} disabled={!editable} onChange={(e) => { setQ("delivery_with_receipt", e.target.checked); if (e.target.checked) setQ("is_nfce", true); }} /><span>Força NFC-e e zera IPI</span></label>
                         </div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Documento estrangeiro</label><input className="erp-input" value={form.foreign_document ?? ""} disabled={!editable} onChange={(e) => setQ("foreign_document", e.target.value)} placeholder="Só p/ consumidor final" /></div>
+                        {isFinalConsumer && <div className="erp-field erp-c3"><label className="erp-label">Documento estrangeiro</label><input className="erp-input" value={form.foreign_document ?? ""} disabled={!editable || !form.is_nfce} onChange={(e) => setQ("foreign_document", e.target.value)} /><span className="erp-field-hint">Disponível somente para consumidor final com NFC-e.</span></div>}
                       </div>
                     </div>
 
@@ -682,8 +769,8 @@ export function Vvnd0300Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label">Desconto</label><input className="erp-input num" type="number" step="0.01" value={form.discount_value ?? 0} disabled={!editable} onChange={(e) => setQ("discount_value", Number(e.target.value))} /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Acréscimo</label><input className="erp-input num" type="number" step="0.01" value={form.surcharge_value ?? 0} disabled={!editable} onChange={(e) => setQ("surcharge_value", Number(e.target.value))} /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Retenções</label><input className="erp-input num" type="number" step="0.01" value={form.retained_tax_value ?? 0} disabled={!editable} onChange={(e) => setQ("retained_tax_value", Number(e.target.value))} /></div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Logradouro (NFC-e)</label><input className="erp-input" value={form.street ?? ""} disabled={!editable} onChange={(e) => setQ("street", e.target.value)} /></div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Número</label><input className="erp-input" value={form.street_number ?? ""} disabled={!editable} onChange={(e) => setQ("street_number", e.target.value)} /></div>
+                        {isFinalConsumer && <div className="erp-field erp-c3"><label className="erp-label">Logradouro do consumidor</label><input className="erp-input" value={form.street ?? ""} disabled={!editable} onChange={(e) => setQ("street", e.target.value)} /></div>}
+                        {isFinalConsumer && <div className="erp-field erp-c3"><label className="erp-label">Número do endereço</label><input className="erp-input" value={form.street_number ?? ""} disabled={!editable} onChange={(e) => setQ("street_number", e.target.value)} /></div>}
                       </div>
                     </div>
 
@@ -713,10 +800,11 @@ export function Vvnd0300Page(): JSX.Element {
                             <label className="erp-label">Seq.</label>
                             <input className="erp-input num" type="number" min={1} placeholder={String(nextSequence)} value={newItem.sequence || ""} onChange={(e) => setI("sequence", e.target.value ? Number(e.target.value) : undefined)} />
                           </div>
-                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setI("item_code", String(code ?? ""))} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={selecionarItem} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela válida para o item</label><LookupField key={`${newItem.item_code}-${itemTableOptions.map((option) => option.code).join("-")}`} value={newItem.price_table_code} loader={async () => itemTableOptions} entityLabel="tabela de venda" disabled={!newItem.item_code || itemTableOptions.length === 0} onChange={(code) => { const tableCode = Number(code ?? 0); setNewItem((current) => ({ ...current, price_table_code: tableCode || undefined, unit_price: itemTablePrices[tableCode] ?? 0 })); }} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" step="0.0001" value={newItem.requested_qty || ""} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>
-                          <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço unit.</label><input className="erp-input num" type="number" step="0.0001" value={newItem.unit_price || ""} onChange={(e) => setI("unit_price", Number(e.target.value))} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço da tabela</label><input className="erp-input num" type="number" step="0.0001" value={newItem.unit_price || ""} readOnly title="Preço calculado pela tabela de venda do orçamento" /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">Desc.%</label><input className="erp-input num" type="number" step="0.01" value={newItem.discount_pct || ""} onChange={(e) => setI("discount_pct", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">IPI %</label><input className="erp-input num" type="number" step="0.01" value={newItem.ipi_pct || ""} disabled={!!selected?.delivery_with_receipt} onChange={(e) => setI("ipi_pct", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">ST %</label><input className="erp-input num" type="number" step="0.01" value={newItem.st_pct || ""} onChange={(e) => setI("st_pct", Number(e.target.value))} /></div>
@@ -735,7 +823,7 @@ export function Vvnd0300Page(): JSX.Element {
                         <div className="erp-fieldset-head">Editar item {editItem.sequence ?? editItem.code}</div>
                         <div className="erp-fieldset-body">
                           <div className="erp-field erp-c2"><label className="erp-label">Qtd solicitada</label><input className="erp-input num" type="number" step="0.0001" value={editItem.requested_qty} onChange={(e) => setEI("requested_qty", Number(e.target.value))} /></div>
-                          <div className="erp-field erp-c2"><label className="erp-label">Preço unit.</label><input className="erp-input num" type="number" step="0.0001" value={editItem.unit_price} onChange={(e) => setEI("unit_price", Number(e.target.value))} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Preço da tabela</label><input className="erp-input num" type="number" step="0.0001" value={editItem.unit_price} readOnly title="O backend recalcula o preço vigente ao salvar a quantidade" /></div>
                           <div className="erp-field erp-c2"><label className="erp-label">Qtd atendida</label><input className="erp-input num" type="number" step="0.0001" value={editItem.attended_qty ?? 0} onChange={(e) => setEI("attended_qty", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label">Qtd cancelada</label><input className="erp-input num" type="number" step="0.0001" value={editItem.cancelled_qty ?? 0} onChange={(e) => setEI("cancelled_qty", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">Desc.%</label><input className="erp-input num" type="number" step="0.01" value={editItem.discount_pct ?? 0} onChange={(e) => setEI("discount_pct", Number(e.target.value))} /></div>
@@ -769,7 +857,7 @@ export function Vvnd0300Page(): JSX.Element {
                           {items.map((it) => (
                             <tr key={it.code}>
                               <td className="num">{it.sequence}</td>
-                              <td className="num">{it.item_code}</td>
+                              <td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td>
                               <td className="num">{qty(it.requested_qty)}</td>
                               <td className="num">{qty(it.attended_qty)}</td>
                               <td className="num">{qty(it.cancelled_qty)}</td>
@@ -856,7 +944,7 @@ export function Vvnd0300Page(): JSX.Element {
                             <td>{EVENT_TYPE_LABEL[ev.event_type ?? ""] ?? ev.event_type ?? "—"}</td>
                             <td className="num">{ev.sales_quotation_item_code ?? "—"}</td>
                             <td>{ev.reason || "—"}</td>
-                            <td>{ev.complement || "—"}</td>
+                            <td>{eventDetails(ev)}</td>
                           </tr>
                         ))}
                       </tbody>

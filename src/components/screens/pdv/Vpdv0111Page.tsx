@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   type CommercialPolicyDTO, type CommercialPolicyLineDTO, type CalcType,
-  listCommercialPolicies, createCommercialPolicy, getCommercialPolicy,
+  listCommercialPolicies, createCommercialPolicy, updateCommercialPolicy, getCommercialPolicy,
   listPolicyLines, addPolicyLine, evaluatePolicies,
 } from "@/services/commercialPolicyService";
 import { errMessage, parseNum, unwrapObject } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { commercialCalculationLabel, commercialResultLabel, commercialResultValue } from "./commercialResult";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "policies" | "evaluate";
@@ -43,13 +44,14 @@ export function Vpdv0111Page(): JSX.Element {
 
   const gravar = () => run(async () => {
     if (!form.description.trim()) { setFeedback({ type: "error", message: "Informe a descrição." }); return; }
-    await createCommercialPolicy({ ...form, kind: "FREIGHT", validity_start: iso(vFrom), validity_end: iso(vTo) });
-    setForm(EMPTY_POLICY); setFeedback({ type: "success", message: "Política de frete criada." });
+    if (form.code) await updateCommercialPolicy(form.code, { ...form, kind: "FREIGHT", validity_start: iso(vFrom), validity_end: iso(vTo) });
+    else await createCommercialPolicy({ ...form, kind: "FREIGHT", validity_start: iso(vFrom), validity_end: iso(vTo) });
+    setForm(EMPTY_POLICY); setFeedback({ type: "success", message: form.code ? "Política de frete atualizada." : "Política de frete criada." });
     await carregar();
   });
   const abrir = (code?: number) => { if (!code) return; void run(async () => {
     const [p, ls] = await Promise.all([getCommercialPolicy(code), listPolicyLines(code)]);
-    setSel(p); setLines(ls);
+    setSel(p); setForm(p); setLines(ls);
   }); };
   const gravarLinha = () => run(async () => {
     if (!sel?.code) return;
@@ -103,7 +105,7 @@ export function Vpdv0111Page(): JSX.Element {
                   <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><input id="stkf" className="erp-check" type="checkbox" checked={!!form.stackable} onChange={(e) => setForm((p) => ({ ...p, stackable: e.target.checked }))} /><label htmlFor="stkf" className="erp-label" style={{ margin: 0 }}>Acumulável</label></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Válida de</label><input className="erp-input" type="date" value={vFrom} onChange={(e) => setVFrom(e.target.value)} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Válida até</label><input className="erp-input" type="date" value={vTo} onChange={(e) => setVTo(e.target.value)} /></div>
-                  <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={gravar} disabled={busy}>Criar política</button><button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => carregar()} disabled={busy}>Atualizar</button></div>
+                  <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={gravar} disabled={busy}>{form.code ? "Salvar alterações" : "Criar política"}</button>{form.code && <button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => setForm(EMPTY_POLICY)} disabled={busy}>Nova política</button>}<button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => carregar()} disabled={busy}>Atualizar</button></div>
                 </div>
               </div>
               <div className="erp-grid-wrap">
@@ -113,7 +115,7 @@ export function Vpdv0111Page(): JSX.Element {
                     {policies.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma política.</td></tr>}
                     {policies.map((p) => (
                       <tr key={p.code} onClick={() => abrir(p.code)} className={sel?.code === p.code ? "erp-row-sel" : ""} style={{ cursor: "pointer" }}>
-                        <td className="num">{p.code}</td><td>{p.description}</td><td>{p.calc_type}</td><td className="num">{p.percent_value ?? 0}</td>
+                        <td className="num">{p.code}</td><td>{p.description}</td><td>{commercialCalculationLabel(p.calc_type)}</td><td className="num">{p.percent_value ?? 0}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -139,7 +141,7 @@ export function Vpdv0111Page(): JSX.Element {
                       <thead><tr><th className="num">Faixa</th><th>Cálculo</th><th className="num">Valor fixo</th><th className="num">%</th><th className="num">Mín/Máx</th></tr></thead>
                       <tbody>
                         {lines.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem faixas.</td></tr>}
-                        {lines.map((l) => <tr key={l.id}><td className="num">{l.line_number}</td><td>{l.calc_type}</td><td className="num">{money(l.fixed_value)}</td><td className="num">{l.percent_value ?? 0}%</td><td className="num">{money(l.min_value)} / {money(l.max_value)}</td></tr>)}
+                        {lines.map((l) => <tr key={l.id}><td className="num">{l.line_number}</td><td>{commercialCalculationLabel(l.calc_type)}</td><td className="num">{money(l.fixed_value)}</td><td className="num">{l.percent_value ?? 0}%</td><td className="num">{money(l.min_value)} / {money(l.max_value)}</td></tr>)}
                       </tbody>
                     </table>
                   </div>
@@ -161,7 +163,7 @@ export function Vpdv0111Page(): JSX.Element {
               {evResult && (
                 <div className="erp-field erp-c12">
                   <div className="erp-grid-wrap"><table className="erp-grid">
-                    <tbody>{Object.entries(evResult).filter(([k]) => k !== "effects").map(([k, v]) => <tr key={k}><td style={{ fontWeight: 600 }}>{k}</td><td>{typeof v === "object" ? JSON.stringify(v) : String(v)}</td></tr>)}</tbody>
+                    <tbody>{Object.entries(evResult).filter(([k]) => k !== "effects").map(([k, v]) => <tr key={k}><td style={{ fontWeight: 600 }}>{commercialResultLabel(k)}</td><td>{commercialResultValue(v)}</td></tr>)}</tbody>
                   </table></div>
                 </div>
               )}

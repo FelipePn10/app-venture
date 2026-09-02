@@ -14,10 +14,13 @@ import {
   createSalesOrderItem,
   cancelSalesOrderItem,
 } from "@/services/salesOrderService";
-import { errMessage } from "@/services/fiscalShared";
+import { errMessage, parseNum } from "@/services/fiscalShared";
+import { findSalesTablesForItem } from "@/services/salesPricingService";
+import { getCustomer } from "@/services/customerService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCustomers, loadEstablishments, loadItems, loadWarehouses } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
+import { loadCustomers, loadEstablishments, loadItems, loadPaymentConditions, loadWarehouses, type LookupOption } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type DetailTab = "dados" | "itens";
@@ -54,16 +57,48 @@ export function Vvnd0200Page(): JSX.Element {
   const [tab, setTab] = useState<DetailTab>("dados");
   /** modo criação (form em branco) vs. visualização de um pedido existente */
   const [creating, setCreating] = useState(true);
+  const [cancelDialog, setCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelComplement, setCancelComplement] = useState("");
+  const [itemTableOptions, setItemTableOptions] = useState<LookupOption[]>([]);
+  const [itemTablePrices, setItemTablePrices] = useState<Record<number, number>>({});
 
   const setO = useCallback(<K extends keyof SalesOrderDTO>(k: K, v: SalesOrderDTO[K]) => setNewOrder((p) => ({ ...p, [k]: v })), []);
   const setI = useCallback(<K extends keyof SalesOrderItemDTO>(k: K, v: SalesOrderItemDTO[K]) => setNewItem((p) => ({ ...p, [k]: v })), []);
+
+  const selecionarItem = (code: string | number | undefined) => {
+    const itemCode = String(code ?? "");
+    setNewItem((current) => ({ ...current, item_code: itemCode, price_table_code: undefined, unit_price: 0 })); setItemTableOptions([]); setItemTablePrices({});
+    if (itemCode) void run(async () => {
+      const candidates = await findSalesTablesForItem(itemCode, {
+        customerCode: selected?.customer_code ?? newOrder.customer_code,
+        quantity: newItem.requested_qty,
+        unit: newItem.sales_uom,
+        currency: selected?.currency_code ?? newOrder.currency_code,
+        referenceDate: selected?.emission_date ?? newOrder.emission_date,
+      });
+      const options = candidates.map(({ table, price }) => ({ code: table.code!, label: table.description || `Tabela ${table.code}`, sub: `Preço: R$ ${money(price.price)}` }));
+      setItemTableOptions(options);
+      setItemTablePrices(Object.fromEntries(candidates.map(({ table, price }) => [table.code!, price.price])));
+      const preferred = candidates.find((candidate) => candidate.autoSelected)
+        ?? candidates.find(({ table }) => table.code === (selected?.price_table_code ?? newOrder.price_table_code))
+        ?? (candidates.length === 1 ? candidates[0] : undefined);
+      if (preferred) setNewItem((current) => ({ ...current, price_table_code: preferred.table.code, unit_price: preferred.price.price, sales_uom: preferred.price.ume || current.sales_uom }));
+      else if (candidates.length === 0) setFeedback({ type: "error", message: `O item ${itemCode} não possui preço ativo em nenhuma tabela de venda.` });
+      else setFeedback({ type: "info", message: "O item existe em mais de uma tabela. Selecione uma das tabelas válidas." });
+    });
+  };
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true); setFeedback(null);
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  const refreshSelected = useCallback(async (code: number) => { setSelected(await getSalesOrder(code)); }, []);
+  const refreshSelected = useCallback(async (code: number) => {
+    const detail = await getSalesOrder(code);
+    setSelected(detail);
+    setOrders((current) => current.map((order) => order.code === code ? { ...order, ...detail } : order));
+  }, []);
 
   const listarTodos = () => run(async () => { setOrders(await listSalesOrders()); });
   const aplicarFiltro = () => run(async () => {
@@ -73,6 +108,15 @@ export function Vvnd0200Page(): JSX.Element {
   });
 
   const novoPedido = () => { setCreating(true); setSelected(null); setNewOrder(EMPTY_ORDER); setTab("dados"); setFeedback(null); };
+  const selecionarCliente = (code: string | number | undefined) => {
+    const customerCode = Number(code ?? 0); setO("customer_code", customerCode);
+    if (customerCode) void run(async () => {
+      const customer = await getCustomer(customerCode);
+      const tableCode = parseNum(customer, "sales_table_code", "SalesTableCode", "sales_table_id", "SalesTableID");
+      setO("price_table_code", tableCode || undefined);
+      if (!tableCode) setFeedback({ type: "info", message: "O cliente não possui tabela de venda padrão. Selecione uma tabela nas condições comerciais." });
+    });
+  };
   const abrir = (code?: number) => { if (!code) return; setCreating(false); setTab("dados"); void run(async () => { await refreshSelected(code); }); };
 
   const criarPedido = () => run(async () => {
@@ -90,7 +134,9 @@ export function Vvnd0200Page(): JSX.Element {
     setFeedback({ type: "info", message: "Confirmado (→P). O backend rodou crédito/reserva/demanda — verifique se o pedido ficou bloqueado." });
   }); };
   const cancelar = (code?: number) => { if (code) void run(async () => {
-    await cancelSalesOrder(code); await refreshSelected(code);
+    if (!cancelReason.trim()) { setFeedback({ type: "error", message: "Informe o motivo do cancelamento." }); return; }
+    await cancelSalesOrder(code, cancelReason.trim(), cancelComplement.trim() || undefined); await refreshSelected(code);
+    setCancelDialog(false); setCancelReason(""); setCancelComplement("");
     setFeedback({ type: "success", message: `Pedido ${code} cancelado.` });
   }); };
   const bloquear = (code?: number) => { if (code) void run(async () => {
@@ -104,8 +150,18 @@ export function Vvnd0200Page(): JSX.Element {
 
   const adicionarItem = () => { const code = selected?.code; if (!code) return; void run(async () => {
     if (!newItem.item_code) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
-    await createSalesOrderItem({ ...newItem, sales_order_code: code });
-    setNewItem(EMPTY_ITEM); await refreshSelected(code);
+    if (!newItem.price_table_code) { setFeedback({ type: "error", message: "Selecione uma tabela que possua preço válido para o item." }); return; }
+    const validTables = await findSalesTablesForItem(newItem.item_code, {
+      customerCode: selected?.customer_code,
+      quantity: newItem.requested_qty,
+      unit: newItem.sales_uom,
+      currency: selected?.currency_code,
+      referenceDate: selected?.emission_date,
+    });
+    const resolved = validTables.find(({ table }) => table.code === newItem.price_table_code);
+    if (!resolved) { setFeedback({ type: "error", message: "A tabela selecionada não possui preço válido para este item nas condições atuais." }); return; }
+    await createSalesOrderItem({ ...newItem, sales_order_code: code, price_table_code: resolved.table.code, unit_price: resolved.price.price });
+    setNewItem(EMPTY_ITEM); setItemTableOptions([]); setItemTablePrices({}); await refreshSelected(code);
     setFeedback({ type: "success", message: "Item adicionado ao pedido." });
   }); };
   const cancelarItem = (itemCode?: number) => { const code = selected?.code; if (!code || !itemCode) return; void run(async () => {
@@ -154,12 +210,12 @@ export function Vvnd0200Page(): JSX.Element {
           {selected?.is_blocked
             ? <button className="erp-btn" onClick={() => desbloquear(selected?.code)} disabled={busy}>Desbloquear</button>
             : <button className="erp-btn" onClick={() => bloquear(selected?.code)} disabled={busy || !selected}>Bloquear</button>}
-          <button className="erp-btn erp-btn-danger" onClick={() => cancelar(selected?.code)} disabled={busy || !selected || selected?.status === "CANCELLED"}>Cancelar</button>
+          <button className="erp-btn erp-btn-danger" onClick={() => { setCancelReason(""); setCancelComplement(""); setCancelDialog(true); }} disabled={busy || !selected || selected?.status === "CANCELLED"}>Cancelar</button>
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Filtrar</span>
-          <input className="erp-tinput num" style={{ width: 96 }} type="number" placeholder="Cliente" value={filterCustomer} onChange={(e) => { setFilterCustomer(e.target.value); setFilterStatus(""); }} />
+          <div style={{ width: 170 }}><LookupField value={filterCustomer ? Number(filterCustomer) : undefined} loader={loadCustomers} entityLabel="cliente" placeholder="Cliente (todos)" onChange={(code) => { setFilterCustomer(code ? String(code) : ""); setFilterStatus(""); }} /></div>
           <select className="erp-tselect" style={{ width: 130 }} value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setFilterCustomer(""); }}>
             <option value="">Todos status</option>
             <option value="R">Rascunho</option><option value="P">Confirmado</option><option value="F">Faturado</option><option value="CANCELLED">Cancelado</option>
@@ -168,7 +224,11 @@ export function Vvnd0200Page(): JSX.Element {
           <button className="erp-btn" onClick={listarTodos} disabled={busy}>Listar todos</button>
         </div>
         <div className="erp-tgroup">
-          <ExportButton title="VVND0200 — Pedido de Venda" filename="vvnd0200" />
+          <ExportButton title="VVND0200 — Pedido de Venda" filename="vvnd0200" build={() => ({
+            columns: ["Código", "Cliente", "Situação", "Emissão", "Entrega", "Comissão %", "Total bruto", "Total líquido", "Bloqueado"],
+            rows: visibleOrders.map((o) => [String(o.code ?? ""), String(o.customer_code ?? ""), statusMeta(o.status).label, o.emission_date?.slice(0, 10) ?? "—", o.delivery_date?.slice(0, 10) ?? "—", String(o.commission_pct ?? 0), money(o.total_gross), money(o.total_net), o.is_blocked ? "Sim" : "Não"]),
+            subtitle: filterCustomer ? `Cliente ${filterCustomer}` : filterStatus ? `Status ${statusMeta(filterStatus).label}` : "Todos os pedidos",
+          })} />
         </div>
       </div>
 
@@ -198,7 +258,7 @@ export function Vvnd0200Page(): JSX.Element {
               return (
                 <div key={o.code} className={`erp-list-row${selected?.code === o.code ? " sel" : ""}`} onClick={() => abrir(o.code)}>
                   <span className="erp-list-code">#{o.code}</span>
-                  <span className="erp-list-sub">Cliente {o.customer_code}</span>
+                  <span className="erp-list-sub"><EntityName code={o.customer_code} loader={loadCustomers} prefix="Cliente" /></span>
                   <span className="erp-list-money">R$ {money(o.total_net)}</span>
                   <div className="erp-list-meta">
                     <span className={`erp-badge ${m.cls}`}>{m.label}</span>
@@ -230,18 +290,18 @@ export function Vvnd0200Page(): JSX.Element {
                     </div>
                     <div className="erp-field erp-c3">
                       <label className="erp-label erp-req">Cliente</label>
-                      <LookupField value={newOrder.customer_code} loader={loadCustomers} entityLabel="cliente" placeholder="Selecionar cliente" onChange={(code) => setO("customer_code", code ?? 0)} />
+                      <LookupField value={newOrder.customer_code} loader={loadCustomers} entityLabel="cliente" placeholder="Selecionar cliente" onChange={selecionarCliente} />
                     </div>
                     <div className="erp-field erp-c3">
                       <label className="erp-label">Moeda</label>
-                      <input className="erp-input" value={newOrder.currency_code ?? ""} onChange={(e) => setO("currency_code", e.target.value)} />
+                      <select className="erp-input" value={newOrder.currency_code ?? "BRL"} onChange={(e) => setO("currency_code", e.target.value)}><option value="BRL">Real (BRL)</option><option value="USD">Dólar (USD)</option><option value="EUR">Euro (EUR)</option></select>
                     </div>
                   </div>
                 </div>
                 <div className="erp-fieldset">
                   <div className="erp-fieldset-head">Condições comerciais</div>
                   <div className="erp-fieldset-body">
-                    <div className="erp-field erp-c3"><label className="erp-label">Cond. pagamento</label><input className="erp-input num" type="number" value={newOrder.payment_term_code || ""} onChange={(e) => setO("payment_term_code", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Condição de pagamento</label><LookupField value={newOrder.payment_term_code} loader={loadPaymentConditions} entityLabel="condição de pagamento" placeholder="Usar padrão do cliente" onChange={(code) => setO("payment_term_code", code ?? undefined)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" value={newOrder.commission_pct || ""} onChange={(e) => setO("commission_pct", Number(e.target.value))} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" type="date" value={newOrder.emission_date ?? ""} onChange={(e) => setO("emission_date", e.target.value)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input" type="date" value={newOrder.delivery_date ?? ""} onChange={(e) => setO("delivery_date", e.target.value)} /></div>
@@ -272,8 +332,8 @@ export function Vvnd0200Page(): JSX.Element {
                       </div>
                       <div className="erp-fieldset-body">
                         <div className="erp-field erp-c3"><label className="erp-label">Nº do pedido</label><input className="erp-input strong" value={selected.order_number ?? selected.code ?? ""} readOnly /></div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento</label><input className="erp-input num" value={selected.enterprise_code ?? ""} readOnly /></div>
-                        <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><input className="erp-input num" value={selected.customer_code ?? ""} readOnly /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento</label><LookupField value={selected.enterprise_code} loader={loadEstablishments} entityLabel="estabelecimento" disabled clearable={false} onChange={() => undefined} /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><div className="erp-input"><EntityName code={selected.customer_code} loader={loadCustomers} prefix="Cliente" /></div></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Cond. pagamento</label><input className="erp-input num" value={selected.payment_term_code ?? ""} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" value={selected.emission_date?.slice(0, 10) ?? "—"} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input" value={selected.delivery_date?.slice(0, 10) ?? "—"} readOnly /></div>
@@ -297,11 +357,12 @@ export function Vvnd0200Page(): JSX.Element {
                       <div className="erp-fieldset">
                         <div className="erp-fieldset-head">Adicionar item</div>
                         <div className="erp-fieldset-body">
-                          <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setI("item_code", String(code ?? ""))} /></div>
-                          <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><LookupField value={newItem.warehouse_code} loader={loadWarehouses} entityLabel="depósito" placeholder="Selecionar depósito" onChange={(code) => setI("warehouse_code", code ?? 0)} /></div>
+                          <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={selecionarItem} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela válida para o item</label><LookupField key={`${newItem.item_code}-${itemTableOptions.map((option) => option.code).join("-")}`} value={newItem.price_table_code} loader={async () => itemTableOptions} entityLabel="tabela de venda" disabled={!newItem.item_code || itemTableOptions.length === 0} onChange={(code) => { const tableCode = Number(code ?? 0); setNewItem((current) => ({ ...current, price_table_code: tableCode || undefined, unit_price: itemTablePrices[tableCode] ?? 0 })); }} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Almoxarifado</label><LookupField value={newItem.warehouse_code} loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Selecionar almoxarifado" onChange={(code) => setI("warehouse_code", code ?? 0)} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={newItem.requested_qty || ""} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>
-                          <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço unit.</label><input className="erp-input num" type="number" value={newItem.unit_price || ""} onChange={(e) => setI("unit_price", Number(e.target.value))} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço da tabela</label><input className="erp-input num" type="number" value={newItem.unit_price || ""} readOnly title="Preço calculado pela tabela selecionada para esta linha" /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">Desc.%</label><input className="erp-input num" type="number" value={newItem.discount_pct || ""} onChange={(e) => setI("discount_pct", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={adicionarItem} disabled={busy}>{busy && <span className="erp-spin" />}Adicionar item ao pedido</button></div>
                         </div>
@@ -311,7 +372,7 @@ export function Vvnd0200Page(): JSX.Element {
                       <table className="erp-grid">
                         <thead>
                           <tr>
-                            <th className="num">Seq</th><th className="num">Item</th><th className="num">Depósito</th>
+                            <th className="num">Seq</th><th className="num">Item</th><th className="num">Almoxarifado</th>
                             <th className="num">Qtd</th><th>UM</th><th className="num">Preço unit.</th><th className="num">Desc. %</th>
                             <th className="num">Total líq.</th><th>Status</th><th style={{ width: 90 }}></th>
                           </tr>
@@ -323,14 +384,14 @@ export function Vvnd0200Page(): JSX.Element {
                           {items.map((it) => (
                             <tr key={it.code}>
                               <td className="num">{it.sequence}</td>
-                              <td className="num">{it.item_code}</td>
-                              <td className="num">{it.warehouse_code ?? "—"}</td>
+                              <td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td>
+                              <td><EntityName code={it.warehouse_code} loader={loadWarehouses} prefix="Almoxarifado" /></td>
                               <td className="num">{it.requested_qty}</td>
                               <td>{it.sales_uom ?? "—"}</td>
                               <td className="num">{money(it.unit_price)}</td>
                               <td className="num">{it.discount_pct ?? 0}</td>
                               <td className="num">{money(it.total_net)}</td>
-                              <td>{it.status ?? "—"}</td>
+                              <td>{statusMeta(it.status).label}</td>
                               <td>{isDraft && <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => cancelarItem(it.code)} disabled={busy}>Cancelar</button>}</td>
                             </tr>
                           ))}
@@ -367,6 +428,7 @@ export function Vvnd0200Page(): JSX.Element {
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
+      {cancelDialog && selected?.code && <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setCancelDialog(false); }}><div className="erp-modal" style={{ width: "min(560px, 94vw)" }}><div className="erp-modal-head"><div><strong id="cancel-order-title">Cancelar pedido {selected.code}?</strong><div className="erp-field-hint">O pedido ficará cancelado e não seguirá para faturamento.</div></div><button className="erp-btn erp-btn-sm" onClick={() => setCancelDialog(false)} disabled={busy}>Fechar</button></div><div className="erp-modal-body"><div className="erp-fieldset"><div className="erp-fieldset-body"><div className="erp-field erp-c12"><label className="erp-label erp-req">Motivo do cancelamento</label><textarea className="erp-input" style={{ height: 76, paddingTop: 8 }} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} autoFocus /></div><div className="erp-field erp-c12"><label className="erp-label">Complemento</label><textarea className="erp-input" style={{ height: 64, paddingTop: 8 }} value={cancelComplement} onChange={(e) => setCancelComplement(e.target.value)} /></div></div></div><div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}><button className="erp-btn" onClick={() => setCancelDialog(false)} disabled={busy}>Manter pedido</button><button className="erp-btn erp-btn-danger" onClick={() => cancelar(selected.code)} disabled={busy || !cancelReason.trim()}>{busy && <span className="erp-spin" />}Confirmar cancelamento</button></div></div></div></div>}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
 } from "@/services/purchaseOrderService";
 import { currentUserId, errMessage, type Obj, parseNum, parseStr } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers, loadEstablishments } from "@/services/lookups";
 
@@ -19,7 +20,7 @@ const EMPTY_ITEM: PurchaseOrderItemDTO = { item_code: "", requested_qty: 1, unit
 function statusBadge(s?: string): JSX.Element {
   const x = (s ?? "").toUpperCase();
   const cls = x === "APPROVED" || x === "RELEASED" ? "ok" : x === "CANCELLED" ? "err" : x === "DRAFT" ? "draft" : "warn";
-  return <span className={`erp-badge ${cls}`}>{s || "—"}</span>;
+  return <span className={`erp-badge ${cls}`}>{enumLabel(s)}</span>;
 }
 
 export function Vsup0200Page(): JSX.Element {

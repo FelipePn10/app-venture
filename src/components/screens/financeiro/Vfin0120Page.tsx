@@ -5,6 +5,7 @@ import {
 } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const TIPOS: PlanoTipo[] = ["RECEITA", "DESPESA", "ATIVO", "PASSIVO", "PATRIMONIO"];
@@ -75,7 +76,7 @@ export function Vfin0120Page(): JSX.Element {
               <input className="erp-input" value={form.parent_code ?? ""} placeholder="3.1" onChange={(e) => setF("parent_code", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Tipo</label>
               <select className="erp-input" value={form.tipo} onChange={(e) => setF("tipo", e.target.value as PlanoTipo)}>
-                {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                {TIPOS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">Natureza</label>
               <select className="erp-input" value={form.natureza} onChange={(e) => setF("natureza", e.target.value as PlanoNatureza)}>
                 <option value="CREDITO">CRÉDITO</option><option value="DEBITO">DÉBITO</option></select></div>

@@ -57,15 +57,12 @@ export async function criarGrupo(dto: GrupoPDM): Promise<GrupoPDM> {
   const { data } = await httpClient.post(`${BASE}/create-group`, {
     code: dto.code,
     description: dto.description,
-    enterprise_id: dto.enterprise_id ?? 1,
-    created_by: currentUserId(),
   });
   return parseGrupo(data);
 }
 export async function atualizarGrupo(code: number, dto: Pick<GrupoPDM, 'description' | 'enterprise_id'>): Promise<GrupoPDM> {
   const { data } = await httpClient.put(`${BASE}/groups/${code}`, {
     description: dto.description,
-    enterprise_id: dto.enterprise_id ?? 1,
   });
   return parseGrupo(data);
 }

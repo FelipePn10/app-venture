@@ -64,8 +64,21 @@ export const QUOTATION_STATUS_TRANSITIONS: Record<string, string[]> = {
   OV: ['A', 'OA'],
 };
 
-/** Tipos de orçamento aceitos pelo backend (`validType`). */
+/**
+ * Tipos aceitos pelo backend. Os três últimos identificam a origem técnica do
+ * registro e são preservados para leitura, mas não devem ser escolhidos por um
+ * usuário ao cadastrar um orçamento no desktop.
+ */
 export const QUOTATION_TYPES = ['VENDA', 'NEGOCIACAO', 'CONSULTA', 'API_TERCEIROS', 'FOCCOPORTAL', 'IMPORTADO'];
+export const EDITABLE_QUOTATION_TYPES = [
+  { value: 'VENDA', label: 'Venda' },
+  { value: 'NEGOCIACAO', label: 'Negociação' },
+  { value: 'CONSULTA', label: 'Consulta' },
+] as const;
+export const QUOTATION_TYPE_LABEL: Record<string, string> = {
+  VENDA: 'Venda', NEGOCIACAO: 'Negociação', CONSULTA: 'Consulta',
+  API_TERCEIROS: 'Integração de terceiros', FOCCOPORTAL: 'Portal Focco', IMPORTADO: 'Importado',
+};
 
 /** Situação de liberação comercial (`validReleaseStatus`). */
 export const RELEASE_STATUS: { value: string; label: string; cls: string }[] = [
@@ -103,6 +116,8 @@ export const EVENT_TYPE_LABEL: Record<string, string> = {
   UNBLOCK: 'Desbloqueio comercial',
   RELEASE: 'Liberação',
   MANUAL_RELEASE: 'Liberação manual',
+  ITEM_CREATE: 'Item incluído',
+  ITEM_UPDATE: 'Item alterado',
 };
 
 export const ITEM_STATUS_LABEL: Record<string, string> = {
@@ -589,7 +604,7 @@ export async function listSalesQuotationEvents(code: number): Promise<QuotationE
 }
 /** Converte o saldo aberto em pedido de venda (transação atômica no backend). */
 export async function convertSalesQuotationToOrder(code: number): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/${code}/convert-to-order`, { created_by: currentUserId() });
+  const { data } = await httpClient.post(`${BASE}/${code}/convert-to-order`, {});
   return unwrapObject(data);
 }
 /**
@@ -653,6 +668,10 @@ export async function saveSalesQuotationParameters(dto: SalesQuotationParameters
   const { data } = await httpClient.put(`${BASE}/parameters`, dto);
   return parseParameters(data);
 }
+export async function resetSalesQuotationParameters(): Promise<SalesQuotationParametersDTO> {
+  const { data } = await httpClient.delete(`${BASE}/parameters`);
+  return parseParameters(data);
+}
 export async function listCommissionPatterns(): Promise<CommissionPatternDTO[]> {
   const { data } = await httpClient.get(`${BASE}/commission-patterns`);
   return unwrapArray(data).map(parseCommissionPattern);
@@ -662,6 +681,9 @@ export async function saveCommissionPattern(dto: CommissionPatternDTO): Promise<
   const { data } = await httpClient.post(`${BASE}/commission-patterns`, dto);
   return parseCommissionPattern(data);
 }
+export async function setCommissionPatternStatus(code: number, isActive: boolean): Promise<void> {
+  await httpClient.patch(`${BASE}/commission-patterns/${code}/status`, { is_active: isActive });
+}
 export async function listCancellationReasons(): Promise<CancellationReasonDTO[]> {
   const { data } = await httpClient.get(`${BASE}/cancellation-reasons`);
   return unwrapArray(data).map(parseCancellationReason);
@@ -670,4 +692,7 @@ export async function listCancellationReasons(): Promise<CancellationReasonDTO[]
 export async function saveCancellationReason(dto: CancellationReasonDTO): Promise<CancellationReasonDTO> {
   const { data } = await httpClient.post(`${BASE}/cancellation-reasons`, dto);
   return parseCancellationReason(data);
+}
+export async function setCancellationReasonStatus(code: number, isActive: boolean): Promise<void> {
+  await httpClient.patch(`${BASE}/cancellation-reasons/${code}/status`, { is_active: isActive });
 }

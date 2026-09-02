@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { type CentroCusto, type CentroCustoDTO, listCentrosCusto, createCentroCusto } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const TIPOS = ["PRODUTIVO", "ADMINISTRATIVO", "COMERCIAL", "AUXILIAR"];
@@ -69,7 +70,7 @@ export function Vfin0130Page(): JSX.Element {
               <input className="erp-input" value={form.descricao} onChange={(e) => setF("descricao", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo</label>
               <select className="erp-input" value={form.tipo} onChange={(e) => setF("tipo", e.target.value)}>
-                {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                {TIPOS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
           
         </div></div>
 

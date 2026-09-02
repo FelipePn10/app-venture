@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const TIPOS: DispositivoTipo[] = ["ICMS", "IPI", "LAUDO", "PIS", "COFINS"];
@@ -70,7 +71,7 @@ export function Vfis0310Page(): JSX.Element {
           
             <div className="erp-field erp-c2"><label className="erp-label">Tipo</label>
               <select className="erp-input" value={form.type} onChange={(e) => { setForm((p) => ({ ...p, type: e.target.value as DispositivoTipo })); setFeedback(null); }}>
-                {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                {TIPOS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c10"><label className="erp-label erp-req">Descrição</label>
               <input className="erp-input" value={form.description} placeholder="Art. 12 do Dec. 45.490/2000 — Isenção ICMS"
                 onChange={(e) => { setForm((p) => ({ ...p, description: e.target.value })); setFeedback(null); }} /></div>

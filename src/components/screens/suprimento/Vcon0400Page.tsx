@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { type SupplierContract, type ContractStatus, CONTRACT_STATUSES, listContracts, getContract, updateContractStatus } from "@/services/supplierContractService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const d10 = (s?: string) => s?.slice(0, 10) ?? "—";
@@ -25,7 +26,7 @@ export function Vcon0400Page(): JSX.Element {
   const mudarStatus = () => { if (!detalhe?.id) return; void run(async () => {
     const c = await updateContractStatus(detalhe.id!, novoStatus);
     setDetalhe(c); setContratos(await listContracts());
-    setFeedback({ type: "success", message: `Contrato ${c.contract_number} → ${c.status}.` });
+    setFeedback({ type: "success", message: `Contrato ${c.contract_number} → ${enumLabel(c.status)}.` });
   }); };
 
   const filtrados = filtroStatus ? contratos.filter((c) => c.status === filtroStatus) : contratos;
@@ -43,7 +44,7 @@ export function Vcon0400Page(): JSX.Element {
           <button className="erp-btn erp-btn-primary" onClick={carregar} disabled={busy}>Listar</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Status</span>
           <select className="erp-input" style={{ height: 32 }} value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as "" | ContractStatus)}>
-            <option value="">todos</option>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+            <option value="">todos</option>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VCON0400 — Consulta de Contratos" filename="vcon0400" /></div>
       </div>
@@ -62,7 +63,7 @@ export function Vcon0400Page(): JSX.Element {
               {filtrados.map((c) => (
                 <tr key={c.id} className={detalhe?.id === c.id ? "erp-row-sel" : ""}>
                   <td style={{ fontWeight: 600 }}>{c.id}</td><td>{c.contract_number}</td><td>{c.supplier_code}</td>
-                  <td>{c.status}</td><td>{d10(c.valid_from)} → {d10(c.valid_to)}</td><td>{c.currency}</td>
+                  <td>{enumLabel(c.status)}</td><td>{d10(c.valid_from)} → {d10(c.valid_to)}</td><td>{c.currency}</td>
                   <td><button className="erp-btn" onClick={() => abrir(c.id)} disabled={busy}>Abrir</button></td>
                 </tr>
               ))}
@@ -72,7 +73,7 @@ export function Vcon0400Page(): JSX.Element {
 
         {detalhe && (
           <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Contrato {detalhe.contract_number} — {detalhe.status} <span className="erp-tgroup-label">Novo status</span> <select className="erp-input" style={{ height: 28, width: 130 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as ContractStatus)}>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={mudarStatus} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Contrato {detalhe.contract_number} — {enumLabel(detalhe.status)} <span className="erp-tgroup-label">Novo status</span> <select className="erp-input" style={{ height: 28, width: 130 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as ContractStatus)}>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={mudarStatus} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Item</th><th>Máscara</th><th>UM</th><th>Contratada</th><th>Consumida</th><th>Saldo</th><th>Preço</th></tr></thead>
                 <tbody>

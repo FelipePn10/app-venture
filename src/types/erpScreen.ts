@@ -359,18 +359,6 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
 
   // ── Assistência Técnica
-  {
-    code: "VASS0201",
-    title: "Cadastro de Chamado de Assistência Técnica",
-    description: "Cadastrar um chamado de assistência técnica para atender o cliente.",
-    module: "assistencia",
-  },
-  {
-    code: "VASS0402",
-    title: "Consulta de Assistência Técnica",
-    description: "Consultar as principais informações de um chamado de assistência técnica.",
-    module: "assistencia",
-  },
 
   // ── Garantia
   {
@@ -391,9 +379,9 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Custos
   {
     code: "VCST0202",
-    title: "Precificação de Produtos",
-    description: "Criar simulação e formar diversos preços de venda.",
-    module: "custo",
+    title: "Tabelas de Venda e Preços por Item",
+    description: "Criar tabelas de venda, vincular itens, manter preços, unidades, vigência e políticas comerciais.",
+    module: "comercial",
   },
   {
     code: "VCUS0100",
@@ -403,12 +391,6 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
 
   // ── PDV
-  {
-    code: "VPDV0200",
-    title: "Cadastro de Pedido de Venda",
-    description: "Cadastrar Pedidos de Venda e receber pedidos importados.",
-    module: "pdv",
-  },
   {
     code: "VPDV0253",
     title: "Console de Acompanhamento de Pedidos",

@@ -11,6 +11,7 @@ import { type ProductionPlanDTO, type InterFactoryDTO, listProductionPlans, crea
 import { type MrpReport, type ReportParams, reportProfile, reportAvailability, reportGroupedNeeds, reportExplosion, reportReorderPoint } from "@/services/mrpReportsService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const d10 = (s?: string) => s?.slice(0, 10) ?? "—";
@@ -265,7 +266,7 @@ export function Vmrp0100Page(): JSX.Element {
               {planned.map((o, i) => (
                 <tr key={i}>
                   <td>{o.order_number ?? o.code}</td><td>{o.item_code}</td><td>{o.quantity}</td>
-                  <td>{o.order_type}</td><td>{o.status}</td><td>{o.is_firm ? "Sim" : "Não"}</td>
+                  <td>{enumLabel(o.order_type)}</td><td>{enumLabel(o.status)}</td><td>{o.is_firm ? "Sim" : "Não"}</td>
                   <td>{!o.is_firm && <button className="erp-btn" onClick={() => firmarPlanejada(o.code ?? o.planned_code)} disabled={busy}>Firmar</button>}</td>
                 </tr>
               ))}
@@ -291,17 +292,17 @@ export function Vmrp0100Page(): JSX.Element {
           <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input" maxLength={60} value={ruleItem} onChange={(e) => setRuleItem(e.target.value)} placeholder="Ex.: TEA452-0" /></div>
           <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={verRegras} disabled={busy}>Listar</button></div>
           <div className="erp-field erp-c2"><label className="erp-label">Tabela</label>
-            <select className="erp-input" value={ruleForm.table_type} onChange={(e) => setRuleForm((s) => ({ ...s, table_type: e.target.value }))}><option value="PLANNING_DATA">PLANNING_DATA</option><option value="PLANNER_DATA">PLANNER_DATA</option></select></div>
+            <select className="erp-input" value={ruleForm.table_type} onChange={(e) => setRuleForm((s) => ({ ...s, table_type: e.target.value }))}><option value="PLANNING_DATA">{enumLabel("PLANNING_DATA")}</option><option value="PLANNER_DATA">{enumLabel("PLANNER_DATA")}</option></select></div>
           <div className="erp-field erp-c2"><label className="erp-label">Campo</label><input className="erp-input" value={ruleForm.field_name} onChange={(e) => setRuleForm((s) => ({ ...s, field_name: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Regra</label>
-            <select className="erp-input" value={ruleForm.rule_type} onChange={(e) => setRuleForm((s) => ({ ...s, rule_type: e.target.value as ConfiguredRule["rule_type"] }))}>{RULE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+            <select className="erp-input" value={ruleForm.rule_type} onChange={(e) => setRuleForm((s) => ({ ...s, rule_type: e.target.value as ConfiguredRule["rule_type"] }))}>{RULE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
           <div className="erp-field erp-c2"><label className="erp-label">Valor</label><input className="erp-input" value={ruleForm.rule_value} onChange={(e) => setRuleForm((s) => ({ ...s, rule_value: e.target.value }))} /></div>
           <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={criarRegra} disabled={busy}>Criar regra</button></div>
         
         {rules.length > 0 && (
           <table className="erp-grid" style={{ marginTop: 10 }}>
             <thead><tr><th>Item</th><th>Tabela</th><th>Campo</th><th>Regra</th><th>Valor</th><th>Seq</th></tr></thead>
-            <tbody>{rules.map((r, i) => <tr key={i}><td>{r.item_code}</td><td>{r.table_type}</td><td>{r.field_name}</td><td>{r.rule_type}</td><td>{r.rule_value}</td><td>{r.sequence ?? "—"}</td></tr>)}</tbody>
+            <tbody>{rules.map((r, i) => <tr key={i}><td>{r.item_code}</td><td>{enumLabel(r.table_type)}</td><td>{r.field_name}</td><td>{enumLabel(r.rule_type)}</td><td>{r.rule_value}</td><td>{r.sequence ?? "—"}</td></tr>)}</tbody>
           </table>
         )}
         </div></div>

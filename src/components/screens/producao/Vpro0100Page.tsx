@@ -12,6 +12,9 @@ import {
 } from "@/services/manufacturingRoutingService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "operacoes" | "roteiros";
@@ -23,7 +26,7 @@ const EMPTY_EDGE: EdgeDTO = { predecessor_id: 0, successor_id: 0, overlap_pct: 0
 
 function originPill(o: string): JSX.Element {
   const cls = o === "INTERNA" ? "erp-badge-green" : o === "EXTERNA" ? "erp-badge-amber" : "erp-badge-blue";
-  return <span className={`erp-badge ${cls}`}>{o}</span>;
+  return <span className={`erp-badge ${cls}`}>{enumLabel(o)}</span>;
 }
 
 export function Vpro0100Page(): JSX.Element {
@@ -85,8 +88,8 @@ export function Vpro0100Page(): JSX.Element {
   // ── Roteiros ───────────────────────────────────────────────────────────────
   const setRF = <K extends keyof RouteDTO>(k: K, v: RouteDTO[K]) => { setRouteForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
 
-  async function carregarRoteiros() {
-    const code = itemCode.trim();
+  async function carregarRoteiros(codigo?: string) {
+    const code = (codigo ?? itemCode).trim();
     if (!code) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     setBusy(true); setFeedback(null); setDetail(null); setLeadTime(null);
     try { setRoutes(await listRoutes(code)); }
@@ -227,7 +230,7 @@ export function Vpro0100Page(): JSX.Element {
         {tab === "roteiros" && (
           <div className="erp-tgroup">
             <span className="erp-tgroup-label">Item</span>
-            <input className="erp-input" style={{ width: 110, height: 32 }}  value={itemCode} placeholder="cód. item" onChange={(e) => setItemCode(e.target.value)} />
+            <div style={{ width: 220 }}><LookupField value={itemCode || undefined} onChange={(code) => { setItemCode(String(code ?? "")); if (code) void carregarRoteiros(String(code)); }} loader={loadItems} entityLabel="item" placeholder="Buscar item" /></div>
             <button className="erp-btn erp-btn-primary" onClick={() => void carregarRoteiros()} disabled={busy}>Carregar</button>
           </div>
         )}
@@ -251,7 +254,7 @@ export function Vpro0100Page(): JSX.Element {
                   <input className="erp-input" value={opForm.name} placeholder="Corte a laser" onChange={(e) => setOpF("name", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Origem</label>
                   <select className="erp-input" value={opForm.origin} onChange={(e) => setOpF("origin", e.target.value as OpOrigin)}>
-                    {OP_ORIGINS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                    {OP_ORIGINS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Tempo padrão (h)</label>
                   <input className="erp-input num" type="number" step="0.01" value={opForm.standard_time} onChange={(e) => setOpF("standard_time", Number(e.target.value))} /></div>
               
@@ -325,7 +328,7 @@ export function Vpro0100Page(): JSX.Element {
                     <div className="erp-field erp-c4"><label className="erp-label erp-req">Operação</label>
                       <select className="erp-input" value={roForm.operation_id} onChange={(e) => setRoF("operation_id", Number(e.target.value))}>
                         <option value={0}>— selecione —</option>
-                        {ops.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.origin})</option>)}</select></div>
+                        {ops.map((o) => <option key={o.id} value={o.id}>{o.name} ({enumLabel(o.origin)})</option>)}</select></div>
                     <div className="erp-field erp-c1"><label className="erp-label">Seq</label>
                       <input className="erp-input num" type="number" value={roForm.sequence} onChange={(e) => setRoF("sequence", Number(e.target.value))} /></div>
                     <div className="erp-field erp-c2"><label className="erp-label">Centro (ID)</label>

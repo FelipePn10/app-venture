@@ -5,6 +5,7 @@ import {
 } from "@/services/configuratorService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const EMPTY: RestrictionDTO = { name: "", attribute: "", operator: "==", value: "" };
@@ -74,7 +75,7 @@ export function Vpro0800Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label erp-req">Atributo</label><input className="erp-input" value={form.attribute} placeholder="cor, tensao..." onChange={(e) => setF("attribute", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Operador</label>
               <select className="erp-input" value={form.operator} onChange={(e) => setF("operator", e.target.value as RestrictionOperator)}>
-                {OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                {OPERATORS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">Valor</label><input className="erp-input" value={form.value} placeholder="azul  ou  azul,verde (IN)" onChange={(e) => setF("value", e.target.value)} /></div>
           
         </div></div>

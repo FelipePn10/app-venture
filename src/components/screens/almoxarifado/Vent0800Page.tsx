@@ -728,54 +728,6 @@ export function Vent0800Page(): JSX.Element {
         {/* ACTION BAR */}
         <div className="al-actionbar">
           <div className="al-action-group">
-            <span className="al-action-label">Nav</span>
-            <button className="al-nav-btn" title="Carregar registro" onClick={() => void handleLoadWarehouseByCode()} disabled={isLoadingRecord}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M9 2L3 6l6 4M2 2v8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <button className="al-nav-btn" title="Limpar formulário" onClick={handleLimpar}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M8 2L4 6l4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <button className="al-nav-btn" title="Consultar código digitado" onClick={() => void handleLoadWarehouseByCode()} disabled={isLoadingRecord}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M4 2l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <button className="al-nav-btn" title="Atualizar do backend" onClick={() => void handleLoadWarehouseByCode()} disabled={isLoadingRecord}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M3 2l6 4-6 4M10 2v8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div className="al-action-group">
             <span className="al-action-label">Ações</span>
             <button
               className="al-btn al-btn-primary"
@@ -817,46 +769,6 @@ export function Vent0800Page(): JSX.Element {
                 />
               </svg>
               Limpar
-            </button>
-          </div>
-
-          <div className="al-action-group">
-            <span className="al-action-label">Ferramentas</span>
-            <button className="al-btn al-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="6"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M8 7v4M8 5.5h.01"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              Ajuda
-            </button>
-            <button className="al-btn al-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <circle
-                  cx="8"
-                  cy="5"
-                  r="3"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M2 14c0-3 2-5 6-5s6 2 6 5"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              Atalhos
             </button>
           </div>
         </div>
@@ -1013,6 +925,15 @@ export function Vent0800Page(): JSX.Element {
                       placeholder="Ex: ALMOX01"
                       maxLength={20}
                     />
+                    <button
+                      type="button"
+                      className="al-input-btn"
+                      title="Carregar almoxarifado pelo código"
+                      onClick={() => void handleLoadWarehouseByCode()}
+                      disabled={isLoadingRecord}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4"/><path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                    </button>
                     {errors.codigo && (
                       <span className="al-field-error">
                         <svg

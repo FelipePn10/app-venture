@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const OPS: OperationType[] = ["AMBAS", "ENTRADA", "SAIDA", "CUSTOS"];
@@ -90,7 +91,7 @@ export function Vfis0320Page(): JSX.Element {
               <input className="erp-input num"  value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value ? e.target.value : undefined)} /></div>
             <div className="erp-field erp-c4"><label className="erp-label">Tipo Operação</label>
               <select className="erp-input" value={form.operation_type} onChange={(e) => setF("operation_type", e.target.value as OperationType)}>
-                {OPS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                {OPS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">% ICMS Contrib.</label>
               <input className="erp-input num" type="number" step="0.01" value={form.icms_pct_contrib} onChange={(e) => setF("icms_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">% ICMS Não-Contrib.</label>

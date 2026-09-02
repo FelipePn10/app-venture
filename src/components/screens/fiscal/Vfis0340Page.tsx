@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const ANEXOS: SimplesAnexo[] = ["I", "II", "III", "IV", "V", "VI"];
@@ -81,7 +82,7 @@ export function Vfis0340Page(): JSX.Element {
               <input className="erp-input" value={form.period} placeholder="2024-01" disabled={editing} onChange={(e) => setF("period", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Anexo</label>
               <select className="erp-input" value={form.annex} disabled={editing} onChange={(e) => setF("annex", e.target.value as SimplesAnexo)}>
-                {ANEXOS.map((a) => <option key={a} value={a}>{a}</option>)}</select></div>
+                {ANEXOS.map((a) => <option key={a} value={a}>{enumLabel(a)}</option>)}</select></div>
             <div className="erp-field erp-c4"><label className="erp-label">Receita Interna</label>
               <input className="erp-input num" type="number" step="0.01" value={form.receita_interna} onChange={(e) => setNum("receita_interna", e.target.value)} /></div>
             <div className="erp-field erp-c4"><label className="erp-label">Receita Externa</label>

@@ -168,6 +168,22 @@
    `overflow: hidden` do `.erp-fieldset` corta o que sobrou — o usuário vê um
    fieldset cortado no meio, sem barra de rolagem e sem como chegar no resto. */
 .erp-detail-body > * { flex-shrink: 0; }
+.vatc-aux-grid { display: grid; grid-template-columns: repeat(3, minmax(300px, 1fr)); gap: 14px; padding: 14px; overflow: auto; min-height: 0; }
+.vatc-aux-grid > .erp-fieldset { min-width: 0; align-self: start; }
+.vcst-tables-main { grid-template-columns: minmax(420px, .9fr) minmax(0, 1.1fr); }
+.vcst-tables-main > .erp-list-panel { overflow: hidden; }
+.vcst-tables-main > .erp-list-panel > .erp-fieldset { flex: 0 0 auto; }
+.vcst-tables-main > .erp-list-panel > .erp-grid-wrap { flex: 1 1 220px; min-height: 180px; overflow: auto; border-radius: 0; }
+@media (max-width: 1280px) and (min-width: 701px) {
+  .vatc-calls-main { display: flex; flex-direction: column; overflow: auto; }
+  .vatc-calls-main > .erp-list-panel { width: 100%; min-height: 230px; max-height: 300px; border-right: 0; border-bottom: 1px solid var(--v-border-strong); }
+  .vatc-calls-main > .erp-detail-panel { overflow: visible; min-height: auto; }
+  .vatc-aux-grid { grid-template-columns: minmax(0, 1fr); }
+  .vcst-tables-main { display: flex; flex-direction: column; overflow: auto; }
+  .vcst-tables-main > .erp-list-panel { width: 100%; min-height: 440px; max-height: none; border-right: 0; border-bottom: 1px solid var(--v-border-strong); }
+  .vcst-tables-main > .erp-detail-panel { overflow: visible; min-height: auto; }
+}
+@media (max-width: 700px) { .vatc-aux-grid { grid-template-columns: minmax(0, 1fr); padding: 10px; overflow: visible; } }
 .erp-detail-body::-webkit-scrollbar { width: 8px; }
 .erp-detail-body::-webkit-scrollbar-thumb { background: var(--v-border-strong); border-radius: 8px; }
 
@@ -350,13 +366,12 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-lookup-clear:hover { color: var(--v-err); background: var(--v-err-bg); }
 
 .erp-lookup-panel {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
   background: var(--v-surface); border: 1px solid var(--v-border-strong); border-radius: var(--v-r-md);
-  box-shadow: var(--v-shadow-lg); overflow: hidden; min-width: 260px;
+  box-shadow: var(--v-shadow-lg); overflow: hidden; min-width: 260px; display: flex; flex-direction: column;
 }
 .erp-lookup-search { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-bottom: 1px solid var(--v-border); color: var(--v-text-muted); }
 .erp-lookup-search input { flex: 1; border: none; outline: none; background: none; font-family: var(--v-font); font-size: 13px; color: var(--v-text); }
-.erp-lookup-list { max-height: 260px; overflow-y: auto; }
+.erp-lookup-list { max-height: 260px; min-height: 0; overflow-y: auto; }
 .erp-lookup-list::-webkit-scrollbar { width: 8px; }
 .erp-lookup-list::-webkit-scrollbar-thumb { background: var(--v-border-strong); border-radius: 8px; }
 .erp-lookup-msg { padding: 20px 12px; text-align: center; color: var(--v-text-muted); font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -416,6 +431,18 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-modal { max-height: min(760px, 88vh); overflow: hidden; border: 1px solid var(--v-border-strong); border-radius: var(--v-r-lg); background: var(--v-surface); box-shadow: var(--v-shadow-lg); }
 .erp-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 15px; border-bottom: 1px solid var(--v-border); background: var(--v-surface-2); }
 .erp-modal-body { max-height: calc(88vh - 64px); overflow-y: auto; padding: 15px; }
+.erp-confirm-dialog { width: min(560px, 94vw); }
+.erp-modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 15px; border-top: 1px solid var(--v-border); background: var(--v-surface-2); }
+.vatc-calls-main > .erp-list-panel .erp-list-sub { grid-column: 1 / -1; min-width: 0; word-break: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.vatc-calls-main > .erp-detail-panel { min-width: 0; }
+.vatc-calls-main > .erp-detail-panel .erp-fieldset-body > * { min-width: 0; }
+.vatc-call-list-grid { table-layout: fixed; }
+.vatc-call-list-grid th:nth-child(1), .vatc-call-list-grid td:nth-child(1) { width: 58px; }
+.vatc-call-list-grid th:nth-child(2), .vatc-call-list-grid td:nth-child(2) { width: 70px; }
+.vatc-call-list-grid th:nth-child(4), .vatc-call-list-grid td:nth-child(4) { width: 104px; }
+.vatc-subject-ellipsis { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vatc-call-detail { width: 100%; min-width: 0; overflow-x: hidden; }
+.vatc-call-detail .erp-grid-wrap { overflow-x: auto; }
 
 .erp-results-bar { display: flex; align-items: center; justify-content: space-between; padding: 9px 15px; background: var(--v-surface); border: 1px solid var(--v-border); border-radius: var(--v-r-md, 8px); box-shadow: var(--v-shadow-sm); }
 .erp-results-bar-left { display: flex; align-items: center; gap: 10px; }

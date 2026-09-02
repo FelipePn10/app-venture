@@ -8,7 +8,7 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadCustomers, loadEstablishments } from "@/services/lookups";
+import { loadItems, loadCustomers, loadEstablishments, loadPaymentConditions, loadSalesDivisions, loadSalesTables, loadWarehouses } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "calls" | "aux";
@@ -41,6 +41,8 @@ export function Vatc0280Page(): JSX.Element {
   const [newStatus, setNewStatus] = useState("IN_ANALYSIS");
   const [diagnosis, setDiagnosis] = useState("");
   const [solution, setSolution] = useState("");
+  const [returnNote, setReturnNote] = useState({ note_number: "", note_series: "", emission_date: today(), operation_type: "RETURN", access_key: "", total_value: 0, notes: "" });
+  const [orderParams, setOrderParams] = useState({ sales_division_code: 0, price_table_code: 0, payment_term_code: 0, warehouse_code: 0 });
 
   // aux
   const [groups, setGroups] = useState<DefectGroupDTO[]>([]);
@@ -66,11 +68,12 @@ export function Vatc0280Page(): JSX.Element {
 
   useEffect(() => { void carregarChamados(); void carregarAux(); }, [carregarChamados, carregarAux]);
 
-  const abrirDetalhe = (code?: number) => { if (!code) return; void run(async () => {
+  const refreshCall = useCallback(async (code: number) => {
     const c = await getCall(code); setSelected(c); setCreating(false);
     setNewStatus(c.status && STATUS_META[c.status] ? c.status : "IN_ANALYSIS");
     setDiagnosis(c.diagnosis ?? ""); setSolution(c.solution ?? "");
-  }); };
+  }, []);
+  const abrirDetalhe = (code?: number) => { if (code) void run(() => refreshCall(code)); };
 
   const novoChamado = () => { setCreating(true); setSelected(null); setForm(EMPTY_CALL); setPendingItems([]); setItemForm(EMPTY_ITEM); };
 
@@ -89,7 +92,7 @@ export function Vatc0280Page(): JSX.Element {
     const created = await createCall({ ...form, items: pendingItems });
     setFeedback({ type: "success", message: `Chamado ${created.call_number ?? created.code} aberto.` });
     setCreating(false); await carregarChamados();
-    if (created.code) abrirDetalhe(created.code);
+    if (created.code) await refreshCall(created.code);
   });
 
   const incluirItem = () => run(async () => {
@@ -98,28 +101,36 @@ export function Vatc0280Page(): JSX.Element {
     await addCallItem(selected.code, { ...itemForm, sequence: (selected.items?.length ?? 0) + 1 });
     setItemForm({ ...EMPTY_ITEM });
     setFeedback({ type: "success", message: "Item incluído no chamado." });
-    abrirDetalhe(selected.code);
+    await refreshCall(selected.code);
   });
 
   const alterarStatus = () => run(async () => {
     if (!selected?.code) return;
     await updateCallStatus(selected.code, { status: newStatus, diagnosis: diagnosis || undefined, solution: solution || undefined });
     setFeedback({ type: "success", message: `Status alterado para ${STATUS_META[newStatus]?.label ?? newStatus}.` });
-    abrirDetalhe(selected.code);
+    await refreshCall(selected.code);
   });
 
   const gerarOrdens = () => run(async () => {
     if (!selected?.code) return;
-    await generateOrders(selected.code, {});
+    if (selected.sales_order_code || selected.production_order_id) { setFeedback({ type: "info", message: "Este chamado já possui pedido ou ordem gerada." }); return; }
+    await generateOrders(selected.code, {
+      sales_division_code: orderParams.sales_division_code || undefined,
+      price_table_code: orderParams.price_table_code || undefined,
+      payment_term_code: orderParams.payment_term_code || undefined,
+      warehouse_code: orderParams.warehouse_code || undefined,
+    });
     setFeedback({ type: "success", message: "Pedido/ordem de assistência gerado e vinculado ao chamado." });
-    abrirDetalhe(selected.code);
+    await refreshCall(selected.code);
   });
 
   const anexarNota = () => run(async () => {
     if (!selected?.code) return;
-    await addReturnNote(selected.code, { note_number: `DEV-${Date.now() % 100000}`, emission_date: today(), operation_type: "RETURN", total_value: 0 });
-    setFeedback({ type: "success", message: "Nota de devolução/remessa vinculada (ajuste número/série na integração fiscal)." });
-    abrirDetalhe(selected.code);
+    if (!returnNote.note_number.trim()) { setFeedback({ type: "error", message: "Informe o número da nota de devolução ou remessa." }); return; }
+    await addReturnNote(selected.code, { ...returnNote, note_series: returnNote.note_series || undefined, access_key: returnNote.access_key || undefined, notes: returnNote.notes || undefined, customer_code: selected.customer_code || undefined });
+    setReturnNote({ note_number: "", note_series: "", emission_date: today(), operation_type: "RETURN", access_key: "", total_value: 0, notes: "" });
+    setFeedback({ type: "success", message: "Nota de devolução ou remessa vinculada ao chamado." });
+    await refreshCall(selected.code);
   });
 
   const criarGrupo = () => run(async () => {
@@ -135,6 +146,7 @@ export function Vatc0280Page(): JSX.Element {
   });
   const criarResponsavel = () => run(async () => {
     if (!respForm.name.trim()) { setFeedback({ type: "error", message: "Informe o nome." }); return; }
+    if (!respForm.employee_code && !respForm.customer_code) { setFeedback({ type: "error", message: "Informe o código do funcionário ou do cliente responsável." }); return; }
     await createWarrantyResponsible(respForm); setRespForm({ name: "" });
     setFeedback({ type: "success", message: "Responsável pela garantia criado." }); await carregarAux();
   });
@@ -212,16 +224,16 @@ export function Vatc0280Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
 
         {view === "calls" && (
-          <div className="erp-main">
+          <div className="erp-main vatc-calls-main">
             <div className="erp-list-panel">
               <div className="erp-grid-wrap">
-                <table className="erp-grid">
+                <table className="erp-grid vatc-call-list-grid">
                   <thead><tr><th className="num">Nº</th><th className="num">Cliente</th><th>Assunto</th><th>Status</th></tr></thead>
                   <tbody>
                     {calls.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum chamado.</td></tr>}
                     {calls.map((c) => (
                       <tr key={c.code} onClick={() => abrirDetalhe(c.code)} className={selected?.code === c.code ? "erp-row-sel" : ""} style={{ cursor: "pointer" }}>
-                        <td className="num">{c.call_number ?? c.code}</td><td className="num">{c.customer_code}</td><td>{c.subject}</td><td>{badge(c.status)}</td>
+                        <td className="num">{c.call_number ?? c.code}</td><td className="num">{c.customer_code}</td><td><span className="vatc-subject-ellipsis" title={c.subject}>{c.subject}</span></td><td>{badge(c.status)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -229,7 +241,7 @@ export function Vatc0280Page(): JSX.Element {
               </div>
             </div>
 
-            <div className="erp-detail-panel">
+            <div className="erp-detail-panel"><div className="erp-detail-body vatc-call-detail">
               {creating ? (
                 <>
                   <div className="erp-fieldset">
@@ -286,21 +298,44 @@ export function Vatc0280Page(): JSX.Element {
                       <div className="erp-field erp-c6"><label className="erp-label">Solução</label><input className="erp-input" value={solution} onChange={(e) => setSolution(e.target.value)} /></div>
                       <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8 }}>
                         <button className="erp-btn erp-btn-primary" onClick={alterarStatus} disabled={busy}>Alterar status</button>
-                        <button className="erp-btn" onClick={anexarNota} disabled={busy}>Vincular nota de devolução</button>
-                        <button className="erp-btn" onClick={gerarOrdens} disabled={busy}>Gerar pedido/ordem</button>
                       </div>
+                    </div>
+                  </div>
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Vincular nota de devolução ou remessa</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c2"><label className="erp-label erp-req">Número</label><input className="erp-input" value={returnNote.note_number} onChange={(e) => setReturnNote((p) => ({ ...p, note_number: e.target.value }))} /></div>
+                      <div className="erp-field erp-c1"><label className="erp-label">Série</label><input className="erp-input" value={returnNote.note_series} onChange={(e) => setReturnNote((p) => ({ ...p, note_series: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label erp-req">Emissão</label><input className="erp-input" type="date" value={returnNote.emission_date} onChange={(e) => setReturnNote((p) => ({ ...p, emission_date: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Operação</label><select className="erp-input" value={returnNote.operation_type} onChange={(e) => setReturnNote((p) => ({ ...p, operation_type: e.target.value }))}><option value="RETURN">Devolução</option><option value="SHIPMENT">Remessa</option></select></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Valor total</label><input className="erp-input num" type="number" step="0.01" value={returnNote.total_value || ""} onChange={(e) => setReturnNote((p) => ({ ...p, total_value: Number(e.target.value) }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Chave de acesso</label><input className="erp-input" value={returnNote.access_key} onChange={(e) => setReturnNote((p) => ({ ...p, access_key: e.target.value }))} /></div>
+                      <div className="erp-field erp-c9"><label className="erp-label">Observações</label><input className="erp-input" value={returnNote.notes} onChange={(e) => setReturnNote((p) => ({ ...p, notes: e.target.value }))} /></div>
+                      <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={anexarNota} disabled={busy}>Vincular nota</button></div>
+                    </div>
+                  </div>
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Gerar pedido de venda ou ordem de produção</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c3"><label className="erp-label">Divisão de vendas</label><LookupField value={orderParams.sales_division_code || undefined} loader={loadSalesDivisions} entityLabel="divisão de vendas" onChange={(code) => setOrderParams((p) => ({ ...p, sales_division_code: Number(code ?? 0) }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Tabela de preço</label><LookupField value={orderParams.price_table_code || undefined} loader={loadSalesTables} entityLabel="tabela de preço" onChange={(code) => setOrderParams((p) => ({ ...p, price_table_code: Number(code ?? 0) }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Condição de pagamento</label><LookupField value={orderParams.payment_term_code || undefined} loader={loadPaymentConditions} entityLabel="condição de pagamento" onChange={(code) => setOrderParams((p) => ({ ...p, payment_term_code: Number(code ?? 0) }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Almoxarifado</label><LookupField value={orderParams.warehouse_code || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(code) => setOrderParams((p) => ({ ...p, warehouse_code: Number(code ?? 0) }))} /></div>
+                      <div className="erp-field erp-c12"><span className="erp-field-hint">Preencha os dados solicitados pelo motivo do chamado. Se algum parâmetro obrigatório faltar, o sistema informará qual deve ser selecionado.</span></div>
+                      {(selected.sales_order_code || selected.production_order_id) && <div className="erp-field erp-c12"><div className="erp-feedback success">Geração concluída: {selected.sales_order_code ? `pedido de venda ${selected.sales_order_code}` : ""}{selected.sales_order_code && selected.production_order_id ? " · " : ""}{selected.production_order_id ? `ordem de produção ${selected.production_order_id}` : ""}.</div></div>}
+                      <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={gerarOrdens} disabled={busy || !!selected.sales_order_code || !!selected.production_order_id}>{selected.sales_order_code || selected.production_order_id ? "Pedido/ordem já gerado" : "Gerar pedido/ordem"}</button></div>
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="erp-fieldset"><div className="erp-fieldset-body"><p style={{ padding: 12, color: "var(--v-text-3)" }}>Selecione um chamado na lista ou clique em <strong>Novo chamado</strong>.</p></div></div>
               )}
-            </div>
+            </div></div>
           </div>
         )}
 
         {view === "aux" && (
-          <>
+          <div className="vatc-aux-grid">
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Grupos de defeito</div>
               <div className="erp-fieldset-body">
@@ -347,6 +382,8 @@ export function Vatc0280Page(): JSX.Element {
               <div className="erp-fieldset-head">Responsáveis pela garantia</div>
               <div className="erp-fieldset-body">
                 <div className="erp-field erp-c4"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={respForm.name} onChange={(e) => setRespForm((p) => ({ ...p, name: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Cliente responsável</label><LookupField value={respForm.customer_code ?? undefined} loader={loadCustomers} entityLabel="cliente" onChange={(code) => setRespForm((p) => ({ ...p, customer_code: typeof code === "number" ? code : null, employee_code: code ? null : p.employee_code }))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Funcionário (código)</label><input className="erp-input num" type="number" value={respForm.employee_code ?? ""} onChange={(e) => setRespForm((p) => ({ ...p, employee_code: e.target.value ? Number(e.target.value) : null, customer_code: e.target.value ? null : p.customer_code }))} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label">E-mail</label><input className="erp-input" value={respForm.email ?? ""} onChange={(e) => setRespForm((p) => ({ ...p, email: e.target.value }))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Telefone</label><input className="erp-input" value={respForm.phone ?? ""} onChange={(e) => setRespForm((p) => ({ ...p, phone: e.target.value }))} /></div>
                 <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criarResponsavel} disabled={busy}>Criar</button></div>
@@ -357,7 +394,7 @@ export function Vatc0280Page(): JSX.Element {
                 </div>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 

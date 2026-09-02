@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RECORD_TYPES, listRecords, listInspectionOrders } from "@/services/procurementService";
 import { errMessage, parseStr, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "ocorrencias" | "ordens";
@@ -41,7 +42,7 @@ export function Vins0400Page(): JSX.Element {
           <button className={`erp-btn ${tab === "ordens" ? "erp-btn-primary" : ""}`} onClick={() => setTab("ordens")}>Ordens de inspeção</button>
         </div>
         {tab === "ocorrencias" && <div className="erp-tgroup"><span className="erp-tgroup-label">Tipo</span>
-          <select className="erp-tselect" value={type} onChange={(e) => setType(e.target.value)}><option value="">todos</option>{RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>}
+          <select className="erp-tselect" value={type} onChange={(e) => setType(e.target.value)}><option value="">todos</option>{RECORD_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>}
         <div className="erp-tgroup"><button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Consultar</button></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VINS0400 — Consulta de Ocorrências / Ordens" filename="vins0400" /></div>
@@ -57,7 +58,7 @@ export function Vins0400Page(): JSX.Element {
                 <thead><tr><th>#</th><th>Tipo</th><th>Fornecedor</th><th>Item</th><th>Referência</th><th>Status</th></tr></thead>
                 <tbody>
                   {records.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem ocorrências. Clique em Consultar.</td></tr>}
-                  {records.map((r, i) => <tr key={i}><td><strong>#{parseStr(r, "id", "ID")}</strong></td><td>{parseStr(r, "record_type", "RecordType")}</td><td>{parseStr(r, "supplier_code", "SupplierCode") || "—"}</td><td>{parseStr(r, "item_code", "ItemCode") || "—"}</td><td>{parseStr(r, "reference", "Reference") || "—"}</td><td><span className="erp-badge info">{parseStr(r, "status", "Status")}</span></td></tr>)}
+                  {records.map((r, i) => <tr key={i}><td><strong>#{parseStr(r, "id", "ID")}</strong></td><td>{enumLabel(parseStr(r, "record_type", "RecordType"))}</td><td>{parseStr(r, "supplier_code", "SupplierCode") || "—"}</td><td>{parseStr(r, "item_code", "ItemCode") || "—"}</td><td>{parseStr(r, "reference", "Reference") || "—"}</td><td><span className="erp-badge info">{enumLabel(parseStr(r, "status", "Status"))}</span></td></tr>)}
                 </tbody>
               </table>
             ) : (
@@ -65,7 +66,7 @@ export function Vins0400Page(): JSX.Element {
                 <thead><tr><th>#</th><th>Item</th><th>Qtde</th><th>Origem</th><th>Status</th></tr></thead>
                 <tbody>
                   {orders.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem ordens. Clique em Consultar.</td></tr>}
-                  {orders.map((o, i) => <tr key={i}><td><strong>#{parseStr(o, "id", "ID")}</strong></td><td>{parseStr(o, "item_code", "ItemCode")}</td><td>{parseStr(o, "quantity", "Quantity")}</td><td>{parseStr(o, "source", "Source")}</td><td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td></tr>)}
+                  {orders.map((o, i) => <tr key={i}><td><strong>#{parseStr(o, "id", "ID")}</strong></td><td>{parseStr(o, "item_code", "ItemCode")}</td><td>{parseStr(o, "quantity", "Quantity")}</td><td>{enumLabel(parseStr(o, "source", "Source"))}</td><td><span className="erp-badge info">{enumLabel(parseStr(o, "status", "Status"))}</span></td></tr>)}
                 </tbody>
               </table>
             )}

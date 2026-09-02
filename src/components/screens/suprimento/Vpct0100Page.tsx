@@ -2,6 +2,9 @@ import { useState, useCallback } from "react";
 import { type PurchaseTolerance, TOLERANCE_TYPES, APPLIES_TO, VALUE_TYPES, ACTIONS, listTolerances, upsertTolerance, deleteTolerance, evaluateTolerance } from "@/services/purchaseTolerancesService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadSuppliers } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const EMPTY: PurchaseTolerance = { tolerance_type: "QUANTITY", applies_to: "ALL", interval_min: "0", interval_max: "", tolerance_value: "0", value_type: "PERCENT", action: "WARN", is_active: true };
@@ -55,21 +58,39 @@ export function Vpct0100Page(): JSX.Element {
             <div className="erp-tabs"><button className="erp-tab active">{form.id ? `Editar tolerância ${form.id}` : "Nova tolerância"}</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset"><div className="erp-fieldset-head">Regra de tolerância</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c4"><label className="erp-label">Tipo</label><select className="erp-input" value={form.tolerance_type} onChange={(e) => setF("tolerance_type", e.target.value)}>{TOLERANCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
-                <div className="erp-field erp-c4"><label className="erp-label">Aplica-se a</label><select className="erp-input" value={form.applies_to} onChange={(e) => setF("applies_to", e.target.value)}>{APPLIES_TO.map((a) => <option key={a} value={a}>{a}</option>)}</select></div>
-                <div className="erp-field erp-c4"><label className="erp-label">Fornecedor (opc.)</label><input className="erp-input num" type="number" value={form.supplier_code ?? ""} onChange={(e) => setF("supplier_code", Number(e.target.value) || undefined)} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Tipo</label><select className="erp-input" value={form.tolerance_type} onChange={(e) => setF("tolerance_type", e.target.value)}>{TOLERANCE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Aplica-se a</label><select className="erp-input" value={form.applies_to} onChange={(e) => setF("applies_to", e.target.value)}>{APPLIES_TO.map((a) => <option key={a} value={a}>{enumLabel(a)}</option>)}</select></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Fornecedor (opc.)</label><LookupField value={form.supplier_code} loader={loadSuppliers} entityLabel="fornecedor" onChange={(code) => setF("supplier_code", code)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Intervalo mín</label><input className="erp-input num" type="number" value={String(form.interval_min)} onChange={(e) => setF("interval_min", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Intervalo máx</label><input className="erp-input num" type="number" value={String(form.interval_max ?? "")} onChange={(e) => setF("interval_max", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Limite</label><input className="erp-input num" type="number" value={String(form.tolerance_value)} onChange={(e) => setF("tolerance_value", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Un.</label><select className="erp-input" value={form.value_type} onChange={(e) => setF("value_type", e.target.value)}>{VALUE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}</select></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Ação</label><select className="erp-input" value={form.action} onChange={(e) => setF("action", e.target.value)}>{ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}</select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Un.</label><select className="erp-input" value={form.value_type} onChange={(e) => setF("value_type", e.target.value)}>{VALUE_TYPES.map((v) => <option key={v} value={v}>{enumLabel(v)}</option>)}</select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Ação</label><select className="erp-input" value={form.action} onChange={(e) => setF("action", e.target.value)}>{ACTIONS.map((a) => <option key={a} value={a}>{enumLabel(a)}</option>)}</select></div>
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{form.id ? "Atualizar" : "Criar"}</button></div>
               </div></div>
               <div className="erp-fieldset"><div className="erp-fieldset-head">Avaliar (esperado × real)</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c3"><label className="erp-label">Esperado</label><input className="erp-input num" type="number" value={ev.expected} onChange={(e) => setEv((s) => ({ ...s, expected: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Real</label><input className="erp-input num" type="number" value={ev.actual} onChange={(e) => setEv((s) => ({ ...s, actual: e.target.value }))} /></div>
                 <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}><button className="erp-btn" onClick={avaliar} disabled={busy}>Avaliar</button></div>
-                {evResult && <div className="erp-field erp-c12"><pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap" }}>{JSON.stringify(evResult, null, 2)}</pre></div>}
+                {evResult && (
+                  <div className="erp-field erp-c12">
+                    <div className={`erp-feedback ${String(evResult.exceeded) === 'true' ? 'error' : 'success'}`} style={{ margin: 0 }}>
+                      <strong>Resultado da avaliação:</strong>{" "}
+                      {String(evResult.exceeded) === 'true'
+                        ? 'o valor informado está fora da tolerância permitida.'
+                        : 'o valor informado está dentro da tolerância permitida.'}
+                    </div>
+                    <table className="erp-grid" style={{ marginTop: 8 }}>
+                      <tbody>
+                        <tr><td>Esperado</td><td className="num">{String(evResult.expected ?? evResult.Expected ?? '—')}</td></tr>
+                        <tr><td>Real</td><td className="num">{String(evResult.actual ?? evResult.Actual ?? '—')}</td></tr>
+                        <tr><td>Permitido</td><td className="num">{String(evResult.allowed ?? evResult.Allowed ?? '—')}</td></tr>
+                        <tr><td>Desvio</td><td className="num">{String(evResult.deviation ?? evResult.Deviation ?? '—')}</td></tr>
+                        <tr><td>Situação</td><td>{String(evResult.exceeded) === 'true' ? 'Acima do permitido' : 'Dentro do permitido'}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div></div>
             </div>
           </section>

@@ -1,7 +1,7 @@
 # HELP - Telas do ERP Venture
 
 > Documentação completa de todas as telas do sistema ERP Venture Desktop.
-> Total de telas documentadas: **201**
+> Total de telas disponíveis: **210**
 > Estilo: Processos de negócio com fluxos, pré-requisitos e passo a passo.
 > Última atualização: Julho 2026
 
@@ -3770,47 +3770,56 @@ Listar chamados (somente leitura) com **filtros client-side** por status, client
 
 ### VGAR0211 — Devoluções de Atendimento e Garantia
 
-> Integração vigente: a devolução é registrada como retorno do chamado em
-> `/api/consumer-service/calls/{code}/returns`. A rotina exige um chamado existente;
-> não cria pedido de venda fictício nem apresenta devoluções pré-preenchidas.
+> Integração vigente: a rotina usa o fluxo enterprise de **RMA** da assistência
+> técnica. Solicitação, autorização, logística reversa, recebimento, inspeção,
+> resolução, custos e evidências permanecem vinculados ao chamado e isolados pela
+> empresa autenticada.
 
 ##### Objetivo
 
-Gerar pedidos de devolução a partir de chamados de assistência em garantia, transformando um chamado de garantia aprovado em um pedido de devolução para o fornecedor ou para o estoque de avarias.
+Controlar a autorização de devolução de mercadoria (RMA) desde a solicitação até a
+destinação final, preservando itens, quantidades, série/lote, SLA, custos, documentos,
+movimentos de estoque, evidências e histórico das decisões.
 
 ##### Pré-requisitos
 
-- Chamado de garantia cadastrado em VASS0201 com status que permita devolução.
-- Item do chamado com fornecedor ou almoxarifado de devolução configurado em VENT0200.
+- Chamado de assistência técnica e seus itens cadastrados.
+- Motivo e análise de elegibilidade definidos.
+- Para autorizar, o RMA precisa estar marcado como elegível.
 
 ##### Passo a passo
 
 1. Acesse **VGAR0211** pelo menu _Garantia > Gerar Pedido Devolução_.
-2. Selecione o **Chamado** de garantia que originará a devolução.
-3. O sistema carrega os itens do chamado elegíveis para devolução.
-4. Confira os dados: item, quantidade, fornecedor, almoxarifado de destino.
-5. Selecione o **tipo de devolução** (Fornecedor, Estoque Avarias, Descarte).
-6. Informe o **motivo da devolução** (defeito de fabricação, recall, etc.).
-7. Clique em **Gerar Pedido Devolução**.
-8. Confirme a geração — um número de pedido de devolução é gerado e vinculado ao chamado.
+2. Use **Listar RMAs do chamado** para verificar solicitações anteriores.
+3. Em **Solicitar RMA**, informe motivo, elegibilidade, justificativa, SLA, custos e
+   ao menos um item do chamado. Cada item pode registrar série, lote e destino
+   solicitado (reparo, troca, crédito ou descarte).
+4. Use **Abrir RMA** para conferir situação, ações permitidas, itens, eventos e custos.
+5. Em **Avançar RMA**, escolha somente uma ação permitida pelo estado atual. A
+   autorização exige número; cancelamento e resolução exigem motivo.
+6. Em **Enviar evidência**, selecione um PDF, PNG ou JPEG de até 10 MiB. A tela envia
+   o arquivo ao armazenamento autenticado do servidor, sem caminho local fictício.
+7. Liste ou baixe as evidências pelo identificador retornado.
 
 ##### Campos
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| Chamado | Select | Sim | Chamado de garantia de origem |
-| Itens | (automático) | — | Itens do chamado elegíveis |
-| Tipo Devolução | Select | Sim | Fornecedor / Estoque Avarias / Descarte |
-| Fornecedor | Select | Condicional | Fornecedor (se tipo = Fornecedor) |
-| Almoxarifado | Select | Condicional | Destino (se tipo = Estoque Avarias) |
-| Motivo | Textarea | Sim | Justificativa da devolução |
-| Pedido Devolução | (gerado) | — | Número do pedido de devolução gerado |
+| Chamado / linha | seleção | Sim | Chamado e item que originam o RMA |
+| Motivo / elegibilidade | texto/seleção | Sim | Fundamento e resultado da análise |
+| SLA | data e hora | Sim | Prazo esperado para tratamento |
+| Item, quantidade, série e lote | dados do item | Sim/condicional | Rastreabilidade física |
+| Destino | seleção | Condicional | Reparo, troca, crédito ou descarte |
+| Custos | valores | Não | Produto, frete e serviço |
+| Evidência | arquivo | Não | PDF, PNG ou JPEG, até 10 MiB |
 
 ##### Observações importantes
 
-- Apenas chamados com **status que permitam devolução** (ex.: Fechado como Reprovado, Aguardando Devolução) podem ser usados.
-- O pedido de devolução gerado segue o workflow padrão de devoluções do sistema.
-- Chamados de **Recall** podem gerar múltiplos pedidos de devolução.
+- A mesma chave de idempotência não cria solicitações duplicadas.
+- A sequência normal é Solicitado → Autorizado → Logística reversa/Recebido →
+  Inspecionado → Resolvido. O backend devolve as ações permitidas em cada etapa.
+- Documentos fiscais e movimentos de estoque são referências do tratamento; a tela
+  não altera nota fiscal autorizada de forma implícita.
 
 ##### Telas relacionadas
 
@@ -4054,7 +4063,7 @@ O fluxo acima é **linear e sequencial**: não se pode faturar um pedido que nã
 
 #### VENT0100 — Consulta de Pedido de Venda
 
-> Correção operacional: **Consultar** carrega a carteira completa; **Abrir pedido** abre somente o código informado; **Consultar itens** usa o pedido informado e mostra exclusivamente suas linhas. Datas, cliente e indicadores são apresentados em português, e valores lógicos aparecem como **Sim/Não**.
+> Correção operacional: **Consultar** carrega a carteira completa; **Abrir pedido** abre somente o código informado; **Consultar itens** usa o pedido informado e mostra exclusivamente suas linhas. Datas, cliente e indicadores são apresentados em português, valores lógicos aparecem como **Sim/Não** e o cliente é identificado por **nome e código**.
 
 ##### Objetivo
 
@@ -4152,7 +4161,9 @@ Cadastrar e gerenciar as **Divisões de Vendas** da empresa — estruturas organ
      **atraso financeiro tolerado**, **PIS %** e **COFINS %**.
 4. Clique em **Salvar** para persistir o registro.
 5. Para editar uma divisão existente, selecione-a na tabela de listagem, altere os campos e salve novamente.
-6. Utilize **Exportar** para gerar um relatório das divisões cadastradas.
+6. Use **Desativar** para impedir novos usos sem perder o histórico; uma divisão inativa continua na lista e pode ser **Reativada**.
+7. **Excluir definitivamente** remove fisicamente apenas divisões sem qualquer vínculo. Não confunda exclusão com desativação.
+8. Utilize **Exportar** para gerar um relatório das divisões cadastradas.
 
 ##### Campos
 
@@ -4213,21 +4224,15 @@ Registrar e consultar **reprogramações de data de entrega** de pedidos de vend
 ##### Passo a passo
 
 1. Acesse a tela **VEXR0100 — Reprogramação de Entrega**.
-2. Clique em **Nova Reprogramação** para abrir o formulário.
-3. Informe o **Pedido** (obrigatório): número do pedido de venda. O sistema preencherá automaticamente:
-   - **Data Original**: data de entrega atual do pedido (somente leitura, carregada do cadastro).
-4. Informe a **Nova Data** (obrigatório): data para a qual a entrega será reprogramada.
-5. Selecione o **Motivo** (obrigatório) da reprogramação entre as opções:
-   - Atraso produção — atraso na fabricação/montagem dos itens.
-   - Logística — problemas com transporte, rota ou transportadora.
-   - Cliente solicitou — solicitação expressa do cliente para adiar/antecipar.
-   - Fornecedor — atraso no recebimento de matéria-prima ou componentes.
-   - Outros — qualquer outro motivo não listado.
-6. Preencha a **Observação** (opcional) com detalhes adicionais sobre a reprogramação.
-7. Clique em **Salvar** para registrar a reprogramação.
-8. A reprogramação aparecerá na tabela de consulta inferior, exibindo: Pedido, Data Original, Nova Data, Motivo, Status.
-9. Utilize **Pesquisar** para filtrar reprogramações por período ou pedido específico.
-10. Utilize **Exportar** para gerar relatório das reprogramações.
+2. Selecione o **Pedido**. A tela carrega automaticamente todos os itens com saldo,
+   suas quantidades e a data atual de cada linha.
+3. Marque somente os itens afetados. Itens não marcados permanecem inalterados.
+4. Informe a nova data e o motivo por linha, ou preencha os valores comuns e use
+   **Aplicar aos itens selecionados**.
+5. Confira a justificativa e os sinais de planejamento apresentados para cada linha.
+6. Clique em **Reprogramar itens selecionados**. Todas as linhas são processadas em
+   uma única transação e o histórico à esquerda é atualizado.
+7. Utilize **Exportar** para gerar o relatório do histórico.
 
 ##### Campos
 
@@ -4243,7 +4248,11 @@ Registrar e consultar **reprogramações de data de entrega** de pedidos de vend
 
 - A data de entrega **original** é preservada e nunca sobrescrita — o histórico mantém a rastreabilidade completa.
 - Um mesmo pedido pode ter múltiplas reprogramações ao longo do tempo. Cada reprogramação é um registro independente com data/hora de criação.
-- A reprogramação **não altera automaticamente** a data de entrega no pedido original (VPDV0200) — isso é feito em processo separado após a autorização.
+- A prévia considera saldo, reservas, demanda, ordens planejadas e firmes, compras,
+  CRP, APS, expedição e faturamento. Documentos fiscais e expedições já concluídas
+  podem bloquear uma linha.
+- O lote é atômico: se qualquer linha falhar, nenhuma alteração é mantida. A chave
+  de idempotência impede duplicação em uma repetição da mesma operação.
 - O campo Motivo é essencial para análises gerenciais de causas de atraso e indicadores de performance logística (OTIF — On Time In Full).
 - A observação deve ser utilizada para registrar aprovações, contatos com cliente ou informações operacionais relevantes.
 
@@ -5418,13 +5427,19 @@ Cadastrar e gerenciar os **almoxarifados** do sistema — locais físicos ou ló
 
 ---
 
-#### VCST0202 — Precificação de Produtos
+#### VCST0202 — Tabelas de Venda e Preços por Item
 
 > **Backend:** `/api/customers/sales-tables` (tabelas + preços + `pricing`/`price-formation`/`generate-prices`/`price-history`) e `/api/customers/sales-price-policies` (políticas de formação). Três abas — **Tabelas & Preços**, **Formação de Preço** e **Políticas**. Substitui o mock antigo `/api/custo/precificacao` (rota morta).
 
 ##### Objetivo
 
 Formar e manter **preços de venda**. Em **Tabelas & Preços**, cria a tabela de venda (validade, formação, casas decimais, composição FOB/CIF, tolerâncias) e mantém os preços por item (incluir/excluir). Em **Formação de Preço**, calcula o **preço sugerido** a partir de custo + margem/impostos (ou de uma política) e **gera preços em lote** (upsert + histórico). Em **Políticas**, cadastra as políticas de formação (fonte de custo, margem, impostos, comissão).
+
+Na inclusão do item na tabela são informados preço de venda, unidade de venda,
+unidade comercial, preço convertido, situação, bloqueio, fórmula e observação. Dados
+fiscais e de produto — como NCM, tributação, garantia e regras de devolução — ficam no
+cadastro mestre do item, porque valem para venda, assistência, retornos e documentos
+fiscais independentemente da tabela de preço escolhida.
 
 ##### Pré-requisitos
 
@@ -5435,87 +5450,36 @@ Formar e manter **preços de venda**. Em **Tabelas & Preços**, cria a tabela de
 
 ##### Passo a passo
 
-1. Acesse **VCST0202 — Precificação de Produtos**.
+1. Acesse **VCST0202 — Tabelas de Venda e Preços por Item**, agora disponível no módulo Comercial.
+2. Em **Tabelas & Preços**, preencha descrição, formação, composição, casas decimais
+   e vigência; clique em **Criar tabela**.
+3. Atualize a lista e selecione a tabela criada.
+4. No painel direito, escolha o item e informe preço, unidades de venda/comercial,
+   conversão, situação, bloqueio, fórmula e observação; clique em
+   **Incluir item na tabela**.
+5. Em **Formação de Preço**, escolha tabela, política e item para calcular ou gerar
+   preços em lote.
+6. Em **Políticas**, mantenha fonte de custo, margem, impostos e comissão.
 
-**Aba Precificações:**
-
-2. Clique em **Novo**. Preencha **Descrição** e **Empresa**. Salve. O código é gerado automaticamente (PR0001, PR0002...).
-
-**Aba Revisões:**
-
-3. Selecione a precificação. Cada precificação tem ao menos uma revisão Aberta.
-4. Para criar nova revisão: **Nova Revisão**, preencha descrição, data validade, observações. Salve.
-5. Para finalizar, clique em **Fechar Revisão** (situação muda para Fechada).
-
-**Aba Itens:**
-
-6. Com revisão Aberta, clique em **Selecionar Itens**.
-7. Para cada item, ajuste **Preço Venda**, **Custo** e veja a **Margem (%)** calculada automaticamente: `(Preço Venda - Custo) / Preço Venda × 100`.
-8. Use **Cálculo Automático** para aplicar margem uniforme.
-9. Use checkboxes para selecionar/desselecionar itens. "Selecionar Todos" afeta toda a lista.
-
-**Aba Dados Gerais:**
-
-10. Configure parâmetros: Cliente, Tabela de Venda, Tipo Frete (10 opções), Cond. Pagamento, Valor Frete, Valor Seguro, Comissão Padrão (%).
-11. Clique em **Recalcular** para atualizar preços conforme novos parâmetros.
-12. Ao finalizar, volte à aba Revisões e **Feche a Revisão**.
-
-##### Campos
-
-**Aba Precificações:**
+##### Campos principais
 
 | Campo | Tipo | Obrigatório | Função |
 |-------|------|-------------|--------|
-| Código | texto (auto) | Sim | Gerado automaticamente (PR0001...) |
-| Descrição | texto | Sim | Nome da precificação |
-| Empresa | texto | Sim | Código do estabelecimento |
-| Revisões | número | Não | Quantidade de revisões |
-| Data Cadastro | data | Sim | Data de criação |
-
-**Aba Revisões:**
-
-| Campo | Tipo | Obrigatório | Opções | Função |
-|-------|------|-------------|--------|--------|
-| Código | texto | Sim | — | Código da revisão |
-| Descrição | texto | Não | — | Descrição |
-| Data Cadastro | data | Sim | — | Data de criação |
-| Data Validade | data | Não | — | Expiração |
-| Última Alteração | data | Não | — | Última modificação |
-| Último Cálculo | data | Não | — | Último recálculo |
-| Situação | seleção | Não | Aberta / Fechada | Status |
-| Observações | texto | Não | — | Anotações |
-
-**Aba Itens:**
-
-| Campo | Tipo | Obrigatório | Função |
-|-------|------|-------------|--------|
-| Linha | número | Sim | Sequencial |
-| Código | texto | Sim | Código do item |
-| Descrição | texto | Não | Descrição |
-| Máscara | seleção | Não | Máscara configurável |
-| Quantidade | número | Não | Quantidade de referência |
-| Preço Venda | número | Não | Preço proposto |
-| Custo | número | Não | Custo do item |
-| Margem (%) | número (auto) | Não | (Preço Venda - Custo) / Preço Venda × 100 |
-
-**Aba Dados Gerais:**
-
-| Campo | Tipo | Obrigatório | Opções | Função |
-|-------|------|-------------|--------|--------|
-| Cliente | texto | Não | — | Cliente alvo |
-| Tabela de Venda | seleção | Não | — | Tabela vinculada |
-| Tipo Frete | seleção | Não | 10 opções (Cif-Contrat. a Terceiros) | Modalidade |
-| Cond. Pagamento | seleção | Não | — | Condição |
-| Valor Frete | número | Não | — | Simulação de frete |
-| Valor Seguro | número | Não | — | Simulação de seguro |
-| Comissão Padrão (%) | número | Não | — | Percentual |
+| Descrição | texto | Sim | Nome da tabela de venda |
+| Formação / composição | seleção | Sim | Origem e composição do preço |
+| Vigência | datas | Sim | Período em que a tabela pode ser usada |
+| Item | busca | Sim | Item vinculado à tabela |
+| Preço de venda | número | Sim | Preço autoritativo usado em pedido/orçamento |
+| Unidades e conversão | texto/número | Não | Relação comercial entre unidades |
+| Situação / bloqueio | seleção | Sim | Controla se o preço pode ser utilizado |
+| Fórmula / observação | texto | Não | Rastreabilidade comercial da formação |
 
 ##### Observações importantes
 
-- **Ciclo de revisões**: Apenas revisões Abertas permitem edição. Ao fechar, torna-se histórica — abra uma nova para alterações. Garante rastreabilidade.
-- **Margem**: Calculada automaticamente. Editar o Preço Venda ou Custo atualiza a margem instantaneamente.
-- **Parâmetros comerciais**: Os valores de frete, seguro e comissão na aba Dados Gerais são para simulação e não alteram os cadastros mestres.
-- Precificações podem ser usadas como base para gerar pedidos de venda (origem "Precificação" no VPDV0200).
+- Pedido e orçamento resolvem o preço vigente dessa tabela no backend e não confiam
+  em preço livre enviado pelo usuário.
+- Dados fiscais permanecem no cadastro mestre do item; não devem ser duplicados em
+  cada tabela de venda.
 
 ##### Telas relacionadas
 
@@ -7710,6 +7674,8 @@ status **Rascunho (R) → Confirmado (P) → Faturado (F)**, além de **bloqueio
 6. O pedido é marcado como **Faturado (F)** automaticamente quando a **NF-e de saída**
    é autorizada (consome as reservas e baixa o estoque).
 
+Após confirmar, bloquear, desbloquear ou cancelar, a situação também é atualizada imediatamente na lista lateral.
+
 ##### Campos principais
 
 | Campo | Obrigatório | Função |
@@ -7738,7 +7704,7 @@ status **Rascunho (R) → Confirmado (P) → Faturado (F)**, além de **bloqueio
 
 #### VVND0300 — Orçamento de Venda
 
-> O campo **Moeda** é uma seleção controlada (Real, Dólar ou Euro), evitando códigos livres inválidos. O estabelecimento deve ser escolhido pelo nome na pesquisa assistida.
+> O campo **Moeda** é uma seleção controlada (Real, Dólar ou Euro), evitando códigos livres inválidos. O estabelecimento é definido pelo acesso autenticado e não pode ser trocado na tela.
 
 ##### Objetivo
 
@@ -7761,16 +7727,16 @@ acompanhamento de oportunidades da carteira.
 ##### Passo a passo
 
 1. Acesse **VVND0300 — Orçamento de Venda** e clique em **Novo orçamento**.
-2. Informe **Cliente**, **Tipo** (VENDA, NEGOCIACAO, CONSULTA…), **Validade**,
+2. Informe **Cliente**, **Tipo** (Venda, Negociação ou Consulta), **Validade**,
    **Probabilidade %** e demais condições; clique em **Criar orçamento** (nasce como
-   **Orçam. VentureERP / OV**). O estabelecimento pode ficar em branco — assume a
+   **Orçam. VentureERP / OV**). O estabelecimento é assumido automaticamente da
    empresa do seu login. Transportadora, tabela de preço e condição de pagamento
    ficam em branco para herdar o cadastro do cliente.
 3. Abra o orçamento na lista e adicione **itens** (item, quantidade, preço, desconto,
    IPI, ST, depósito, data de entrega). Os totais são recalculados a cada alteração
    e as **políticas comerciais** são reavaliadas — uma política que exija aprovação
    bloqueia o orçamento automaticamente.
-4. Ajuste a capa quando precisar e clique em **Salvar capa**. Enquanto houver
+4. Ajuste os dados quando precisar e clique em **Salvar**. Enquanto houver
    alteração não salva, a troca de status e o bloqueio/liberação ficam travados.
 5. Quando aprovado, clique em **Converter em pedido**. O sistema cria o pedido de
    venda com o **saldo aberto** — pedido, itens, vínculo e evento são gravados na
@@ -7783,9 +7749,9 @@ acompanhamento de oportunidades da carteira.
 
 | Campo | Obrigatório | Função |
 |-------|-------------|--------|
-| Cliente | Sim | Destinatário da proposta |
-| Estabelecimento | Não | Em branco assume a empresa do login |
-| Tipo | Não | VENDA, NEGOCIACAO, CONSULTA, API_TERCEIROS, FOCCOPORTAL, IMPORTADO |
+| Cliente | Venda/Negociação | Destinatário da proposta; opcional em Consulta |
+| Estabelecimento | Automático | Empresa autenticada; o backend recusa outra empresa |
+| Tipo | Não | Venda, Negociação ou Consulta. Integração, portal e importação são origens técnicas somente para leitura |
 | Válido até | Não | Prazo de validade (expira depois) |
 | Probabilidade % | Não | Peso do valor ponderado da carteira |
 | Divisão de vendas | Não | Necessária para trocar a condição de pagamento do cliente |
@@ -7857,6 +7823,10 @@ e **motivos de cancelamento**.
 4. Na aba **Motivos de cancelamento**, cadastre ao menos um motivo antes de operar o
    VVND0300. Marque **Indicador D** para permitir descancelamento e **Indicador C**
    para exigir complemento no cancelamento. Clique em **Gravar motivo**.
+5. Use **Desativar/Reativar** nas listas quando um apoio deixar de ser utilizado.
+   Registros já referenciados são protegidos pelo sistema.
+6. Em **Parâmetros**, use **Restaurar padrões** para remover as personalizações da
+   empresa e voltar às regras padrão do domínio.
 
 ##### Campos principais
 
@@ -7877,7 +7847,9 @@ e **motivos de cancelamento**.
 - **Sem motivo de cancelamento cadastrado o VVND0300 não cancela nada** — nem o
   orçamento, nem itens.
 - Gravar com um **código já existente atualiza** o registro (padrões e motivos).
-- As listas mostram apenas registros **ativos**.
+- Códigos negativos são recusados. O padrão de comissão pode ficar sem código para geração automática; o motivo exige código maior que zero.
+- A aba Parâmetros mostra um resumo da configuração atualmente carregada, mesmo quando uma das listas auxiliares estiver indisponível.
+- As listas mostram registros ativos e inativos, com a situação identificada.
 - A gravação é restrita a **ADMIN**; para os demais perfis a tela abre em consulta.
 
 ##### Telas relacionadas
@@ -7917,6 +7889,8 @@ acompanhamento comercial**.
    comissão padrão) e **Contatos** (telefones e e-mails — o contato principal é
    atualizado automaticamente pelo menor ranking).
 5. Use **Bloquear** (exige motivo) / **Desbloquear** para controlar disponibilidade.
+   Representantes bloqueados ou inativos não aparecem nos seletores de novas vendas,
+   orçamentos, metas ou recorrências; os documentos históricos continuam consultáveis.
 6. **Relatório** consolida o cadastro por UF/região/situação; **Follow-up** mostra a
    evolução comercial (orçamentos, pedidos, comissão) do representante selecionado.
 
@@ -8026,6 +8000,8 @@ tempo de resolução.
    Se a situação for **Visita técnica**, a **data da visita** é obrigatória; se o tipo
    for **reclamação**, os **sintomas** são obrigatórios.
 5. Abra o chamado para **Agendar/Resolver** a posição e **Registrar retorno/contato**.
+   Cada retorno permite informar canal, descrição e a data do próximo contato, e aparece
+   imediatamente no histórico do chamado.
 6. **Relatório** consolida totais por posição, vistorias e tempo médio de resolução.
 
 ##### Campos principais
@@ -8112,6 +8088,8 @@ futura, **expirar** reservas vencidas e **reprogramar datas de entrega em lote**
 2. **Reserva de tanque**: informe a data prometida, validade, capacidade e as
    **linhas** (item, quantidade, preço). Marque **Descontar ATP** para verificar
    estoque e **Gravar** para confirmar (desmarcado apenas simula).
+   O resultado informa de forma separada a validade, a data solicitada, as alocações
+   e eventuais avisos de planejamento.
 3. **Reprogramação em lote**: filtre por período/cliente e informe a **nova data** —
    pedidos e itens com **data firme** são ignorados.
 
@@ -10321,9 +10299,10 @@ O pedido deve existir em VVND0200. Execute na ordem prevista pelo processo comer
 4. **Motivo de atraso**: registre motivo e ação (`RESCHEDULE`, conforme regra vigente)
    quando a promessa não puder ser cumprida.
 
-Reabra o pedido depois de cada ação. Transição fora de ordem, pedido cancelado, bloqueio
-comercial ou situação inválida retorna erro. Após timeout, consulte o histórico antes de
-repetir para evitar eventos duplicados.
+Depois de cada ação, a própria tela consulta novamente o pedido e mostra o estado
+persistido, incluindo análise, atendimento e conferência. Transição fora de ordem,
+pedido cancelado, bloqueio comercial ou situação inválida retorna erro. Após timeout,
+consulte o histórico antes de repetir para evitar eventos duplicados.
 
 ### VVND0610 — Reajuste de Venda Recorrente
 
@@ -10355,12 +10334,12 @@ do anexo retornado.
 
 ### VREP0600 — Complementos do Representante
 
-Cadastre o representante antes desta rotina. Para segmento, informe representante,
-segmento e indicador principal. Para plano de venda, informe códigos e início de
-vigência. Interesse recebe uma descrição objetiva. Correspondência exige CEP, cidade,
-UF, logradouro e número conforme o endereço efetivo. Grave um complemento por vez e
-reabra o representante na rotina principal para validar o vínculo. Códigos de apoio
-inexistentes, duplicidade de vínculo e dados de outro tenant são recusados.
+Cadastre o representante antes desta rotina. As quatro operações têm nomes distintos:
+**Vincular segmento**, **Vincular plano de vendas**, **Vincular interesse** e
+**Cadastrar endereço de correspondência**. Use os seletores pesquisáveis disponíveis
+para representante, segmento e plano de vendas; eles aceitam pesquisa pelo nome ou pelo código.
+Correspondência exige CEP, cidade, UF, logradouro e número conforme o endereço efetivo.
+Códigos de apoio inexistentes, duplicidade de vínculo e dados de outro tenant são recusados.
 
 ### VEST0400 — Consultas de Movimentos e Saldos por Almoxarifado
 
@@ -10771,3 +10750,18 @@ persistido.
   a tela resolve e envia o ID técnico quando a FK do backend o exigir.
 - Dados, listas, estados vazios e mensagens sempre pertencem à empresa do token. Um
   identificador válido em outro tenant deve ser tratado como inexistente.
+# Ajustes de usabilidade comercial — 26/08/2026
+
+- VVND0200 é a única entrada para cadastro e manutenção de pedidos; VPDV0200 foi removida do catálogo.
+- VATC0280 é a única entrada para cadastro completo de chamados; VASS0201 foi removida do catálogo.
+- VATC0480 é a única entrada para consulta consolidada de chamados; VASS0402 foi removida do catálogo.
+- Campos de pedido, chamado, cliente, item, tabela de venda e estabelecimento usam pesquisa com registros disponíveis e continuam aceitando código digitado.
+- VENT0100 apresenta os campos de bloqueio e saldo em português.
+- VVND0200 exige e envia o motivo ao cancelar um pedido.
+- VREP0600 trata a classificação do interesse como identificador numérico, conforme o contrato da API.
+- VATC0480 e VASS0402 mantêm instruções e painéis legíveis também em janelas menores.
+- VATC0280 informa que o responsável pela garantia precisa estar associado a um funcionário ou cliente.
+- VCST0202 e VCUS0100 usam linguagem de negócio em português para fontes e composições de custo.
+- VCLI0500 mantém a aba aberta após salvar endereço ou contato, atualiza a lista e oferece uma única área de exportação.
+- VCLI0117 diferencia listagem, criação, avaliação e alteração de restrições.
+- VCLI0202 apresenta os componentes da política comercial em português e com seletores para entidades cadastradas.

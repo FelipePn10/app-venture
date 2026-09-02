@@ -2,6 +2,9 @@ import { useState, useCallback } from "react";
 import { type SupplierContract, type ContractItem, type ContractStatus, CONTRACT_STATUSES, createContract } from "@/services/supplierContractService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadEstablishments, loadItems, loadItemMasks, loadSuppliers } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const CAPA_INICIAL = { enterprise_code: "1", supplier_code: "", contract_number: "", description: "", status: "DRAFT" as ContractStatus, currency: "BRL", valid_from: "", valid_to: "", price_index: "", notes: "" };
@@ -77,11 +80,11 @@ export function Vcon0200Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Capa do contrato</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={capa.enterprise_code} onChange={(e) => setC("enterprise_code", e.target.value)} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Fornecedor</label><input className="erp-input num" type="number" value={capa.supplier_code} onChange={(e) => setC("supplier_code", e.target.value)} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><LookupField value={capa.enterprise_code ? Number(capa.enterprise_code) : undefined} loader={loadEstablishments} entityLabel="empresa" onChange={(c) => setC("enterprise_code", c ? String(c) : "")} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Fornecedor</label><LookupField value={capa.supplier_code ? Number(capa.supplier_code) : undefined} loader={loadSuppliers} entityLabel="fornecedor" onChange={(c) => setC("supplier_code", c ? String(c) : "")} /></div>
           <div className="erp-field erp-c3"><label className="erp-label erp-req">Número do contrato</label><input className="erp-input" value={capa.contract_number} onChange={(e) => setC("contract_number", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Status</label>
-            <select className="erp-input" value={capa.status} onChange={(e) => setC("status", e.target.value)}>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+            <select className="erp-input" value={capa.status} onChange={(e) => setC("status", e.target.value)}>{CONTRACT_STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
           <div className="erp-field erp-c3"><label className="erp-label">Descrição</label><input className="erp-input" value={capa.description} onChange={(e) => setC("description", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Moeda</label><input className="erp-input" value={capa.currency} onChange={(e) => setC("currency", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Vigência de</label><input className="erp-input" type="date" value={capa.valid_from} onChange={(e) => setC("valid_from", e.target.value)} /></div>
@@ -91,8 +94,8 @@ export function Vcon0200Page(): JSX.Element {
         </div></div>
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Linhas do contrato ({items.length})</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setItemForm((f) => ({ ...f, item_code: String(c ?? "") }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><LookupField value={itemForm.mask} loader={loadItemMasks} entityLabel="máscara" onChange={(c) => setItemForm((f) => ({ ...f, mask: c ? String(c) : "" }))} /></div>
           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd contratada</label><input className="erp-input num" type="number" value={itemForm.contracted_qty} onChange={(e) => setItemForm((f) => ({ ...f, contracted_qty: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Preço unit.</label><input className="erp-input num" type="number" value={itemForm.unit_price} onChange={(e) => setItemForm((f) => ({ ...f, unit_price: e.target.value }))} /></div>
@@ -112,7 +115,7 @@ export function Vcon0200Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">Contrato criado</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c3"><label className="erp-label">Nº interno</label><input className="erp-input num" value={criado.id ?? "—"} readOnly /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Número</label><input className="erp-input" value={criado.contract_number} readOnly /></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Status</label><input className="erp-input" value={criado.status} readOnly /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Status</label><input className="erp-input" value={enumLabel(criado.status)} readOnly /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Linhas</label><input className="erp-input num" value={(criado.items ?? []).length} readOnly /></div>
             </div></div>
           </>

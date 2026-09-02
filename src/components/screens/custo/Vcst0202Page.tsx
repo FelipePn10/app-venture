@@ -6,6 +6,8 @@ import {
 } from "@/services/salesPricingService";
 import { errMessage, parseNum, unwrapObject } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadSalesPricePolicies, loadSalesTables } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "tables" | "formation" | "policies";
@@ -15,6 +17,12 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFraction
 const EMPTY_TABLE: SalesTableDTO = { description: "", price_formation: "INFORMADO", decimal_places: 2, composition: "FOB", table_type: "NORMAL", base_date: "PEDIDO", tolerance_min_pct: 0, tolerance_max_pct: 10 };
 const EMPTY_PRICE: SalesTablePriceDTO = { item_code: "", price: 0, ume: "UN", umc: "UN", situation: "ATIVO", blocked: false };
 const EMPTY_POLICY: SalesPricePolicyDTO = { description: "", cost_source: "STANDARD_TOTAL", policy_scope: "PREC", priority: 10, sequence: 10, margin_pct: 20, taxes_pct: 12, commission_pct: 5 };
+const COST_SOURCE_LABELS: Record<string, string> = {
+  STANDARD_TOTAL: "Custo padrão total",
+  STANDARD_MATERIAL: "Custo padrão de materiais",
+  AVERAGE: "Custo médio",
+  LAST_PURCHASE: "Último custo de compra",
+};
 
 export function Vcst0202Page(): JSX.Element {
   const [view, setView] = useState<View>("tables");
@@ -59,6 +67,7 @@ export function Vcst0202Page(): JSX.Element {
   const gravarPreco = () => run(async () => {
     if (!selTable?.code) return;
     if (!priceForm.item_code.trim()) { setFeedback({ type: "error", message: "Informe o item." }); return; }
+    if (!(priceForm.price > 0)) { setFeedback({ type: "error", message: "O preço precisa ser maior que zero." }); return; }
     await createSalesTablePrice(selTable.code, priceForm); setPriceForm(EMPTY_PRICE);
     setFeedback({ type: "success", message: "Preço incluído." });
     setPrices(await listSalesTablePrices(selTable.code));
@@ -97,11 +106,11 @@ export function Vcst0202Page(): JSX.Element {
         <nav className="erp-crumbs">
           <span className="erp-crumb-mut">Comercial &amp; Vendas</span>
           <span className="erp-crumb-sep">›</span>
-          <span className="erp-crumb-cur">Precificação de Produtos</span>
+          <span className="erp-crumb-cur">Tabelas de Venda e Preços por Item</span>
           <span className="erp-crumb-code">VCST0202</span>
         </nav>
         <div className="erp-titlebar-spacer" />
-        <span className="erp-titlebar-meta">Tabelas de venda · formação de preço · políticas</span>
+        <span className="erp-titlebar-meta">Criar tabela · vincular itens · formar preços · políticas</span>
       </header>
 
       <div className="erp-toolbar">
@@ -111,21 +120,21 @@ export function Vcst0202Page(): JSX.Element {
           <button className={`erp-btn${view === "policies" ? " erp-btn-dark" : ""}`} onClick={() => setView("policies")} disabled={busy}>Políticas</button>
         </div>
         <div className="erp-tspacer" />
-        <div className="erp-tgroup"><ExportButton title="VCST0202 — Precificação" filename="vcst0202" /></div>
+        <div className="erp-tgroup"><ExportButton title="VCST0202 — Tabelas de venda e preços por item" filename="vcst0202" /></div>
       </div>
 
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
 
         {view === "tables" && (
-          <div className="erp-main">
+          <div className="erp-main vcst-tables-main">
             <div className="erp-list-panel">
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Nova tabela de venda</div>
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c8"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={tableForm.description} onChange={(e) => setTableForm((p) => ({ ...p, description: e.target.value }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Casas decimais</label><input className="erp-input num" type="number" value={tableForm.decimal_places} onChange={(e) => setTableForm((p) => ({ ...p, decimal_places: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Formação</label><select className="erp-tselect" value={tableForm.price_formation} onChange={(e) => setTableForm((p) => ({ ...p, price_formation: e.target.value }))}><option value="INFORMADO">INFORMADO</option><option value="FORMADO">FORMADO</option></select></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Formação do preço</label><select className="erp-tselect" value={tableForm.price_formation} onChange={(e) => setTableForm((p) => ({ ...p, price_formation: e.target.value }))}><option value="INFORMADO">Preço informado manualmente</option><option value="CUSTO_MEDIO">Custo médio</option><option value="CUSTO_STANDARD_TOTAL">Custo padrão total</option><option value="CUSTO_STANDARD_MATERIAL">Custo padrão de materiais</option><option value="INFORMADO_SEM_ICMS">Preço informado sem ICMS</option><option value="MAT_OPER">Materiais e operações</option><option value="TABELA_CUSTO">Tabela de custo</option><option value="TRANSFERENCIA_IPI">Transferência com IPI</option><option value="TRANSFERENCIA_UF">Transferência entre estados</option></select></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Composição</label><select className="erp-tselect" value={tableForm.composition} onChange={(e) => setTableForm((p) => ({ ...p, composition: e.target.value }))}><option value="FOB">FOB</option><option value="CIF">CIF</option></select></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Válida de</label><input className="erp-input" type="date" value={tValidFrom} onChange={(e) => setTValidFrom(e.target.value)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Válida até</label><input className="erp-input" type="date" value={tValidTo} onChange={(e) => setTValidTo(e.target.value)} /></div>
@@ -152,10 +161,17 @@ export function Vcst0202Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Tabela {selTable.code} — {selTable.description}</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><input className="erp-input" value={priceForm.item_code} onChange={(e) => setPriceForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
-                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Preço</label><input className="erp-input num" type="number" value={priceForm.price || ""} onChange={(e) => setPriceForm((p) => ({ ...p, price: Number(e.target.value) }))} /></div>
-                      <div className="erp-field erp-c2"><label className="erp-label">UM</label><input className="erp-input" value={priceForm.ume ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, ume: e.target.value }))} /></div>
-                      <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarPreco} disabled={busy}>Incluir preço</button></div>
+                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={priceForm.item_code} loader={loadItems} entityLabel="item" onChange={(code) => setPriceForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço de venda</label><input className="erp-input num" type="number" min="0.01" step="0.0001" value={priceForm.price || ""} onChange={(e) => setPriceForm((p) => ({ ...p, price: Number(e.target.value) }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Unidade de venda</label><input className="erp-input" value={priceForm.ume ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, ume: e.target.value.toUpperCase() }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Unidade comercial</label><input className="erp-input" value={priceForm.umc ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, umc: e.target.value.toUpperCase() }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Preço convertido</label><input className="erp-input num" type="number" min="0" step="0.0001" value={priceForm.price_conv ?? ""} placeholder="Igual ao preço" onChange={(e) => setPriceForm((p) => ({ ...p, price_conv: e.target.value ? Number(e.target.value) : undefined }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Situação</label><select className="erp-input" value={priceForm.situation ?? "ATIVO"} onChange={(e) => setPriceForm((p) => ({ ...p, situation: e.target.value }))}><option value="ATIVO">Ativo</option><option value="PROMOCIONAL">Promocional</option><option value="INATIVO">Inativo</option></select></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Disponibilidade</label><label className="erp-check"><input type="checkbox" checked={!!priceForm.blocked} onChange={(e) => setPriceForm((p) => ({ ...p, blocked: e.target.checked }))} /><span>Bloquear este preço</span></label></div>
+                      <div className="erp-field erp-c5"><label className="erp-label">Fórmula/referência</label><input className="erp-input" value={priceForm.formula ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, formula: e.target.value }))} /></div>
+                      <div className="erp-field erp-c5"><label className="erp-label">Observação comercial</label><input className="erp-input" value={priceForm.observation ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, observation: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarPreco} disabled={busy}>Incluir item na tabela</button></div>
+                      <div className="erp-field erp-c12"><span className="erp-field-hint">Aqui ficam preço, unidades, conversão e disponibilidade comercial. NCM, tributação, garantia, devolução e dados fiscais pertencem ao cadastro mestre do item, pois são usados por todas as tabelas e documentos.</span></div>
                     </div>
                   </div>
                   <div className="erp-grid-wrap">
@@ -171,7 +187,7 @@ export function Vcst0202Page(): JSX.Element {
                     </table>
                   </div>
                 </>
-              ) : <div className="erp-fieldset"><div className="erp-fieldset-body"><p style={{ padding: 12, color: "var(--v-text-3)" }}>Selecione uma tabela para gerenciar os preços.</p></div></div>}
+              ) : <div className="erp-detail-empty"><div className="erp-detail-empty-title">Nenhuma tabela selecionada</div><div className="erp-detail-empty-sub">Selecione uma tabela na lista para gerenciar os preços.</div></div>}
             </div>
           </div>
         )}
@@ -181,22 +197,22 @@ export function Vcst0202Page(): JSX.Element {
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Formação de preço (custo + margem/cargas, ou por política)</div>
               <div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela (cód.)</label><input className="erp-input num" type="number" value={fTable} onChange={(e) => setFTable(e.target.value)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Política (cód.)</label><input className="erp-input num" type="number" value={fPolicy} onChange={(e) => setFPolicy(e.target.value)} placeholder="opcional" /></div>
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input" value={fItem} onChange={(e) => setFItem(e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela de venda</label><LookupField value={fTable} loader={loadSalesTables} entityLabel="tabela de venda" onChange={(code) => setFTable(String(code ?? ""))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Política comercial</label><LookupField value={fPolicy} loader={loadSalesPricePolicies} entityLabel="política comercial" placeholder="Opcional" onChange={(code) => setFPolicy(String(code ?? ""))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={fItem} loader={loadItems} entityLabel="item" onChange={(code) => setFItem(String(code ?? ""))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Custo base</label><input className="erp-input num" type="number" value={fCost} onChange={(e) => setFCost(e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Margem %</label><input className="erp-input num" type="number" value={fMargin} onChange={(e) => setFMargin(e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Impostos %</label><input className="erp-input num" type="number" value={fTaxes} onChange={(e) => setFTaxes(e.target.value)} /></div>
                 <div className="erp-field erp-c6" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={calcularFormacao} disabled={busy}>Calcular preço sugerido</button></div>
               </div>
-              {fResult && <div className="erp-feedback info" style={{ margin: "0 14px 12px" }}>{Object.entries(fResult).map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`).join(" · ")}</div>}
+              {fResult && <div className="erp-feedback info" style={{ margin: "0 14px 12px" }}><strong>Resultado da formação:</strong> preço sugerido R$ {money(parseNum(fResult, "suggested_price", "SuggestedPrice"))}, custo base R$ {money(parseNum(fResult, "base_cost", "BaseCost"))}, margem de contribuição {parseNum(fResult, "contribution_margin_pct", "ContributionMarginPct").toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%.</div>}
             </div>
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Gerar preços em lote (upsert + histórico)</div>
               <div className="erp-fieldset-body">
                 <div className="erp-field erp-c9"><label className="erp-label">Itens (separados por vírgula)</label><input className="erp-input" value={genItems} onChange={(e) => setGenItems(e.target.value)} placeholder="1001, 1002, 1003" /></div>
                 <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gerarPrecos} disabled={busy}>Gerar preços</button></div>
-                <p style={{ fontSize: 12, color: "var(--v-text-3)", padding: "0 0 4px" }}>Usa a tabela e política informadas acima; busca o custo pela <code>cost_source</code> da política.</p>
+                <p style={{ fontSize: 12, color: "var(--v-text-3)", padding: "0 0 4px" }}>Os preços são calculados com a tabela, a política e a fonte de custo configuradas acima.</p>
               </div>
             </div>
           </>
@@ -208,7 +224,7 @@ export function Vcst0202Page(): JSX.Element {
               <div className="erp-fieldset-head">Nova política de formação de preço</div>
               <div className="erp-fieldset-body">
                 <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={policyForm.description} onChange={(e) => setPolicyForm((p) => ({ ...p, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Fonte de custo</label><select className="erp-tselect" value={policyForm.cost_source} onChange={(e) => setPolicyForm((p) => ({ ...p, cost_source: e.target.value }))}><option value="STANDARD_TOTAL">STANDARD_TOTAL</option><option value="STANDARD_MATERIAL">STANDARD_MATERIAL</option><option value="AVERAGE">AVERAGE</option><option value="LAST_PURCHASE">LAST_PURCHASE</option></select></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Fonte de custo</label><select className="erp-tselect" value={policyForm.cost_source} onChange={(e) => setPolicyForm((p) => ({ ...p, cost_source: e.target.value }))}>{Object.entries(COST_SOURCE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Prioridade</label><input className="erp-input num" type="number" value={policyForm.priority} onChange={(e) => setPolicyForm((p) => ({ ...p, priority: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Margem %</label><input className="erp-input num" type="number" value={policyForm.margin_pct} onChange={(e) => setPolicyForm((p) => ({ ...p, margin_pct: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Impostos %</label><input className="erp-input num" type="number" value={policyForm.taxes_pct} onChange={(e) => setPolicyForm((p) => ({ ...p, taxes_pct: Number(e.target.value) }))} /></div>
@@ -223,7 +239,7 @@ export function Vcst0202Page(): JSX.Element {
                 <tbody>
                   {policies.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Clique em <strong>Atualizar lista</strong>.</td></tr>}
                   {policies.map((p) => (
-                    <tr key={p.code}><td className="num">{p.code}</td><td>{p.description}</td><td>{p.cost_source || "—"}</td><td className="num">{p.margin_pct ?? 0}%</td><td className="num">{p.taxes_pct ?? 0}%</td><td className="num">{p.commission_pct ?? 0}%</td></tr>
+                    <tr key={p.code}><td className="num">{p.code}</td><td>{p.description}</td><td>{COST_SOURCE_LABELS[p.cost_source ?? ""] ?? p.cost_source ?? "—"}</td><td className="num">{p.margin_pct ?? 0}%</td><td className="num">{p.taxes_pct ?? 0}%</td><td className="num">{p.commission_pct ?? 0}%</td></tr>
                   ))}
                 </tbody>
               </table>

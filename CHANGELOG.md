@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## [v1.1.12] — 2026-09-02
+
+## Melhorias
+- Deixamos todas as telas comerciais, de engenharia, manufatura, suprimentos, almoxarifado e produção com textos em português, sem termos técnicos em inglês.
+- Agora os campos de item, classificação, máscara, característica, cliente, fornecedor, representante, plano, ordem, máquina, centro de custo e afins abrem uma lista de busca com todos os cadastros, mantendo a opção de digitar o código manualmente.
+- Corrigimos a exportação de relatórios em dezenas de telas, que antes exibiam "Nada para exportar".
+- As mensagens de erro passaram a ser claras e em português, explicando o que ajustar em vez de mostrar códigos técnicos.
+
+## Correções
+- Corrigimos o cadastro de preços em tabelas de venda, a formação de preço e a geração em lote, que rejeitavam itens com código alfanumérico.
+- Corrigimos a reativação e exclusão de divisões de vendas, a reprogramação de entrega com sugestão automática de data e o bloqueio de fornecedores.
+- Corrigimos a estrutura de produto (BOM): inclusão, atualização, remoção e navegação entre os níveis com a unidade e a descrição preenchidas automaticamente.
+- Corrigimos a contagem cíclica, o inventário, os saldos por almoxarifado e o cadastro de almoxarifado.
+- Corrigimos a criação de políticas comerciais (desconto e frete), permitindo salvar as alterações e buscar itens e máscaras.
+- Corrigimos o cadastro de grupo PDM e de roteiros de fabricação, com códigos gerados automaticamente quando não informados.
+
 ## [v1.1.11] — 2026-08-25
 
 ## Correções

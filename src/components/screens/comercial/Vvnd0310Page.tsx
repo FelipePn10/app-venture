@@ -5,10 +5,13 @@ import {
   type CancellationReasonDTO,
   getSalesQuotationParameters,
   saveSalesQuotationParameters,
+  resetSalesQuotationParameters,
   listCommissionPatterns,
   saveCommissionPattern,
+  setCommissionPatternStatus,
   listCancellationReasons,
   saveCancellationReason,
+  setCancellationReasonStatus,
 } from "@/services/salesQuotationService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -58,8 +61,12 @@ export function Vvnd0310Page(): JSX.Element {
   }, []);
 
   const reload = useCallback(() => run(async () => {
-    const [p, cp, cr] = await Promise.all([getSalesQuotationParameters(), listCommissionPatterns(), listCancellationReasons()]);
-    setParams(p); setPatterns(cp); setReasons(cr);
+    const [p, cp, cr] = await Promise.allSettled([getSalesQuotationParameters(), listCommissionPatterns(), listCancellationReasons()]);
+    if (p.status === "fulfilled") setParams({ ...EMPTY_PARAMS, ...p.value });
+    if (cp.status === "fulfilled") setPatterns(cp.value);
+    if (cr.status === "fulfilled") setReasons(cr.value);
+    const failed = [p, cp, cr].filter((result) => result.status === "rejected").length;
+    if (failed) setFeedback({ type: "error", message: `${failed} consulta(s) não puderam ser carregadas. Os dados disponíveis continuam visíveis.` });
   }), [run]);
   useEffect(() => { void reload(); }, [reload]);
 
@@ -77,6 +84,7 @@ export function Vvnd0310Page(): JSX.Element {
   });
 
   const salvarPadrao = () => run(async () => {
+    if ((pattern.code ?? 0) < 0) { setFeedback({ type: "error", message: "O código do padrão não pode ser negativo." }); return; }
     if (!pattern.description.trim()) { setFeedback({ type: "error", message: "Descrição é obrigatória." }); return; }
     // Mesma regra do backend: a divisão faturamento/pagamento precisa fechar o total.
     if (Math.abs((pattern.invoice_pct + pattern.payment_pct) - pattern.commission_pct) > 1e-9) {
@@ -89,8 +97,26 @@ export function Vvnd0310Page(): JSX.Element {
     setFeedback({ type: "success", message: `Padrão de comissão ${saved.code} gravado.` });
   });
 
+  const restaurarParametros = () => run(async () => {
+    if (!window.confirm("Restaurar os parâmetros padrão do sistema para esta empresa? As personalizações atuais serão removidas.")) return;
+    setParams(await resetSalesQuotationParameters());
+    setFeedback({ type: "success", message: "Parâmetros restaurados para os padrões do sistema." });
+  });
+
+  const alternarPadrao = (item: CommissionPatternDTO) => run(async () => {
+    await setCommissionPatternStatus(item.code, !item.is_active);
+    setPatterns(await listCommissionPatterns());
+    setFeedback({ type: "success", message: `Padrão ${item.code} ${item.is_active ? "desativado" : "reativado"}.` });
+  });
+
+  const alternarMotivo = (item: CancellationReasonDTO) => run(async () => {
+    await setCancellationReasonStatus(item.code, !item.is_active);
+    setReasons(await listCancellationReasons());
+    setFeedback({ type: "success", message: `Motivo ${item.code} ${item.is_active ? "desativado" : "reativado"}.` });
+  });
+
   const salvarMotivo = () => run(async () => {
-    if (!reason.code || !reason.description.trim()) { setFeedback({ type: "error", message: "Código e descrição são obrigatórios." }); return; }
+    if ((reason.code ?? 0) <= 0 || !reason.description.trim()) { setFeedback({ type: "error", message: "Informe um código maior que zero e a descrição." }); return; }
     await saveCancellationReason(reason);
     setReasons(await listCancellationReasons());
     setReason(EMPTY_REASON);
@@ -119,7 +145,7 @@ export function Vvnd0310Page(): JSX.Element {
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Gravar</span>
-          {tab === "parametros" && <button className="erp-btn erp-btn-primary" onClick={salvarParametros} disabled={busy || !isAdmin} title={adminHint}>Salvar parâmetros</button>}
+          {tab === "parametros" && <><button className="erp-btn erp-btn-primary" onClick={salvarParametros} disabled={busy || !isAdmin} title={adminHint}>Salvar parâmetros</button><button className="erp-btn" onClick={restaurarParametros} disabled={busy || !isAdmin} title={adminHint}>Restaurar padrões</button></>}
           {tab === "comissao" && <button className="erp-btn erp-btn-primary" onClick={salvarPadrao} disabled={busy || !isAdmin} title={adminHint}>Gravar padrão</button>}
           {tab === "motivos" && <button className="erp-btn erp-btn-primary" onClick={salvarMotivo} disabled={busy || !isAdmin} title={adminHint}>Gravar motivo</button>}
         </div>
@@ -132,7 +158,7 @@ export function Vvnd0310Page(): JSX.Element {
         {!isAdmin && <div className="erp-feedback info">Perfil sem permissão de gravação — os cadastros aparecem somente para consulta.</div>}
 
         <div className="erp-main">
-          <section className="erp-detail-panel" style={{ width: "100%" }}>
+          <section className="erp-detail-panel" style={{ width: "100%", gridColumn: "1 / -1" }}>
             <div className="erp-tabs">
               <button className={`erp-tab${tab === "parametros" ? " active" : ""}`} onClick={() => setTab("parametros")}>Parâmetros</button>
               <button className={`erp-tab${tab === "comissao" ? " active" : ""}`} onClick={() => setTab("comissao")}>Padrões de comissão ({patterns.length})</button>
@@ -142,6 +168,7 @@ export function Vvnd0310Page(): JSX.Element {
 
               {tab === "parametros" && (
                 <>
+                  <div className="erp-feedback info">Configuração carregada para a empresa <strong>{params.enterprise_code ?? "atual"}</strong>: consumidor final {params.final_consumer_customer_code ?? "não definido"}, NFC-e padrão {params.default_nfce ? "ativada" : "desativada"} e frete CIF mínimo de R$ {pct(params.minimum_cif_freight)}.</div>
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Rótulos dos campos comerciais</div>
                     <div className="erp-fieldset-body">
@@ -202,7 +229,7 @@ export function Vvnd0310Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">{pattern.code ? `Padrão ${pattern.code}` : "Novo padrão de comissão"}</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" placeholder="automático" value={pattern.code || ""} disabled={!isAdmin} onChange={(e) => setPat("code", Number(e.target.value))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" min={0} placeholder="automático" value={pattern.code || ""} disabled={!isAdmin} onChange={(e) => setPat("code", Math.max(0, Number(e.target.value)))} /></div>
                       <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={pattern.description} disabled={!isAdmin} onChange={(e) => setPat("description", e.target.value)} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" step="0.01" min={0} value={pattern.commission_pct} disabled={!isAdmin} onChange={(e) => setPat("commission_pct", Number(e.target.value))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">No faturamento %</label><input className="erp-input num" type="number" step="0.01" min={0} value={pattern.invoice_pct} disabled={!isAdmin} onChange={(e) => setPat("invoice_pct", Number(e.target.value))} /></div>
@@ -219,9 +246,9 @@ export function Vvnd0310Page(): JSX.Element {
                   </div>
                   <div className="erp-grid-wrap">
                     <table className="erp-grid">
-                      <thead><tr><th className="num">Código</th><th>Descrição</th><th className="num">Comissão %</th><th className="num">Faturamento %</th><th className="num">Pagamento %</th><th style={{ width: 90 }}></th></tr></thead>
+                      <thead><tr><th className="num">Código</th><th>Descrição</th><th className="num">Comissão %</th><th className="num">Faturamento %</th><th className="num">Pagamento %</th><th>Situação</th><th style={{ width: 190 }}>Ações</th></tr></thead>
                       <tbody>
-                        {patterns.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum padrão de comissão cadastrado.</td></tr>}
+                        {patterns.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum padrão de comissão cadastrado.</td></tr>}
                         {patterns.map((p) => (
                           <tr key={p.code}>
                             <td className="num">{p.code}</td>
@@ -229,7 +256,8 @@ export function Vvnd0310Page(): JSX.Element {
                             <td className="num">{pct(p.commission_pct)}</td>
                             <td className="num">{pct(p.invoice_pct)}</td>
                             <td className="num">{pct(p.payment_pct)}</td>
-                            <td><button className="erp-btn erp-btn-sm" onClick={() => setPattern({ ...p })} disabled={busy || !isAdmin}>Editar</button></td>
+                            <td><span className={`erp-badge ${p.is_active ? "ok" : "err"}`}>{p.is_active ? "Ativo" : "Inativo"}</span></td>
+                            <td><div style={{ display: "flex", gap: 6 }}><button className="erp-btn erp-btn-sm" onClick={() => setPattern({ ...p })} disabled={busy || !isAdmin}>Editar</button><button className="erp-btn erp-btn-sm" onClick={() => void alternarPadrao(p)} disabled={busy || !isAdmin}>{p.is_active ? "Desativar" : "Reativar"}</button></div></td>
                           </tr>
                         ))}
                       </tbody>
@@ -243,7 +271,7 @@ export function Vvnd0310Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">{reason.code ? `Motivo ${reason.code}` : "Novo motivo de cancelamento"}</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={reason.code || ""} disabled={!isAdmin} onChange={(e) => setR("code", Number(e.target.value))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" min={1} value={reason.code || ""} disabled={!isAdmin} onChange={(e) => setR("code", Math.max(0, Number(e.target.value)))} /></div>
                       <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={reason.description} disabled={!isAdmin} onChange={(e) => setR("description", e.target.value)} /></div>
                       <div className="erp-field erp-c2">
                         <label className="erp-label">Indicador D</label>
@@ -268,16 +296,17 @@ export function Vvnd0310Page(): JSX.Element {
                   </div>
                   <div className="erp-grid-wrap">
                     <table className="erp-grid">
-                      <thead><tr><th className="num">Código</th><th>Descrição</th><th>Descancelar (D)</th><th>Complemento (C)</th><th style={{ width: 90 }}></th></tr></thead>
+                      <thead><tr><th className="num">Código</th><th>Descrição</th><th>Descancelar (D)</th><th>Complemento (C)</th><th>Situação</th><th style={{ width: 190 }}>Ações</th></tr></thead>
                       <tbody>
-                        {reasons.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum motivo cadastrado — o cancelamento de orçamentos fica indisponível até cadastrar ao menos um.</td></tr>}
+                        {reasons.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum motivo cadastrado — o cancelamento de orçamentos fica indisponível até cadastrar ao menos um.</td></tr>}
                         {reasons.map((r) => (
                           <tr key={r.code}>
                             <td className="num">{r.code}</td>
                             <td>{r.description}</td>
                             <td>{r.allow_uncancel ? "Sim" : "Não"}</td>
                             <td>{r.require_complement ? "Sim" : "Não"}</td>
-                            <td><button className="erp-btn erp-btn-sm" onClick={() => setReason({ ...r })} disabled={busy || !isAdmin}>Editar</button></td>
+                            <td><span className={`erp-badge ${r.is_active ? "ok" : "err"}`}>{r.is_active ? "Ativo" : "Inativo"}</span></td>
+                            <td><div style={{ display: "flex", gap: 6 }}><button className="erp-btn erp-btn-sm" onClick={() => setReason({ ...r })} disabled={busy || !isAdmin}>Editar</button><button className="erp-btn erp-btn-sm" onClick={() => void alternarMotivo(r)} disabled={busy || !isAdmin}>{r.is_active ? "Desativar" : "Reativar"}</button></div></td>
                           </tr>
                         ))}
                       </tbody>

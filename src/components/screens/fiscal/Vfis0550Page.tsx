@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalAdvancedService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -91,7 +92,7 @@ export function Vfis0550Page(): JSX.Element {
               <input className="erp-input" value={form.period} placeholder="2024-01" onChange={(e) => setF("period", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo</label>
               <select className="erp-input" value={form.restitution_type} onChange={(e) => setF("restitution_type", e.target.value as RestituicaoTipo)}>
-                {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                {TIPOS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label erp-req">UF</label>
               <input className="erp-input" maxLength={2} value={form.uf} onChange={(e) => setF("uf", e.target.value.toUpperCase())} /></div>
             <div className="erp-field erp-c1"><label className="erp-label">Modelo</label>

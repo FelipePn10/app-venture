@@ -35,7 +35,7 @@ export async function createServicePrice(dto: ServicePrice): Promise<ServicePric
   const { data } = await httpClient.post(`${BASE}/prices`, {
     item_code: dto.item_code, mask: dto.mask ?? '', supplier_code: dto.supplier_code, operation_id: dto.operation_id,
     uom: dto.uom ?? '', reference_date: dto.reference_date ?? new Date().toISOString(), preferred: !!dto.preferred,
-    unit_price: String(dto.unit_price), freight_type: dto.freight_type ?? 'CIF',
+    unit_price: String(dto.unit_price), freight_type: dto.freight_type ?? 'FIXED',
   });
   return parsePrice(data);
 }

@@ -46,7 +46,7 @@ export function Vres0100Page(): JSX.Element {
           <button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button>
           <button className="erp-btn" onClick={novo} disabled={busy}>Novo</button></div>
         <div className="erp-tspacer" />
-        <div className="erp-tgroup"><ExportButton title="VRES0100 — Motivos de Restrição" filename="vres0100" /></div>
+        <div className="erp-tgroup"><ExportButton title="VRES0100 — Motivos de Restrição" filename="vres0100" build={() => ({ columns: ["Código", "Descrição", "Situação"], rows: list.map((r) => [String(r.code ?? ""), r.description, r.situation]), subtitle: "Motivos de restrição" })} /></div>
       </div>
 
       <div className="erp-content">

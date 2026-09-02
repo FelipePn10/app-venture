@@ -19,11 +19,10 @@ import { Vpre0102Page } from "./previsao/Vpre0102Page";
 import { Vpre0201Page } from "./previsao/Vpre0201Page";
 import { Vpre0251Page } from "./previsao/Vpre0251Page";
 import { Vpre0301Page } from "./previsao/Vpre0301Page";
-import { Vass0201Page } from "./assistencia/Vass0201Page";
-import { Vass0402Page } from "./assistencia/Vass0402Page";
 import { Vatc0280Page } from "./assistencia/Vatc0280Page";
 import { Vatc0480Page } from "./assistencia/Vatc0480Page";
 import { Vatc0380Page } from "./assistencia/Vatc0380Page";
+import { Vsac0200Page } from "./assistencia/Vsac0200Page";
 import { Vcli0500Page } from "./cliente/Vcli0500Page";
 import { Vcli0510Page } from "./cliente/Vcli0510Page";
 import { Vcli0520Page } from "./cliente/Vcli0520Page";
@@ -175,11 +174,10 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VPRE0251: <Vpre0251Page />,
   VPRE0301: <Vpre0301Page />,
   // Assistência Técnica
-  VASS0201: <Vass0201Page />,
-  VASS0402: <Vass0402Page />,
   VATC0280: <Vatc0280Page />,
   VATC0480: <Vatc0480Page />,
   VATC0380: <Vatc0380Page />,
+  VSAC0200: <Vsac0200Page />,
   // Cliente
   VCLI0500: <Vcli0500Page />,
   VCLI0510: <Vcli0510Page />,

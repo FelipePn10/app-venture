@@ -6,6 +6,7 @@ import {
 } from "@/services/preventiveMaintenanceService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -109,7 +110,7 @@ export function Vpro0500Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label">Centro (ID)</label><input className="erp-input num" type="number" value={form.work_center_id ?? ""} onChange={(e) => setF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
             <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description ?? ""} onChange={(e) => setF("description", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Frequência</label>
-              <select className="erp-input" value={form.frequency} onChange={(e) => setF("frequency", e.target.value as MaintFrequency)}>{FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
+              <select className="erp-input" value={form.frequency} onChange={(e) => setF("frequency", e.target.value as MaintFrequency)}>{FREQUENCIES.map((f) => <option key={f} value={f}>{enumLabel(f)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">Intervalo (dias)</label><input className="erp-input num" type="number" value={form.frequency_days ?? ""} onChange={(e) => setF("frequency_days", e.target.value ? Number(e.target.value) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Horas estimadas</label><input className="erp-input num" type="number" step="0.1" value={form.estimated_hours} onChange={(e) => setF("estimated_hours", Number(e.target.value))} /></div>
           
@@ -123,7 +124,7 @@ export function Vpro0500Page(): JSX.Element {
               {plans.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td><td style={{ fontWeight: 600 }}>{p.machine_id}</td><td>{p.work_center_id ?? "—"}</td>
-                  <td>{p.frequency}{p.frequency_days ? ` (${p.frequency_days}d)` : ""}</td><td>{p.estimated_hours}</td>
+                  <td>{enumLabel(p.frequency)}{p.frequency_days ? ` (${p.frequency_days}d)` : ""}</td><td>{p.estimated_hours}</td>
                   <td>{(p.next_scheduled_at ?? "").slice(0, 10) || "—"}</td>
                   <td>
                     <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void abrir(p)}>Ordens</button>

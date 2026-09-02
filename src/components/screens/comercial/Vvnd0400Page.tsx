@@ -17,7 +17,8 @@ import {
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCustomers } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
+import { loadCustomers, loadEstablishments, resetLookups } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "reps" | "types";
@@ -41,10 +42,13 @@ export function Vvnd0400Page(): JSX.Element {
   const [filterActive, setFilterActive] = useState<"ACTIVE" | "INACTIVE" | "ALL">("ALL");
   const [listSearch, setListSearch] = useState("");
   const [summary, setSummary] = useState<string | null>(null);
+  const [reportRows, setReportRows] = useState<Obj[] | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<DetailTab>("dados");
   const [creating, setCreating] = useState(true);
+  const [blockDialog, setBlockDialog] = useState(false);
+  const [blockReason, setBlockReason] = useState("");
 
   const setR = useCallback(<K extends keyof RepresentativeDTO>(k: K, v: RepresentativeDTO[K]) => setForm((p) => ({ ...p, [k]: v })), []);
   const setT = useCallback(<K extends keyof RepresentativeTypeDTO>(k: K, v: RepresentativeTypeDTO[K]) => setTypeForm((p) => ({ ...p, [k]: v })), []);
@@ -55,9 +59,17 @@ export function Vvnd0400Page(): JSX.Element {
   }, []);
 
   const carregarTipos = useCallback(() => run(async () => { setTypes(await listRepresentativeTypes()); }), [run]);
-  useEffect(() => { void carregarTipos(); }, [carregarTipos]);
+  useEffect(() => {
+    void carregarTipos();
+    void listRepresentatives({ state: filterState || undefined, active_status: filterActive }).then(setReps).catch(() => setReps([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carregarTipos]);
 
-  const refreshSelected = useCallback(async (code: number) => { setSelected(await getRepresentative(code)); }, []);
+  const refreshSelected = useCallback(async (code: number) => {
+    const detail = await getRepresentative(code);
+    setSelected(detail);
+    setReps((current) => current.map((representative) => representative.code === code ? { ...representative, ...detail } : representative));
+  }, []);
 
   const listar = () => run(async () => {
     setReps(await listRepresentatives({ state: filterState || undefined, active_status: filterActive }));
@@ -78,15 +90,29 @@ export function Vvnd0400Page(): JSX.Element {
     setFeedback({ type: "success", message: "Cadastro atualizado." });
   }); };
 
-  const bloquear = (code?: number) => { if (!code) return; const reason = window.prompt("Motivo do bloqueio:"); if (!reason) return;
-    void run(async () => { await blockRepresentative(code, reason); await refreshSelected(code); setFeedback({ type: "success", message: `Representante ${code} bloqueado.` }); });
+  const bloquear = (code?: number) => { if (!code) return;
+    void run(async () => {
+      if (!blockReason.trim()) { setFeedback({ type: "error", message: "Informe o motivo do bloqueio." }); return; }
+      await blockRepresentative(code, blockReason.trim()); resetLookups(); await refreshSelected(code);
+      setBlockDialog(false); setBlockReason("");
+      setFeedback({ type: "success", message: `Representante ${code} bloqueado e removido dos seletores de novas operações.` });
+    });
   };
-  const desbloquear = (code?: number) => { if (code) void run(async () => { await unblockRepresentative(code); await refreshSelected(code); setFeedback({ type: "success", message: `Representante ${code} desbloqueado.` }); }); };
+  const desbloquear = (code?: number) => { if (code) void run(async () => { await unblockRepresentative(code); resetLookups(); await refreshSelected(code); setFeedback({ type: "success", message: `Representante ${code} desbloqueado e novamente disponível para novas operações.` }); }); };
 
   const relatorio = () => run(async () => {
     const rows = await getRepresentativeReport({ state: filterState || undefined, active_status: filterActive, sort_by: "NAME", with_accounts: true });
+    setReportRows(rows);
     setSummary(`Relatório cadastral: ${rows.length} representante(s) na abrangência filtrada.`);
-    setFeedback({ type: "info", message: "Relatório cadastral gerado (veja a barra de status)." });
+    setFeedback({ type: "info", message: "Relatório cadastral gerado — use Exportar relatório para baixar." });
+  });
+  const relatorioIndividual = () => run(async () => {
+    const code = selected?.code;
+    if (!code) { setFeedback({ type: "error", message: "Selecione um representante para o relatório individual." }); return; }
+    const rows = await getRepresentativeReport({ codes: String(code), with_accounts: true });
+    setReportRows(rows);
+    setSummary(`Relatório individual: ${rows.length} linha(s) do representante #${code}.`);
+    setFeedback({ type: "info", message: "Relatório individual gerado — use Exportar relatório para baixar." });
   });
   const followUp = () => run(async () => {
     const code = selected?.code;
@@ -159,7 +185,7 @@ export function Vvnd0400Page(): JSX.Element {
             <span className="erp-tgroup-label">Cadastro</span>
             {selected?.is_blocked
               ? <button className="erp-btn" onClick={() => desbloquear(selected?.code)} disabled={busy}>Desbloquear</button>
-              : <button className="erp-btn erp-btn-danger" onClick={() => bloquear(selected?.code)} disabled={busy || !selected}>Bloquear</button>}
+              : <button className="erp-btn erp-btn-danger" onClick={() => { setBlockReason(""); setBlockDialog(true); }} disabled={busy || !selected}>Bloquear</button>}
           </div>
           <div className="erp-tspacer" />
           <div className="erp-tgroup">
@@ -170,10 +196,25 @@ export function Vvnd0400Page(): JSX.Element {
             </select>
             <button className="erp-btn" onClick={listar} disabled={busy}>Listar</button>
             <button className="erp-btn" onClick={relatorio} disabled={busy}>Relatório</button>
+            <button className="erp-btn" onClick={relatorioIndividual} disabled={busy || !selected}>Relatório individual</button>
             <button className="erp-btn" onClick={followUp} disabled={busy}>Follow-up</button>
           </div>
         </>}
-        <div className="erp-tgroup"><ExportButton title="VVND0400 — Representantes" filename="vvnd0400" /></div>
+        <div className="erp-tgroup"><ExportButton title="VVND0400 — Representantes" filename="vvnd0400" build={() => {
+          if (reportRows && reportRows.length) {
+            const keys = Object.keys(reportRows[0]);
+            return {
+              columns: keys.map((key) => key),
+              rows: reportRows.map((row) => keys.map((key) => { const value = row[key]; return typeof value === "object" ? JSON.stringify(value) : String(value ?? ""); })),
+              subtitle: selected ? `Representante ${selected.code}` : "Relatório geral",
+            };
+          }
+          return {
+            columns: ["Código", "Nome", "Documento", "Tipo", "UF", "Situação"],
+            rows: visible.map((r) => [String(r.code ?? ""), r.name, r.document_number, typeLabel(r.type_code), r.state ?? "—", r.is_blocked ? "Bloqueado" : r.is_active === false ? "Inativo" : "Ativo"]),
+            subtitle: "Lista de representantes",
+          };
+        }} /></div>
       </div>
 
       <div className="erp-content">
@@ -231,7 +272,7 @@ export function Vvnd0400Page(): JSX.Element {
                     <span className="erp-badge info">{typeLabel(r.type_code)}</span>
                     {r.state && <span className="erp-badge">{r.state}</span>}
                     {r.is_blocked && <span className="erp-badge err">Bloqueado</span>}
-                    {r.is_active === false && <span className="erp-badge warn">Inativo</span>}
+                    {!r.is_blocked && <span className={`erp-badge ${r.is_active === false ? "warn" : "ok"}`}>{r.is_active === false ? "Inativo" : "Ativo"}</span>}
                   </div>
                 </div>
               ))}
@@ -301,14 +342,20 @@ export function Vvnd0400Page(): JSX.Element {
                       </div>
                     </div>
                   ) : tab === "empresas" ? (
-                    <div className="erp-fieldset">
-                      <div className="erp-fieldset-head">Empresa de atuação</div>
-                      <div className="erp-fieldset-body">
-                        <div className="erp-field erp-c4"><label className="erp-label erp-req">Estabelecimento</label><input className="erp-input num" type="number" value={enterprise.enterprise_code} onChange={(e) => setEnterprise((p) => ({ ...p, enterprise_code: e.target.value }))} /></div>
-                        <div className="erp-field erp-c4"><label className="erp-label">Comissão padrão %</label><input className="erp-input num" type="number" value={enterprise.commission_pct} onChange={(e) => setEnterprise((p) => ({ ...p, commission_pct: e.target.value }))} /></div>
-                        <div className="erp-field erp-c4" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={addEmpresa} disabled={busy}>Vincular empresa</button></div>
+                    <>
+                      <div className="erp-fieldset">
+                        <div className="erp-fieldset-head">Empresa de atuação</div>
+                        <div className="erp-fieldset-body">
+                          <div className="erp-field erp-c4"><label className="erp-label erp-req">Estabelecimento</label><LookupField value={Number(enterprise.enterprise_code) || undefined} loader={loadEstablishments} entityLabel="estabelecimento" onChange={(code) => setEnterprise((p) => ({ ...p, enterprise_code: code ? String(code) : "" }))} /></div>
+                          <div className="erp-field erp-c4"><label className="erp-label">Comissão padrão %</label><input className="erp-input num" type="number" value={enterprise.commission_pct} onChange={(e) => setEnterprise((p) => ({ ...p, commission_pct: e.target.value }))} /></div>
+                          <div className="erp-field erp-c4" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={addEmpresa} disabled={busy}>Vincular empresa</button></div>
+                        </div>
                       </div>
-                    </div>
+                      <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Estabelecimento</th><th className="num">Comissão</th><th>Padrão</th><th>Situação</th></tr></thead><tbody>
+                        {!selected.enterprises?.length && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma empresa vinculada.</td></tr>}
+                        {selected.enterprises?.map((item) => <tr key={item.id ?? item.enterprise_code}><td>{item.enterprise_name ? `${item.enterprise_name} (${item.enterprise_code})` : <EntityName code={item.enterprise_code} loader={loadEstablishments} prefix="Estabelecimento" />}</td><td className="num">{item.commission_pct ?? 0}%</td><td>{item.is_default ? "Sim" : "Não"}</td><td>{item.is_active ? "Ativo" : "Inativo"}</td></tr>)}
+                      </tbody></table></div>
+                    </>
                   ) : (
                     <>
                       <div className="erp-fieldset">
@@ -327,7 +374,12 @@ export function Vvnd0400Page(): JSX.Element {
                           <div className="erp-field erp-c4" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={addEmail} disabled={busy}>Adicionar</button></div>
                         </div>
                       </div>
-                      <p style={{ fontSize: 12, color: "var(--v-text-3)" }}>Ao adicionar, o sistema atualiza automaticamente o contato principal pelo menor ranking.</p>
+                      <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Tipo</th><th>Contato</th><th className="num">Prioridade</th></tr></thead><tbody>
+                        {!selected.phones?.length && !selected.emails?.length && <tr><td colSpan={3} className="erp-grid-empty">Nenhum telefone ou e-mail vinculado.</td></tr>}
+                        {selected.phones?.map((item) => <tr key={`p-${item.id ?? item.phone}`}><td>{item.phone_type || "Telefone"}</td><td>{[item.ddi, item.ddd, item.phone].filter(Boolean).join(" ")}</td><td className="num">{item.ranking ?? "—"}</td></tr>)}
+                        {selected.emails?.map((item) => <tr key={`e-${item.id ?? item.email}`}><td>E-mail</td><td>{item.email}</td><td className="num">{item.ranking ?? "—"}</td></tr>)}
+                      </tbody></table></div>
+                      <p style={{ fontSize: 12, color: "var(--v-text-3)" }}>Contato principal atual: {selected.main_phone || selected.main_email || "não definido"}. O menor número de prioridade define o principal.</p>
                     </>
                   )}
                 </div>
@@ -352,6 +404,16 @@ export function Vvnd0400Page(): JSX.Element {
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
+      {blockDialog && selected && <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="block-representative-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setBlockDialog(false); }}>
+        <div className="erp-modal" style={{ width: "min(540px, 94vw)" }}>
+          <div className="erp-modal-head"><div><strong id="block-representative-title">Bloquear representante</strong><div className="erp-field-hint">{selected.code} · {selected.name}</div></div><button className="erp-btn erp-btn-sm" onClick={() => setBlockDialog(false)} disabled={busy}>Fechar</button></div>
+          <div className="erp-modal-body">
+            <div className="erp-note">O representante deixará de aparecer em seletores de novos pedidos, orçamentos, recorrências e metas. Os registros históricos serão preservados.</div>
+            <div className="erp-field" style={{ marginTop: 14 }}><label className="erp-label erp-req">Motivo do bloqueio</label><textarea className="erp-input" rows={4} autoFocus value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Explique por que o representante não poderá ser utilizado" /></div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}><button className="erp-btn" onClick={() => setBlockDialog(false)} disabled={busy}>Cancelar</button><button className="erp-btn erp-btn-danger" onClick={() => bloquear(selected.code)} disabled={busy || !blockReason.trim()}>{busy && <span className="erp-spin" />}Confirmar bloqueio</button></div>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }

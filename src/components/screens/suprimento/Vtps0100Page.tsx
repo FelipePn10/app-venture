@@ -2,10 +2,13 @@ import { useState, useCallback } from "react";
 import { type ServicePrice, listServicePrices, createServicePrice, deleteServicePrice, listServiceOrders, updateServiceOrderStatus } from "@/services/thirdPartyServicesService";
 import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadSuppliers, loadOperations } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "precos" | "ordens";
-const PRICE: ServicePrice = { item_code: "", mask: "", supplier_code: 0, operation_id: 0, uom: "UN", unit_price: "0", preferred: true, freight_type: "CIF" };
+const PRICE: ServicePrice = { item_code: "", mask: "", supplier_code: 0, operation_id: 0, uom: "UN", unit_price: "0", preferred: true, freight_type: "FIXED" };
 
 export function Vtps0100Page(): JSX.Element {
   const [tab, setTab] = useState<Tab>("precos");
@@ -22,7 +25,7 @@ export function Vtps0100Page(): JSX.Element {
   const crPreco = () => run(async () => { if (!form.item_code || !form.supplier_code || !form.operation_id) { setFeedback({ type: "error", message: "Item, fornecedor e operação obrigatórios." }); return; } await createServicePrice(form); setForm({ ...PRICE }); setPrices(await listServicePrices()); setFeedback({ type: "success", message: "Preço de serviço criado." }); });
   const rmPreco = (id?: number) => { if (!id) return; void run(async () => { await deleteServicePrice(id); setPrices(await listServicePrices()); }); };
   const carOrdens = () => run(async () => { setOrders(await listServiceOrders()); });
-  const mudarStatus = (id: number, status: string) => run(async () => { await updateServiceOrderStatus(id, status); setOrders(await listServiceOrders()); setFeedback({ type: "success", message: `OS ${id} → ${status}.` }); });
+  const mudarStatus = (id: number, status: string) => run(async () => { await updateServiceOrderStatus(id, status); setOrders(await listServiceOrders()); setFeedback({ type: "success", message: `OS ${id} → ${enumLabel(status)}.` }); });
 
   return (
     <div className="erp-screen">
@@ -48,9 +51,9 @@ export function Vtps0100Page(): JSX.Element {
             <div className="erp-tabs"><button className="erp-tab active">Preços de serviço</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset"><div className="erp-fieldset-head">Novo preço</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={form.item_code || ""} onChange={(e) => setF("item_code", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Fornecedor</label><input className="erp-input num" type="number" value={form.supplier_code || ""} onChange={(e) => setF("supplier_code", Number(e.target.value))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Operação</label><input className="erp-input num" type="number" value={form.operation_id || ""} onChange={(e) => setF("operation_id", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={form.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setF("item_code", String(code ?? ""))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Fornecedor</label><LookupField value={form.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor" onChange={(code) => setF("supplier_code", code ?? 0)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Operação</label><LookupField value={form.operation_id || undefined} loader={loadOperations} entityLabel="operação" onChange={(code) => setF("operation_id", code ?? 0)} /></div>
                 <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={form.uom} onChange={(e) => setF("uom", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Preço unit.</label><input className="erp-input num" type="number" value={String(form.unit_price)} onChange={(e) => setF("unit_price", e.target.value)} /></div>
                 <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={crPreco} disabled={busy}>Criar preço</button></div>
@@ -67,8 +70,8 @@ export function Vtps0100Page(): JSX.Element {
               <table className="erp-grid"><thead><tr><th>#</th><th>Fornecedor</th><th>Item</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>{orders.length === 0 ? <tr><td colSpan={5} className="erp-grid-empty">clique em Carregar</td></tr> : orders.map((o, i) => { const id = parseNum(o, "id", "ID"); return (
                   <tr key={i}><td><strong>#{id}</strong></td><td>{parseStr(o, "supplier_code", "SupplierCode") || "—"}</td><td>{parseStr(o, "item_code", "ItemCode") || "—"}</td>
-                    <td><span className="erp-badge info">{parseStr(o, "status", "Status")}</span></td>
-                    <td style={{ display: "flex", gap: 4 }}>{["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"].map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(id, s)} disabled={busy}>{s}</button>)}</td></tr>
+                    <td><span className="erp-badge info">{enumLabel(parseStr(o, "status", "Status"))}</span></td>
+                    <td style={{ display: "flex", gap: 4 }}>{["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"].map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(id, s)} disabled={busy}>{enumLabel(s)}</button>)}</td></tr>
                 ); })}</tbody>
               </table>
             </div>

@@ -9,10 +9,15 @@ import {
 } from "@/services/shipmentsService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { EntityName } from "@/components/ui/EntityName";
+import { loadCarriers, loadItems, loadWarehouses } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const STATUS_LABEL: Record<string, string> = { OPEN: "Aberto", SEPARATED: "Separado", CONFERRED: "Conferido", SHIPPED: "Despachado", CANCELLED: "Cancelado" };
 const statusLabel = (s?: string) => (s ? STATUS_LABEL[s] ?? s : "—");
+const REFERENCE_LABEL: Record<string, string> = { SALES_ORDER: "Pedido de venda", PURCHASE_ORDER: "Pedido de compra", PRODUCTION_ORDER: "Ordem de produção" };
 
 const EMPTY_ITEM: ShipmentItemDTO = { item_code: "", quantity: 1, warehouse_id: 0, unit_net_weight: 0, unit_gross_weight: 0 };
 const EMPTY_VOL: ShipmentVolumeDTO = { volume_number: 1, package_type: "CAIXA", net_weight: 0, gross_weight: 0, length_cm: 0, width_cm: 0, height_cm: 0, marking: "" };
@@ -52,7 +57,7 @@ export function Vexp0100Page(): JSX.Element {
 
   const criar = () => run(async () => {
     const created = await createShipment(newForm);
-    setFeedback({ type: "success", message: `Romaneio ${created.code} criado (OPEN).` });
+    setFeedback({ type: "success", message: `Romaneio ${created.code} criado (Aberto).` });
     setList(await listShipments());
     if (created.code) await reload(created.code);
   });
@@ -126,7 +131,7 @@ export function Vexp0100Page(): JSX.Element {
               <option value="SALES_ORDER">Pedido de Venda</option><option value="PURCHASE_ORDER">Pedido de Compra</option><option value="PRODUCTION_ORDER">Ordem de Produção</option>
             </select></div>
           <div className="erp-field erp-c3"><label className="erp-label erp-req">Código do pedido</label><input className="erp-input num" type="number" value={newForm.sales_order_code || ""} onChange={(e) => setNewForm((p) => ({ ...p, sales_order_code: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><input className="erp-input num" type="number" value={newForm.carrier_code || ""} onChange={(e) => setNewForm((p) => ({ ...p, carrier_code: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><LookupField value={newForm.carrier_code || undefined} loader={loadCarriers} entityLabel="transportadora" onChange={(code) => setNewForm((p) => ({ ...p, carrier_code: code ? Number(code) : undefined }))} /></div>
           <div className="erp-field erp-c4" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar romaneio</button></div>
         </div></div>
 
@@ -137,7 +142,7 @@ export function Vexp0100Page(): JSX.Element {
               {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum romaneio. Use Listar ou Auto-fill.</td></tr>}
               {list.map((s) => (
                 <tr key={s.code} className={selected?.code === s.code ? "erp-row-sel" : ""}>
-                  <td>{s.code}</td><td>{s.reference_type ?? "—"}</td>
+                  <td>{s.code}</td><td>{REFERENCE_LABEL[s.reference_type ?? ""] ?? s.reference_type ?? "—"}</td>
                   <td>{s.sales_order_code ?? s.purchase_order_code ?? s.production_order_code ?? "—"}</td>
                   <td>{statusLabel(s.status)}</td><td>{s.total_volumes ?? 0}</td>
                   <td><button className="erp-btn" onClick={() => abrir(s.code)} disabled={busy}>Abrir</button></td>
@@ -163,9 +168,9 @@ export function Vexp0100Page(): JSX.Element {
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Itens ({items.length})</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code || ""} onChange={(e) => setItemForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setItemForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={itemForm.quantity || ""} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Depósito</label><input className="erp-input num" type="number" value={itemForm.warehouse_id || ""} onChange={(e) => setItemForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Depósito</label><LookupField value={itemForm.warehouse_id || undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setItemForm((p) => ({ ...p, warehouse_id: code ? Number(code) : 0 }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Peso líq. unit.</label><input className="erp-input num" type="number" step="0.01" value={itemForm.unit_net_weight || ""} onChange={(e) => setItemForm((p) => ({ ...p, unit_net_weight: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Peso bruto unit.</label><input className="erp-input num" type="number" step="0.01" value={itemForm.unit_gross_weight || ""} onChange={(e) => setItemForm((p) => ({ ...p, unit_gross_weight: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={adicionarItem} disabled={busy || (st !== "OPEN" && st !== "SEPARATED")}>Adicionar</button></div>
@@ -177,10 +182,10 @@ export function Vexp0100Page(): JSX.Element {
                   {items.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem itens.</td></tr>}
                   {items.map((it) => (
                     <tr key={it.id ?? it.item_code}>
-                      <td>{it.item_code}</td><td>{it.quantity}</td>
+                      <td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td><td>{it.quantity}</td>
                       <td>{it.is_conferred ? it.conferred_qty : "—"}</td>
                       <td>{it.has_divergence ? "⚠️ Sim" : it.is_conferred ? "Não" : "—"}</td>
-                      <td>{it.warehouse_id ?? "—"}</td>
+                      <td><EntityName code={it.warehouse_id} loader={loadWarehouses} prefix="Depósito" /></td>
                       <td><button className="erp-btn" onClick={() => conferirItem(it)} disabled={busy || st === "SHIPPED" || st === "CANCELLED"}>Conferir</button></td>
                     </tr>
                   ))}
@@ -192,7 +197,7 @@ export function Vexp0100Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">Volumes / packing ({volumes.length})</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c1"><label className="erp-label">Nº</label><input className="erp-input num" type="number" value={volForm.volume_number || ""} onChange={(e) => setVolForm((p) => ({ ...p, volume_number: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Espécie</label>
-                <select className="erp-input" value={volForm.package_type} onChange={(e) => setVolForm((p) => ({ ...p, package_type: e.target.value as never }))}>{PACKAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                <select className="erp-input" value={volForm.package_type} onChange={(e) => setVolForm((p) => ({ ...p, package_type: e.target.value as never }))}>{PACKAGE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
               <div className="erp-field erp-c2"><label className="erp-label">Peso bruto</label><input className="erp-input num" type="number" step="0.01" value={volForm.gross_weight || ""} onChange={(e) => setVolForm((p) => ({ ...p, gross_weight: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Compr.</label><input className="erp-input num" type="number" value={volForm.length_cm || ""} onChange={(e) => setVolForm((p) => ({ ...p, length_cm: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Larg.</label><input className="erp-input num" type="number" value={volForm.width_cm || ""} onChange={(e) => setVolForm((p) => ({ ...p, width_cm: Number(e.target.value) }))} /></div>
@@ -213,7 +218,7 @@ export function Vexp0100Page(): JSX.Element {
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Transporte &amp; NF-e</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label">Modalidade frete</label>
-                <select className="erp-input" value={transport.freight_modality} onChange={(e) => setTransport((p) => ({ ...p, freight_modality: e.target.value }))}>{FREIGHT_MODALITIES.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+                <select className="erp-input" value={transport.freight_modality} onChange={(e) => setTransport((p) => ({ ...p, freight_modality: e.target.value }))}>{FREIGHT_MODALITIES.map((m) => <option key={m} value={m}>{enumLabel(m)}</option>)}</select></div>
               <div className="erp-field erp-c2"><label className="erp-label">Valor frete</label><input className="erp-input num" type="number" step="0.01" value={transport.freight_value || ""} onChange={(e) => setTransport((p) => ({ ...p, freight_value: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Placa</label><input className="erp-input" value={transport.vehicle_plate} onChange={(e) => setTransport((p) => ({ ...p, vehicle_plate: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Motorista</label><input className="erp-input" value={transport.driver_name} onChange={(e) => setTransport((p) => ({ ...p, driver_name: e.target.value }))} /></div>

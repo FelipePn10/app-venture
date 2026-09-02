@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalAdvancedService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -125,7 +126,7 @@ export function Vfis0560Page(): JSX.Element {
               <input className="erp-input num" type="number" value={form.empresa_id || ""} onChange={(e) => setF("empresa_id", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Finalidade</label>
               <select className="erp-input" value={form.purpose} onChange={(e) => setF("purpose", e.target.value as NotaEspecialPurpose)}>
-                {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}</select></div>
+                {PURPOSES.map((p) => <option key={p} value={p}>{enumLabel(p)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label erp-req">Período</label>
               <input className="erp-input" value={form.period} placeholder="2024-01" onChange={(e) => setF("period", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>

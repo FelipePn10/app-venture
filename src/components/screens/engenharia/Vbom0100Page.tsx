@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { type BomHeader, listBomHeaders, createBomHeader, updateBomHeaderStatus } from "@/services/bomHeaderService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
 import { listItemMasks } from "@/services/itemService";
@@ -61,7 +62,7 @@ export function Vbom0100Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">Cabeçalhos do item</button></div>
           <div className="erp-detail-body">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Novo cabeçalho (versão auto-incrementada)</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label">Máscara cadastrada</label><select className="erp-input" value={form.mask} onChange={(e) => setForm((f) => ({ ...f, mask: e.target.value }))} disabled={!item}><option value="">Item sem máscara</option>{masks.map((mask) => <option key={mask} value={mask}>{mask}</option>)}</select><span className="erp-field-hint">As opções são carregadas do item selecionado; não é necessário digitar.</span></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Máscara cadastrada</label><select className="erp-input" value={form.mask} onChange={(e) => setForm((f) => ({ ...f, mask: e.target.value }))} disabled={!item}><option value="">Item sem máscara</option>{masks.map((mask) => <option key={mask} value={mask}>{enumLabel(mask)}</option>)}</select><span className="erp-field-hint">As opções são carregadas do item selecionado; não é necessário digitar.</span></div>
               <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={form.bom_type} onChange={(e) => setForm((f) => ({ ...f, bom_type: e.target.value }))}><option value="MBOM">Estrutura de fabricação (MBOM)</option><option value="EBOM">Estrutura de engenharia (EBOM)</option></select></div>
               <div className="erp-field erp-c3"><label className="erp-label">Vigência de</label><input className="erp-input" type="date" value={form.valid_from} onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar cabeçalho</button></div>

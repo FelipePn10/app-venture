@@ -2,6 +2,9 @@ import { useState, useCallback } from "react";
 import { type ItemRule, type ItemRuleCondition, listItemRules, createItemRule, updateItemRule, deleteItemRule } from "@/services/itensConfigService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCharacteristics } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const OPERATORS = ["EQUAL", "DIFFERENT", "GREATER", "LESS", "IN", "NOT_IN"];
@@ -86,7 +89,7 @@ export function Vite0118Page(): JSX.Element {
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela destino</label><input className="erp-input" value={form.target_table} onChange={(e) => setF("target_table", e.target.value)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Campo destino</label><input className="erp-input" value={form.target_field} onChange={(e) => setF("target_field", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Situação</label><select className="erp-input" value={form.situation} onChange={(e) => setF("situation", e.target.value)}>{SITUATIONS.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Situação</label><select className="erp-input" value={form.situation} onChange={(e) => setF("situation", e.target.value)}>{SITUATIONS.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Conteúdo</label><input className="erp-input" value={form.content} onChange={(e) => setF("content", e.target.value)} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Fórmula</label><input className="erp-input" value={form.formula} onChange={(e) => setF("formula", e.target.value)} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
@@ -96,8 +99,8 @@ export function Vite0118Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Condições ({form.conditions.length}) — característica ∘ operador ∘ variável</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c3"><label className="erp-label">Característica (id)</label><input className="erp-input num" type="number" value={cond.characteristic_id || ""} onChange={(e) => setCond((c) => ({ ...c, characteristic_id: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Operador</label><select className="erp-input" value={cond.operator} onChange={(e) => setCond((c) => ({ ...c, operator: e.target.value }))}>{OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Característica</label><LookupField value={cond.characteristic_id || undefined} loader={loadCharacteristics} entityLabel="característica" onChange={(code) => setCond((c) => ({ ...c, characteristic_id: code ?? 0 }))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Operador</label><select className="erp-input" value={cond.operator} onChange={(e) => setCond((c) => ({ ...c, operator: e.target.value }))}>{OPERATORS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Variável (id)</label><input className="erp-input num" type="number" value={cond.variable_id || ""} onChange={(e) => setCond((c) => ({ ...c, variable_id: Number(e.target.value) || undefined }))} /></div>
                   <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addCond}>+ condição</button></div>
                   {form.conditions.length > 0 && (

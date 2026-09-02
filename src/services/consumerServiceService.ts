@@ -37,6 +37,8 @@ export interface ConsumerDTO {
   knowledge_code?: number;
   notes?: string;
   is_active?: boolean;
+  phones?: Array<{ code?: number; phone_type?: string; number: string; is_primary?: boolean }>;
+  emails?: Array<{ code?: number; email: string; is_primary?: boolean }>;
 }
 
 // ─── Chamado ──────────────────────────────────────────────────────────────────
@@ -57,10 +59,42 @@ export interface ConsumerCallDTO {
   return_date?: string;
   visit_requested_date?: string;
   visit_returned_date?: string;
+  sale_store_code?: number;
+  establishment_code?: number;
+  technician_description?: string;
+  forwarded_store_code?: number;
+  checklist_code?: number;
   symptoms?: string;
   subject: string;
   description?: string;
   solution?: string;
+  attachments?: ConsumerCallAttachmentDTO[];
+  returns?: ConsumerCallReturnDTO[];
+}
+
+export interface ConsumerCallReturnDTO {
+  code?: number;
+  call_code?: number;
+  contacted_at?: string;
+  contact_type?: string;
+  description?: string;
+  next_return_at?: string;
+  user_code?: number;
+}
+
+export interface ConsumerCallAttachmentDTO {
+  id: number;
+  call_code: number;
+  file_name: string;
+  content_type?: string;
+  file_size: number;
+  download_url?: string;
+  notes?: string;
+}
+
+function parseAttachment(raw: unknown): ConsumerCallAttachmentDTO {
+  const o = unwrapObject(raw);
+  return { id: parseNum(o, 'id', 'code', 'ID', 'Code'), call_code: parseNum(o, 'call_code', 'CallCode'), file_name: parseStr(o, 'file_name', 'FileName'), content_type: parseStr(o, 'content_type', 'ContentType') || undefined, file_size: parseNum(o, 'file_size', 'FileSize'), download_url: parseStr(o, 'download_url', 'DownloadURL') || undefined, notes: parseStr(o, 'notes', 'Notes') || undefined };
 }
 
 function parseCallType(raw: unknown): CallTypeDTO {
@@ -73,6 +107,8 @@ function parseKnowledge(raw: unknown): KnowledgeSourceDTO {
 }
 function parseConsumer(raw: unknown): ConsumerDTO {
   const o = unwrapObject(raw);
+  const phones = unwrapArray(o.phones ?? o.Phones).map((rawPhone) => { const phone = unwrapObject(rawPhone); return { code: parseNum(phone, 'code', 'Code'), phone_type: parseStr(phone, 'phone_type', 'PhoneType'), number: parseStr(phone, 'number', 'Number'), is_primary: parseBool(phone, 'is_primary', 'IsPrimary') }; });
+  const emails = unwrapArray(o.emails ?? o.Emails).map((rawEmail) => { const email = unwrapObject(rawEmail); return { code: parseNum(email, 'code', 'Code'), email: parseStr(email, 'email', 'Email'), is_primary: parseBool(email, 'is_primary', 'IsPrimary') }; });
   return {
     code: parseNum(o, 'code', 'Code'),
     name: parseStr(o, 'name', 'Name'),
@@ -92,6 +128,8 @@ function parseConsumer(raw: unknown): ConsumerDTO {
     knowledge_code: parseNum(o, 'knowledge_code', 'KnowledgeCode'),
     notes: parseStr(o, 'notes', 'Notes'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
+    phones,
+    emails,
   };
 }
 function parseCall(raw: unknown): ConsumerCallDTO {
@@ -104,15 +142,26 @@ function parseCall(raw: unknown): ConsumerCallDTO {
     call_type_code: parseNum(o, 'call_type_code', 'CallTypeCode'),
     direction: (parseStr(o, 'direction', 'Direction') || 'RECEIVED') as ConsumerCallDTO['direction'],
     in_warranty: parseBool(o, 'in_warranty', 'InWarranty'),
+    defect_group_code: parseNum(o, 'defect_group_code', 'DefectGroupCode') || undefined,
+    defect_reason_code: parseNum(o, 'defect_reason_code', 'DefectReasonCode') || undefined,
+    responsible_user_code: parseNum(o, 'responsible_user_code', 'ResponsibleUserCode') || undefined,
     position: (parseStr(o, 'position', 'Position') || 'PENDING') as ConsumerCallDTO['position'],
     situation: (parseStr(o, 'situation', 'Situation') || 'OTHER') as ConsumerCallDTO['situation'],
     opened_at: parseStr(o, 'opened_at', 'OpenedAt') || undefined,
     return_date: parseStr(o, 'return_date', 'ReturnDate') || undefined,
     visit_requested_date: parseStr(o, 'visit_requested_date', 'VisitRequestedDate') || undefined,
+    visit_returned_date: parseStr(o, 'visit_returned_date', 'VisitReturnedDate') || undefined,
+    sale_store_code: parseNum(o, 'sale_store_code', 'SaleStoreCode') || undefined,
+    establishment_code: parseNum(o, 'establishment_code', 'EstablishmentCode') || undefined,
+    technician_description: parseStr(o, 'technician_description', 'TechnicianDescription') || undefined,
+    forwarded_store_code: parseNum(o, 'forwarded_store_code', 'ForwardedStoreCode') || undefined,
     symptoms: parseStr(o, 'symptoms', 'Symptoms'),
     subject: parseStr(o, 'subject', 'Subject'),
     description: parseStr(o, 'description', 'Description'),
     solution: parseStr(o, 'solution', 'Solution'),
+    checklist_code: parseNum(o, 'checklist_code', 'ChecklistCode') || undefined,
+    returns: unwrapArray(o.returns ?? o.Returns).map((rawReturn) => { const item = unwrapObject(rawReturn); return { code: parseNum(item, 'code', 'Code'), call_code: parseNum(item, 'call_code', 'CallCode'), contacted_at: parseStr(item, 'contacted_at', 'ContactedAt') || undefined, contact_type: parseStr(item, 'contact_type', 'ContactType') || undefined, description: parseStr(item, 'description', 'Description') || undefined, next_return_at: parseStr(item, 'next_return_at', 'NextReturnAt') || undefined, user_code: parseNum(item, 'user_code', 'UserCode') || undefined }; }),
+    attachments: unwrapArray(o.attachments ?? o.Attachments).map(parseAttachment),
   };
 }
 
@@ -210,6 +259,20 @@ export async function addCallReturn(code: number, payload: Obj): Promise<Obj> {
 export async function addCallChecklistItem(code: number, payload: Obj): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/calls/${code}/checklist`, { call_code: code, ...payload });
   return unwrapObject(data);
+}
+export async function uploadCallAttachment(callCode: number, file: File, notes?: string): Promise<ConsumerCallAttachmentDTO> {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  if (notes?.trim()) form.append('notes', notes.trim());
+  const { data } = await httpClient.post(`${BASE}/calls/${callCode}/attachments`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return parseAttachment(data);
+}
+export async function downloadCallAttachment(callCode: number, attachmentCode: number): Promise<Blob> {
+  const { data } = await httpClient.get(`${BASE}/calls/${callCode}/attachments/${attachmentCode}/download`, { responseType: 'blob' });
+  return data as Blob;
+}
+export async function deleteCallAttachment(callCode: number, attachmentCode: number): Promise<void> {
+  await httpClient.delete(`${BASE}/calls/${callCode}/attachments/${attachmentCode}`);
 }
 export async function setChecklistItemDone(itemCode: string, done: boolean, notes?: string): Promise<Obj> {
   const { data } = await httpClient.patch(`${BASE}/calls/checklist/${itemCode}`, { done, notes: notes ?? null });

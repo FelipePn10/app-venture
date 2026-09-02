@@ -19,7 +19,7 @@ export interface SalesTableDTO {
   validity_end?: string;
   tolerance_min_pct?: number;
   tolerance_max_pct?: number;
-  price_formation?: string;   // INFORMADO | FORMADO ...
+  price_formation?: string;
   decimal_places?: number;
   composition?: string;       // FOB | CIF ...
   table_type?: string;        // NORMAL ...
@@ -171,7 +171,19 @@ export async function listSalesTablePrices(tableCode: number): Promise<SalesTabl
   return unwrapArray(data).map(parsePrice);
 }
 export async function createSalesTablePrice(tableCode: number, dto: SalesTablePriceDTO): Promise<SalesTablePriceDTO> {
-  const { data } = await httpClient.post(`${BASE}/${tableCode}/prices`, dto);
+  const payload = {
+    sales_table_code: tableCode,
+    item_code: String(dto.item_code),
+    price: Number(dto.price),
+    ume: dto.ume || undefined,
+    umc: dto.umc || dto.ume || undefined,
+    price_conv: dto.price_conv ?? Number(dto.price),
+    formula: dto.formula || undefined,
+    situation: dto.situation || 'ATIVO',
+    blocked: Boolean(dto.blocked),
+    observation: dto.observation || undefined,
+  };
+  const { data } = await httpClient.post(`${BASE}/${tableCode}/prices`, payload);
   return parsePrice(data);
 }
 export async function updateSalesTablePrice(dto: SalesTablePriceDTO & { id: number }): Promise<SalesTablePriceDTO> {
@@ -185,22 +197,84 @@ export async function listPriceHistory(tableCode: number, itemCode?: string): Pr
   const { data } = await httpClient.get(`${BASE}/${tableCode}/price-history`, { params: itemCode ? { item_code: itemCode } : undefined });
   return unwrapArray(data).map(unwrapObject);
 }
+export async function getSalesTableItemPrice(tableCode: number, itemCode: string): Promise<SalesTablePriceDTO> {
+  const { data } = await httpClient.get(`${BASE}/${tableCode}/prices/${encodeURIComponent(String(itemCode))}`);
+  return parsePrice(data);
+}
+export interface ItemSalesTableOption {
+  table: SalesTableDTO;
+  price: SalesTablePriceDTO;
+  source?: string;
+  priority?: number;
+  autoSelected?: boolean;
+}
+export interface ItemSalesTableResolutionParams {
+  customerCode?: number;
+  quantity?: number;
+  unit?: string;
+  currency?: string;
+  referenceDate?: string;
+}
+/** Resolve no backend as tabelas vigentes e o preço aplicável à linha. */
+export async function findSalesTablesForItem(itemCode: string, context: ItemSalesTableResolutionParams = {}): Promise<ItemSalesTableOption[]> {
+  // O backend exige `reference_date` no formato "AAAA-MM-DD". As capas podem
+  // carregar `emission_date` como RFC3339 ("2026-08-30T00:00:00Z"); normalizamos
+  // para a parte de data para não receber "data de referência inválida".
+  const referenceDate = context.referenceDate ? context.referenceDate.slice(0, 10) : undefined;
+  const { data } = await httpClient.get(`${BASE}/resolve-by-item`, { params: {
+    item_code: String(itemCode),
+    customer_code: context.customerCode || undefined,
+    quantity: context.quantity && context.quantity > 0 ? context.quantity : 1,
+    unit: context.unit || undefined,
+    currency: context.currency || undefined,
+    reference_date: referenceDate,
+  } });
+  const response = unwrapObject(data);
+  const selected = unwrapObject(response.selected);
+  const selectedCode = parseNum(selected, 'sales_table_code', 'SalesTableCode');
+  const autoSelected = parseBool(response, 'auto_selected', 'AutoSelected');
+  return unwrapArray(response.candidates).map((raw) => {
+    const candidate = unwrapObject(raw);
+    const tableCode = parseNum(candidate, 'sales_table_code', 'SalesTableCode');
+    const appliedPrice = parseNum(candidate, 'applied_price', 'AppliedPrice');
+    const unit = parseStr(candidate, 'unit', 'Unit') || undefined;
+    return {
+      table: { code: tableCode, description: parseStr(candidate, 'description', 'Description'), is_active: true },
+      price: { item_code: String(itemCode), price: appliedPrice, ume: unit, situation: 'ATIVO', blocked: false },
+      source: parseStr(candidate, 'source', 'Source') || undefined,
+      priority: parseNum(candidate, 'priority', 'Priority'),
+      autoSelected: autoSelected && selectedCode === tableCode,
+    };
+  });
+}
 
 // ─── Operações de preço ───────────────────────────────────────────────────────
 
 /** Resolve o preço unitário da tabela vigente e o total bruto. */
 export async function priceSalesItem(salesTableCode: number, itemCode: string, quantity: number): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/pricing`, { sales_table_code: salesTableCode, item_code: itemCode, quantity });
+  const { data } = await httpClient.post(`${BASE}/pricing`, { sales_table_code: Number(salesTableCode), item_code: String(itemCode), quantity: Number(quantity) });
   return unwrapObject(data);
 }
 /** Calcula preço sugerido a partir de custo + margem/cargas (ou política). */
 export async function formSalesPrice(req: PriceFormationRequest): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/price-formation`, req);
+  const payload = {
+    ...req,
+    sales_table_code: Number(req.sales_table_code),
+    policy_code: req.policy_code == null ? undefined : Number(req.policy_code),
+    item_code: String(req.item_code).trim(),
+  };
+  const { data } = await httpClient.post(`${BASE}/price-formation`, payload);
   return unwrapObject(data);
 }
 /** Gera preços em lote (upsert + histórico) por política/custo. */
 export async function generateSalesTablePrices(salesTableCode: number, policyCode: number, itemCodes: string[], warehouseId?: number, reason?: string): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/generate-prices`, { sales_table_code: salesTableCode, policy_code: policyCode, item_codes: itemCodes, warehouse_id: warehouseId, reason });
+  const { data } = await httpClient.post(`${BASE}/generate-prices`, {
+    sales_table_code: Number(salesTableCode),
+    policy_code: Number(policyCode),
+    item_codes: itemCodes.map((code) => String(code).trim()).filter(Boolean),
+    warehouse_id: warehouseId == null ? undefined : Number(warehouseId),
+    reason,
+  });
   return unwrapObject(data);
 }
 

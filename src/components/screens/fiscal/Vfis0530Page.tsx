@@ -5,6 +5,7 @@ import {
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const TIPOS: LinhaApuracaoTipo[] = ["DEBITO", "CREDITO", "SALDO", "DEDUCAO", "OUTROS"];
@@ -75,7 +76,7 @@ export function Vfis0530Page(): JSX.Element {
               <input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Tipo</label>
               <select className="erp-input" value={form.line_type} onChange={(e) => setF("line_type", e.target.value as LinhaApuracaoTipo)}>
-                {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                {TIPOS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">Aceita lançamentos</label>
               <div className="erp-toggle-row">
                 <label className="erp-toggle"><input type="checkbox" checked={!!form.accepts_entries} onChange={(e) => setF("accepts_entries", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>

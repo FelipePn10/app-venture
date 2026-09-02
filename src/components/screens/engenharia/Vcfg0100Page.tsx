@@ -7,6 +7,9 @@ import {
 } from "@/services/configuratorCfgService";
 import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCharacteristics } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "conjuntos" | "caracteristicas" | "item";
@@ -115,7 +118,7 @@ export function Vcfg0100Page(): JSX.Element {
               <div className="erp-fieldset"><div className="erp-fieldset-head">Nova característica</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input" value={charForm.code} onChange={(e) => setCharForm((f) => ({ ...f, code: e.target.value }))} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição (pergunta)</label><input className="erp-input" value={charForm.description} onChange={(e) => setCharForm((f) => ({ ...f, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={charForm.type} onChange={(e) => setCharForm((f) => ({ ...f, type: e.target.value }))}>{CHAR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={charForm.type} onChange={(e) => setCharForm((f) => ({ ...f, type: e.target.value }))}>{CHAR_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
                 <div className="erp-field erp-c1"><label className="erp-label">Conjunto</label><input className="erp-input num" type="number" value={charForm.set_id ?? ""} onChange={(e) => setCharForm((f) => ({ ...f, set_id: Number(e.target.value) || undefined }))} /></div>
                 <div className="erp-field erp-c2" style={{ alignSelf: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={!!charForm.affects_price} onChange={(e) => setCharForm((f) => ({ ...f, affects_price: e.target.checked }))} /> Afeta preço</label></div>
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={crChar} disabled={busy}>Criar característica</button></div>
@@ -134,13 +137,13 @@ export function Vcfg0100Page(): JSX.Element {
               <div className="erp-fieldset"><div className="erp-fieldset-head">Características do item</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" value={item} onChange={(e) => setItem(e.target.value)} /></div>
                 <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}><button className="erp-btn erp-btn-dark" onClick={carItemChars} disabled={busy}>Carregar características</button></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Vincular característica (id)</label><div style={{ display: "flex", gap: 6 }}><input className="erp-input num" type="number" value={ansForm.characteristic_id} onChange={(e) => setAnsForm((f) => ({ ...f, characteristic_id: e.target.value }))} /><button className="erp-btn erp-btn-sm" onClick={() => addItemChar(Number(ansForm.characteristic_id))} disabled={busy}>+ vincular</button></div></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Vincular característica</label><div style={{ display: "flex", gap: 6 }}><div style={{ flex: 1 }}><LookupField value={Number(ansForm.characteristic_id) || undefined} loader={loadCharacteristics} entityLabel="característica" onChange={(code) => setAnsForm((f) => ({ ...f, characteristic_id: code ? String(code) : "" }))} /></div><button className="erp-btn erp-btn-sm" onClick={() => addItemChar(Number(ansForm.characteristic_id))} disabled={busy}>+ vincular</button></div></div>
                 <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Seq</th><th>Característica</th><th>Default</th></tr></thead>
                   <tbody>{itemChars.length === 0 ? <tr><td colSpan={3} className="erp-grid-empty">informe o item e carregue</td></tr> : itemChars.map((c, i) => <tr key={i}><td>{parseNum(c, "sequence", "Sequence")}</td><td>{parseNum(c, "characteristic_id", "CharacteristicID")}</td><td>{parseStr(c, "description", "Description") || "—"}</td></tr>)}</tbody>
                 </table></div>
               </div></div>
               <div className="erp-fieldset"><div className="erp-fieldset-head">Gerar máscara (respostas)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label">Característica (id)</label><input className="erp-input num" type="number" value={ansForm.characteristic_id} onChange={(e) => setAnsForm((f) => ({ ...f, characteristic_id: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Característica</label><LookupField value={Number(ansForm.characteristic_id) || undefined} loader={loadCharacteristics} entityLabel="característica" onChange={(code) => setAnsForm((f) => ({ ...f, characteristic_id: code ? String(code) : "" }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Variável (id)</label><input className="erp-input num" type="number" value={ansForm.variable_id} onChange={(e) => setAnsForm((f) => ({ ...f, variable_id: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Valor (livre)</label><input className="erp-input" value={ansForm.value} onChange={(e) => setAnsForm((f) => ({ ...f, value: e.target.value }))} /></div>
                 <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addAns}>+ resposta</button></div>

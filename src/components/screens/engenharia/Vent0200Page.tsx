@@ -3,7 +3,7 @@ import { createItem, getItemTemplate } from "@/services/itemService";
 import { listFiscalClassifications, type FiscalClassification } from "@/services/fiscalAdvancedService";
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses } from "@/services/lookups";
+import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadItems, loadItemClassifications } from "@/services/lookups";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
 //
@@ -127,7 +127,7 @@ interface FormItem {
   tempoGarantia: string;
   almoxAssTec: string;
   entregaEstimada: string;
-  foccoMobile: boolean;
+  mobileEnabled: boolean;
   embExportacao: boolean;
   classificacaoCom: string;
   obsComercial: string;
@@ -277,7 +277,7 @@ const formInicial: FormItem = {
   tempoGarantia: "",
   almoxAssTec: "",
   entregaEstimada: "",
-  foccoMobile: false,
+  mobileEnabled: false,
   embExportacao: false,
   classificacaoCom: "",
   obsComercial: "",
@@ -472,7 +472,7 @@ export function Vent0200Page(): JSX.Element {
           requires_special_packaging: form.embalagDif,
           withhold_pis_cofins: form.retencaoPisCofins,
           is_packaging: form.embalagem,
-          mobile_enabled: form.foccoMobile,
+          mobile_enabled: form.mobileEnabled,
           export_packaging: form.embExportacao,
           classification_code: form.classificacaoCom.trim() || undefined,
           notes: form.obsComercial.trim() || undefined,
@@ -560,7 +560,7 @@ export function Vent0200Page(): JSX.Element {
         embalagDif: parseBool(commercial, "requires_special_packaging", "RequiresSpecialPackaging"),
         retencaoPisCofins: parseBool(commercial, "withhold_pis_cofins", "WithholdPisCofins"),
         embalagem: parseBool(commercial, "is_packaging", "IsPackaging"),
-        foccoMobile: parseBool(commercial, "mobile_enabled", "MobileEnabled"),
+        mobileEnabled: parseBool(commercial, "mobile_enabled", "MobileEnabled"),
         embExportacao: parseBool(commercial, "export_packaging", "ExportPackaging"),
         classificacaoCom: opt(commercial, "classification_code", "ClassificationCode"),
         obsComercial: opt(commercial, "notes", "Notes"),
@@ -833,28 +833,6 @@ export function Vent0200Page(): JSX.Element {
         {/* ACTION BAR */}
         <div className="it-actionbar">
           <div className="it-action-group">
-            <span className="it-action-label">Nav</span>
-            {[
-              { title: "Primeiro", path: "M9 2L3 6l6 4M2 2v8" },
-              { title: "Anterior", path: "M8 2L4 6l4 4" },
-              { title: "Próximo", path: "M4 2l4 4-4 4" },
-              { title: "Último", path: "M3 2l6 4-6 4M10 2v8" },
-            ].map(({ title, path }) => (
-              <button key={title} className="it-nav-btn" title={title}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path
-                    d={path}
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            ))}
-          </div>
-
-          <div className="it-action-group">
             <span className="it-action-label">Ações</span>
             <button
               className="it-btn it-btn-primary"
@@ -930,26 +908,6 @@ export function Vent0200Page(): JSX.Element {
                 />
               </svg>
               Ajuda
-            </button>
-            <button className="it-btn it-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <rect
-                  x="2"
-                  y="3"
-                  width="12"
-                  height="10"
-                  rx="1.5"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M5 7h6M5 10h4"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              PDM
             </button>
           </div>
         </div>
@@ -1456,17 +1414,23 @@ export function Vent0200Page(): JSX.Element {
                     <label className="it-label">
                       Usar item-base como modelo
                     </label>
-                    <LookupField
-                      value={form.itemBaseCod || undefined}
-                      onChange={(code) => void aplicarItemBase(code)}
-                      loader={loadBaseItems}
-                      entityLabel="item base"
-                      placeholder="Selecionar item base…"
-                    />
+                    {form.nature === 2 ? (
+                      <input className="it-input" value="Indisponível para item-base" readOnly disabled />
+                    ) : (
+                      <LookupField
+                        value={form.itemBaseCod || undefined}
+                        onChange={(code) => void aplicarItemBase(code)}
+                        loader={loadBaseItems}
+                        entityLabel="item base"
+                        placeholder="Selecionar item base…"
+                      />
+                    )}
                     {errors.itemBaseCod
                       ? <span className="it-field-error">{errors.itemBaseCod}</span>
                       : <span className="it-field-hint">
-                          Opcional. Ao selecionar, copia as configurações das demais abas; código, nome e nome técnico continuam sendo os do novo item.
+                          {form.nature === 2
+                            ? "Você está criando um item-base; não faz sentido usar outro item-base como modelo."
+                            : "Opcional. Ao selecionar, copia as configurações das demais abas; código, nome e nome técnico continuam sendo os do novo item."}
                         </span>}
                   </div>
 
@@ -1565,16 +1529,13 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Classificação</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.classificacaoPlan}
-                        onChange={(e) =>
-                          setField("classificacaoPlan", e.target.value)
-                        }
-                        placeholder="Código de classificação"
-                      />
-                    </div>
+                    <LookupField
+                      value={form.classificacaoPlan || undefined}
+                      onChange={(code) => setField("classificacaoPlan", code ? String(code) : "")}
+                      loader={loadItemClassifications}
+                      entityLabel="classificação"
+                      placeholder="Selecionar classificação"
+                    />
                   </div>
 
                   <div className="it-field it-col-2">
@@ -1951,16 +1912,13 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Item Embalagem</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.itemEmbalagem}
-                        onChange={(e) =>
-                          setField("itemEmbalagem", e.target.value)
-                        }
-                        placeholder="Código do item embalagem"
-                      />
-                    </div>
+                    <LookupField
+                      value={form.itemEmbalagem || undefined}
+                      onChange={(code) => setField("itemEmbalagem", code ? String(code) : "")}
+                      loader={loadItems}
+                      entityLabel="item de embalagem"
+                      placeholder="Selecionar item de embalagem"
+                    />
                   </div>
 
                   <div className="it-field it-col-12">
@@ -1989,7 +1947,7 @@ export function Vent0200Page(): JSX.Element {
                             label: "Retenção PIS/COFINS",
                           },
                           { key: "embalagem", label: "É Embalagem" },
-                          { key: "foccoMobile", label: "FoccoMOBILE" },
+                          { key: "mobileEnabled", label: "Habilita no aplicativo" },
                           { key: "embExportacao", label: "Emb. Exportação" },
                         ] as { key: keyof FormItem; label: string }[]
                       ).map(({ key, label }) => (
@@ -2318,16 +2276,13 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Classificação</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.classifSuprimentos}
-                        onChange={(e) =>
-                          setField("classifSuprimentos", e.target.value)
-                        }
-                        placeholder="Código de classificação"
-                      />
-                    </div>
+                    <LookupField
+                      value={form.classifSuprimentos || undefined}
+                      onChange={(code) => setField("classifSuprimentos", code ? String(code) : "")}
+                      loader={loadItemClassifications}
+                      entityLabel="classificação"
+                      placeholder="Selecionar classificação"
+                    />
                   </div>
 
                   <div className="it-field it-col-12">

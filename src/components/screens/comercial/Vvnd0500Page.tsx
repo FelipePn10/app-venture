@@ -14,7 +14,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
+import { loadItems, loadRepresentatives } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "goals" | "periods";
@@ -69,6 +70,7 @@ export function Vvnd0500Page(): JSX.Element {
   });
 
   const criarPeriodo = () => run(async () => {
+    if (!periodForm.description?.trim()) { setFeedback({ type: "error", message: "Descrição é obrigatória." }); return; }
     if (!periodForm.start_date || !periodForm.end_date) { setFeedback({ type: "error", message: "Datas inicial e final são obrigatórias." }); return; }
     if (periodForm.start_date > periodForm.end_date) { setFeedback({ type: "error", message: "Período invertido: início depois do fim." }); return; }
     await createSalesGoalPeriod(periodForm); setPeriodForm(EMPTY_PERIOD); await carregarPeriodos();
@@ -109,6 +111,7 @@ export function Vvnd0500Page(): JSX.Element {
   const items = selected?.items ?? [];
   const periodLabel = (c?: number) => { const p = periods.find((x) => x.code === c); return p ? `${p.description || p.period_type} (${p.start_date?.slice(0, 10)}→${p.end_date?.slice(0, 10)})` : (c ? `#${c}` : "—"); };
   const targetLabel = (it: SalesGoalItemDTO) => it.item_code ? `Item ${it.item_code}` : it.item_classification_code ? `Classif. ${it.item_classification_code}` : it.item_group_code ? `Grupo ${it.item_group_code}` : "—";
+  const periodTypeLabel = (type?: string) => ({ MONTH: "Mensal", WEEK: "Semanal", CUSTOM: "Personalizado" }[type ?? ""] ?? type ?? "—");
 
   const visible = useMemo(() => {
     const q = listSearch.trim().toLowerCase();
@@ -162,7 +165,7 @@ export function Vvnd0500Page(): JSX.Element {
                 <div key={p.code} className="erp-list-row" style={{ cursor: "default" }}>
                   <span className="erp-list-code">#{p.code}</span>
                   <span className="erp-list-sub">{p.description || p.period_type}</span>
-                  <div className="erp-list-meta"><span className="erp-badge info">{p.period_type}</span><span style={{ marginLeft: "auto", fontSize: 11, color: "var(--v-text-3)" }}>{p.start_date?.slice(0, 10)} → {p.end_date?.slice(0, 10)}</span></div>
+                  <div className="erp-list-meta"><span className="erp-badge info">{periodTypeLabel(p.period_type)}</span><span style={{ marginLeft: "auto", fontSize: 11, color: "var(--v-text-3)" }}>{p.start_date?.slice(0, 10)} → {p.end_date?.slice(0, 10)}</span></div>
                 </div>
               ))}
             </div>
@@ -173,7 +176,7 @@ export function Vvnd0500Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Janela da meta</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c4"><label className="erp-label">Descrição</label><input className="erp-input" value={periodForm.description ?? ""} onChange={(e) => setP("description", e.target.value)} /></div>
+                  <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label><input className="erp-input" required value={periodForm.description ?? ""} onChange={(e) => setP("description", e.target.value)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Tipo</label><select className="erp-input" value={periodForm.period_type} onChange={(e) => setP("period_type", e.target.value as SalesGoalPeriodDTO["period_type"])}><option value="MONTH">Mensal</option><option value="WEEK">Semanal</option><option value="CUSTOM">Customizado</option></select></div>
                   <div className="erp-field erp-c2"><label className="erp-label erp-req">Início</label><input className="erp-input" type="date" value={periodForm.start_date} onChange={(e) => setP("start_date", e.target.value)} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label erp-req">Fim</label><input className="erp-input" type="date" value={periodForm.end_date} onChange={(e) => setP("end_date", e.target.value)} /></div>
@@ -197,7 +200,7 @@ export function Vvnd0500Page(): JSX.Element {
               {visible.map((g) => (
                 <div key={g.code} className={`erp-list-row${selected?.code === g.code ? " sel" : ""}`} onClick={() => abrir(g.code)}>
                   <span className="erp-list-code">#{g.code}</span>
-                  <span className="erp-list-sub">Repres. {g.representative_code}</span>
+                  <span className="erp-list-sub"><EntityName code={g.representative_code} loader={loadRepresentatives} prefix="Representante" /></span>
                   <div className="erp-list-meta"><span className="erp-badge info">{g.analysis_base === "SALES" ? "Vendas" : "Faturamento"}</span><span className="erp-badge">Prem. {g.award_pct ?? 0}%</span></div>
                 </div>
               ))}
@@ -212,7 +215,7 @@ export function Vvnd0500Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Cabeçalho da meta</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Representante</label><input className="erp-input num" type="number" value={goalForm.representative_code || ""} onChange={(e) => setG("representative_code", Number(e.target.value))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Representante</label><LookupField value={goalForm.representative_code || undefined} loader={loadRepresentatives} entityLabel="representante" onChange={(code) => setG("representative_code", code ?? 0)} /></div>
                       <div className="erp-field erp-c5"><label className="erp-label erp-req">Período</label>
                         <select className="erp-input" value={goalForm.period_code || ""} onChange={(e) => setG("period_code", Number(e.target.value))}>
                           <option value="">Selecionar período…</option>
@@ -241,7 +244,7 @@ export function Vvnd0500Page(): JSX.Element {
                     <div className="erp-fieldset">
                       <div className="erp-fieldset-head">Meta #{selected.code} <span className="erp-badge info" style={{ marginLeft: 4 }}>{selected.analysis_base === "SALES" ? "Vendas" : "Faturamento"}</span></div>
                       <div className="erp-fieldset-body">
-                        <div className="erp-field erp-c3"><label className="erp-label">Representante</label><input className="erp-input num strong" value={selected.representative_code} readOnly /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Representante</label><div className="erp-input strong"><EntityName code={selected.representative_code} loader={loadRepresentatives} prefix="Representante" /></div></div>
                         <div className="erp-field erp-c6"><label className="erp-label">Período</label><input className="erp-input" value={periodLabel(selected.period_code)} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Premiação %</label><input className="erp-input num" value={selected.award_pct ?? 0} readOnly /></div>
                       </div>

@@ -8,6 +8,7 @@ import {
 } from "@/services/supplierService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "tipos" | "contatos" | "parametros";
@@ -110,18 +111,18 @@ export function Vsup0510Page(): JSX.Element {
               <div className="erp-fieldset-head">{typeEdit !== null ? `Editando tipo #${typeEdit}` : "Novo tipo de fornecedor"}</div>
               <div className="erp-fieldset-body">
                 <div className="erp-field erp-c7"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={typeForm.description} onChange={(e) => setTypeForm((p) => ({ ...p, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Kind</label><select className="erp-input" value={typeForm.kind} onChange={(e) => setTypeForm((p) => ({ ...p, kind: e.target.value as SupplierKind }))}>{SUPPLIER_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Tipo</label><select className="erp-input" value={typeForm.kind} onChange={(e) => setTypeForm((p) => ({ ...p, kind: e.target.value as SupplierKind }))}>{SUPPLIER_KINDS.map((k) => <option key={k} value={k}>{enumLabel(k)}</option>)}</select></div>
                 <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void salvarTipo()} disabled={busy}>{typeEdit !== null ? "Atualizar" : "Salvar"}</button></div>
                 <div className="erp-field erp-c12"><span style={{ fontSize: 11.5, color: "var(--v-text-3)" }}>kind TRANSPORTADORA/TRANSP_REDESP/REDESPACHO dispensa a Inscrição Estadual do fornecedor.</span></div>
               </div>
             </div>
             <div className="erp-grid-wrap">
               <table className="erp-grid">
-                <thead><tr><th className="num">Código</th><th>Descrição</th><th>Kind</th><th style={{ width: 90 }}></th></tr></thead>
+                <thead><tr><th className="num">Código</th><th>Descrição</th><th>Tipo</th><th style={{ width: 90 }}></th></tr></thead>
                 <tbody>
                   {types.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum tipo.</td></tr>}
                   {types.map((t) => (
-                    <tr key={t.code}><td className="num" style={{ fontWeight: 600 }}>{t.code}</td><td>{t.description}</td><td><span className="erp-badge draft">{t.kind}</span></td>
+                    <tr key={t.code}><td className="num" style={{ fontWeight: 600 }}>{t.code}</td><td>{t.description}</td><td><span className="erp-badge draft">{enumLabel(t.kind)}</span></td>
                       <td><button className="erp-btn erp-btn-sm" onClick={() => { setTypeForm({ ...t }); setTypeEdit(t.code ?? null); }}>Editar</button></td></tr>
                   ))}
                 </tbody>

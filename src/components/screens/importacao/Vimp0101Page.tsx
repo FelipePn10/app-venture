@@ -2,6 +2,7 @@ import { useState } from "react";
 import { type ImportStatus, listImportProcesses, updateImportProcessStatus } from "@/services/procurementService";
 import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const STATUSES: ImportStatus[] = ["OPEN", "NATIONALIZED", "CANCELLED"];
@@ -23,7 +24,7 @@ export function Vimp0101Page(): JSX.Element {
   }
   async function mudar(id: number, status: ImportStatus) {
     setBusy(true); setFeedback(null);
-    try { await updateImportProcessStatus(id, status); await carregar(); setFeedback({ type: "success", message: `Processo #${id} → ${status}.` }); }
+    try { await updateImportProcessStatus(id, status); await carregar(); setFeedback({ type: "success", message: `Processo #${id} → ${enumLabel(status)}.` }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -44,7 +45,7 @@ export function Vimp0101Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Processos</span><button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Status</span>
-          <select className="erp-tselect" value={filtro} onChange={(e) => setFiltro(e.target.value as "" | ImportStatus)}><option value="">todos</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+          <select className="erp-tselect" value={filtro} onChange={(e) => setFiltro(e.target.value as "" | ImportStatus)}><option value="">todos</option>{STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VIMP0101 — Status Logístico da Carga" filename="vimp0101" /></div>
       </div>
@@ -62,8 +63,8 @@ export function Vimp0101Page(): JSX.Element {
                   <tr key={i}>
                     <td><strong>#{id}</strong></td><td>{parseNum(p, "supplier_code", "SupplierCode") || "—"}</td><td>{parseStr(p, "currency", "Currency")}</td>
                     <td>{parseStr(p, "reference", "Reference") || "—"}</td>
-                    <td><span className={`erp-badge ${st === "NATIONALIZED" ? "ok" : st === "CANCELLED" ? "err" : "info"}`}>{st}</span></td>
-                    <td style={{ display: "flex", gap: 4 }}>{STATUSES.filter((s) => s !== st).map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => void mudar(id, s)} disabled={busy}>{s}</button>)}</td>
+                    <td><span className={`erp-badge ${st === "NATIONALIZED" ? "ok" : st === "CANCELLED" ? "err" : "info"}`}>{enumLabel(st)}</span></td>
+                    <td style={{ display: "flex", gap: 4 }}>{STATUSES.filter((s) => s !== st).map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => void mudar(id, s)} disabled={busy}>{enumLabel(s)}</button>)}</td>
                   </tr>
                 ); })}
               </tbody>

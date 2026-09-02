@@ -5,6 +5,7 @@ import {
 } from "@/services/purchaseQuotationService";
 import { errMessage, type Obj, parseNum, parseBool } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadEstablishments, loadSuppliers } from "@/services/lookups";
 
@@ -115,7 +116,7 @@ export function Vsup0400Page(): JSX.Element {
                 <div key={q.code} className={`erp-list-row${!creating && selCode === q.code ? " sel" : ""}`} onClick={() => q.code && void abrir(q.code)}>
                   <span className="erp-list-code">#{q.code}</span>
                   <span className="erp-list-sub">Estab. {q.enterprise_code} · {(q.emission_date ?? "").slice(0, 10)}</span>
-                  <div className="erp-list-meta"><span className="erp-badge draft">{q.status}</span></div>
+                  <div className="erp-list-meta"><span className="erp-badge draft">{enumLabel(q.status)}</span></div>
                 </div>
               ))}
             </div>

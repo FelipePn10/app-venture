@@ -5,6 +5,7 @@ import {
 } from "@/services/procurementService";
 import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const BASES: ApportionBasis[] = ["VALUE", "WEIGHT", "QUANTITY"];
@@ -46,7 +47,7 @@ export function Vimp0200Page(): JSX.Element {
     setCapa({ ...CAPA_INI }); setItems([]); setExpenses([]); setList(await listImportProcesses());
   });
   const recompute = () => { const id = parseNum(detalhe ?? {}, "id", "ID"); if (!id) return; void run(async () => { setDetalhe(await recomputeImportProcess(id)); setFeedback({ type: "success", message: "Custo nacionalizado recalculado." }); }); };
-  const mudarStatus = (status: ImportStatus) => { const id = parseNum(detalhe ?? {}, "id", "ID"); if (!id) return; void run(async () => { setDetalhe(await updateImportProcessStatus(id, status)); setList(await listImportProcesses()); setFeedback({ type: "success", message: `Processo → ${status}.` }); }); };
+  const mudarStatus = (status: ImportStatus) => { const id = parseNum(detalhe ?? {}, "id", "ID"); if (!id) return; void run(async () => { setDetalhe(await updateImportProcessStatus(id, status)); setList(await listImportProcesses()); setFeedback({ type: "success", message: `Processo → ${enumLabel(status)}.` }); }); };
 
   const detItems = detalhe ? (((detalhe.items ?? detalhe.Items) as Obj[]) ?? []) : [];
 
@@ -79,7 +80,7 @@ export function Vimp0200Page(): JSX.Element {
               {list.map((p, i) => { const id = parseNum(p, "id", "ID"); return (
                 <div key={i} className={`erp-list-row${parseNum(detalhe ?? {}, "id", "ID") === id ? " erp-row-sel" : ""}`} onClick={() => void abrir(id)}>
                   <span className="erp-list-code">#{id}</span>
-                  <span className="erp-list-sub">{parseStr(p, "currency", "Currency")} · {parseStr(p, "status", "Status")}</span>
+                  <span className="erp-list-sub">{parseStr(p, "currency", "Currency")} · {enumLabel(parseStr(p, "status", "Status"))}</span>
                 </div>
               ); })}
             </div>
@@ -97,7 +98,7 @@ export function Vimp0200Page(): JSX.Element {
                   <div className="erp-field erp-c2"><label className="erp-label">Incoterm</label><input className="erp-input" value={capa.incoterm} onChange={(e) => setC("incoterm", e.target.value)} /></div>
                   <div className="erp-field erp-c1"><label className="erp-label">Moeda</label><input className="erp-input" value={capa.currency} onChange={(e) => setC("currency", e.target.value)} /></div>
                   <div className="erp-field erp-c1"><label className="erp-label">Câmbio</label><input className="erp-input num" type="number" value={capa.exchange_rate} onChange={(e) => setC("exchange_rate", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Base de rateio</label><select className="erp-input" value={capa.apportion_basis} onChange={(e) => setC("apportion_basis", e.target.value)}>{BASES.map((b) => <option key={b} value={b}>{b}</option>)}</select></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Base de rateio</label><select className="erp-input" value={capa.apportion_basis} onChange={(e) => setC("apportion_basis", e.target.value)}>{BASES.map((b) => <option key={b} value={b}>{enumLabel(b)}</option>)}</select></div>
                 </div>
               </div>
 
@@ -126,10 +127,10 @@ export function Vimp0200Page(): JSX.Element {
 
               {detalhe && (
                 <div className="erp-fieldset">
-                  <div className="erp-fieldset-head">Processo #{String(detalhe.id ?? detalhe.ID)} — {parseStr(detalhe, "status", "Status")}
+                  <div className="erp-fieldset-head">Processo #{String(detalhe.id ?? detalhe.ID)} — {enumLabel(parseStr(detalhe, "status", "Status"))}
                     <span style={{ float: "right", display: "flex", gap: 6 }}>
                       <button className="erp-btn erp-btn-sm" onClick={recompute} disabled={busy}>Recalcular landed</button>
-                      {STATUSES.map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(s)} disabled={busy}>{s}</button>)}
+                      {STATUSES.map((s) => <button key={s} className="erp-btn erp-btn-sm" onClick={() => mudarStatus(s)} disabled={busy}>{enumLabel(s)}</button>)}
                     </span>
                   </div>
                   <div className="erp-fieldset-body">

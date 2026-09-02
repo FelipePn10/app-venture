@@ -9,6 +9,7 @@ import {
 } from "@/services/qualityService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
 
@@ -158,7 +159,7 @@ export function Vpro0400Page(): JSX.Element {
                 <div className="erp-fieldset-head">Novo plano de inspeção</div>
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Item</label><LookupField value={planForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setPlanForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Momento</label><select className="erp-tselect" value={planForm.point_type} onChange={(e) => setPlanForm((p) => ({ ...p, point_type: e.target.value as PointType }))}>{POINT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Momento</label><select className="erp-tselect" value={planForm.point_type} onChange={(e) => setPlanForm((p) => ({ ...p, point_type: e.target.value as PointType }))}>{POINT_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
                   <div className="erp-field erp-c12"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={planForm.description} onChange={(e) => setPlanForm((p) => ({ ...p, description: e.target.value }))} /></div>
                   {numField("Tam. amostra", planForm.sample_size, (n) => setPlanForm((p) => ({ ...p, sample_size: n })), true, "erp-c3")}
                   {numField("Nível aceitação", planForm.acceptance_level, (n) => setPlanForm((p) => ({ ...p, acceptance_level: n })), false, "erp-c3")}
@@ -241,7 +242,7 @@ export function Vpro0400Page(): JSX.Element {
                 {numField("Inspecionado", recForm.inspected_qty, (n) => setRecForm((f) => ({ ...f, inspected_qty: n })), true, "erp-c3")}
                 {numField("Aprovado", recForm.approved_qty, (n) => setRecForm((f) => ({ ...f, approved_qty: n })), true, "erp-c3")}
                 {numField("Rejeitado", recForm.rejected_qty, (n) => setRecForm((f) => ({ ...f, rejected_qty: n })), true, "erp-c3")}
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Resultado</label><select className="erp-tselect" value={recForm.result} onChange={(e) => setRecForm((f) => ({ ...f, result: e.target.value as QualityResult }))}>{QUALITY_RESULTS.map((r) => <option key={r} value={r}>{r}</option>)}</select></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Resultado</label><select className="erp-tselect" value={recForm.result} onChange={(e) => setRecForm((f) => ({ ...f, result: e.target.value as QualityResult }))}>{QUALITY_RESULTS.map((r) => <option key={r} value={r}>{enumLabel(r)}</option>)}</select></div>
                 <div className="erp-field erp-c12"><label className="erp-label">Observações</label><input className="erp-input" value={recForm.notes ?? ""} onChange={(e) => setRecForm((f) => ({ ...f, notes: e.target.value }))} /></div>
               </div>
             </div>
@@ -293,7 +294,7 @@ export function Vpro0400Page(): JSX.Element {
                 {numField("OF (id)", ncForm.production_order_id, (n) => setNcForm((p) => ({ ...p, production_order_id: n || null })), false, "erp-c2")}
                 <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" value={ncForm.lot ?? ""} onChange={(e) => setNcForm((p) => ({ ...p, lot: e.target.value }))} /></div>
                 {numField("Qtd NC", ncForm.nonconform_qty, (n) => setNcForm((p) => ({ ...p, nonconform_qty: n })), true, "erp-c2")}
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Severidade</label><select className="erp-tselect" value={ncForm.severity} onChange={(e) => setNcForm((p) => ({ ...p, severity: e.target.value as NCSeverity }))}>{NC_SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Severidade</label><select className="erp-tselect" value={ncForm.severity} onChange={(e) => setNcForm((p) => ({ ...p, severity: e.target.value as NCSeverity }))}>{NC_SEVERITIES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select></div>
                 <div className="erp-field erp-c9"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={ncForm.description} onChange={(e) => setNcForm((p) => ({ ...p, description: e.target.value }))} /></div>
                 <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={gravarNC} disabled={busy}>Registrar NC</button><button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => carregarNCs()} disabled={busy}>Atualizar abertas</button></div>
               </div>
@@ -309,7 +310,7 @@ export function Vpro0400Page(): JSX.Element {
                       <td>
                         <div style={{ display: "flex", gap: 4 }}>
                           <select className="erp-tselect" value={dispSel[nc.id!] ?? ""} onChange={(e) => setDispSel((d) => ({ ...d, [nc.id!]: e.target.value as NCDisposition }))}>
-                            <option value="">— disposição —</option>{NC_DISPOSITIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                            <option value="">— disposição —</option>{NC_DISPOSITIONS.map((d) => <option key={d} value={d}>{enumLabel(d)}</option>)}
                           </select>
                           <button className="erp-btn erp-btn-sm" onClick={() => aplicarDisposicao(nc)} disabled={busy}>Aplicar</button>
                         </div>
