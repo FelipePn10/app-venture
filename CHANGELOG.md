@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.12] — 2026-09-02
+
 ## Melhorias
 - Deixamos todas as telas comerciais, de engenharia, manufatura, suprimentos, almoxarifado e produção com textos em português, sem termos técnicos em inglês.
 - Agora os campos de item, classificação, máscara, característica, cliente, fornecedor, representante, plano, ordem, máquina, centro de custo e afins abrem uma lista de busca com todos os cadastros, mantendo a opção de digitar o código manualmente.
