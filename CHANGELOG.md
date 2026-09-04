@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## Novidades
+- O cadastro de estrutura de produto ganhou o botão **Configurador**: responda as perguntas do item e o sistema monta a máscara, valida as combinações proibidas e já calcula as quantidades que vêm de fórmula, aplicando tudo na estrutura.
+
+## Melhorias
+- Centralizamos o roteiro de fabricação nas telas de engenharia, com operações, precedências, recursos, ferramentas e cálculo de lead time em um lugar só.
+- Os cadastros de apoio do fornecedor (tipos de fornecedor, tipos de contato e parâmetros de compras) passaram para dentro do cadastro de fornecedor, no botão **Cadastros de apoio**.
+- A comparação de previsto e realizado de vendas passou a mostrar o realizado, a diferença e o percentual de aderência, podendo considerar pedidos, faturamento ou os dois.
+- Traduzimos quase trezentos campos que ainda apareciam em inglês nas rotinas do sistema.
+- Datas deixaram de aparecer no formato técnico e passaram a usar o seletor de dia, mês, ano e horário.
+- Operações que tinham o mesmo nome dentro de uma rotina ganharam nomes distintos, deixando claro o que cada uma faz.
+- As classificações fiscais de venda e compra do item agora abrem a lista de busca com todos os cadastros.
+- O cadastro de fornecedor indica quando a inscrição estadual é obrigatória.
+- Telas que existiam apenas repetindo outra saíram do menu e, se abertas por um atalho antigo, explicam para onde a função foi.
+
+## Correções
+- Você não é mais desconectado ao reabrir o aplicativo com uma sessão válida.
+- Corrigimos a consulta dos endereços de almoxarifado da produção, que não retornava nada.
+
 ## [v1.1.13] — 2026-09-02
 
 ## Correções
