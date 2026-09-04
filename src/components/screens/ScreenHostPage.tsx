@@ -32,7 +32,6 @@ import { Vpdv0108Page } from "./pdv/Vpdv0108Page";
 import { Vpdv0111Page } from "./pdv/Vpdv0111Page";
 import { Vvre0200Page } from "./pdv/Vvre0200Page";
 import { Vre0203Page } from "./pdv/Vre0203Page";
-import { Vcon0100Page } from "./suprimento/Vcon0100Page";
 import { Vcon0200Page } from "./suprimento/Vcon0200Page";
 import { Vcon0400Page } from "./suprimento/Vcon0400Page";
 import { Vcon0202Page } from "./suprimento/Vcon0202Page";
@@ -93,7 +92,7 @@ import { Vsac0100Page } from "./comercial/Vsac0100Page";
 import { Vdpr0100Page } from "./comercial/Vdpr0100Page";
 import { Vpro0900Page } from "./producao/Vpro0900Page";
 import { Vpro1000Page } from "./producao/Vpro1000Page";
-import { Vpro0100Page } from "./producao/Vpro0100Page";
+import { RoteiroFabricacaoPage } from "./engenharia/RoteiroFabricacaoPage";
 import { Vpro0200Page } from "./producao/Vpro0200Page";
 import { Vpro0210Page } from "./producao/Vpro0210Page";
 import { Vpro0300Page } from "./producao/Vpro0300Page";
@@ -107,7 +106,6 @@ import { Vest0100Page } from "./almoxarifado/Vest0100Page";
 import { Vcut0100Page } from "./producao/Vcut0100Page";
 import { Vmrp0100Page } from "./planejamento/Vmrp0100Page";
 import { Vsup0500Page } from "./suprimento/Vsup0500Page";
-import { Vsup0510Page } from "./suprimento/Vsup0510Page";
 import { Vsup0110Page } from "./suprimento/Vsup0110Page";
 import { Vsup0120Page } from "./suprimento/Vsup0120Page";
 import { Vsup0130Page } from "./suprimento/Vsup0130Page";
@@ -135,6 +133,32 @@ import { WindowControls } from "@/components/window/WindowControls";
 import { OperationalRoutinePage } from "./OperationalRoutinePage";
 import { EntityLookupAssist } from "@/components/ui/EntityLookupAssist";
 import { OPERATIONAL_ROUTINES } from "./operationalRoutines";
+
+/**
+ * Rotinas retiradas do catálogo. Elas saíram da busca e do menu, mas um código
+ * antigo ainda pode chegar aqui por link ou memória do usuário — então a tela
+ * explica para onde a função foi, em vez de dizer que não existe.
+ */
+const RETIRED_SCREENS: Record<string, { title: string; reason: string; replacement: string; replacementTitle: string }> = {
+  VCON0100: {
+    title: "Tipos de Contratos",
+    reason: "O ERP não mantém tipos de contrato como cadastro separado: o próprio contrato já descreve situação, vigência, moeda e índice de reajuste.",
+    replacement: "VCON0200",
+    replacementTitle: "Cadastro de Contratos de Fornecedores",
+  },
+  VSUP0510: {
+    title: "Apoio de Fornecedores",
+    reason: "Os cadastros de apoio (tipos de fornecedor, tipos de contato e parâmetros de compras) foram unificados no cadastro de fornecedor, no botão Cadastros de apoio.",
+    replacement: "VSUP0500",
+    replacementTitle: "Cadastro de Fornecedores",
+  },
+  VPRO0100: {
+    title: "Roteiro de Fabricação",
+    reason: "O roteiro de fabricação era mantido em duas telas sobre os mesmos dados; ficou centralizado na engenharia, com operações, precedências, recursos, ferramentas e lead time.",
+    replacement: "VENT0202",
+    replacementTitle: "Roteiro de Fabricação por Item",
+  },
+};
 
 const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   ...Object.fromEntries(Object.entries(OPERATIONAL_ROUTINES).map(([code, routine]) => [code, <OperationalRoutinePage key={code} routine={routine} />])),
@@ -196,7 +220,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VDPR0100: <Vdpr0100Page />,
   VPRO0900: <Vpro0900Page />,
   VPRO1000: <Vpro1000Page />,
-  VPRO0100: <Vpro0100Page />,
+  VENT0115: <RoteiroFabricacaoPage code="VENT0115" />,
+  VENT0202: <RoteiroFabricacaoPage code="VENT0202" />,
   VPRO0200: <Vpro0200Page />,
   VPRO0210: <Vpro0210Page />,
   VPRO0300: <Vpro0300Page />,
@@ -211,7 +236,6 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VCUT0100: <Vcut0100Page />,
   VMRP0100: <Vmrp0100Page />,
   VSUP0500: <Vsup0500Page />,
-  VSUP0510: <Vsup0510Page />,
   VSUP0110: <Vsup0110Page />,
   VSUP0120: <Vsup0120Page />,
   VSUP0130: <Vsup0130Page />,
@@ -272,7 +296,6 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   // Manutenção
   // Suprimento
   // Código legado direcionado à implementação real de Pedido de Compra.
-  VCON0100: <Vcon0100Page />,
   VCON0200: <Vcon0200Page />,
   VCON0400: <Vcon0400Page />,
   VCON0202: <Vcon0202Page />,
@@ -308,6 +331,53 @@ export function ScreenHostPage(): JSX.Element {
   const screen = useMemo(() => {
     if (code && code in SCREEN_REGISTRY) {
       return SCREEN_REGISTRY[code];
+    }
+    // Rotina aposentada: em vez de "não implementada", diz para onde ela foi.
+    const retired = code ? RETIRED_SCREENS[code] : undefined;
+    if (retired) {
+      return (
+        <div className="erp-screen">
+          <header className="erp-titlebar">
+            <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+            <nav className="erp-crumbs">
+              <span className="erp-crumb-mut">Rotina unificada</span>
+              <span className="erp-crumb-sep">›</span>
+              <span className="erp-crumb-cur">{retired.title}</span>
+              <span className="erp-crumb-code">{code}</span>
+            </nav>
+            <div className="erp-titlebar-spacer" />
+          </header>
+          <div className="erp-content" style={{ flex: 1 }}>
+            <section className="erp-detail-panel">
+              <div className="erp-tabs"><button className="erp-tab active">Esta rotina mudou de lugar</button></div>
+              <div className="erp-detail-body">
+                <div className="erp-feedback info">{retired.reason}</div>
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Onde fazer isso agora</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c12">
+                      <table className="erp-grid">
+                        <thead><tr><th style={{ width: 120 }}>Rotina</th><th>Função</th></tr></thead>
+                        <tbody>
+                          <tr>
+                            <td style={{ fontWeight: 600 }}>{retired.replacement}</td>
+                            <td>{retired.replacementTitle}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <footer className="erp-statusbar">
+            <div className="erp-status-item">Substituída por: <strong>{retired.replacement}</strong></div>
+            <div className="erp-status-spacer" />
+            <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
+          </footer>
+        </div>
+      );
     }
     return (
       <main className="screen-layout">

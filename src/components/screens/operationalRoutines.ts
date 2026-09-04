@@ -2,9 +2,9 @@ import type { OperationalRoutine, RoutineField, RoutineOperation } from "./Opera
 
 const id = (name = "id", label = "Código"): RoutineField => ({ name, label, type: "number", required: true });
 const json = (placeholder: string): RoutineField => ({ name: "__body", label: "Dados da operação", type: "json", required: true, placeholder });
-const list = (path: string, fields: RoutineField[] = [], query: string[] = []): RoutineOperation => ({ label: "Consultar", method: "GET", path, fields, query });
-const create = (path: string, example: string, adminOnly = false): RoutineOperation => ({ label: "Cadastrar", method: "POST", path, fields: [json(example)], adminOnly });
-const remove = (path: string, fields: RoutineField[] = [id()], adminOnly = false): RoutineOperation => ({ label: "Desativar / excluir", method: "DELETE", path, fields, destructive: true, adminOnly });
+const list = (path: string, fields: RoutineField[] = [], query: string[] = [], label = "Consultar"): RoutineOperation => ({ label, method: "GET", path, fields, query });
+const create = (path: string, example: string, adminOnly = false, label = "Cadastrar"): RoutineOperation => ({ label, method: "POST", path, fields: [json(example)], adminOnly });
+const remove = (path: string, fields: RoutineField[] = [id()], adminOnly = false, label = "Desativar / excluir"): RoutineOperation => ({ label, method: "DELETE", path, fields, destructive: true, adminOnly });
 const routine = (code: string, title: string, description: string, operations: RoutineOperation[]): OperationalRoutine => ({ code, title, description, guidance: "Selecione uma operação, preencha os dados e confira o retorno antes de avançar no fluxo.", operations });
 const enumOpt = (name: string, label: string, options: string[]): RoutineField => ({ name, label, options });
 
@@ -14,20 +14,6 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Abrir pedido", method: "GET", path: "/api/sales-order/{code}", fields: [id("code", "Pedido")] },
     { label: "Consultar itens", method: "GET", path: "/api/sales-order/items/{code}", fields: [id("code", "Pedido")] },
     { label: "Consultar por cliente", method: "GET", path: "/api/sales-order/customer/{customerCode}", fields: [id("customerCode", "Cliente")] },
-  ]),
-  VENT0115: routine("VENT0115", "Roteiros padrão", "Mantém modelos reutilizáveis de fabricação; o roteiro padrão não representa uma ordem nem o roteiro efetivo de um item até ser copiado ou vinculado.", [
-    list("/api/routing/routes"),
-    create("/api/routing/routes", '{"item_code":"100","description":"Roteiro padrão da família","alternative":1,"is_standard":true}'),
-    { label: "Abrir modelo", method: "GET", path: "/api/routing/routes/{id}", fields: [id()] },
-    { label: "Adicionar operação", method: "POST", path: "/api/routing/route-operations/{routeId}", fields: [id("routeId", "Roteiro"), json('{"operation_id":1,"sequence":10,"standard_time":1,"situation":"APROVADA"}')] },
-    { label: "Calcular lead time", method: "GET", path: "/api/routing/routes/{id}/lead-time", fields: [id()] },
-  ]),
-  VENT0202: routine("VENT0202", "Roteiro de fabricação por item", "Mantém o roteiro efetivo do item, suas operações, tempos, precedências e recursos usados pela OF, CRP e APS.", [
-    list("/api/routing/routes", [{ name: "item_code", label: "Item", required: true }], ["item_code"]),
-    create("/api/routing/routes", '{"item_code":"100","description":"Roteiro do item","alternative":1,"is_standard":true}'),
-    { label: "Abrir roteiro completo", method: "GET", path: "/api/routing/routes/{id}", fields: [id()] },
-    { label: "Adicionar operação", method: "POST", path: "/api/routing/route-operations/{routeId}", fields: [id("routeId", "Roteiro"), json('{"operation_id":1,"sequence":10,"standard_time":1,"setup_time":0.25,"situation":"APROVADA"}')] },
-    { label: "Calcular lead time", method: "GET", path: "/api/routing/routes/{id}/lead-time", fields: [id()] },
   ]),
   VENT0363: routine("VENT0363", "Relatório de tempos por centro de trabalho", "Consulta operações e lead times persistidos para analisar carga e tempo padrão; não altera roteiros nem ordens.", [
     list("/api/routing/operations"),
@@ -74,9 +60,9 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     list("/api/procurement/purchase-movements", [{ name: "supplier_code", label: "Fornecedor", type: "number" }, { name: "item_code", label: "Item" }, { name: "limit", label: "Limite", type: "number", defaultValue: "100" }], ["supplier_code", "item_code", "limit"]),
   ]),
   VSUP0600: routine("VSUP0600", "Inspeção de recebimento", "Cria roteiros, gera ordens, registra resultados, analisa e destina o material inspecionado.", [
-    create("/api/procurement/receiving-inspection-routes", '{"enterprise_code":1,"basis":"ITEM","item_code":100,"mask":"","inspection_warehouse_id":2,"valid_from":"2026-07-14","steps":[{"sequence":1,"inspection_name":"Dimensão","kind":"NUMERIC","appointment_mode":"SAMPLE","is_required":true,"emits_label":false,"sample_qty":5,"acceptance_qty":5,"rejection_qty":1,"min_value":9.9,"max_value":10.1,"attributes":[]}]}'),
+    create("/api/procurement/receiving-inspection-routes", '{"enterprise_code":1,"basis":"ITEM","item_code":100,"mask":"","inspection_warehouse_id":2,"valid_from":"2026-07-14","steps":[{"sequence":1,"inspection_name":"Dimensão","kind":"NUMERIC","appointment_mode":"SAMPLE","is_required":true,"emits_label":false,"sample_qty":5,"acceptance_qty":5,"rejection_qty":1,"min_value":9.9,"max_value":10.1,"attributes":[]}]}', false, "Cadastrar roteiro de inspeção"),
     { label: "Abrir roteiro", method: "GET", path: "/api/procurement/receiving-inspection-routes/{id}", fields: [id()] },
-    create("/api/procurement/receiving-inspection-orders", '{"source":"PURCHASE_ORDER","purchase_order_code":1000,"purchase_order_item_code":1,"supplier_code":10,"item_code":100,"mask":"","warehouse_id":2,"quantity":20}'),
+    create("/api/procurement/receiving-inspection-orders", '{"source":"PURCHASE_ORDER","purchase_order_code":1000,"purchase_order_item_code":1,"supplier_code":10,"item_code":100,"mask":"","warehouse_id":2,"quantity":20}', false, "Abrir ordem de inspeção"),
     list("/api/procurement/receiving-inspection-orders", [{ name: "status", label: "Status" }, { name: "supplier_code", label: "Fornecedor", type: "number" }], ["status", "supplier_code"]),
     { label: "Registrar resultados", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/results", fields: [id(), json('{"step_id":1,"sequence":1,"sample_index":1,"measured_value":10,"min_value":9.9,"max_value":10.1,"is_approved":true}')] },
     { label: "Analisar ordem", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/analysis", fields: [id(), json('{"conform_qty":18,"rejected_qty":2,"rework_qty":0,"restricted_qty":0,"treatment":"PARTIAL_APPROVAL","affects_supplier_score":true,"move_stock":true,"destination_warehouse_id":1,"rejection_warehouse_id":3,"notes":"Conferência concluída"}')] },
@@ -84,12 +70,12 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   ]),
   VAVF0300: routine("VAVF0300", "Scorecard e IQF do fornecedor", "Consulta o histórico e calcula ou registra os indicadores de qualidade, entrega, comercial e atendimento.", [
     list("/api/procurement/suppliers/{supplierCode}/scorecards", [id("supplierCode", "Fornecedor")]),
-    create("/api/procurement/supplier-scorecards/compute", '{"supplier_code":10,"period_start":"2026-01-01","period_end":"2026-06-30","commercial_score":100,"service_score":100,"persist":true,"notes":"Apuração semestral"}'),
+    create("/api/procurement/supplier-scorecards/compute", '{"supplier_code":10,"period_start":"2026-01-01","period_end":"2026-06-30","commercial_score":100,"service_score":100,"persist":true,"notes":"Apuração semestral"}', false, "Calcular avaliação"),
     create("/api/procurement/supplier-scorecards", '{"supplier_code":10,"period_start":"2026-01-01","period_end":"2026-06-30","quality_score":95,"delivery_score":90,"commercial_score":100,"service_score":98,"total_receipts":20,"rejected_receipts":1,"late_receipts":2,"notes":"Avaliação manual"}'),
   ]),
   VSUP0610: routine("VSUP0610", "Alçadas e parâmetros de compras", "Administra limites de aprovação e parâmetros operacionais de suprimentos.", [
-    list("/api/procurement/approval-limits"), create("/api/procurement/approval-limits", '{"enterprise_code":1,"scope":"GLOBAL","currency":"BRL","auto_approve_max":10000,"block_above":50000,"valid_from":"2026-01-01","notes":"Alçada padrão"}', true),
-    list("/api/procurement/parameters", [{ name: "domain", label: "Domínio" }], ["domain"]),
+    list("/api/procurement/approval-limits", [], [], "Consultar alçadas"), create("/api/procurement/approval-limits", '{"enterprise_code":1,"scope":"GLOBAL","currency":"BRL","auto_approve_max":10000,"block_above":50000,"valid_from":"2026-01-01","notes":"Alçada padrão"}', true),
+    list("/api/procurement/parameters", [{ name: "domain", label: "Domínio" }], ["domain"], "Consultar parâmetros"),
     { label: "Salvar parâmetro", method: "PUT", path: "/api/procurement/parameters", adminOnly: true, fields: [json('{"enterprise_code":1,"domain":"RECEIVING_NOTICE","param_key":"REQUIRE_NOTICE","param_value":"true","value_type":"BOOL","description":"Exigir aviso"}')] },
   ]),
   VSUP0620: routine("VSUP0620", "EDI de fornecedores", "Recebe confirmações eletrônicas e evidencia divergências contra o pedido de compra.", [
@@ -130,19 +116,19 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     list("/api/configurator/sets/{id}/variables", [id()]), { label: "Cadastrar variável", method: "POST", path: "/api/configurator/sets/{id}/variables", fields: [id(), json('{"code":"AZ","description":"Azul","mask_composition":"AZ","is_special":false,"include_description":true,"special_data":"","marketing":true}')] },
     { label: "Abrir variável", method: "GET", path: "/api/configurator/variables/{varId}", fields: [id("varId", "Variável")] },
     { label: "Alterar variável", method: "PUT", path: "/api/configurator/variables/{varId}", fields: [id("varId", "Variável"), json('{"code":"AZ","description":"Azul","mask_composition":"AZ","is_active":true,"is_special":false,"include_description":true,"special_data":"","marketing":true}')] },
-    remove("/api/configurator/variables/{varId}", [id("varId", "Variável")]),
+    remove("/api/configurator/variables/{varId}", [id("varId", "Variável")], false, "Excluir variável"),
     { label: "Traduzir variável", method: "POST", path: "/api/configurator/variables/{varId}/languages", fields: [id("varId", "Variável"), json('{"language":"en","country":"US","translation":"Blue"}')] },
-    remove("/api/configurator/variables/languages/{langId}", [id("langId", "Tradução")]),
+    remove("/api/configurator/variables/languages/{langId}", [id("langId", "Tradução")], false, "Excluir tradução da variável"),
   ]),
   VCFG0200: routine("VCFG0200", "Características do configurador", "Mantém características, tipos, fórmulas, limites, idiomas e itens de recebimento.", [
     list("/api/configurator/characteristics"), create("/api/configurator/characteristics", '{"code":"COR","description":"Cor","type":"ESCOLHA","set_id":1,"mask":"","is_required":true,"is_special":false,"affects_price":false,"controls_goals":false,"receiving_type":"","field_source":"","formula":"","option_true":"Sim","option_false":"Não"}'),
     { label: "Abrir característica", method: "GET", path: "/api/configurator/characteristics/{id}", fields: [id()] },
     { label: "Alterar característica", method: "PUT", path: "/api/configurator/characteristics/{id}", fields: [id(), json('{"code":"COR","description":"Cor","type":"ESCOLHA","is_active":true,"is_required":true}')] }, remove("/api/configurator/characteristics/{id}"),
     { label: "Traduzir característica", method: "POST", path: "/api/configurator/characteristics/{id}/languages", fields: [id(), json('{"language":"en","description":"Color","mask":"COLOR"}')] },
-    remove("/api/configurator/characteristics/languages/{langId}", [id("langId", "Tradução")]),
+    remove("/api/configurator/characteristics/languages/{langId}", [id("langId", "Tradução")], false, "Excluir tradução da característica"),
     { label: "Listar itens vinculados", method: "GET", path: "/api/configurator/characteristics/{id}/items", fields: [id()] },
     list("/api/configurator/characteristics/{id}/receiving-items", [id()]), { label: "Vincular item de recebimento", method: "POST", path: "/api/configurator/characteristics/{id}/receiving-items", fields: [id(), json('{"variable_id":1,"receiving_type":"RECEBIMENTO","item_code":100}')] },
-    remove("/api/configurator/characteristics/receiving-items/{recvId}", [id("recvId", "Vínculo de recebimento")]),
+    remove("/api/configurator/characteristics/receiving-items/{recvId}", [id("recvId", "Vínculo de recebimento")], false, "Excluir vínculo de recebimento"),
   ]),
   VCFG0300: routine("VCFG0300", "Características por item", "Ordena e configura as características que compõem cada item configurável.", [
     list("/api/configurator/items/{itemCode}/characteristics", [id("itemCode", "Item")]),
@@ -150,15 +136,15 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Alterar vínculo", method: "PUT", path: "/api/configurator/item-characteristics/{id}", fields: [id(), json('{"sequence":1,"is_special":false,"is_drawing":false,"is_load":false,"formula":"","default_answers":[]}')] }, remove("/api/configurator/item-characteristics/{id}"),
   ]),
   VCFG0400: routine("VCFG0400", "Geração de máscaras configuradas", "Gera uma máscara por respostas ou combinações em lote, com opção de persistência.", [
-    create("/api/configurator/generate-mask", '{"item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}],"persist":false}'),
-    create("/api/configurator/generate-masks", '{"item_code":100,"restrict":[{"characteristic_id":1,"variable_ids":[1,2]}],"persist":false}'),
+    create("/api/configurator/generate-mask", '{"item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}],"persist":false}', false, "Gerar máscara"),
+    create("/api/configurator/generate-masks", '{"item_code":100,"restrict":[{"characteristic_id":1,"variable_ids":[1,2]}],"persist":false}', false, "Gerar máscaras em lote"),
   ]),
   VCFG0500: routine("VCFG0500", "Descrições configuradas", "Mantém tipos, linhas e renderização das descrições de itens configurados.", [
     list("/api/configurator/description-types"), create("/api/configurator/description-types", '{"code":"COMERCIAL","description":"Descrição comercial","kind":"GERAL","is_active":true}'),
     { label: "Abrir tipo", method: "GET", path: "/api/configurator/description-types/{id}", fields: [id()] },
     { label: "Alterar tipo", method: "PUT", path: "/api/configurator/description-types/{id}", fields: [id(), json('{"code":"COMERCIAL","description":"Descrição comercial","kind":"GERAL","is_active":true}')] },
     remove("/api/configurator/description-types/{id}"),
-    create("/api/configurator/item-descriptions", '{"item_code":100,"description_type_id":1}'), list("/api/configurator/items/{itemCode}/descriptions", [id("itemCode", "Item")]),
+    create("/api/configurator/item-descriptions", '{"item_code":100,"description_type_id":1}', false, "Cadastrar descrição do item"), list("/api/configurator/items/{itemCode}/descriptions", [id("itemCode", "Item")]),
     { label: "Abrir descrição", method: "GET", path: "/api/configurator/item-descriptions/{id}", fields: [id()] },
     { label: "Atualizar linhas", method: "PUT", path: "/api/configurator/item-descriptions/{id}/lines", fields: [id(), json('{"lines":[{"id":1,"order_index":1,"show_characteristic":true,"show_mask":true,"desc_type":"DESCRICAO","text":"","line_break":false}]}')] },
     { label: "Recarregar linhas", method: "POST", path: "/api/configurator/item-descriptions/{id}/reload", fields: [id()] },
@@ -166,13 +152,13 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     remove("/api/configurator/item-descriptions/{id}"),
   ]),
   VCFG0600: routine("VCFG0600", "Regras equivalentes e regras de item", "Avalia regras pai-filho e regras que preenchem campos do item configurado.", [
-    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")]), create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}'),
-    create("/api/configurator/equivalent-rules/apply", '{"parent_item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}]}'),
+    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")], [], "Consultar regras de equivalência"), create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}', false, "Cadastrar regra de equivalência"),
+    create("/api/configurator/equivalent-rules/apply", '{"parent_item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}]}', false, "Aplicar regra de equivalência"),
     { label: "Abrir regra equivalente", method: "GET", path: "/api/configurator/equivalent-rules/{id}", fields: [id()] },
     { label: "Alterar regra equivalente", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}')] },
     remove("/api/configurator/equivalent-rules/{id}"),
-    list("/api/configurator/items/{itemCode}/rules", [id("itemCode", "Item")]), create("/api/configurator/item-rules", '{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}'),
-    create("/api/configurator/item-rules/evaluate", '{"item_code":100,"answers":[]}'),
+    list("/api/configurator/items/{itemCode}/rules", [id("itemCode", "Item")], [], "Consultar regras do item"), create("/api/configurator/item-rules", '{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}', false, "Cadastrar regra do item"),
+    create("/api/configurator/item-rules/evaluate", '{"item_code":100,"answers":[]}', false, "Avaliar regra do item"),
     { label: "Abrir regra do item", method: "GET", path: "/api/configurator/item-rules/{id}", fields: [id()] },
     { label: "Alterar regra do item", method: "PUT", path: "/api/configurator/item-rules/{id}", fields: [id(), json('{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}')] },
     remove("/api/configurator/item-rules/{id}"),
@@ -182,8 +168,8 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     list("/api/third-party-services/prices", [{ name: "item_from", label: "Item inicial" }, { name: "item_to", label: "Item final" }, { name: "supplier_from", label: "Fornecedor inicial", type: "number" }, { name: "supplier_to", label: "Fornecedor final", type: "number" }, { name: "operation_id", label: "Operação", type: "number" }, { name: "reference_date", label: "Data de referência", type: "date" }, { name: "price_type", label: "Tipo de preço" }, { name: "preferred", label: "Somente preferencial", type: "checkbox" }], ["item_from", "item_to", "supplier_from", "supplier_to", "operation_id", "reference_date", "price_type", "preferred"]), create("/api/third-party-services/prices", '{"item_code":"TEA452-0","supplier_code":10,"operation_id":1,"uom":"UN","reference_date":"2026-07-14T00:00:00Z","preferred":true,"unit_price":"25.50","freight_type":"FIXED","freight_value":"0","tax_percent":"0","reason":"Tabela 2026","rules":[]}', true),
     { label: "Abrir preço", method: "GET", path: "/api/third-party-services/prices/{id}", fields: [id()] },
     { label: "Alterar preço", method: "PUT", path: "/api/third-party-services/prices/{id}", adminOnly: true, fields: [id(), json('{"item_code":100,"supplier_code":10,"operation_id":1,"uom":"UN","reference_date":"2026-07-14T00:00:00Z","preferred":true,"unit_price":"25.50","freight_type":"FIXED","freight_value":"0","tax_percent":"0","reason":"Revisão","rules":[]}')] },
-    list("/api/third-party-services/prices/resolve", [{ name: "item_code", label: "Item", required: true }, { name: "mask", label: "Máscara" }, { name: "supplier_code", label: "Fornecedor", type: "number" }, { name: "operation_id", label: "Operação", type: "number", required: true }, { name: "reference_date", label: "Data de referência", type: "date" }, { name: "attributes", label: "Atributos" }], ["item_code", "mask", "supplier_code", "operation_id", "reference_date", "attributes"]),
-    list("/api/third-party-services/cost", [{ name: "item_code", label: "Item", required: true }, { name: "mask", label: "Máscara" }, { name: "operation_id", label: "Operação", type: "number", required: true }, { name: "reference_date", label: "Data de referência", type: "date" }, { name: "mode", label: "Modo", defaultValue: "STANDARD" }], ["item_code", "mask", "operation_id", "reference_date", "mode"]),
+    list("/api/third-party-services/prices/resolve", [{ name: "item_code", label: "Item", required: true }, { name: "mask", label: "Máscara" }, { name: "supplier_code", label: "Fornecedor", type: "number" }, { name: "operation_id", label: "Operação", type: "number", required: true }, { name: "reference_date", label: "Data de referência", type: "date" }, { name: "attributes", label: "Atributos" }], ["item_code", "mask", "supplier_code", "operation_id", "reference_date", "attributes"], "Resolver preço do item"),
+    list("/api/third-party-services/cost", [{ name: "item_code", label: "Item", required: true }, { name: "mask", label: "Máscara" }, { name: "operation_id", label: "Operação", type: "number", required: true }, { name: "reference_date", label: "Data de referência", type: "date" }, { name: "mode", label: "Modo", defaultValue: "STANDARD" }], ["item_code", "mask", "operation_id", "reference_date", "mode"], "Consultar custo do serviço"),
     { label: "Histórico", method: "GET", path: "/api/third-party-services/prices/{id}/history", fields: [id()] }, { label: "Reajustar", method: "POST", path: "/api/third-party-services/prices/readjust", adminOnly: true, fields: [json('{"ids":[1,2],"percent":"5.0","reference_date":"2026-07-14T00:00:00Z","reason":"Reajuste anual"}')] },
     { label: "Copiar / mover", method: "POST", path: "/api/third-party-services/prices/copy-move", adminOnly: true, fields: [json('{"ids":[1],"supplier_code":20,"operation_id":2,"move":false,"reference_date":"2026-07-14T00:00:00Z","reason":"Nova negociação"}')] }, remove("/api/third-party-services/prices/{id}", [id()], true),
   ]),
@@ -255,12 +241,12 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Adicionar revisão", method: "POST", path: "/api/drawings/{id}/revisions", fields: [id(), json('{"revision":"A","start_date":"2026-07-14","material_spec":"Aço","reason":"Emissão inicial","approved_by":"Responsável","approval_date":"2026-07-14","is_current":true}')] },
     { label: "Listar revisões", method: "GET", path: "/api/drawings/{id}/revisions", fields: [id()] },
     { label: "Alterar revisão", method: "PUT", path: "/api/drawings/revisions/{revId}", fields: [id("revId", "Revisão"), json('{"revision":"B","start_date":"2026-07-14","material_spec":"Aço","reason":"Ajuste dimensional","approved_by":"Responsável","approval_date":"2026-07-14","is_current":true}')] },
-    remove("/api/drawings/revisions/{revId}", [id("revId", "Revisão")]),
+    remove("/api/drawings/revisions/{revId}", [id("revId", "Revisão")], false, "Excluir revisão"),
     { label: "Distribuir revisão", method: "POST", path: "/api/drawings/revisions/{revId}/distributions", fields: [id("revId", "Revisão"), json('{"recipient":"Produção","distributed_at":"2026-07-14","notes":"Cópia controlada"}')] },
-    remove("/api/drawings/distributions/{distId}", [id("distId", "Distribuição")]),
+    remove("/api/drawings/distributions/{distId}", [id("distId", "Distribuição")], false, "Excluir distribuição"),
     { label: "Vincular característica", method: "POST", path: "/api/drawings/{id}/characteristics", fields: [id(), json('{"characteristic_id":1,"operator":"EQ","variable_id":1}')] },
     { label: "Listar características", method: "GET", path: "/api/drawings/{id}/characteristics", fields: [id()] },
-    remove("/api/drawings/characteristics/{charLinkId}", [id("charLinkId", "Vínculo")]),
+    remove("/api/drawings/characteristics/{charLinkId}", [id("charLinkId", "Vínculo")], false, "Excluir vínculo de característica"),
     { label: "Consultar código por item", method: "GET", path: "/api/drawings/item-code/{itemCode}", fields: [id("itemCode", "Item")] },
     { label: "Manter código por item", method: "PUT", path: "/api/drawings/item-code", fields: [json('{"item_code":100,"mask":"","drawing_code":"DES-001.0"}')] },
     list("/api/drawings/manufacturing-parameters"),
@@ -281,9 +267,9 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Desativar máscara", method: "DELETE", path: "/api/lot-masks/{id}", fields: [id()], destructive: true },
   ]),
   VSUP0630: routine("VSUP0630", "Tolerâncias de pedido de compra", "Define tolerâncias por faixa e fornecedor e avalia quantidade, preço ou prazo recebido.", [
-    list("/api/purchase-order-tolerances/"), create("/api/purchase-order-tolerances/", '{"tolerance_type":"QUANTITY","applies_to":"RECEIPT","interval_min":"0","interval_max":"1000","tolerance_value":"5","value_type":"PERCENT","action":"WARN","is_active":true}'),
+    list("/api/purchase-order-tolerances/", [], [], "Consultar tolerâncias"), create("/api/purchase-order-tolerances/", '{"tolerance_type":"QUANTITY","applies_to":"RECEIPT","interval_min":"0","interval_max":"1000","tolerance_value":"5","value_type":"PERCENT","action":"WARN","is_active":true}'),
     { label: "Alterar", method: "PUT", path: "/api/purchase-order-tolerances/", fields: [json('{"id":1,"tolerance_type":"QUANTITY","applies_to":"RECEIPT","interval_min":"0","tolerance_value":"5","value_type":"PERCENT","action":"WARN","is_active":true}')] },
-    create("/api/purchase-order-tolerances/evaluate", '{"tolerance_type":"QUANTITY","applies_to":"RECEIPT","supplier_code":10,"expected":"100","actual":"104"}'), remove("/api/purchase-order-tolerances/{id}"),
+    create("/api/purchase-order-tolerances/evaluate", '{"tolerance_type":"QUANTITY","applies_to":"RECEIPT","supplier_code":10,"expected":"100","actual":"104"}', false, "Avaliar tolerância"), remove("/api/purchase-order-tolerances/{id}"),
   ]),
   VSEC0100: routine("VSEC0100", "Solicitação e aprovação de troca de senha", "Controla o fluxo seguro de solicitação, aprovação administrativa e conclusão da troca pelo titular.", [
     { label: "Solicitar troca", method: "POST", path: "/api/password-change-requests/" },
@@ -366,8 +352,8 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   VSUP0660: routine("VSUP0660", "Parâmetros e contatos complementares do fornecedor", "Configura regras corporativas do cadastro de fornecedores e inclui telefones e e-mails em contatos já persistidos.", [
     { label: "Consultar parâmetros", method: "GET", path: "/api/suppliers/support/parameters/{enterpriseCode}", fields: [id("enterpriseCode", "Empresa")] },
     { label: "Salvar parâmetros", method: "PUT", path: "/api/suppliers/support/parameters/", fields: [json('{"enterprise_code":1,"default_financial_account":"2.1.1","unique_item_code_per_supplier":true,"requires_financial_account":true,"purchase_supplier_type_id":1,"copy_obs_to_purchase_order":true,"copy_obs_to_entry_invoice":true,"homologation_default":false,"use_stock_uom":true,"generic_supplier_code":null,"default_due_base_date":"EMISSAO"}')] },
-    create("/api/suppliers/contacts/phones", '{"contact_id":1,"value":"11999999999","ranking":1}'),
-    create("/api/suppliers/contacts/emails", '{"contact_id":1,"value":"compras@fornecedor.com.br","ranking":1}'),
+    create("/api/suppliers/contacts/phones", '{"contact_id":1,"value":"11999999999","ranking":1}', false, "Cadastrar telefone do contato"),
+    create("/api/suppliers/contacts/emails", '{"contact_id":1,"value":"compras@fornecedor.com.br","ranking":1}', false, "Cadastrar e-mail do contato"),
   ]),
   VSUP0670: routine("VSUP0670", "Itens do fornecedor e relatórios de qualidade", "Consulta os itens vinculados ao fornecedor e mantém evidências documentais de qualidade do vínculo item-fornecedor.", [
     { label: "Itens por fornecedor", method: "GET", path: "/api/item-suppliers/supplier/{supplierCode}", fields: [id("supplierCode", "Fornecedor")] },
@@ -381,8 +367,8 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   VSUP0680: routine("VSUP0680", "Fontes e atualização de preços de compra", "Consulta candidatos e preços originados de compras, aplica seleções na tabela e copia ajustes entre seus itens.", [
     { label: "Consultar fontes", method: "GET", path: "/api/purchase-price-tables/sources", fields: [{ name: "start", label: "Data inicial", type: "date", required: true }, { name: "end", label: "Data final", type: "date", required: true }, { name: "supplier_code", label: "Fornecedor", type: "number" }, { name: "table_code", label: "Tabela", type: "number" }, { name: "source", label: "Origem" }], query: ["start", "end", "supplier_code", "table_code", "source"] },
     { label: "Consultar candidatos", method: "GET", path: "/api/purchase-price-tables/{code}/candidates", fields: [id("code", "Tabela"), { name: "mode", label: "Modo", defaultValue: "INTERNAL" }, { name: "order", label: "Ordenação", defaultValue: "NUMERIC" }, { name: "classification_id", label: "Classificação", type: "number" }], query: ["mode", "order", "classification_id"] },
-    create("/api/purchase-price-tables/sources/apply", '{"table_code":1,"overwrite":false,"selections":[{"source_type":"PURCHASE_ORDER","source_id":100}]}'),
-    create("/api/purchase-price-tables/items/copy-adjustments", '{"source_item_id":1,"target_item_id":2,"mode":"COPY"}'),
+    create("/api/purchase-price-tables/sources/apply", '{"table_code":1,"overwrite":false,"selections":[{"source_type":"PURCHASE_ORDER","source_id":100}]}', false, "Aplicar fonte de preço"),
+    create("/api/purchase-price-tables/items/copy-adjustments", '{"source_item_id":1,"target_item_id":2,"mode":"COPY"}', false, "Copiar e reajustar itens"),
   ]),
   VENG0600: routine("VENG0600", "Rede de precedência do roteiro", "Mantém dependências predecessor-sucessor e sobreposição entre operações de um roteiro de fabricação.", [
     { label: "Definir dependência", method: "POST", path: "/api/routing/route-operations/{routeId}/network/set", fields: [id("routeId", "Roteiro"), { name: "predecessor_id", label: "Operação predecessora", type: "number", required: true }, { name: "successor_id", label: "Operação sucessora", type: "number", required: true }, { name: "overlap_pct", label: "Sobreposição (%)", type: "number", required: true }] },
@@ -404,8 +390,8 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Gerar SPED ECD", method: "POST", path: "/api/accounting/sped/ecd/", downloadFilename: "SPED_ECD.txt", fields: [json('{"plan_id":1,"empresa_id":1,"from":"2026-01-01","to":"2026-12-31","empresa":{"CNPJ":"00000000000191","CPF":"","Nome":"EMPRESA LTDA","UF":"SP","Email":"contabilidade@empresa.com.br","IE":"110042490114","CodigoMunicipio":"3550308","CEP":"01001000","Endereco":"PRACA DA SE","Numero":"100","Complemento":"","Bairro":"SE","Fone":"1130000000","NIRE":"35123456789","IndSitAtiv":"0","IndNireCert":"0","IndGrandePorte":"0","IndEscCons":"N","TipoECD":"0","HashECDSub":"","NumOrd":"1","NomeAudi":"","IndSitEsp":"0"},"livros":[{"NumOrd":"1","NatLivro":"G","NumLiv":"1","DescLiv":"LIVRO DIARIO GERAL","CodHash":"","NumHash":"","PerIni":"2026-01-01T00:00:00Z","PerFin":"2026-12-31T23:59:59Z","CodHashAnt":"","NumHashAnt":""}]}')] },
   ]),
   VFIS0620: routine("VFIS0620", "Manifestação do destinatário e inutilização", "Envia à SEFAZ eventos de manifestação de NF-e recebida e inutiliza faixas não utilizadas de numeração própria.", [
-    create("/api/fiscal/manifestacao", '{"chave_nfe":"00000000000000000000000000000000000000000000","tipo":"CIENCIA","justificativa":"Documento identificado e aguardando conferência"}'),
-    create("/api/fiscal/inutilizacao", '{"serie":1,"numero_inicial":100,"numero_final":105,"justificativa":"Faixa não utilizada por falha controlada de numeração"}'),
+    create("/api/fiscal/manifestacao", '{"chave_nfe":"00000000000000000000000000000000000000000000","tipo":"CIENCIA","justificativa":"Documento identificado e aguardando conferência"}', false, "Manifestar NF-e"),
+    create("/api/fiscal/inutilizacao", '{"serie":1,"numero_inicial":100,"numero_final":105,"justificativa":"Faixa não utilizada por falha controlada de numeração"}', false, "Inutilizar numeração"),
   ]),
   VFIS0630: routine("VFIS0630", "Tabela IBPT e carga tributária aproximada", "Importa o arquivo oficial IBPT/SCI por UF e consulta a carga tributária vigente por NCM.", [
     { label: "Importar tabela IBPT", method: "POST", path: "/api/fiscal/ibpt/import", adminOnly: true, fields: [{ name: "uf", label: "UF", required: true }, { name: "csv", label: "Arquivo CSV IBPT", type: "file-text", required: true, accept: ".csv,text/csv,text/plain", help: "Selecione o CSV oficial, separado por ponto e vírgula." }] },
@@ -550,16 +536,16 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Abrir ordem", method: "GET", path: "/api/procurement/receiving-inspection-orders/{id}", fields: [id()] },
   ]),
   VENG0204: routine("VENG0204", "Regras de variáveis equivalentes", "Mantém e aplica relações entre características de itens pai e filho.", [
-    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")]),
-    create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}'),
+    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")], [], "Consultar regras de equivalência"),
+    create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}', false, "Cadastrar regra de equivalência"),
     create("/api/configurator/equivalent-rules/apply", '{"parent_item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}]}'),
     { label: "Abrir regra", method: "GET", path: "/api/configurator/equivalent-rules/{id}", fields: [id()] },
     { label: "Alterar regra", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}')] },
     remove("/api/configurator/equivalent-rules/{id}"),
   ]),
   VITE0118: routine("VITE0118", "Regras de itens configurados", "Mantém e avalia regras que preenchem campos do item a partir das respostas do configurador.", [
-    list("/api/configurator/items/{itemCode}/rules", [id("itemCode", "Item")]),
-    create("/api/configurator/item-rules", '{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}'),
+    list("/api/configurator/items/{itemCode}/rules", [id("itemCode", "Item")], [], "Consultar regras do item"),
+    create("/api/configurator/item-rules", '{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}', false, "Cadastrar regra do item"),
     create("/api/configurator/item-rules/evaluate", '{"item_code":100,"answers":[]}'),
     { label: "Abrir regra", method: "GET", path: "/api/configurator/item-rules/{id}", fields: [id()] },
     { label: "Alterar regra", method: "PUT", path: "/api/configurator/item-rules/{id}", fields: [id(), json('{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}')] },

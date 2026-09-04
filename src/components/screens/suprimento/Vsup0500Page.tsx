@@ -6,17 +6,30 @@ import {
   listSuppliers, getSupplier, createSupplier, updateSupplier, blockSupplier, unblockSupplier,
   listSupplierTypes, addAddress, addPhone, addEmail, addDueDate, addContact,
   listEnterprises, addEnterprise, sefazQuery, getPurchasingDefaults,
+  type ContactTypeDTO, type SupplierParametersDTO, type SupplierKind, SUPPLIER_KINDS,
+  createSupplierType, updateSupplierType, listContactTypes, createContactType,
+  getParameters, updateParameters,
 } from "@/services/supplierService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadEstablishments } from "@/services/lookups";
+import { loadEstablishments, defaultEnterprise } from "@/services/lookups";
 import { lookupCnpj, type CnpjLookup } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Folder = "dados" | "endereco" | "telefones" | "emails" | "vencimentos" | "contatos" | "empresas";
+/**
+ * Cadastros de apoio ao fornecedor. Antes viviam na VSUP0510; foram trazidos
+ * para cá para que tudo de fornecedor fique em uma tela só. Não dependem do
+ * fornecedor selecionado, por isso ficam em um modo próprio da tela.
+ */
+type ApoioTab = "tipos" | "contatos" | "parametros";
+const APOIO_LABEL: Record<ApoioTab, string> = { tipos: "Tipos de fornecedor", contatos: "Tipos de contato", parametros: "Parâmetros de compras" };
+const APOIO_TABS: ApoioTab[] = ["tipos", "contatos", "parametros"];
+/** Data-base usada para calcular os vencimentos das notas de entrada. */
+const DUE_BASE_LABEL: Record<string, string> = { EMISSAO: "Data de emissão", ENTRADA: "Data de entrada", DIGITACAO: "Data de digitação" };
 const SYS_USER = "00000000-0000-0000-0000-000000000000";
 const MA_RE = /^[A-Z]{2}-\d{5}-\d$/;
 
@@ -53,6 +66,18 @@ export function Vsup0500Page(): JSX.Element {
   const [entForm, setEntForm] = useState<{ enterprise_code?: number; financial_account: string; ipi: boolean; default_invoice_type_id: string; purchase_price_table_id: string }>({ enterprise_code: undefined, financial_account: "", ipi: false, default_invoice_type_id: "", purchase_price_table_id: "" });
   const [entCode] = useState("1");
 
+  // ── Cadastros de apoio (antiga VSUP0510) ───────────────────────────────────
+  const [apoio, setApoio] = useState(false);
+  const [apoioTab, setApoioTab] = useState<ApoioTab>("tipos");
+  const [typeForm, setTypeForm] = useState<SupplierTypeDTO>({ description: "", kind: "NORMAL" });
+  const [typeEdit, setTypeEdit] = useState<number | null>(null);
+  const [contactTypes, setContactTypes] = useState<ContactTypeDTO[]>([]);
+  const [contactTypeForm, setContactTypeForm] = useState<ContactTypeDTO>({ description: "" });
+  // A empresa dos parâmetros vem sozinha quando só existe uma cadastrada.
+  const [paramEnterprise, setParamEnterprise] = useState<number | undefined>(undefined);
+  const [enterpriseFixed, setEnterpriseFixed] = useState<string>("");
+  const [params, setParams] = useState<SupplierParametersDTO>({ enterprise_code: 0 });
+
   const reload = useCallback(async () => {
     setBusy(true);
     try {
@@ -63,8 +88,62 @@ export function Vsup0500Page(): JSX.Element {
   }, [onlyActive]);
   useEffect(() => { void reload(); }, [reload]);
 
+  // A empresa dos parâmetros é resolvida uma vez: com uma única empresa
+  // cadastrada ela é assumida e o campo vira apenas informativo.
+  useEffect(() => {
+    void defaultEnterprise().then((only) => {
+      if (!only) return;
+      setParamEnterprise(Number(only.code));
+      setEnterpriseFixed(only.label);
+    });
+  }, []);
+
+  const carregarApoio = useCallback(async () => {
+    setBusy(true);
+    try { setContactTypes(await listContactTypes().catch(() => [] as ContactTypeDTO[])); }
+    finally { setBusy(false); }
+  }, []);
+
+  async function salvarTipoFornecedor() {
+    if (!typeForm.description.trim()) { setFeedback({ type: "error", message: "Informe a descrição do tipo de fornecedor." }); return; }
+    setBusy(true); setFeedback(null);
+    try {
+      if (typeEdit !== null) { await updateSupplierType({ ...typeForm, code: typeEdit }); setFeedback({ type: "success", message: "Tipo de fornecedor atualizado." }); }
+      else { await createSupplierType(typeForm); setFeedback({ type: "success", message: "Tipo de fornecedor cadastrado." }); }
+      setTypeForm({ description: "", kind: "NORMAL" }); setTypeEdit(null); await reload();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  async function salvarTipoContato() {
+    if (!contactTypeForm.description.trim()) { setFeedback({ type: "error", message: "Informe a descrição do tipo de contato." }); return; }
+    setBusy(true); setFeedback(null);
+    try { await createContactType(contactTypeForm); setContactTypeForm({ description: "" }); setFeedback({ type: "success", message: "Tipo de contato cadastrado." }); await carregarApoio(); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  const setP = <K extends keyof SupplierParametersDTO>(k: K, v: SupplierParametersDTO[K]) => setParams((prev) => ({ ...prev, [k]: v }));
+
+  async function carregarParams() {
+    if (!paramEnterprise) { setFeedback({ type: "error", message: "Selecione a empresa dos parâmetros." }); return; }
+    setBusy(true); setFeedback(null);
+    try { setParams(await getParameters(paramEnterprise)); setFeedback({ type: "info", message: "Parâmetros de compras carregados." }); }
+    catch (e) {
+      setFeedback({ type: "info", message: errMessage(e, "Esta empresa ainda não tem parâmetros; preencha e salve para criá-los.") });
+      setParams({ enterprise_code: paramEnterprise });
+    } finally { setBusy(false); }
+  }
+
+  async function salvarParams() {
+    if (!paramEnterprise) { setFeedback({ type: "error", message: "Selecione a empresa dos parâmetros." }); return; }
+    setBusy(true); setFeedback(null);
+    try { await updateParameters({ ...params, enterprise_code: paramEnterprise }); setFeedback({ type: "success", message: "Parâmetros de compras salvos." }); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
   const setF = <K extends keyof SupplierDTO>(k: K, v: SupplierDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
   const kindOf = (code?: number) => types.find((t) => t.code === code)?.kind;
+  // Mesma regra da validação: só transportadora/redespacho dispensam a IE.
+  const ieRequired = !NO_IE_KINDS.includes(kindOf(form.supplier_type_code) ?? "");
 
   function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEnterprises([]); setCnpjData(null); setFolder("dados"); setEditMode(true); setFeedback(null); }
 
@@ -211,6 +290,9 @@ export function Vsup0500Page(): JSX.Element {
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
             Novo fornecedor
           </button>
+          <button className={`erp-btn${apoio ? " erp-btn-primary" : ""}`} onClick={() => { setApoio((v) => !v); setFeedback(null); if (!apoio) void carregarApoio(); }} disabled={busy}>
+            Cadastros de apoio
+          </button>
         </div>
         {editMode && (
           <div className="erp-tgroup">
@@ -231,6 +313,100 @@ export function Vsup0500Page(): JSX.Element {
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
         {cnpjData && editMode && <div className="erp-note"><strong>Consulta cadastral:</strong> situação {cnpjData.registration_status || "não informada"}; abertura {cnpjData.opening_date || "não informada"}; natureza jurídica {cnpjData.legal_nature || "não informada"}; porte {cnpjData.size || "não informado"}; CNAE principal {cnpjData.main_activity?.code || "não informado"} {cnpjData.main_activity?.description ? `— ${cnpjData.main_activity.description}` : ""}; CNAEs secundários {cnpjData.secondary_activities.map((item) => item.code).filter(Boolean).join(", ") || "não informados"}; IEs {cnpjData.state_registrations.map((item) => `${item.uf} ${item.number}${item.enabled ? " ativa" : " inativa"}`).join(", ") || cnpjData.state_registration || "não informadas"}; endereço {[cnpjData.address?.street, cnpjData.address?.number, cnpjData.address?.neighborhood, cnpjData.address?.city, cnpjData.address?.uf, cnpjData.address?.zip_code].filter(Boolean).join(", ") || "não informado"}; telefone {cnpjData.phone || "não informado"}; e-mail {cnpjData.email || "não informado"}; Simples Nacional {cnpjData.simples_optant ? "sim" : "não"}; MEI {cnpjData.mei ? "sim" : "não"}. Os campos disponíveis foram preenchidos e permanecem editáveis para conferência.</div>}
+        {apoio && (
+          <section className="erp-detail-panel">
+            <div className="erp-tabs">
+              {APOIO_TABS.map((t) => (
+                <button key={t} className={`erp-tab${apoioTab === t ? " active" : ""}`} onClick={() => { setApoioTab(t); if (t === "parametros") void carregarParams(); }}>{APOIO_LABEL[t]}</button>
+              ))}
+            </div>
+            <div className="erp-detail-body">
+
+              {apoioTab === "tipos" && (<>
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">{typeEdit !== null ? `Editando o tipo de fornecedor ${typeEdit}` : "Novo tipo de fornecedor"}</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c7"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={typeForm.description} onChange={(e) => setTypeForm((prev) => ({ ...prev, description: e.target.value }))} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Natureza</label><select className="erp-input" value={typeForm.kind} onChange={(e) => setTypeForm((prev) => ({ ...prev, kind: e.target.value as SupplierKind }))}>{SUPPLIER_KINDS.map((k) => <option key={k} value={k}>{enumLabel(k)}</option>)}</select></div>
+                    <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                      <button className="erp-btn erp-btn-primary" onClick={() => void salvarTipoFornecedor()} disabled={busy}>{typeEdit !== null ? "Atualizar" : "Cadastrar"}</button>
+                    </div>
+                    <div className="erp-field erp-c12"><span className="erp-field-hint">Transportadora, redespacho e transportadora/redespacho dispensam a inscrição estadual do fornecedor.</span></div>
+                  </div>
+                </div>
+                <div className="erp-grid-wrap">
+                  <table className="erp-grid">
+                    <thead><tr><th className="num">Código</th><th>Descrição</th><th>Natureza</th><th style={{ width: 90 }} /></tr></thead>
+                    <tbody>
+                      {types.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum tipo de fornecedor cadastrado.</td></tr>}
+                      {types.map((t) => (
+                        <tr key={t.code}>
+                          <td className="num" style={{ fontWeight: 600 }}>{t.code}</td><td>{t.description}</td>
+                          <td><span className="erp-badge draft">{enumLabel(t.kind)}</span></td>
+                          <td><button className="erp-btn erp-btn-sm" onClick={() => { setTypeForm({ ...t }); setTypeEdit(t.code ?? null); }}>Editar</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>)}
+
+              {apoioTab === "contatos" && (<>
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Novo tipo de contato</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c9"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={contactTypeForm.description} onChange={(e) => setContactTypeForm({ description: e.target.value })} /></div>
+                    <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void salvarTipoContato()} disabled={busy}>Cadastrar</button></div>
+                  </div>
+                </div>
+                <div className="erp-grid-wrap">
+                  <table className="erp-grid">
+                    <thead><tr><th className="num">Código</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                      {contactTypes.length === 0 && <tr><td colSpan={2} className="erp-grid-empty">Nenhum tipo de contato cadastrado.</td></tr>}
+                      {contactTypes.map((c) => <tr key={c.code}><td className="num" style={{ fontWeight: 600 }}>{c.code}</td><td>{c.description}</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
+              </>)}
+
+              {apoioTab === "parametros" && (
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Parâmetros de compras da empresa</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c4"><label className="erp-label">Empresa</label>
+                      {enterpriseFixed
+                        ? <input className="erp-input" value={enterpriseFixed} disabled />
+                        : <LookupField value={paramEnterprise} loader={loadEstablishments} entityLabel="empresa" placeholder="Selecionar empresa" onChange={(code) => setParamEnterprise(code ? Number(code) : undefined)} />}
+                    </div>
+                    <div className="erp-field erp-c5" style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+                      <button className="erp-btn erp-btn-dark" onClick={() => void carregarParams()} disabled={busy}>Carregar</button>
+                      <button className="erp-btn erp-btn-primary" onClick={() => void salvarParams()} disabled={busy}>Salvar parâmetros</button>
+                    </div>
+                    <div className="erp-field erp-c3" />
+                    <div className="erp-field erp-c4"><label className="erp-label">Conta financeira padrão</label><input className="erp-input num" type="number" value={params.default_financial_account ?? ""} onChange={(e) => setP("default_financial_account", (e.target.value ? Number(e.target.value) : undefined) as never)} /></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Tipo de fornecedor para comprar</label><input className="erp-input num" type="number" value={params.purchase_supplier_type_id ?? ""} onChange={(e) => setP("purchase_supplier_type_id", (e.target.value ? Number(e.target.value) : undefined) as never)} /></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Fornecedor genérico da NF-e</label><input className="erp-input num" type="number" value={params.generic_supplier_code ?? ""} onChange={(e) => setP("generic_supplier_code", (e.target.value ? Number(e.target.value) : undefined) as never)} /></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Data-base dos vencimentos</label>
+                      <select className="erp-input" value={params.default_due_base_date ?? ""} onChange={(e) => setP("default_due_base_date", e.target.value || undefined)}>
+                        <option value="">Não definida</option>
+                        {Object.entries(DUE_BASE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                    </div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Código do item único por fornecedor</label><label className="erp-check"><input type="checkbox" checked={!!params.unique_item_code_per_supplier} onChange={(e) => setP("unique_item_code_per_supplier", e.target.checked as never)} /><span>{params.unique_item_code_per_supplier ? "Sim" : "Não"}</span></label></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Exigir conta financeira</label><label className="erp-check"><input type="checkbox" checked={!!params.requires_financial_account} onChange={(e) => setP("requires_financial_account", e.target.checked as never)} /><span>{params.requires_financial_account ? "Sim" : "Não"}</span></label></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Copiar observação para o pedido de compra</label><label className="erp-check"><input type="checkbox" checked={!!params.copy_obs_to_purchase_order} onChange={(e) => setP("copy_obs_to_purchase_order", e.target.checked as never)} /><span>{params.copy_obs_to_purchase_order ? "Sim" : "Não"}</span></label></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Copiar observação para a NF de entrada</label><label className="erp-check"><input type="checkbox" checked={!!params.copy_obs_to_entry_invoice} onChange={(e) => setP("copy_obs_to_entry_invoice", e.target.checked as never)} /><span>{params.copy_obs_to_entry_invoice ? "Sim" : "Não"}</span></label></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Homologação padrão</label><label className="erp-check"><input type="checkbox" checked={!!params.homologation_default} onChange={(e) => setP("homologation_default", e.target.checked as never)} /><span>{params.homologation_default ? "Sim" : "Não"}</span></label></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Usar a unidade de estoque</label><label className="erp-check"><input type="checkbox" checked={!!params.use_stock_uom} onChange={(e) => setP("use_stock_uom", e.target.checked as never)} /><span>{params.use_stock_uom ? "Sim" : "Não"}</span></label></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {!apoio && (
         <div className="erp-main">
           <aside className="erp-list-panel">
             <div className="erp-panel-head">
@@ -277,7 +453,11 @@ export function Vsup0500Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ/CPF</label><input className="erp-input" value={form.document_number} onChange={(e) => setF("document_number", e.target.value)} />
                           {form.document_number.trim() && (form.document_type === "CNPJ" || form.document_type === "CPF") && <span style={{ fontSize: 11, marginTop: 3, color: validateCNPJOrCPF(form.document_number) ? "var(--v-ok)" : "var(--v-err)" }}>{validateCNPJOrCPF(form.document_number) ? "✓ válido" : "✗ inválido"}</span>}</div>
                         {!editing && form.document_type === "CNPJ" && <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={() => void consultarCnpj()} disabled={busy || !validateCNPJOrCPF(form.document_number)}>Consultar CNPJ</button></div>}
-                        <div className="erp-field erp-c3"><label className="erp-label">Inscr. Estadual</label><input className="erp-input" value={form.state_registration ?? ""} onChange={(e) => setF("state_registration", e.target.value)} /></div>
+                        <div className="erp-field erp-c3">
+                          <label className={`erp-label${ieRequired ? " erp-req" : ""}`}>Inscr. Estadual</label>
+                          <input className="erp-input" value={form.state_registration ?? ""} onChange={(e) => setF("state_registration", e.target.value)} />
+                          <span className="erp-field-hint">{ieRequired ? "Obrigatória para este tipo de fornecedor." : "Dispensada para transportadora e redespacho."}</span>
+                        </div>
                         <div className="erp-field erp-c2"><label className="erp-label">Insc. Municipal</label><input className="erp-input" value={form.municipal_registration ?? ""} onChange={(e) => setF("municipal_registration", e.target.value)} /></div>
                         <div className="erp-field erp-c4"><label className="erp-label">Tipo de fornecedor</label><select className="erp-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value ? Number(e.target.value) : undefined)}><option value="">—</option>{types.map((t) => <option key={t.code} value={t.code}>{t.description} ({t.kind})</option>)}</select></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Tipo frete</label><select className="erp-input" value={form.freight_type} onChange={(e) => setF("freight_type", e.target.value as FreightType)}>{FREIGHT_TYPES.map((x) => <option key={x} value={x}>{enumLabel(x)}</option>)}</select></div>
@@ -388,6 +568,7 @@ export function Vsup0500Page(): JSX.Element {
             )}
           </section>
         </div>
+        )}
       </div>
 
       <footer className="erp-statusbar">

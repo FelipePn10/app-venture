@@ -145,6 +145,34 @@ export async function listForecasts(year: number): Promise<SalesForecastDTO[]> {
   const { data } = await httpClient.get(`${BASE}/list/${year}`);
   return unwrapArray(data).map(parseForecast);
 }
+/** Demanda realizada do ano — `GET /api/sales-forecast/actuals`. */
+export interface ActualDemandDTO {
+  item_code: string;
+  mask: string;
+  year: number;
+  month: number;
+  quantity: number;
+}
+
+/** Fonte do realizado: pedidos, faturamento ou os dois somados. */
+export type ActualSource = 'ORDERS' | 'INVOICING' | 'BOTH';
+
+export async function listActuals(year: number, source: ActualSource = 'BOTH', itemCode?: string): Promise<ActualDemandDTO[]> {
+  const params: Record<string, string | number> = { year, source };
+  if (itemCode) params['item_code'] = itemCode;
+  const { data } = await httpClient.get(`${BASE}/actuals`, { params });
+  return unwrapArray(data).map((row) => {
+    const o = row as Obj;
+    return {
+      item_code: String(o['item_code'] ?? o['ItemCode'] ?? ''),
+      mask: String(o['mask'] ?? o['Mask'] ?? ''),
+      year: Number(o['year'] ?? o['Year'] ?? 0),
+      month: Number(o['month'] ?? o['Month'] ?? 0),
+      quantity: Number(o['quantity'] ?? o['Quantity'] ?? 0),
+    };
+  });
+}
+
 export async function getForecastByItem(itemCode: string): Promise<SalesForecastDTO[]> {
   const { data } = await httpClient.get(`${BASE}/item/${itemCode}`);
   return unwrapArray(data).map(parseForecast);

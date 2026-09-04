@@ -172,6 +172,106 @@ const LABELS: Record<string, string> = {
   employee_id: "Funcionário", contact_id: "Contato", function_id: "Função", service_id: "Serviço", field_id: "Campo",
   machine_id: "Máquina", weekday: "Dia da semana", start: "Início", end: "Fim", intervals: "Intervalos",
   downtime_type: "Tipo de parada",
+  // Rótulos das rotinas operacionais: toda chave lida do backend precisa de
+  // tradução aqui, senão humanLabel() cai no nome do campo em inglês.
+  formula: "Fórmula", characteristic_id: "Característica", variable_id: "Variável",
+  answers: "Respostas", parent_item_code: "Item pai", uom: "Unidade de medida",
+  persist: "Gravar configuração", items: "Itens", is_special: "Especial",
+  rejected_qty: "Qtde. rejeitada", destination_warehouse_id: "Almoxarifado de destino", period_start: "Início do período",
+  period_end: "Fim do período", value_type: "Tipo do valor", parent_uom: "Unidade do item pai",
+  child_item_code: "Item filho", parent_characteristic_id: "Característica do pai", parent_operator: "Operador do pai",
+  child_characteristic_id: "Característica do filho", child_operator: "Operador do filho", target_table: "Tabela de destino",
+  target_field: "Campo de destino", content: "Conteúdo", conditions: "Condições",
+  material_spec: "Especificação do material", reference: "Referência", kind: "Tipo",
+  is_required: "Obrigatório", min_value: "Valor mínimo", max_value: "Valor máximo",
+  commercial_score: "Nota comercial", service_score: "Nota de atendimento", from: "De",
+  tolerance_type: "Tipo de tolerância", applies_to: "Aplica-se a", serie: "Série",
+  order_id: "Ordem", payload: "Conteúdo da mensagem", source: "Origem",
+  step_id: "Etapa", sample_index: "Amostra", measured_value: "Valor medido",
+  is_approved: "Aprovado", conform_qty: "Qtde. conforme", rework_qty: "Qtde. para retrabalho",
+  restricted_qty: "Qtde. restrita", treatment: "Tratamento", affects_supplier_score: "Afeta a nota do fornecedor",
+  move_stock: "Movimenta estoque", rejection_warehouse_id: "Almoxarifado de rejeição", approved_qty: "Qtde. aprovada",
+  quarantine_warehouse_id: "Almoxarifado de quarentena", lines: "Linhas", incoterm: "Incoterm",
+  exchange_rate: "Taxa de câmbio", apportion_basis: "Base de rateio", weight: "Peso",
+  fob_unit_price: "Preço unitário FOB", expenses: "Despesas", expense_type: "Tipo de despesa",
+  amount: "Valor", in_item_cost: "Compõe o custo do item", lot: "Lote",
+  mask_composition: "Composição da máscara", include_description: "Incluir na descrição", special_data: "Dado especial",
+  marketing: "Uso comercial", language: "Idioma", type: "Tipo",
+  receiving_type: "Tipo de recebimento", is_drawing: "Gera desenho", is_load: "Compõe carga",
+  default_answers: "Respostas padrão", preferred: "Preferencial", freight_type: "Tipo de frete",
+  freight_value: "Valor do frete", tax_percent: "Percentual de imposto", rules: "Regras",
+  ids: "Registros", time_unit: "Unidade de tempo", refresh_value: "Intervalo de atualização",
+  digit: "Dígito", format: "Formato", model: "Modelo",
+  creation_date: "Data de criação", revision: "Revisão", start_date: "Data de início",
+  approved_by: "Aprovado por", approval_date: "Data de aprovação", is_current: "Vigente",
+  interval_min: "Intervalo mínimo", tolerance_value: "Valor da tolerância", customer_id: "Cliente",
+  title: "Título", instruction: "Instrução", tipo: "Tipo",
+  numero_documento: "Número do documento", valor: "Valor", ranking: "Ordem de preferência",
+  serial_number: "Número de série", justificativa: "Justificativa", data_emissao: "Data de emissão",
+  cfop: "CFOP", valor_frete: "Valor do frete", valor_seguro: "Valor do seguro",
+  actual_hours: "Horas realizadas", record_type: "Tipo de registro", basis: "Base",
+  inspection_warehouse_id: "Almoxarifado de inspeção", steps: "Etapas", inspection_name: "Nome da inspeção",
+  appointment_mode: "Modo de apontamento", emits_label: "Emite etiqueta", sample_qty: "Qtde. da amostra",
+  acceptance_qty: "Qtde. de aceitação", rejection_qty: "Qtde. de rejeição", attributes: "Atributos",
+  quality_score: "Nota de qualidade", delivery_score: "Nota de entrega", total_receipts: "Total de recebimentos",
+  rejected_receipts: "Recebimentos rejeitados", late_receipts: "Recebimentos em atraso", scope: "Abrangência",
+  auto_approve_max: "Aprovação automática até", block_above: "Bloquear acima de", domain: "Domínio",
+  param_key: "Parâmetro", param_value: "Valor do parâmetro", message_type: "Tipo de mensagem",
+  qty_tolerance: "Tolerância de quantidade", price_tolerance: "Tolerância de preço", homologated_min: "Mínimo de homologados",
+  conditional_min: "Mínimo de condicionais", category: "Categoria", valid_until: "Válido até",
+  country: "País", translation: "Tradução", set_id: "Conjunto",
+  affects_price: "Afeta o preço", controls_goals: "Controla metas", field_source: "Campo de origem",
+  option_true: "Rótulo para \"Sim\"", option_false: "Rótulo para \"Não\"", restrict: "Restringir respostas",
+  variable_ids: "Variáveis", description_type_id: "Tipo de descrição", order_index: "Ordem",
+  show_characteristic: "Mostrar característica", show_mask: "Mostrar máscara", desc_type: "Tipo de texto",
+  text: "Texto", line_break: "Quebra de linha", percent: "Percentual",
+  move: "Mover", purchase_requisition_code: "Requisição de compra", movement_type: "Tipo de movimento",
+  occurred_at: "Ocorrido em", reference_type: "Tipo de referência", reference_code: "Código da referência",
+  idempotency_key: "Chave de controle de duplicidade", from_uom: "Unidade de origem", to_uom: "Unidade de destino",
+  factor: "Fator de conversão", maintenance_order_id: "Ordem de manutenção", contacts: "Contatos",
+  functions: "Funções", credit_limit: "Limite de crédito", services: "Serviços",
+  list_only_active_resources: "Listar apenas recursos ativos", recipient: "Destinatário", distributed_at: "Distribuído em",
+  drawing_code: "Desenho", replicate_drawing_revision: "Replicar revisão do desenho", plan_code: "Plano",
+  initial_order_number: "Número inicial da ordem", generate_llc: "Gerar nível mais baixo (LLC)", interval_max: "Intervalo máximo",
+  expected: "Esperado", actual: "Realizado", param_number: "Número do parâmetro",
+  nome: "Nome", suframa: "Suframa", codigo_municipio: "Código do município",
+  regime_tributario: "Regime tributário", data_inicial: "Data inicial", data_final: "Data final",
+  indicador_situacao: "Indicador de situação", contabilista_nome: "Nome do contabilista", contabilista_cpf: "CPF do contabilista",
+  contabilista_crc: "CRC do contabilista", contabilista_cnpj: "CNPJ do contabilista", participantes: "Participantes",
+  unidades: "Unidades", itens: "Itens", documentos_fiscais: "Documentos fiscais",
+  inventario: "Inventário", chave_acesso: "Chave de acesso", context: "Contexto",
+  channel: "Canal", parceiro_id: "Parceiro", conta_bancaria_id: "Conta bancária",
+  data_adiantamento: "Data do adiantamento", valor_original: "Valor original", descricao: "Descrição",
+  conta_tipo: "Tipo de conta", conta_id: "Conta", data_aplicacao: "Data de aplicação",
+  config: "Configuração", titulos: "Títulos", nosso_numero: "Nosso número",
+  vencimento: "Vencimento", emissao: "Emissão", sacado_nome: "Nome do sacado",
+  sacado_tipo: "Tipo do sacado", sacado_documento: "Documento do sacado", sacado_endereco: "Endereço do sacado",
+  sacado_bairro: "Bairro do sacado", sacado_cidade: "Cidade do sacado", sacado_uf: "UF do sacado",
+  sacado_cep: "CEP do sacado", default_financial_account: "Conta financeira padrão", unique_item_code_per_supplier: "Código do item único por fornecedor",
+  requires_financial_account: "Exigir conta financeira", purchase_supplier_type_id: "Tipo de fornecedor de compra", copy_obs_to_purchase_order: "Copiar observação para o pedido de compra",
+  copy_obs_to_entry_invoice: "Copiar observação para a nota de entrada", homologation_default: "Homologação padrão", use_stock_uom: "Usar a unidade de estoque",
+  generic_supplier_code: "Fornecedor genérico", default_due_base_date: "Data-base padrão de vencimento", table_code: "Tabela",
+  overwrite: "Sobrescrever existentes", selections: "Seleções", source_type: "Tipo de origem",
+  source_id: "Origem", source_item_id: "Item de origem", target_item_id: "Item de destino",
+  mode: "Modo", price: "Preço", ume: "Unidade de estoque",
+  umc: "Unidade de compra", price_conv: "Preço convertido", blocked: "Bloqueado",
+  item_codes: "Itens", plan_id: "Plano", empresa_id: "Empresa",
+  empresa: "Empresa", livros: "Livros", chave_nfe: "Chave da NF-e",
+  numero_inicial: "Número inicial", numero_final: "Número final", data_saida: "Data de saída",
+  cnpj_destinatario: "CNPJ do destinatário", razao_social_destinatario: "Razão social do destinatário", ie_destinatario: "Inscrição estadual do destinatário",
+  uf_destinatario: "UF do destinatário", tipo_pessoa: "Tipo de pessoa", natureza_operacao: "Natureza da operação",
+  valor_desconto: "Valor do desconto", origem_mercadoria: "Origem da mercadoria", item_overrides: "Exceções por item",
+  numero_cte: "Número do CT-e", data_entrada: "Data de entrada", cnpj_emitente: "CNPJ do emitente",
+  razao_social_emitente: "Razão social do emitente", valor_outros: "Outros valores", valor_total: "Valor total",
+  valor_icms: "Valor do ICMS", base_icms: "Base do ICMS", aliq_icms: "Alíquota do ICMS",
+  tipo_rateio: "Tipo de rateio", reason_code: "Motivo", reason_description: "Descrição do motivo",
+  eligibility_status: "Situação da elegibilidade", eligibility_reason: "Motivo da elegibilidade", sla_due_at: "Prazo do SLA",
+  product_cost: "Custo do produto", freight_cost: "Custo do frete", service_cost: "Custo do serviço",
+  call_item_code: "Item do chamado", lot_number: "Número do lote", requested_destination: "Destino solicitado",
+  correlation_id: "Identificador de correlação", authorization_number: "Número da autorização", reverse_carrier_code: "Transportadora da logística reversa",
+  reverse_tracking_code: "Rastreio da logística reversa", inspection_notes: "Observações da inspeção", fiscal_document_key: "Chave do documento fiscal",
+  stock_movement_code: "Movimento de estoque", component_item_code: "Item componente", area: "Área",
+  event_date: "Data do evento",
 };
 
 const VALUE_LABELS: Record<string, string> = {
@@ -212,7 +312,16 @@ function valueLabel(value: string): string {
   return ENUM_WORDS[value] ?? value;
 }
 
-function isDateField(name: string): boolean { return name.includes("date") || name.endsWith("_on"); }
+// Datas são detectadas pelo nome e, principalmente, pelo formato do valor: um
+// ISO-8601 vira seletor de data/hora mesmo em campos como `movement_from`, e um
+// `from_uom` (valor "KG") continua sendo texto.
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_NAME = /(date|_from$|_to$|^from$|^to$|_inicial$|_final$|_inicio$|_fim$|vencimento|competencia)/;
+
+function isIsoDateTime(value: unknown): boolean { return typeof value === "string" && ISO_DATE_TIME.test(value); }
+function isIsoDate(value: unknown): boolean { return typeof value === "string" && ISO_DATE.test(value); }
+function isDateField(name: string): boolean { return DATE_NAME.test(name) || name.endsWith("_on"); }
 function isDateTimeField(name: string): boolean { return name.endsWith("_time") || name.endsWith("_at") || name === "starts_at" || name === "ends_at"; }
 
 function lookupFor(name: string, label = ""): LookupLoader | undefined {
@@ -269,14 +378,20 @@ function PayloadNode({ name, value, path, root, onChange }: { name: string; valu
   </div>;
   if (value && typeof value === "object") return <div className="erp-field erp-c12" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 10 }}>{Object.entries(value as Obj).map(([key, child]) => <PayloadNode key={key} name={key} value={child} path={[...path, key]} root={root} onChange={onChange}/>)}</div>;
   const options = ENUM_OPTIONS[name];
-  const lookup = typeof value === "number" ? lookupFor(name) : undefined;
+  // A lupa vale para código numérico e para código alfanumérico (item, plano,
+  // tabela). O tipo original do campo é preservado ao gravar de volta.
+  const isTextCode = typeof value === "string" && !isIsoDateTime(value) && !isIsoDate(value);
+  const lookup = typeof value === "number" || isTextCode ? lookupFor(name) : undefined;
+  // Data/hora quando o nome indica ou quando o próprio valor já é um ISO-8601.
+  const asDateTime = isDateTimeField(name) || isIsoDateTime(value);
+  const asDate = !asDateTime && (isIsoDate(value) || (isDateField(name) && typeof value === "string" && !value));
   return <div className="erp-field erp-c3"><label className="erp-label">{humanLabel(name)}</label>
     {typeof value === "boolean" ? <label className="erp-label" style={{ display: "flex", gap: 7, alignItems: "center", minHeight: 30 }}><input type="checkbox" checked={value} onChange={(event) => onChange(updateNested(root, path, event.target.checked))}/> Sim</label>
-      : lookup ? <LookupField value={Number(value) || undefined} onChange={(code) => onChange(updateNested(root, path, code ?? 0))} loader={lookup} entityLabel={humanLabel(name).toLowerCase()} placeholder={`Pesquisar ${humanLabel(name).toLowerCase()}…`}/>
+      : lookup ? <LookupField<string | number> value={isTextCode ? (value as string) || undefined : Number(value) || undefined} onChange={(code) => onChange(updateNested(root, path, isTextCode ? String(code ?? "") : Number(code ?? 0)))} loader={lookup} entityLabel={humanLabel(name).toLowerCase()} placeholder={`Pesquisar ${humanLabel(name).toLowerCase()}…`}/>
       : options ? <select className="erp-input" value={String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, event.target.value))}><option value="">Selecione…</option>{options.map((option) => <option key={option} value={option}>{valueLabel(option)}</option>)}</select>
-      : <input className={`erp-input ${typeof value === "number" ? "num" : ""}`} type={typeof value === "number" ? "number" : isDateTimeField(name) ? "datetime-local" : isDateField(name) ? "date" : "text"} value={isDateTimeField(name) ? String(value ?? "").replace(/Z$/, "").slice(0, 16) : String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, typeof value === "number" ? Number(event.target.value) : isDateTimeField(name) && event.target.value ? new Date(event.target.value).toISOString() : event.target.value))}/>}
-    {isDateField(name) && <span className="erp-field-hint">Formato: dia/mês/ano.</span>}
-    {isDateTimeField(name) && <span className="erp-field-hint">Informe dia, mês, ano e horário.</span>}
+      : <input className={`erp-input ${typeof value === "number" ? "num" : ""}`} type={typeof value === "number" ? "number" : asDateTime ? "datetime-local" : asDate ? "date" : "text"} value={asDateTime ? String(value ?? "").replace(/Z$/, "").slice(0, 16) : String(value ?? "")} onChange={(event) => onChange(updateNested(root, path, typeof value === "number" ? Number(event.target.value) : asDateTime && event.target.value ? new Date(event.target.value).toISOString() : event.target.value))}/>}
+    {asDate && <span className="erp-field-hint">Formato: dia/mês/ano.</span>}
+    {asDateTime && <span className="erp-field-hint">Informe dia, mês, ano e horário.</span>}
   </div>;
 }
 

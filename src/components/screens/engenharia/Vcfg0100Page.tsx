@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import {
-  type CfgSet, type CfgVariable, type CfgCharacteristic, type CfgMaskAnswer, CHAR_TYPES,
+  type CfgSet, type CfgVariable, type CfgCharacteristic, CHAR_TYPES,
   listSets, createSet, deleteSet, listSetVariables, createVariable, deleteVariable,
   listCharacteristics, createCharacteristic, deleteCharacteristic,
-  listItemCharacteristics, addItemCharacteristic, generateMask,
+  listItemCharacteristics, addItemCharacteristic,
 } from "@/services/configuratorCfgService";
 import { errMessage, parseStr, parseNum, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -30,9 +30,7 @@ export function Vcfg0100Page(): JSX.Element {
   // item & máscara
   const [item, setItem] = useState("");
   const [itemChars, setItemChars] = useState<Obj[]>([]);
-  const [answers, setAnswers] = useState<CfgMaskAnswer[]>([]);
   const [ansForm, setAnsForm] = useState({ characteristic_id: "", variable_id: "", value: "" });
-  const [maskResult, setMaskResult] = useState<Obj | null>(null);
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true); setFeedback(null);
@@ -50,8 +48,6 @@ export function Vcfg0100Page(): JSX.Element {
   // item
   const carItemChars = () => run(async () => { const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setItemChars(await listItemCharacteristics(it)); });
   const addItemChar = (charId: number) => run(async () => { const it = item.trim(); if (!it) return; await addItemCharacteristic(it, charId, (itemChars.length + 1) * 10); setItemChars(await listItemCharacteristics(it)); });
-  const addAns = () => { const cid = Number(ansForm.characteristic_id); if (!cid) return; setAnswers((a) => [...a, { characteristic_id: cid, variable_id: Number(ansForm.variable_id) || undefined, value: ansForm.value || undefined }]); setAnsForm({ characteristic_id: "", variable_id: "", value: "" }); };
-  const gerar = (persist: boolean) => run(async () => { const it = item.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setMaskResult(await generateMask(it, answers, persist)); setFeedback({ type: "success", message: persist ? "Máscara gerada e persistida." : "Máscara gerada (prévia)." }); });
 
   return (
     <div className="erp-screen">
@@ -61,14 +57,14 @@ export function Vcfg0100Page(): JSX.Element {
           <span className="erp-crumb-mut">Engenharia</span><span className="erp-crumb-sep">›</span>
           <span className="erp-crumb-cur">Configurador de Produto</span><span className="erp-crumb-code">VCFG0100</span>
         </nav>
-        <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">conjuntos · variáveis · características · máscara</span>
+        <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">conjuntos · variáveis · características do item</span>
       </header>
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <button className={`erp-btn ${tab === "conjuntos" ? "erp-btn-primary" : ""}`} onClick={() => setTab("conjuntos")}>Conjuntos &amp; Variáveis</button>
           <button className={`erp-btn ${tab === "caracteristicas" ? "erp-btn-primary" : ""}`} onClick={() => setTab("caracteristicas")}>Características</button>
-          <button className={`erp-btn ${tab === "item" ? "erp-btn-primary" : ""}`} onClick={() => setTab("item")}>Item &amp; Máscara</button>
+          <button className={`erp-btn ${tab === "item" ? "erp-btn-primary" : ""}`} onClick={() => setTab("item")}>Características do Item</button>
         </div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VCFG0100 — Configurador de Produto" filename="vcfg0100" /></div>
       </div>
@@ -132,7 +128,7 @@ export function Vcfg0100Page(): JSX.Element {
 
         {tab === "item" && (
           <section className="erp-detail-panel">
-            <div className="erp-tabs"><button className="erp-tab active">Item &amp; máscara</button></div>
+            <div className="erp-tabs"><button className="erp-tab active">Características do item</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset"><div className="erp-fieldset-head">Características do item</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><input className="erp-input num" value={item} onChange={(e) => setItem(e.target.value)} /></div>
@@ -142,17 +138,12 @@ export function Vcfg0100Page(): JSX.Element {
                   <tbody>{itemChars.length === 0 ? <tr><td colSpan={3} className="erp-grid-empty">informe o item e carregue</td></tr> : itemChars.map((c, i) => <tr key={i}><td>{parseNum(c, "sequence", "Sequence")}</td><td>{parseNum(c, "characteristic_id", "CharacteristicID")}</td><td>{parseStr(c, "description", "Description") || "—"}</td></tr>)}</tbody>
                 </table></div>
               </div></div>
-              <div className="erp-fieldset"><div className="erp-fieldset-head">Gerar máscara (respostas)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label">Característica</label><LookupField value={Number(ansForm.characteristic_id) || undefined} loader={loadCharacteristics} entityLabel="característica" onChange={(code) => setAnsForm((f) => ({ ...f, characteristic_id: code ? String(code) : "" }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Variável (id)</label><input className="erp-input num" type="number" value={ansForm.variable_id} onChange={(e) => setAnsForm((f) => ({ ...f, variable_id: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Valor (livre)</label><input className="erp-input" value={ansForm.value} onChange={(e) => setAnsForm((f) => ({ ...f, value: e.target.value }))} /></div>
-                <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addAns}>+ resposta</button></div>
-                <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Característica</th><th>Variável</th><th>Valor</th></tr></thead>
-                  <tbody>{answers.length === 0 ? <tr><td colSpan={3} className="erp-grid-empty">sem respostas</td></tr> : answers.map((a, i) => <tr key={i}><td>{a.characteristic_id}</td><td>{a.variable_id ?? "—"}</td><td>{a.value ?? "—"}</td></tr>)}</tbody>
-                </table></div>
-                <div className="erp-field erp-c6" style={{ gap: 8 }}><button className="erp-btn" onClick={() => gerar(false)} disabled={busy}>Gerar (prévia)</button><button className="erp-btn erp-btn-primary" onClick={() => gerar(true)} disabled={busy}>Gerar &amp; persistir</button></div>
-                {maskResult && <div className="erp-field erp-c12"><pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap" }}>{JSON.stringify(maskResult, null, 2)}</pre></div>}
-              </div></div>
+              <div className="erp-feedback info">
+                Gerar a configuração (responder as perguntas e produzir a máscara) é feito pelo botão
+                <strong> Configurador</strong> dentro do Cadastro de Estrutura de Produto (VENT0210), onde a máscara
+                já sai aplicada na estrutura e nas fórmulas de quantidade. Aqui ficam apenas os cadastros que o
+                configurador consome.
+              </div>
             </div>
           </section>
         )}

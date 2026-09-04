@@ -3,7 +3,7 @@ import { createItem, getItemTemplate } from "@/services/itemService";
 import { listFiscalClassifications, type FiscalClassification } from "@/services/fiscalAdvancedService";
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadItems, loadItemClassifications } from "@/services/lookups";
+import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadItems, loadItemClassifications, loadFiscalClassifications } from "@/services/lookups";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
 //
@@ -1992,14 +1992,12 @@ export function Vent0200Page(): JSX.Element {
                   <div className="it-field it-col-4">
                     <label className="it-label">Classif. Fiscal Venda</label>
                     <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        list="classificacoes-fiscais-item"
-                        value={form.classifFiscVenda}
-                        onChange={(e) =>
-                          setField("classifFiscVenda", e.target.value)
-                        }
-                        placeholder="Selecione o código do mestre fiscal"
+                      <LookupField<string>
+                        value={form.classifFiscVenda || undefined}
+                        loader={loadFiscalClassifications}
+                        entityLabel="classificação fiscal"
+                        placeholder="Buscar classificação fiscal de venda"
+                        onChange={(code) => setField("classifFiscVenda", code ? String(code) : "")}
                       />
                     </div>
                   </div>
@@ -2007,21 +2005,15 @@ export function Vent0200Page(): JSX.Element {
                   <div className="it-field it-col-4">
                     <label className="it-label">Classif. Fiscal Compra</label>
                     <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        list="classificacoes-fiscais-item"
-                        value={form.classifFiscCompra}
-                        onChange={(e) =>
-                          setField("classifFiscCompra", e.target.value)
-                        }
-                        placeholder="Selecione o código do mestre fiscal"
+                      <LookupField<string>
+                        value={form.classifFiscCompra || undefined}
+                        loader={loadFiscalClassifications}
+                        entityLabel="classificação fiscal"
+                        placeholder="Buscar classificação fiscal de compra"
+                        onChange={(code) => setField("classifFiscCompra", code ? String(code) : "")}
                       />
                     </div>
                   </div>
-
-                  <datalist id="classificacoes-fiscais-item">
-                    {classificacoesFiscais.map((c) => <option key={c.code} value={c.code}>{c.description}</option>)}
-                  </datalist>
 
                   {(fiscalVenda || fiscalCompra) && (
                     <div className="it-field it-col-12">

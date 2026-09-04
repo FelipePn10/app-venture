@@ -29,7 +29,17 @@ function originPill(o: string): JSX.Element {
   return <span className={`erp-badge ${cls}`}>{enumLabel(o)}</span>;
 }
 
-export function Vpro0100Page(): JSX.Element {
+/**
+ * Roteiro de fabricação — operações, roteiros, precedências, recursos,
+ * ferramentas e lead time.
+ *
+ * É a implementação única do roteiro: antes existia também na VPRO0100, que
+ * chamava os mesmos endpoints de `/api/routing`. A rotina foi centralizada nas
+ * telas de engenharia — VENT0115 (modelos padrão) e VENT0202 (roteiro efetivo
+ * do item) —, que é onde o roteiro conversa com a OF, o CRP e o APS.
+ */
+export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115" | "VENT0202" }): JSX.Element {
+  const titulo = code === "VENT0115" ? "Roteiros Padrão" : "Roteiro de Fabricação por Item";
   const [tab, setTab] = useState<Tab>("operacoes");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
@@ -210,7 +220,7 @@ export function Vpro0100Page(): JSX.Element {
     <div className="erp-screen">
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Roteiro de Fabricação</span><span className="erp-crumb-code">VPRO0100</span></nav>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Engenharia</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">{titulo}</span><span className="erp-crumb-code">{code}</span></nav>
         <div className="erp-titlebar-spacer" />
       </header>
 
@@ -236,7 +246,7 @@ export function Vpro0100Page(): JSX.Element {
         )}
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Relatório</span>
-          <ExportButton title="VPRO0100 — Roteiro de Fabricação" filename="vpro0100" />
+          <ExportButton title={`${code} — ${titulo}`} filename={code.toLowerCase()} />
         </div>
       </div>
 
