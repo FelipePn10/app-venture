@@ -223,6 +223,30 @@ export const loadEstablishments = cached(() =>
 );
 
 /**
+ * Classificações fiscais (mestre fiscal) usadas nas abas Contábil e Fiscal do
+ * item — o usuário escolhe da lista em vez de decorar o código.
+ */
+export const loadFiscalClassifications = cached(async () => {
+  const { listFiscalClassifications } = await import('@/services/fiscalAdvancedService');
+  const rows = await listFiscalClassifications();
+  return rows.map((c) => ({
+    code: String(c.code),
+    label: c.description ? `${c.code} · ${c.description}` : String(c.code),
+    sub: c.ncm ? `NCM ${c.ncm}` : undefined,
+  })).filter((o) => o.code);
+});
+
+/**
+ * Empresa padrão da operação: quando a instalação tem uma única empresa, ela é
+ * assumida sozinha e o usuário não precisa (nem deve) digitar o código. Com mais
+ * de uma, devolve `undefined` e a tela oferece a escolha em uma lista.
+ */
+export async function defaultEnterprise(): Promise<LookupOption | undefined> {
+  const options = await loadEstablishments();
+  return options.length === 1 ? options[0] : undefined;
+}
+
+/**
  * Grupos e modificadores do PDM — pré-requisitos do cadastro de item: sem eles
  * o `POST /api/items/create` é recusado. O modificador é identificado por `id`
  * (gerado pelo backend), não por `code`; o grupo usa `code` informado.

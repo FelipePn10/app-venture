@@ -18,6 +18,7 @@ import {
   UNIT_OPTIONS,
   HEALTH_OPTIONS,
 } from '@/services/ItemStructureService';
+import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -240,6 +241,9 @@ export function Vent0210Page(): JSX.Element {
   const [isLoading, setIsLoading]               = useState(false);
   const [isSaving, setIsSaving]                 = useState(false);
   const [feedback, setFeedback]                 = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  // O configurador não tem tela própria: é este painel, aberto pelo botão da
+  // barra de ações com o item pai já carregado.
+  const [configuradorAberto, setConfiguradorAberto] = useState(false);
 
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -326,6 +330,24 @@ export function Vent0210Page(): JSX.Element {
     } else {
       setMaskError('');
       await loadRoot(currentParentCode ?? rootInfo.code, rootMascara);
+    }
+  }
+
+  // ── configurador ─────────────────────────────────────────────────────────────
+
+  /**
+   * Aplica na estrutura a máscara escolhida no configurador: volta para a raiz,
+   * grava a máscara no cabeçalho e recarrega os componentes já resolvidos para
+   * essa configuração.
+   */
+  async function handleUsarMascaraConfigurada(mask: string) {
+    setConfiguradorAberto(false);
+    setRootMascara(mask);
+    setMaskError('');
+    setBreadcrumb([]);
+    if (rootInfo) {
+      await loadRoot(rootInfo.code, mask);
+      setFeedback({ type: 'success', msg: `Estrutura carregada para a configuração ${mask}.` });
     }
   }
 
@@ -654,6 +676,10 @@ export function Vent0210Page(): JSX.Element {
               <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Incluir Item
             </button>
+            <button className="fe-btn fe-btn-ghost" onClick={() => setConfiguradorAberto(true)} disabled={!rootInfo} title={rootInfo ? 'Configurar o produto' : 'Busque o item pai para configurar'}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="8" cy="8" r="2.6" stroke="currentColor" strokeWidth="1.4"/></svg>
+              Configurador
+            </button>
             <button className="fe-btn fe-btn-danger" onClick={handleLimpar}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Limpar
@@ -961,6 +987,15 @@ export function Vent0210Page(): JSX.Element {
         </footer>
 
       </div>
+
+      {configuradorAberto && rootInfo && (
+        <StructureConfiguratorPanel
+          itemCode={rootInfo.code}
+          itemName={rootInfo.name}
+          onUseMask={(mask) => void handleUsarMascaraConfigurada(mask)}
+          onClose={() => setConfiguradorAberto(false)}
+        />
+      )}
     </>
   );
 }

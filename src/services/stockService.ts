@@ -231,31 +231,35 @@ export async function consumeReservation(id: number): Promise<void> {
 }
 
 // ── §4 Inventário ──
+// Contrato canônico do inventário. `/api/stock/inventories` ainda responde por
+// compatibilidade, mas é a rota antiga; usamos `/api/inventory`.
+const INVENTORY = '/api/inventory';
+
 export async function listInventories(): Promise<InventoryDTO[]> {
-  const { data } = await httpClient.get('/api/stock/inventories/list');
+  const { data } = await httpClient.get(`${INVENTORY}/`);
   return unwrapArray(data).map(parseInventory);
 }
 export async function getInventory(id: number): Promise<InventoryDTO> {
-  const { data } = await httpClient.get(`/api/stock/inventories/${id}`);
+  const { data } = await httpClient.get(`${INVENTORY}/${id}`);
   return parseInventory(data);
 }
 export async function createInventory(dto: InventoryDTO): Promise<InventoryDTO> {
-  const { data } = await httpClient.post('/api/stock/inventories/create', dto);
+  const { data } = await httpClient.post(`${INVENTORY}/`, dto);
   return parseInventory(data);
 }
 export async function closeInventory(id: number): Promise<void> {
-  await httpClient.post(`/api/stock/inventories/${id}/close`, {});
+  await httpClient.post(`${INVENTORY}/${id}/close`, {});
 }
 export async function countInventoryItem(dto: { inventory_id: number; item_code: string; warehouse_id: number; counted_qty: number }): Promise<Obj> {
-  const { data } = await httpClient.post('/api/stock/inventories/count', dto);
+  const { data } = await httpClient.post(`${INVENTORY}/count`, dto);
   return unwrapObject(data);
 }
 export async function adjustInventoryItem(dto: { inventory_id: number; item_code: string; warehouse_id: number }): Promise<Obj> {
-  const { data } = await httpClient.post('/api/stock/inventories/adjust', dto);
+  const { data } = await httpClient.post(`${INVENTORY}/adjust`, dto);
   return unwrapObject(data);
 }
 export async function listInventoryItems(id: number): Promise<Obj[]> {
-  const { data } = await httpClient.get(`/api/stock/inventories/${id}/items`);
+  const { data } = await httpClient.get(`${INVENTORY}/${id}/items`);
   return unwrapArray(data).map(unwrapObject);
 }
 

@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { fetchSessionProfile } from '@/services/authService';
 import { useAuthStore } from '@/store/authStore';
 
+/** Distingue "token recusado" de "não consegui perguntar" (404, rede, 5xx). */
+function isAuthenticationFailure(error: unknown): boolean {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  return status === 401 || status === 403;
+}
+
 export function SessionBootstrap({ children }: { children: JSX.Element }): JSX.Element {
   const [isReady, setIsReady] = useState(false);
   const { isAuthenticated, clearAuthData, setUserProfile } = useAuthStore((state) => ({
@@ -25,8 +31,13 @@ export function SessionBootstrap({ children }: { children: JSX.Element }): JSX.E
             user: profile.user,
           });
         }
-      } catch {
-        clearAuthData();
+      } catch (error) {
+        // Só uma recusa de autenticação encerra a sessão. Se o endpoint de
+        // perfil não existir ou a rede falhar, o token continua válido e o
+        // usuário segue conectado — sem isso, reabrir o app derruba a sessão.
+        if (isAuthenticationFailure(error)) {
+          clearAuthData();
+        }
       } finally {
         setIsReady(true);
       }

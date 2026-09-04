@@ -151,12 +151,6 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
   // ── Produção
   {
-    code: "VPRO0100",
-    title: "Roteiro de Fabricação",
-    description: "Cadastrar operações, roteiros, rede de dependências e calcular lead time via CPM.",
-    module: "producao",
-  },
-  {
     code: "VPRO0200",
     title: "CRP — Capacity Requirements Planning",
     description: "Calcular carga por centro de trabalho/dia e identificar sobrecargas de um plano MRP.",
@@ -426,12 +420,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "suprimento",
   },
   {
-    code: "VSUP0510",
-    title: "Apoio de Fornecedores",
-    description: "Cadastros de apoio do fornecedor: tipos de fornecedor (kind), tipos de contato e parâmetros por empresa.",
-    module: "suprimento",
-  },
-  {
     code: "VSUP0110",
     title: "Conversão de UM por Item",
     description: "Cadastrar fatores de conversão entre unidades de medida de um item (ex.: 1 CX = 12 UN) para o pedido de compra.",
@@ -609,12 +597,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VCON0200",
     title: "Cadastro de Contratos de Fornecedores",
     description: "Cadastrar contratos com fornecedores para acompanhamento de quantidades contratadas e recebidas.",
-    module: "suprimento",
-  },
-  {
-    code: "VCON0100",
-    title: "Cadastro de Tipos de Contratos",
-    description: "Cadastrar os tipos de contratos com fornecedores.",
     module: "suprimento",
   },
   {
