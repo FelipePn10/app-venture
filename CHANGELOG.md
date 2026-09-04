@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.14] — 2026-09-04
+
 ## Novidades
 - O cadastro de estrutura de produto ganhou o botão **Configurador**: responda as perguntas do item e o sistema monta a máscara, valida as combinações proibidas e já calcula as quantidades que vêm de fórmula, aplicando tudo na estrutura.
 
