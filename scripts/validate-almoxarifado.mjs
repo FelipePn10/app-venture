@@ -14,7 +14,8 @@ const check = (name, condition) => {
 const vest0500 = read('src/components/screens/almoxarifado/Vest0500Page.tsx');
 const vent0800 = read('src/components/screens/almoxarifado/Vent0800Page.tsx');
 const routineCatalog = read('src/components/screens/operationalRoutines.ts');
-const routinePage = read('src/components/screens/OperationalRoutinePage.tsx');
+const routinePage = read('src/components/screens/OperationalRoutinePage.tsx')
+  + read('src/utils/fieldLabels.ts');
 const enumLabels = read('src/utils/enumLabels.ts');
 
 check('VEST0500 item/almoxarifado/máscara usam modal', /loader=\{loadItems\}/.test(vest0500) && /loader=\{loadWarehouses\}/.test(vest0500) && /loader=\{loadItemMasks\}/.test(vest0500));

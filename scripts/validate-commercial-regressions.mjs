@@ -13,7 +13,8 @@ const check = (name, condition) => {
 const pricing = read('src/services/salesPricingService.ts');
 const policies = read('src/services/commercialPolicyService.ts');
 const policyPage = read('src/components/screens/pdv/Vpdv0108Page.tsx');
-const routines = read('src/components/screens/OperationalRoutinePage.tsx');
+const routines = read('src/components/screens/OperationalRoutinePage.tsx')
+  + read('src/utils/fieldLabels.ts');
 const routineCatalog = read('src/components/screens/operationalRoutines.ts');
 const recurring = read('src/services/recurringSalesService.ts');
 const recurringPage = read('src/components/screens/pdv/Vvre0200Page.tsx');

@@ -157,7 +157,7 @@ export function Vpdv0111Page(): JSX.Element {
             <div className="erp-fieldset-body">
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Valor bruto</label><input className="erp-input num" type="number" value={ev.gross_value} onChange={(e) => setEv((s) => ({ ...s, gross_value: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={ev.quantity} onChange={(e) => setEv((s) => ({ ...s, quantity: e.target.value }))} /></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Transportadora (id)</label><input className="erp-input num" type="number" value={ev.carrier_id} onChange={(e) => setEv((s) => ({ ...s, carrier_id: e.target.value }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><input className="erp-input num" type="number" value={ev.carrier_id} onChange={(e) => setEv((s) => ({ ...s, carrier_id: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Cliente (cód.)</label><input className="erp-input num" type="number" value={ev.customer_code} onChange={(e) => setEv((s) => ({ ...s, customer_code: e.target.value }))} /></div>
               <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={simular} disabled={busy}>Avaliar</button></div>
               {evResult && (

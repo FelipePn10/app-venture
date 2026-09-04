@@ -71,7 +71,7 @@ export function Vusr0100Page(): JSX.Element {
                 <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={solicitar} disabled={busy}>Solicitar</button></div>
               </div></div>
               <div className="erp-fieldset"><div className="erp-fieldset-head">Concluir troca (após aprovação)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Solicitação (id)</label><input className="erp-input num" type="number" value={comp.id} onChange={(e) => setComp((c) => ({ ...c, id: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Solicitação</label><input className="erp-input num" type="number" value={comp.id} onChange={(e) => setComp((c) => ({ ...c, id: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Senha atual</label><input className="erp-input" type="password" value={comp.current} onChange={(e) => setComp((c) => ({ ...c, current: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Nova senha</label><input className="erp-input" type="password" value={comp.nova} onChange={(e) => setComp((c) => ({ ...c, nova: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Confirmar</label><input className="erp-input" type="password" value={comp.confirm} onChange={(e) => setComp((c) => ({ ...c, confirm: e.target.value }))} /></div>
