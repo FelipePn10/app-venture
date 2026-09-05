@@ -8,6 +8,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCarriers, loadEstablishments, loadItems, loadSuppliers } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const dt = (s?: string) => (s ? s.replace("T", " ").slice(0, 16) : "—");
@@ -99,29 +101,37 @@ export function Vavr0200Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Novo aviso — <span style={{fontWeight:400,opacity:0.65}}>agenda de doca e conferência antes da NF</span></div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label">Empresa</label><input className="erp-input num" type="number" value={capa.enterprise_code} onChange={(e) => setC("enterprise_code", e.target.value)} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Fornecedor</label><input className="erp-input num" type="number" value={capa.supplier_code} onChange={(e) => setC("supplier_code", e.target.value)} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Pedido de compra</label><input className="erp-input num" type="number" value={capa.purchase_order_code} onChange={(e) => setC("purchase_order_code", e.target.value)} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><input className="erp-input num" type="number" value={capa.carrier_code} onChange={(e) => setC("carrier_code", e.target.value)} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Empresa</label><LookupField<string> value={capa.enterprise_code || undefined} loader={loadEstablishments} entityLabel="empresa" placeholder="Selecionar empresa" onChange={(c) => setC("enterprise_code", c ? String(c) : "")} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label><LookupField<string> value={capa.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Buscar fornecedor" onChange={(c) => setC("supplier_code", c ? String(c) : "")} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField<string> value={capa.carrier_code || undefined} loader={loadCarriers} entityLabel="transportadora" placeholder="Buscar transportadora" onChange={(c) => setC("carrier_code", c ? String(c) : "")} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Pedido de compra</label><input className="erp-input num" type="number" value={capa.purchase_order_code} onChange={(e) => setC("purchase_order_code", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Doca</label><input className="erp-input" value={capa.dock} onChange={(e) => setC("dock", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Nº NF</label><input className="erp-input" value={capa.invoice_number} onChange={(e) => setC("invoice_number", e.target.value)} /></div>
-          <div className="erp-field erp-c3"><label className="erp-label">Agendado para</label><input className="erp-input" type="datetime-local" value={capa.scheduled_at} onChange={(e) => setC("scheduled_at", e.target.value)} /></div>
-          <div className="erp-field erp-c9"><label className="erp-label">Observações</label><input className="erp-input" value={capa.notes} onChange={(e) => setC("notes", e.target.value)} /></div>
-        
-        <div className="erp-fieldset-body" style={{ marginTop: 8 }}>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={itemForm.item_code} onChange={(e) => setItemForm((f) => ({ ...f, item_code: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd esperada</label><input className="erp-input num" type="number" value={itemForm.expected_qty} onChange={(e) => setItemForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
-          <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
-          <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={addItem}>+ item</button></div>
-          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={criar} disabled={busy}>Criar aviso</button></div>
-        </div>
-        {items.length > 0 && (
-          <table className="erp-grid" style={{ marginTop: 10 }}>
-            <thead><tr><th>Item</th><th>Máscara</th><th>Qtd esperada</th><th>UM</th><th></th></tr></thead>
-            <tbody>{items.map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.expected_qty}</td><td>{it.unit || "—"}</td><td><button className="erp-btn" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>Remover</button></td></tr>)}</tbody>
-          </table>
-        )}
+          <div className="erp-field erp-c4"><label className="erp-label">Agendado para</label><input className="erp-input" type="datetime-local" value={capa.scheduled_at} onChange={(e) => setC("scheduled_at", e.target.value)} /></div>
+          <div className="erp-field erp-c4"><label className="erp-label">Observações</label><input className="erp-input" value={capa.notes} onChange={(e) => setC("notes", e.target.value)} /></div>
+        </div></div>
+
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Itens esperados</div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField<string> value={itemForm.item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Buscar item" onChange={(c) => setItemForm((f) => ({ ...f, item_code: c ? String(c) : "" }))} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd. esperada</label><input className="erp-input num" type="number" value={itemForm.expected_qty} onChange={(e) => setItemForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Unidade</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
+          <div className="erp-field erp-c1" style={{ alignSelf: "end" }}><button className="erp-btn" style={{ width: "100%" }} onClick={addItem}>Incluir</button></div>
+
+          {items.length > 0 && (
+            <div className="erp-field erp-c12">
+              <div className="erp-grid-wrap">
+                <table className="erp-grid">
+                  <thead><tr><th>Item</th><th>Máscara</th><th className="num">Qtd. esperada</th><th>Unidade</th><th style={{ width: 90 }} /></tr></thead>
+                  <tbody>{items.map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td className="num">{it.expected_qty}</td><td>{it.unit || "—"}</td><td><button className="erp-btn erp-btn-sm" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>Remover</button></td></tr>)}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="erp-field erp-c12" style={{ alignItems: "flex-end" }}>
+            <button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar aviso de recebimento</button>
+          </div>
         </div></div>
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Avisos ({notices.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">

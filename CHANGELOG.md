@@ -11,6 +11,7 @@
 - Cadastrar um código já usado agora avisa que o registro existe, em vez de apresentar uma falha genérica.
 - A consulta de máquina deixou de trazer o tipo de máquina no lugar da máquina.
 - Traduzimos as últimas mensagens que ainda chegavam em inglês e corrigimos a acentuação das demais.
+- Corrigimos o Aviso de Recebimento, que exibia rótulos e botões sobrepostos e agora abre listas de busca para empresa, fornecedor, transportadora e item.
 
 ## [v1.1.14] — 2026-09-04
 
