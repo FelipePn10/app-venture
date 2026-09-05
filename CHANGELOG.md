@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.15] — 2026-09-05
+
 ## Melhorias
 - Registros que antes apareciam como texto técnico — genealogia de lote, programa de corte, resultado do planejamento e inspeção — passaram a ser exibidos como tabelas em português.
 - Campos que pediam um "id" agora mostram o nome do cadastro que você está informando.
