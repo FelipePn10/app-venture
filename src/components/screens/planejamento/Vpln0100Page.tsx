@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { type PipelineResult, type PlanningParam, runPipeline, listPlanningParams, updatePlanningParam } from "@/services/planningService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { ReadableRecord } from "@/components/ui/ReadableRecord";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -66,7 +67,7 @@ export function Vpln0100Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Resultado do pipeline — {result.viable ? "VIÁVEL" : "INVIÁVEL"}</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c12"><pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap" }}>{JSON.stringify(result.raw, null, 2)}</pre></div>
+                  <div className="erp-field erp-c12"><ReadableRecord value={result.raw} emptyLabel="O pipeline não devolveu detalhes." /></div>
                 </div>
               </div>
             )}

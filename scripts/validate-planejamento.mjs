@@ -12,7 +12,8 @@ const check = (name, condition) => {
 };
 
 const vpre0301 = read('src/components/screens/previsao/Vpre0301Page.tsx');
-const routinePage = read('src/components/screens/OperationalRoutinePage.tsx');
+const routinePage = read('src/components/screens/OperationalRoutinePage.tsx')
+  + read('src/utils/fieldLabels.ts');
 const enumLabels = read('src/utils/enumLabels.ts');
 
 check('VPRE0301 não exibe endpoint técnico ao usuário', !/não é exposto por/.test(vpre0301) && !/pendente de integração de endpoint/.test(vpre0301));

@@ -8,6 +8,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadItemMasks, loadItemClassifications, loadEstablishments, loadWarehouses } from "@/services/lookups";
+import { ReadableRecord } from "@/components/ui/ReadableRecord";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const BASES: InspectionBasis[] = ["ITEM", "CLASSIFICATION"];
@@ -84,7 +85,7 @@ export function Vins0200Page(): JSX.Element {
           <button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{busy && <span className="erp-spin" />}Criar roteiro</button>
         </div>
         <div className="erp-tgroup">
-          <span className="erp-tgroup-label">Consultar (id)</span>
+          <span className="erp-tgroup-label">Consultar pelo código</span>
           <input className="erp-tinput" style={{ width: 80 }} type="number" value={consultaId} onChange={(e) => setConsultaId(e.target.value)} />
           <button className="erp-btn erp-btn-dark" onClick={consultar} disabled={busy}>Abrir</button>
         </div>
@@ -142,7 +143,7 @@ export function Vins0200Page(): JSX.Element {
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Roteiro {String(criado.id ?? criado.ID ?? "")}</div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c12"><pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap" }}>{JSON.stringify(criado, null, 2)}</pre></div>
+                  <div className="erp-field erp-c12"><ReadableRecord value={criado} emptyLabel="Nenhuma inspeção criada." /></div>
                 </div>
               </div>
             )}

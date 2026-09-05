@@ -14,6 +14,7 @@ import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadItems, loadWarehouses } from "@/services/lookups";
+import { ReadableRecord } from "@/components/ui/ReadableRecord";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
@@ -185,7 +186,7 @@ export function Vest0100Page(): JSX.Element {
         </div></div></div>
         {genealogy && (
           <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
-            <pre style={{ margin: 0, fontSize: 11, maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify(genealogy, null, 2)}</pre>
+            <ReadableRecord value={genealogy} emptyLabel="Sem genealogia para este lote." />
           </div></div>
         )}
 

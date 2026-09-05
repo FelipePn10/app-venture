@@ -101,7 +101,7 @@ export function Vite0118Page(): JSX.Element {
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c3"><label className="erp-label">Característica</label><LookupField value={cond.characteristic_id || undefined} loader={loadCharacteristics} entityLabel="característica" onChange={(code) => setCond((c) => ({ ...c, characteristic_id: code ?? 0 }))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Operador</label><select className="erp-input" value={cond.operator} onChange={(e) => setCond((c) => ({ ...c, operator: e.target.value }))}>{OPERATORS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Variável (id)</label><input className="erp-input num" type="number" value={cond.variable_id || ""} onChange={(e) => setCond((c) => ({ ...c, variable_id: Number(e.target.value) || undefined }))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Variável</label><input className="erp-input num" type="number" value={cond.variable_id || ""} onChange={(e) => setCond((c) => ({ ...c, variable_id: Number(e.target.value) || undefined }))} /></div>
                   <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={addCond}>+ condição</button></div>
                   {form.conditions.length > 0 && (
                     <div className="erp-field erp-c12"><table className="erp-grid">

@@ -23,8 +23,9 @@ const page = fs.readFileSync('src/components/screens/OperationalRoutinePage.tsx'
 const routines = fs.readFileSync('src/components/screens/operationalRoutines.ts', 'utf8');
 
 // ── 1. Dicionário de rótulos ────────────────────────────────────────────────
-const start = page.indexOf('const LABELS: Record<string, string> = {');
-const block = page.slice(start, page.indexOf('\n};', start));
+const dicionario = fs.readFileSync('src/utils/fieldLabels.ts', 'utf8');
+const start = dicionario.indexOf('export const FIELD_LABELS: Record<string, string> = {');
+const block = dicionario.slice(start, dicionario.indexOf('\n};', start));
 const labels = new Set([...block.matchAll(/(?:^|[{,\s])([a-z0-9_]+)\s*:\s*"/g)].map((m) => m[1]));
 const keys = new Set([...routines.matchAll(/"([a-z][a-z0-9_]{2,})"\s*:/g)].map((m) => m[1]));
 const untranslated = [...keys].filter((k) => !labels.has(k));
@@ -71,6 +72,33 @@ check(
   `as ${ops.size} rotinas não repetem nomes de operação`,
   duplicated.length === 0,
   duplicated.map((d) => `  ${d}`).join('\n'),
+);
+
+// ── 4. Nada de JSON cru nem "(id)" na interface ─────────────────────────────
+import { readdirSync, statSync } from 'node:fs';
+import path from 'node:path';
+
+function telas(dir) {
+  const out = [];
+  for (const e of readdirSync(dir)) {
+    const f = path.join(dir, e);
+    if (statSync(f).isDirectory()) out.push(...telas(f));
+    else if (f.endsWith('.tsx')) out.push(f);
+  }
+  return out;
+}
+const arquivos = telas('src/components/screens');
+const comJson = arquivos.filter((f) => /JSON\.stringify\([^)]*null,\s*2\)/.test(fs.readFileSync(f, 'utf8')));
+check(
+  `nenhuma das ${arquivos.length} telas despeja JSON cru`,
+  comJson.length === 0,
+  comJson.map((f) => `  ${f}`).join('\n'),
+);
+const comId = arquivos.filter((f) => /label">[^<]*\(id\)|tgroup-label">[^<]*\(id\)/.test(fs.readFileSync(f, 'utf8')));
+check(
+  'nenhum rótulo de campo mostra "(id)" ao usuário',
+  comId.length === 0,
+  comId.map((f) => `  ${f}`).join('\n'),
 );
 
 console.log(`\n${checks.length}/${checks.length} validações de rótulos das rotinas aprovadas.`);

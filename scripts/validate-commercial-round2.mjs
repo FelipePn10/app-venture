@@ -13,7 +13,8 @@ const check = (name, condition) => {
 };
 
 const pricing = read('src/services/salesPricingService.ts');
-const routinePage = read('src/components/screens/OperationalRoutinePage.tsx');
+const routinePage = read('src/components/screens/OperationalRoutinePage.tsx')
+  + read('src/utils/fieldLabels.ts');
 const routineCatalog = read('src/components/screens/operationalRoutines.ts');
 const vvnd0200 = read('src/components/screens/comercial/Vvnd0200Page.tsx');
 const vvnd0300 = read('src/components/screens/comercial/Vvnd0300Page.tsx');

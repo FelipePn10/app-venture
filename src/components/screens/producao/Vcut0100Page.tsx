@@ -12,6 +12,7 @@ import {
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { ReadableRecord } from "@/components/ui/ReadableRecord";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const pct = (n?: number) => `${(n ?? 0).toFixed(1)}%`;
@@ -206,7 +207,7 @@ export function Vcut0100Page(): JSX.Element {
                 {unplaced.length > 0 && <div className="erp-feedback error">⚠️ {unplaced.length} peça(s) sem encaixe (maior que qualquer estoque disponível).</div>}
 
                 {program && (
-                  <div className="erp-fieldset"><div className="erp-fieldset-head">Programa de corte</div><div className="erp-fieldset-body"><div className="erp-field erp-c12"><pre style={{ margin: 0, fontSize: 11, maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify(program, null, 2)}</pre></div></div></div>
+                  <div className="erp-fieldset"><div className="erp-fieldset-head">Programa de corte</div><div className="erp-fieldset-body"><div className="erp-field erp-c12"><ReadableRecord value={program} emptyLabel="Nenhum programa de corte gerado." /></div></div></div>
                 )}
               </>
             )}

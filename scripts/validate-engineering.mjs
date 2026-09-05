@@ -17,7 +17,8 @@ const vent0210 = read('src/components/screens/engenharia/Vent0210Page.tsx');
 const roteiro = read('src/components/screens/engenharia/RoteiroFabricacaoPage.tsx');
 const vpro0900 = read('src/components/screens/producao/Vpro0900Page.tsx');
 const vmaq0200 = read('src/components/screens/engenharia/Vmaq0200Page.tsx');
-const routinePage = read('src/components/screens/OperationalRoutinePage.tsx');
+const routinePage = read('src/components/screens/OperationalRoutinePage.tsx')
+  + read('src/utils/fieldLabels.ts');
 const routineCatalog = read('src/components/screens/operationalRoutines.ts');
 const lookups = read('src/services/lookups.ts');
 const structure = read('src/services/ItemStructureService.ts');
