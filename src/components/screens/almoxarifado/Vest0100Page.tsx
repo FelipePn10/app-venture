@@ -32,7 +32,10 @@ export function Vest0100Page(): JSX.Element {
   const [genealogy, setGenealogy] = useState<Obj | null>(null);
   const [consumption, setConsumption] = useState<ConsumptionAvgDTO | null>(null);
   const [movForm, setMovForm] = useState<MovementDTO>({ ...EMPTY_MOV });
-  const [resForm, setResForm] = useState({ item_code: "", warehouse_id: 0, quantity: 0, reference_type: "MANUAL", reference_code: 0 });
+  const [resForm, setResForm] = useState({
+    item_code: "", warehouse_id: 0, quantity: 0, reference_type: "MANUAL", reference_code: 0,
+    reference_item_code: "", reservation_date: "", expiration_date: "", notes: "",
+  });
   const [lotForm, setLotForm] = useState({ item_code: "", lot: "", heat_number: "", certificate: "" });
   const [resId, setResId] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -62,7 +65,13 @@ export function Vest0100Page(): JSX.Element {
 
   const criarReserva = () => run(async () => {
     if (!resForm.item_code || !resForm.warehouse_id || !resForm.quantity) { setFeedback({ type: "error", message: "Item, depósito e quantidade são obrigatórios." }); return; }
-    const r = await createReservation(resForm);
+    const r = await createReservation({
+      ...resForm,
+      reference_item_code: Number(resForm.reference_item_code) || undefined,
+      reservation_date: resForm.reservation_date || undefined,
+      expiration_date: resForm.expiration_date || undefined,
+      notes: resForm.notes.trim() || undefined,
+    });
     setResId(String(r.id ?? ""));
     setFeedback({ type: "success", message: `Reserva ${r.id} criada (Ativo) — ATP reduzido.` });
     if (itemCode) await getAtp(itemCode.trim()).then(setAtp);
@@ -160,6 +169,11 @@ export function Vest0100Page(): JSX.Element {
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={resForm.item_code || ""} onChange={(e) => setResForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Depósito</label><input className="erp-input num" type="number" value={resForm.warehouse_id || ""} onChange={(e) => setResForm((p) => ({ ...p, warehouse_id: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={resForm.quantity || ""} onChange={(e) => setResForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Linha do documento</label><input className="erp-input num" type="number" value={resForm.reference_item_code} onChange={(e) => setResForm((p) => ({ ...p, reference_item_code: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Vale a partir de</label><input className="erp-input" type="date" value={resForm.reservation_date} onChange={(e) => setResForm((p) => ({ ...p, reservation_date: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Expira em</label><input className="erp-input" type="date" value={resForm.expiration_date} onChange={(e) => setResForm((p) => ({ ...p, expiration_date: e.target.value }))} />
+            <span className="erp-field-hint">Sem data, a reserva segura o saldo até alguém liberar.</span></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Observações</label><input className="erp-input" value={resForm.notes} onChange={(e) => setResForm((p) => ({ ...p, notes: e.target.value }))} /></div>
           <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={criarReserva} disabled={busy}>Criar reserva</button></div>
           <div className="erp-field erp-c2"><label className="erp-label">Reserva (ID)</label><input className="erp-input num" type="number" value={resId} onChange={(e) => setResId(e.target.value)} /></div>
           <div className="erp-field erp-c2" style={{ alignSelf: "end", display: "flex", gap: 8 }}>

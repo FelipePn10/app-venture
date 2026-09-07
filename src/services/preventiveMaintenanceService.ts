@@ -120,7 +120,16 @@ export async function advanceOrder(id: number, status: MaintOrderStatus, actualH
   const { data } = await httpClient.post(`${BASE}/orders/advance`, body);
   return parseOrder(data);
 }
+/**
+ * Gera as ordens preventivas do horizonte informado.
+ *
+ * O backend lê `horizon_days` da **query string**, não do corpo. Enviado no
+ * corpo, o parâmetro era descartado em silêncio e o horizonte caía sempre no
+ * padrão de 30 dias — quem pedia 90 recebia 30 sem nenhum aviso.
+ */
 export async function generateOrders(horizonDays: number): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/orders/generate`, { horizon_days: horizonDays });
+  const { data } = await httpClient.post(`${BASE}/orders/generate`, null, {
+    params: { horizon_days: horizonDays },
+  });
   return unwrapObject(data);
 }

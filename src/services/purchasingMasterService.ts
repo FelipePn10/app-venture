@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject, type Obj, parseBool } from '@/services/fiscalShared';
 import { downloadResponse } from '@/services/fileDownload';
 
 /**
@@ -108,11 +108,34 @@ export interface ItemSupplierDTO {
   id?: number;
   item_code: string;
   supplier_code: number;
+  mask?: string;
   ranking: number;
   supplier_item_code?: string;
   supplier_item_desc?: string;
   supplier_uom?: string;
   lead_time_days?: number;
+
+  /**
+   * O que muda de fato entre comprar do fornecedor A ou do B: a unidade em que
+   * ele fatura, quanto vem por embalagem e o fator de conversão para a unidade
+   * interna. Sem isso, um pedido de 10 caixas vira 10 unidades no estoque.
+   */
+  xml_uom?: string;
+  conversion_factor?: number;
+  package_quantity?: number;
+  barcode?: string;
+  is_preferred?: boolean;
+  /** Homologação do fornecedor para este item. */
+  classification_id?: number;
+  classification_date?: string;
+  classification_grade?: number;
+  /** Faturamento direto ao cliente, sem passar pelo estoque. */
+  direct_billing?: boolean;
+  third_party_order?: boolean;
+  ignore_avg_cost_addition?: boolean;
+  ecommerce?: boolean;
+  valid_until?: string;
+  notes?: string;
 }
 function parseItemSupplier(raw: unknown): ItemSupplierDTO {
   const o = unwrapObject(raw);
@@ -125,6 +148,21 @@ function parseItemSupplier(raw: unknown): ItemSupplierDTO {
     supplier_item_desc: parseStr(o, 'supplier_description', 'SupplierDescription') || undefined,
     supplier_uom: parseStr(o, 'uom', 'UOM') || undefined,
     lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
+    mask: parseStr(o, 'mask', 'Mask') || undefined,
+    xml_uom: parseStr(o, 'xml_uom', 'XMLUOM') || undefined,
+    conversion_factor: parseNum(o, 'conversion_factor', 'ConversionFactor') || undefined,
+    package_quantity: parseNum(o, 'package_quantity', 'PackageQuantity') || undefined,
+    barcode: parseStr(o, 'barcode', 'Barcode') || undefined,
+    is_preferred: parseBool(o, 'is_preferred', 'IsPreferred'),
+    classification_id: parseNum(o, 'classification_id', 'ClassificationID') || undefined,
+    classification_date: parseStr(o, 'classification_date', 'ClassificationDate') || undefined,
+    classification_grade: parseNum(o, 'classification_grade', 'ClassificationGrade') || undefined,
+    direct_billing: parseBool(o, 'direct_billing', 'DirectBilling'),
+    third_party_order: parseBool(o, 'third_party_order', 'ThirdPartyOrder'),
+    ignore_avg_cost_addition: parseBool(o, 'ignore_avg_cost_addition', 'IgnoreAvgCostAddition'),
+    ecommerce: parseBool(o, 'ecommerce', 'Ecommerce'),
+    valid_until: parseStr(o, 'valid_until', 'ValidUntil') || undefined,
+    notes: parseStr(o, 'notes', 'Notes') || undefined,
   };
 }
 export async function listItemSuppliers(itemCode: string): Promise<ItemSupplierDTO[]> {

@@ -106,6 +106,7 @@ import { Vest0100Page } from "./almoxarifado/Vest0100Page";
 import { Vcut0100Page } from "./producao/Vcut0100Page";
 import { Vmrp0100Page } from "./planejamento/Vmrp0100Page";
 import { Vsup0500Page } from "./suprimento/Vsup0500Page";
+import { Vpdc0200Page } from "./suprimento/Vpdc0200Page";
 import { Vsup0110Page } from "./suprimento/Vsup0110Page";
 import { Vsup0120Page } from "./suprimento/Vsup0120Page";
 import { Vsup0130Page } from "./suprimento/Vsup0130Page";
@@ -240,6 +241,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSUP0120: <Vsup0120Page />,
   VSUP0130: <Vsup0130Page />,
   VSUP0200: <Vsup0200Page />,
+  VPDC0200: <Vpdc0200Page />,
   VSUP0300: <Vsup0300Page />,
   VSUP0400: <Vsup0400Page />,
   VITM0100: <Vitm0100Page />,

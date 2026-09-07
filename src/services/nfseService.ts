@@ -15,6 +15,17 @@ export interface NfseDTO {
   tomador_email?: string;
   tomador_codigo_municipio: string;
   tomador_uf: string;
+  /**
+   * Endereço do tomador. A prefeitura recusa o RPS sem logradouro, número, CEP
+   * e bairro — a tela pedia só município e UF, e a nota voltava rejeitada.
+   */
+  tomador_logradouro?: string;
+  tomador_numero?: string;
+  tomador_complemento?: string;
+  tomador_bairro?: string;
+  tomador_cep?: string;
+  /** Contribuinte enquadrado como incentivador cultural. */
+  incentivador_cultural?: boolean;
   item_lista_servico: string;
   codigo_tributario_municipio: string;
   discriminacao: string;
@@ -45,6 +56,12 @@ function parseNfse(raw: unknown): NfseDTO {
     tomador_email: parseStr(o, 'tomador_email', 'TomadorEmail'),
     tomador_codigo_municipio: parseStr(o, 'tomador_codigo_municipio', 'TomadorCodigoMunicipio'),
     tomador_uf: parseStr(o, 'tomador_uf', 'TomadorUf'),
+    tomador_logradouro: parseStr(o, 'tomador_logradouro', 'TomadorLogradouro') || undefined,
+    tomador_numero: parseStr(o, 'tomador_numero', 'TomadorNumero') || undefined,
+    tomador_complemento: parseStr(o, 'tomador_complemento', 'TomadorComplemento') || undefined,
+    tomador_bairro: parseStr(o, 'tomador_bairro', 'TomadorBairro') || undefined,
+    tomador_cep: parseStr(o, 'tomador_cep', 'TomadorCep') || undefined,
+    incentivador_cultural: parseBool(o, 'incentivador_cultural', 'IncentivadorCultural'),
     item_lista_servico: parseStr(o, 'item_lista_servico', 'ItemListaServico'),
     codigo_tributario_municipio: parseStr(o, 'codigo_tributario_municipio', 'CodigoTributarioMunicipio'),
     discriminacao: parseStr(o, 'discriminacao', 'Discriminacao'),

@@ -45,6 +45,40 @@ export const FIELD_LABELS: Record<string, string> = {
   discount_pct: "Desconto (%)", min_margin_pct: "Margem mínima (%)",
   max_discount_pct: "Desconto máximo (%)", incidences_json: "Regras de incidência",
   name: "Nome", attribute: "Campo avaliado", operator: "Operador", value: "Valor", person_type: "Tipo de pessoa",
+  // Configurador: regras de equivalência e recorte da máscara.
+  division_id: "Divisão de vendas", option_id: "Opção",
+  child_seq: "Sequência do filho",
+  parent_variable_id: "Resposta do pai", child_variable_id: "Resposta do filho",
+  // Integração contábil da comissão do representante.
+  event_type: "Tipo de evento",
+  debit_account_code: "Conta de débito", debit_cost_center_code: "Centro de custo do débito",
+  credit_account_code: "Conta de crédito", credit_cost_center_code: "Centro de custo do crédito",
+  history_code: "Histórico contábil", commission_pattern_code: "Padrão de comissão",
+  // Inspeção de recebimento: origem da ordem e destino do material.
+  fiscal_entry_code: "Nota fiscal de entrada", receiving_notice_code: "Aviso de recebimento",
+  certificate: "Certificado", supplier_note: "Nota do fornecedor",
+  attribute_description: "Atributo conferido",
+  rework_warehouse_id: "Almoxarifado de retrabalho",
+  restricted_warehouse_id: "Almoxarifado restrito",
+  // EDI de compras: o que o fornecedor confirmou × o que o pedido pediu.
+  external_reference: "Referência do fornecedor",
+  confirmed_qty: "Quantidade confirmada", confirmed_price: "Preço confirmado",
+  confirmed_date: "Data confirmada",
+  po_qty: "Quantidade do pedido", po_price: "Preço do pedido", po_date: "Data do pedido",
+  // APS: faixas de filtro do sequenciamento e perfil industrial da máquina.
+  from_order: "Ordem inicial", to_order: "Ordem final",
+  from_machine: "Máquina inicial", to_machine: "Máquina final",
+  from_work_center: "Centro de trabalho inicial", to_work_center: "Centro de trabalho final",
+  from_planner: "Planejador inicial", to_planner: "Planejador final",
+  sequence_id: "Sequência", new_start: "Novo início", new_machine_id: "Nova máquina",
+  cascade: "Empurrar as operações seguintes",
+  acquired_on: "Data de aquisição", last_executed_on: "Última execução",
+  maintenance_responsible_employee_id: "Responsável pela manutenção",
+  text_value: "Valor em texto", max_length: "Tamanho máximo",
+  // Restrições e dependências do configurador: a regra é lida como frase —
+  // SE (dominantes) … ENTÃO (determinantes) …
+  dominants: "Condições (SE)", determinants: "Consequências (ENTÃO)",
+  question_id: "Pergunta", condition_type: "Conector (E/OU)", answer_value: "Resposta",
   call_code: "Chamado", direction: "Direção", in_warranty: "Em garantia",
   defect_group_code: "Grupo de defeito", defect_reason_code: "Motivo do defeito",
   responsible_user_code: "Usuário responsável", position: "Posição", situation: "Situação",

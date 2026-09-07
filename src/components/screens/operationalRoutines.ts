@@ -37,13 +37,6 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Ordens do plano", method: "GET", path: "/api/maintenance/orders/by-plan/{planId}", fields: [id("planId", "Plano")] },
     { label: "Ordens do centro", method: "GET", path: "/api/maintenance/orders/by-work-center/{wcId}", fields: [id("wcId", "Centro de trabalho")] },
   ]),
-  VPDC0200: routine("VPDC0200", "Manutenção de pedido de compra", "Cria e mantém capa e itens do pedido de compra. Aprovação, autorização e recebimento ficam isolados em VPDC0210.", [
-    list("/api/purchase-order/list"),
-    create("/api/purchase-order/create", '{"enterprise_code":1,"supplier_code":1,"emission_date":"2026-07-14","currency":"BRL"}'),
-    { label: "Abrir pedido", method: "GET", path: "/api/purchase-order/{code}", fields: [id("code", "Pedido")] },
-    { label: "Adicionar item", method: "POST", path: "/api/purchase-order/{code}/items", fields: [id("code", "Pedido"), json('{"item_code":100,"quantity":10,"unit_price":20,"uom":"UN"}')] },
-    { label: "Cancelar pedido", method: "DELETE", path: "/api/purchase-order/{code}/cancel", fields: [id("code", "Pedido")], destructive: true },
-  ]),
   VENT0204: routine("VENT0204", "Cadastro de Grupo PDM", "Consulta, cadastra e altera famílias PDM vinculadas à empresa, usando o cadastro estrutural persistido no backend. Empresa e usuário responsável são definidos automaticamente pelo acesso atual.", [
     list("/api/pdm/groups"),
     { label: "Abrir grupo", method: "GET", path: "/api/pdm/groups/{code}", fields: [id("code", "Código do grupo")] },
@@ -64,9 +57,9 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Abrir roteiro", method: "GET", path: "/api/procurement/receiving-inspection-routes/{id}", fields: [id()] },
     create("/api/procurement/receiving-inspection-orders", '{"source":"PURCHASE_ORDER","purchase_order_code":1000,"purchase_order_item_code":1,"supplier_code":10,"item_code":100,"mask":"","warehouse_id":2,"quantity":20}', false, "Abrir ordem de inspeção"),
     list("/api/procurement/receiving-inspection-orders", [{ name: "status", label: "Status" }, { name: "supplier_code", label: "Fornecedor", type: "number" }], ["status", "supplier_code"]),
-    { label: "Registrar resultados", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/results", fields: [id(), json('{"step_id":1,"sequence":1,"sample_index":1,"measured_value":10,"min_value":9.9,"max_value":10.1,"is_approved":true}')] },
+    { label: "Registrar resultados", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/results", fields: [id(), json('{"step_id":1,"sequence":1,"sample_index":1,"measured_value":10,"min_value":9.9,"max_value":10.1,"attribute_description":null,"is_approved":true,"notes":null}')] },
     { label: "Analisar ordem", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/analysis", fields: [id(), json('{"conform_qty":18,"rejected_qty":2,"rework_qty":0,"restricted_qty":0,"treatment":"PARTIAL_APPROVAL","affects_supplier_score":true,"move_stock":true,"destination_warehouse_id":1,"rejection_warehouse_id":3,"notes":"Conferência concluída"}')] },
-    { label: "Destinar estoque", method: "POST", path: "/api/procurement/receiving-inspections/{id}/disposition", fields: [id(), json('{"approved_qty":18,"rejected_qty":2,"destination_warehouse_id":1,"quarantine_warehouse_id":2,"reason":"Avaria"}')] },
+    { label: "Destinar estoque", method: "POST", path: "/api/procurement/receiving-inspections/{id}/disposition", fields: [id(), json('{"approved_qty":18,"rejected_qty":2,"destination_warehouse_id":1,"quarantine_warehouse_id":2,"rework_warehouse_id":null,"restricted_warehouse_id":null,"reason":"Avaria"}')] },
   ]),
   VAVF0300: routine("VAVF0300", "Scorecard e IQF do fornecedor", "Consulta o histórico e calcula ou registra os indicadores de qualidade, entrega, comercial e atendimento.", [
     list("/api/procurement/suppliers/{supplierCode}/scorecards", [id("supplierCode", "Fornecedor")]),
@@ -80,7 +73,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   ]),
   VSUP0620: routine("VSUP0620", "EDI de fornecedores", "Recebe confirmações eletrônicas e evidencia divergências contra o pedido de compra.", [
     list("/api/procurement/edi-messages", [{ name: "supplier_code", label: "Fornecedor", type: "number" }, { name: "status", label: "Status" }], ["supplier_code", "status"]),
-    create("/api/procurement/edi-messages", '{"enterprise_code":1,"supplier_code":10,"direction":"INBOUND","message_type":"PO_CONFIRMATION","purchase_order_code":1000,"payload":{},"qty_tolerance":0,"price_tolerance":0,"lines":[]}'),
+    create("/api/procurement/edi-messages", '{"enterprise_code":1,"supplier_code":10,"direction":"INBOUND","message_type":"PO_CONFIRMATION","purchase_order_code":1000,"external_reference":"","payload":{},"qty_tolerance":0,"price_tolerance":0,"lines":[{"purchase_order_item_code":1,"item_code":100,"mask":"","confirmed_qty":10,"confirmed_price":25.5,"confirmed_date":"2026-10-01","po_qty":10,"po_price":25.5,"po_date":"2026-09-15","notes":null}]}'),
     { label: "Abrir mensagem", method: "GET", path: "/api/procurement/edi-messages/{id}", fields: [id()] },
   ]),
   VIMP0300: routine("VIMP0300", "Processo de importação e custo nacionalizado", "Controla itens, despesas, rateio, recálculo e situação do processo de importação.", [
@@ -120,7 +113,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Traduzir variável", method: "POST", path: "/api/configurator/variables/{varId}/languages", fields: [id("varId", "Variável"), json('{"language":"en","country":"US","translation":"Blue"}')] },
     remove("/api/configurator/variables/languages/{langId}", [id("langId", "Tradução")], false, "Excluir tradução da variável"),
   ]),
-  VCFG0200: routine("VCFG0200", "Características do configurador", "Mantém características, tipos, fórmulas, limites, idiomas e itens de recebimento.", [
+  VCFG0200: routine("VCFG0200", "Características do configurador", "Manutenção avançada das características. O cadastro guiado (com pergunta, tipo e limites em formulário) é a VCFG0100.", [
     list("/api/configurator/characteristics"), create("/api/configurator/characteristics", '{"code":"COR","description":"Cor","type":"ESCOLHA","set_id":1,"mask":"","is_required":true,"is_special":false,"affects_price":false,"controls_goals":false,"receiving_type":"","field_source":"","formula":"","option_true":"Sim","option_false":"Não"}'),
     { label: "Abrir característica", method: "GET", path: "/api/configurator/characteristics/{id}", fields: [id()] },
     { label: "Alterar característica", method: "PUT", path: "/api/configurator/characteristics/{id}", fields: [id(), json('{"code":"COR","description":"Cor","type":"ESCOLHA","is_active":true,"is_required":true}')] }, remove("/api/configurator/characteristics/{id}"),
@@ -130,13 +123,13 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     list("/api/configurator/characteristics/{id}/receiving-items", [id()]), { label: "Vincular item de recebimento", method: "POST", path: "/api/configurator/characteristics/{id}/receiving-items", fields: [id(), json('{"variable_id":1,"receiving_type":"RECEBIMENTO","item_code":100}')] },
     remove("/api/configurator/characteristics/receiving-items/{recvId}", [id("recvId", "Vínculo de recebimento")], false, "Excluir vínculo de recebimento"),
   ]),
-  VCFG0300: routine("VCFG0300", "Características por item", "Ordena e configura as características que compõem cada item configurável.", [
+  VCFG0300: routine("VCFG0300", "Características por item", "Manutenção avançada do vínculo item × característica. Para ordenar as perguntas com setas e resposta padrão, use a VCFG0100.", [
     list("/api/configurator/items/{itemCode}/characteristics", [id("itemCode", "Item")]),
     { label: "Adicionar característica", method: "POST", path: "/api/configurator/items/{itemCode}/characteristics", fields: [id("itemCode", "Item"), json('{"characteristic_id":1,"sequence":1,"is_special":false,"is_drawing":false,"is_load":false,"formula":"","default_answers":[]}')] },
     { label: "Alterar vínculo", method: "PUT", path: "/api/configurator/item-characteristics/{id}", fields: [id(), json('{"sequence":1,"is_special":false,"is_drawing":false,"is_load":false,"formula":"","default_answers":[]}')] }, remove("/api/configurator/item-characteristics/{id}"),
   ]),
-  VCFG0400: routine("VCFG0400", "Geração de máscaras configuradas", "Gera uma máscara por respostas ou combinações em lote, com opção de persistência.", [
-    create("/api/configurator/generate-mask", '{"item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}],"persist":false}', false, "Gerar máscara"),
+  VCFG0400: routine("VCFG0400", "Geração de máscaras configuradas", "Geração de máscara pelo corpo cru da requisição. Para responder as perguntas e ver a máscara se formando, use a VCFG0100.", [
+    create("/api/configurator/generate-mask", '{"item_code":100,"division_id":null,"answers":[{"characteristic_id":1,"variable_id":2,"option_id":null,"value":""}],"persist":false}', false, "Gerar máscara"),
     create("/api/configurator/generate-masks", '{"item_code":100,"restrict":[{"characteristic_id":1,"variable_ids":[1,2]}],"persist":false}', false, "Gerar máscaras em lote"),
   ]),
   VCFG0500: routine("VCFG0500", "Descrições configuradas", "Mantém tipos, linhas e renderização das descrições de itens configurados.", [
@@ -152,10 +145,10 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     remove("/api/configurator/item-descriptions/{id}"),
   ]),
   VCFG0600: routine("VCFG0600", "Regras equivalentes e regras de item", "Avalia regras pai-filho e regras que preenchem campos do item configurado.", [
-    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")], [], "Consultar regras de equivalência"), create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}', false, "Cadastrar regra de equivalência"),
+    list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")], [], "Consultar regras de equivalência"), create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"child_seq":10,"parent_characteristic_id":1,"parent_operator":"EQUAL","parent_variable_id":null,"child_characteristic_id":2,"child_operator":"SET","child_variable_id":null,"division_id":null,"formula":""}', false, "Cadastrar regra de equivalência"),
     create("/api/configurator/equivalent-rules/apply", '{"parent_item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}]}', false, "Aplicar regra de equivalência"),
     { label: "Abrir regra equivalente", method: "GET", path: "/api/configurator/equivalent-rules/{id}", fields: [id()] },
-    { label: "Alterar regra equivalente", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}')] },
+    { label: "Alterar regra equivalente", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"child_seq":10,"parent_characteristic_id":1,"parent_operator":"EQUAL","parent_variable_id":null,"child_characteristic_id":2,"child_operator":"SET","child_variable_id":null,"division_id":null,"formula":""}')] },
     remove("/api/configurator/equivalent-rules/{id}"),
     list("/api/configurator/items/{itemCode}/rules", [id("itemCode", "Item")], [], "Consultar regras do item"), create("/api/configurator/item-rules", '{"item_code":100,"target_table":"items","target_field":"description","content":"Configurado","formula":"","description":"Preencher descrição","situation":"ACTIVE","conditions":[]}', false, "Cadastrar regra do item"),
     create("/api/configurator/item-rules/evaluate", '{"item_code":100,"answers":[]}', false, "Avaliar regra do item"),
@@ -211,8 +204,8 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   ]),
   VAPS0500: routine("VAPS0500", "Perfil industrial de máquinas", "Mantém uso, preparação, marca, responsáveis, serviços preventivos, itens e campos especiais.", [
     { label: "Consultar perfil", method: "GET", path: "/api/aps/resources/{id}/industrial-profile", fields: [id("id", "Recurso")] },
-    { label: "Salvar perfil", method: "PUT", path: "/api/aps/resources/{id}/industrial-profile", adminOnly: true, fields: [id("id", "Recurso"), json('{"usage_description":"Centro de usinagem","preparation_time":"30","preparation_time_unit":"MIN","brand":"Marca","is_preferred":true,"services":[],"special_values":[]}')] },
-    { label: "Alterar serviço", method: "PATCH", path: "/api/aps/resources/{machineID}/services/{serviceID}", adminOnly: true, fields: [id("machineID", "Máquina"), id("serviceID", "Serviço"), json('{"service_code":"PREV001","description":"Preventiva","service_type":"PREVENTIVE","frequency_value":30,"frequency_unit":"DAY","max_tolerance":5,"implemented_on":"2026-07-14T00:00:00Z","items":[],"responsible_employee_ids":[]}')] },
+    { label: "Salvar perfil", method: "PUT", path: "/api/aps/resources/{id}/industrial-profile", adminOnly: true, fields: [id("id", "Recurso"), json('{"usage_description":"Centro de usinagem","acquired_on":"2020-03-01T00:00:00Z","preparation_time":"30","preparation_time_unit":"MIN","supplier_code":null,"brand":"Marca","is_preferred":true,"maintenance_responsible_employee_id":null,"services":[],"special_values":[{"name":"Potência","value_type":"NUMERIC","numeric_value":"15.5","text_value":"","max_length":null}]}')] },
+    { label: "Alterar serviço", method: "PATCH", path: "/api/aps/resources/{machineID}/services/{serviceID}", adminOnly: true, fields: [id("machineID", "Máquina"), id("serviceID", "Serviço"), json('{"service_code":"PREV001","description":"Preventiva","service_type":"PREVENTIVE","frequency_value":30,"frequency_unit":"DAY","max_tolerance":5,"supplier_code":null,"implemented_on":"2026-07-14T00:00:00Z","last_executed_on":null,"items":[],"responsible_employee_ids":[]}')] },
     { label: "Desativar serviço", method: "DELETE", path: "/api/aps/resources/{machineID}/services/{serviceID}", fields: [id("machineID", "Máquina"), id("serviceID", "Serviço")], destructive: true, adminOnly: true },
     { label: "Alterar item do serviço", method: "PATCH", path: "/api/aps/resources/{machineID}/services/{serviceID}/items/{itemID}", adminOnly: true, fields: [id("machineID", "Máquina"), id("serviceID", "Serviço"), id("itemID", "Item do serviço"), json('{"item_code":100,"quantity":"1","notes":"Troca preventiva"}')] },
     { label: "Desativar item do serviço", method: "DELETE", path: "/api/aps/resources/{machineID}/services/{serviceID}/items/{itemID}", fields: [id("machineID", "Máquina"), id("serviceID", "Serviço"), id("itemID", "Item do serviço")], destructive: true, adminOnly: true },
@@ -222,8 +215,9 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   VAPS0600: routine("VAPS0600", "Cálculo e consulta do sequenciamento APS", "Executa o cálculo, consulta recursos/eventos e administra parâmetros do motor de sequenciamento.", [
     { label: "Executar sequenciamento", method: "POST", path: "/api/aps/sequence", fields: [json('{"start_from":"2026-07-14T08:00:00Z","order_ids":[],"machine_ids":[],"work_center_ids":[],"operation_ids":[]}')] },
     list("/api/aps/sequence/resources"),
-    { label: "Abrir visão de sequenciamento", method: "POST", path: "/api/aps/sequence/view", fields: [json('{"from":"2026-07-14T00:00:00Z","to":"2026-07-21T23:59:59Z","resource_group_id":1,"time_unit":"HOUR","refresh_value":15}')] },
-    { label: "Exportar eventos", method: "POST", path: "/api/aps/sequence/events/export", fields: [json('{"from":"2026-07-14T00:00:00Z","to":"2026-07-21T23:59:59Z","resource_group_id":1,"time_unit":"HOUR","refresh_value":15}')] },
+    { label: "Abrir visão de sequenciamento", method: "POST", path: "/api/aps/sequence/view", fields: [json('{"from":"2026-07-14T00:00:00Z","to":"2026-07-21T23:59:59Z","resource_group_id":1,"time_unit":"HOUR","refresh_value":15,"from_order":null,"to_order":null,"from_machine":null,"to_machine":null,"from_work_center":null,"to_work_center":null,"from_planner":null,"to_planner":null}')] },
+    { label: "Exportar eventos", method: "POST", path: "/api/aps/sequence/events/export", fields: [json('{"from":"2026-07-14T00:00:00Z","to":"2026-07-21T23:59:59Z","resource_group_id":1,"time_unit":"HOUR","refresh_value":15,"from_order":null,"to_order":null,"from_machine":null,"to_machine":null,"from_work_center":null,"to_work_center":null,"from_planner":null,"to_planner":null}')] },
+    { label: "Reprogramar operação", method: "POST", path: "/api/aps/sequence/reschedule", fields: [json('{"sequence_id":1,"new_start":"2026-07-15T08:00:00Z","new_machine_id":null,"cascade":true}')] },
     { label: "Salvar parâmetros", method: "PUT", path: "/api/aps/sequence/settings", adminOnly: true, fields: [json('{"list_only_active_resources":true}')] },
   ]),
 
@@ -323,11 +317,11 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   ]),
   VCLI0117: routine("VCLI0117", "Permissões e restrições de venda", "Mantém e avalia restrições por cliente, item e contexto comercial usando o motor real de regras.", [
     { label: "Listar restrições", method: "GET", path: "/api/restriction/list" },
-    { label: "Criar restrição", method: "POST", path: "/api/restriction/create", fields: [json('{"name":"Bloqueio comercial","attribute":"customer_code","operator":"==","value":"100"}')] },
+    { label: "Criar restrição", method: "POST", path: "/api/restriction/create", fields: [json('{"situation":"ACTIVE","item_code":900700,"reason_code":1,"dominants":[{"question_id":1,"operator":"EQUAL","condition_type":"AND","answer_value":"PT","sequence":1}],"determinants":[{"question_id":2,"operator":"INVALID","answer_value":""}]}')] },
     { label: "Abrir restrição", method: "GET", path: "/api/restriction/{code}", fields: [id("code", "Código")] },
     { label: "Restrições do cliente", method: "GET", path: "/api/restriction/customer/{customerCode}", fields: [id("customerCode", "Cliente")] },
     { label: "Restrições do item", method: "GET", path: "/api/restriction/item/{itemCode}", fields: [id("itemCode", "Item")] },
-    { label: "Alterar restrição", method: "PUT", path: "/api/restriction/{code}", fields: [id("code", "Código"), json('{"name":"Bloqueio comercial","attribute":"customer_code","operator":"==","value":"100"}')] },
+    { label: "Alterar restrição", method: "PUT", path: "/api/restriction/{code}", fields: [id("code", "Código"), json('{"situation":"ACTIVE","item_code":900700,"reason_code":1}')] },
     { label: "Avaliar venda", method: "POST", path: "/api/restriction/evaluate", fields: [json('{"customer_code":100,"item_code":200,"context":{"channel":"DIRECT"}}')] },
     { label: "Desativar", method: "PATCH", path: "/api/restriction/{code}/deactivate", fields: [id("code", "Código")] },
   ]),
@@ -512,6 +506,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Vincular plano de vendas", method: "POST", path: "/api/representatives/sales-plans", fields: [json('{"representative_code":1,"sales_plan_code":1,"is_active":true}')] },
     { label: "Vincular interesse", method: "POST", path: "/api/representatives/interests", fields: [json('{"representative_code":1,"item_classification_code":1,"is_active":true}')] },
     { label: "Cadastrar endereço de correspondência", method: "POST", path: "/api/representatives/correspondence-addresses", fields: [json('{"representative_code":1,"postal_code":"00000000","city":"São Paulo","state":"SP","street":"Rua Exemplo","street_number":"100","district":"Centro","is_default":true}')] },
+    { label: "Integração contábil da comissão", method: "POST", path: "/api/representatives/accounting", fields: [json('{"representative_code":1,"enterprise_code":1,"event_type":"COMISSAO","debit_account_code":null,"debit_cost_center_code":null,"credit_account_code":null,"credit_cost_center_code":null,"history_code":null}')] },
   ]),
   VEST0400: routine("VEST0400", "Consultas de movimentos e saldos por almoxarifado", "Consulta movimentos, saldo pontual e posição consolidada do estoque real.", [
     { label: "Movimentos do almoxarifado", method: "GET", path: "/api/stock/movements/warehouse/{warehouseId}", fields: [id("warehouseId", "Almoxarifado")] },
@@ -522,12 +517,12 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     create("/api/procurement/supplier-scorecards/compute", '{"supplier_code":10,"period_start":"2026-01-01","period_end":"2026-06-30","commercial_score":100,"service_score":100,"persist":true,"notes":"Apuração semestral"}'),
   ]),
   VINS0201: routine("VINS0201", "Manutenção das ordens de inspeção", "Cria ordens de inspeção e registra as medições exigidas pelo roteiro de recebimento.", [
-    create("/api/procurement/receiving-inspection-orders", '{"source":"PURCHASE_ORDER","purchase_order_code":1000,"purchase_order_item_code":1,"supplier_code":10,"item_code":100,"mask":"","warehouse_id":2,"quantity":20}'),
-    { label: "Registrar resultados", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/results", fields: [id(), json('{"step_id":1,"sequence":1,"sample_index":1,"measured_value":10,"min_value":9.9,"max_value":10.1,"is_approved":true}')] },
+    create("/api/procurement/receiving-inspection-orders", '{"source":"PURCHASE_ORDER","purchase_order_code":1000,"purchase_order_item_code":1,"fiscal_entry_code":null,"receiving_notice_code":null,"supplier_code":10,"item_code":100,"mask":"","lot":null,"serial_number":null,"warehouse_id":2,"quantity":20,"certificate":null,"supplier_note":null,"model":null,"notes":null}'),
+    { label: "Registrar resultados", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/results", fields: [id(), json('{"step_id":1,"sequence":1,"sample_index":1,"measured_value":10,"min_value":9.9,"max_value":10.1,"attribute_description":null,"is_approved":true,"notes":null}')] },
   ]),
   VINS0206: routine("VINS0206", "Tratamento das ordens de inspeção", "Analisa quantidades inspecionadas e efetiva a destinação física aprovada ou rejeitada.", [
     { label: "Analisar ordem", method: "POST", path: "/api/procurement/receiving-inspection-orders/{id}/analysis", fields: [id(), json('{"conform_qty":18,"rejected_qty":2,"rework_qty":0,"restricted_qty":0,"treatment":"PARTIAL_APPROVAL","affects_supplier_score":true,"move_stock":true,"destination_warehouse_id":1,"rejection_warehouse_id":3,"notes":"Conferência concluída"}')] },
-    { label: "Destinar estoque", method: "POST", path: "/api/procurement/receiving-inspections/{id}/disposition", fields: [id(), json('{"approved_qty":18,"rejected_qty":2,"destination_warehouse_id":1,"quarantine_warehouse_id":2,"reason":"Avaria"}')] },
+    { label: "Destinar estoque", method: "POST", path: "/api/procurement/receiving-inspections/{id}/disposition", fields: [id(), json('{"approved_qty":18,"rejected_qty":2,"destination_warehouse_id":1,"quarantine_warehouse_id":2,"rework_warehouse_id":null,"restricted_warehouse_id":null,"reason":"Avaria"}')] },
   ]),
   VINS0313: routine("VINS0313", "Consulta de inspeções de recebimento", "Consulta ordens de inspeção por situação e fornecedor sem alterar o recebimento.", [
     list("/api/procurement/receiving-inspection-orders", [{ name: "status", label: "Status" }, { name: "supplier_code", label: "Fornecedor", type: "number" }], ["status", "supplier_code"]),
@@ -537,10 +532,10 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   ]),
   VENG0204: routine("VENG0204", "Regras de variáveis equivalentes", "Mantém e aplica relações entre características de itens pai e filho.", [
     list("/api/configurator/parents/{parentItemCode}/equivalent-rules", [id("parentItemCode", "Item pai")], [], "Consultar regras de equivalência"),
-    create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}', false, "Cadastrar regra de equivalência"),
+    create("/api/configurator/equivalent-rules", '{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"child_seq":10,"parent_characteristic_id":1,"parent_operator":"EQUAL","parent_variable_id":null,"child_characteristic_id":2,"child_operator":"SET","child_variable_id":null,"division_id":null,"formula":""}', false, "Cadastrar regra de equivalência"),
     create("/api/configurator/equivalent-rules/apply", '{"parent_item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}]}'),
     { label: "Abrir regra", method: "GET", path: "/api/configurator/equivalent-rules/{id}", fields: [id()] },
-    { label: "Alterar regra", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"parent_characteristic_id":1,"parent_operator":"EQ","child_characteristic_id":2,"child_operator":"SET","formula":""}')] },
+    { label: "Alterar regra", method: "PUT", path: "/api/configurator/equivalent-rules/{id}", fields: [id(), json('{"parent_item_code":100,"parent_uom":"UN","child_item_code":200,"child_seq":10,"parent_characteristic_id":1,"parent_operator":"EQUAL","parent_variable_id":null,"child_characteristic_id":2,"child_operator":"SET","child_variable_id":null,"division_id":null,"formula":""}')] },
     remove("/api/configurator/equivalent-rules/{id}"),
   ]),
   VITE0118: routine("VITE0118", "Regras de itens configurados", "Mantém e avalia regras que preenchem campos do item a partir das respostas do configurador.", [
@@ -552,7 +547,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     remove("/api/configurator/item-rules/{id}"),
   ]),
   VITE0313: routine("VITE0313", "Geração de máscaras configuradas", "Gera uma máscara individual pelas respostas informadas e opcionalmente a persiste.", [
-    create("/api/configurator/generate-mask", '{"item_code":100,"answers":[{"characteristic_id":1,"variable_id":2,"value":""}],"persist":false}'),
+    create("/api/configurator/generate-mask", '{"item_code":100,"division_id":null,"answers":[{"characteristic_id":1,"variable_id":2,"option_id":null,"value":""}],"persist":false}'),
   ]),
   VPLC0200: routine("VPLC0200", "Montagem e gestão de cargas", "Monta uma carga com romaneios e notas fiscais antes de sua liberação logística.", [
     list("/api/shipments/loads", [{ name: "status", label: "Situação" }, { name: "carrier_code", label: "Transportadora", type: "number" }], ["status", "carrier_code"]),

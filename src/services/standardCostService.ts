@@ -26,6 +26,10 @@ export interface WorkCenterCost {
   id?: number;
   work_center_id: number;
   cost_per_hour: number;
+  /** Separar máquina de mão de obra é o que permite custear um roteiro em que
+   *  a máquina roda sozinha, ou em que dois operadores atendem um equipamento. */
+  machine_cost_per_hour?: number;
+  labor_cost_per_hour?: number;
   currency?: string;
 }
 
@@ -54,6 +58,8 @@ function parseWcc(raw: unknown): WorkCenterCost {
     id: parseNum(o, 'id', 'ID') || undefined,
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID'),
     cost_per_hour: parseNum(o, 'cost_per_hour', 'CostPerHour'),
+    machine_cost_per_hour: parseNum(o, 'machine_cost_per_hour', 'MachineCostPerHour') || undefined,
+    labor_cost_per_hour: parseNum(o, 'labor_cost_per_hour', 'LaborCostPerHour') || undefined,
     currency: parseStr(o, 'currency', 'Currency') || undefined,
   };
 }
@@ -85,8 +91,21 @@ export async function listWorkCenterCosts(): Promise<WorkCenterCost[]> {
   const { data } = await httpClient.get(`${BASE}/work-center-costs`);
   return unwrapArray(data).map(parseWcc);
 }
-export async function upsertWorkCenterCost(workCenterId: number, costPerHour: number): Promise<WorkCenterCost> {
-  const { data } = await httpClient.post(`${BASE}/work-center-costs`, { work_center_id: workCenterId, cost_per_hour: costPerHour, updated_by: currentUserId() });
+/**
+ * Grava a tarifa do centro de trabalho. `updated_by` sai do JWT no backend —
+ * mandar o autor pelo corpo permitiria assinar a alteração como outra pessoa.
+ */
+export async function upsertWorkCenterCost(
+  workCenterId: number,
+  costPerHour: number,
+  split?: { machine?: number; labor?: number },
+): Promise<WorkCenterCost> {
+  const { data } = await httpClient.post(`${BASE}/work-center-costs`, {
+    work_center_id: workCenterId,
+    cost_per_hour: costPerHour,
+    machine_cost_per_hour: split?.machine ?? 0,
+    labor_cost_per_hour: split?.labor ?? 0,
+  });
   return parseWcc(data);
 }
 

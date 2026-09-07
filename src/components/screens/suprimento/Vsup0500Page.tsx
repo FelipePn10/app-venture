@@ -61,7 +61,10 @@ export function Vsup0500Page(): JSX.Element {
   const [addrForm, setAddrForm] = useState({ zip_code: "", street: "", number: "", complement: "", district: "", city: "", uf: "", country: "BR" });
   const [phoneForm, setPhoneForm] = useState({ number: "", ranking: 1 });
   const [emailForm, setEmailForm] = useState({ email: "", ranking: 1 });
-  const [dueForm, setDueForm] = useState({ description: "", ranking: 1, payment_condition_code: "", payment_type: "MENSAL", subsequent_month: false });
+  const [dueForm, setDueForm] = useState({
+    description: "", ranking: 1, payment_condition_code: "", payment_type: "MENSAL", subsequent_month: false,
+    receipt_start_time: "", receipt_end_time: "", avg_unload_minutes: "",
+  });
   const [contactForm, setContactForm] = useState({ name: "", role: "", department: "", purchase_order_tag: "", observation: "" });
   const [entForm, setEntForm] = useState<{ enterprise_code?: number; financial_account: string; ipi: boolean; default_invoice_type_id: string; purchase_price_table_id: string }>({ enterprise_code: undefined, financial_account: "", ipi: false, default_invoice_type_id: "", purchase_price_table_id: "" });
   const [entCode] = useState("1");
@@ -527,7 +530,26 @@ export function Vsup0500Page(): JSX.Element {
                       <div className="erp-field erp-c3"><label className="erp-label">Cond. pagto (cód.)</label><input className="erp-input num" type="number" value={dueForm.payment_condition_code} onChange={(e) => setDueForm((p) => ({ ...p, payment_condition_code: e.target.value }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Tipo pagto</label><select className="erp-input" value={dueForm.payment_type} onChange={(e) => setDueForm((p) => ({ ...p, payment_type: e.target.value }))}><option value="MENSAL">MENSAL</option><option value="SEMANAL">SEMANAL</option></select></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Mês subsequente</label><label className="erp-check"><input type="checkbox" checked={dueForm.subsequent_month} onChange={(e) => setDueForm((p) => ({ ...p, subsequent_month: e.target.checked }))} /><span>Sim</span></label></div>
-                      <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void run(() => addDueDate({ supplier_code: form.code!, description: dueForm.description, ranking: dueForm.ranking, payment_condition_code: dueForm.payment_condition_code ? Number(dueForm.payment_condition_code) : undefined, payment_type: dueForm.payment_type, subsequent_month: dueForm.subsequent_month }), "Vencimento salvo.")} disabled={busy}>+ Vencimento</button></div>
+                      {/* Janela de recebimento: quando o caminhão do fornecedor pode
+                          encostar e quanto tempo a descarga costuma levar. É o que
+                          a portaria usa para agendar a doca. */}
+                      <div className="erp-field erp-c2"><label className="erp-label">Recebe a partir de</label><input className="erp-input" type="time" value={dueForm.receipt_start_time} onChange={(e) => setDueForm((p) => ({ ...p, receipt_start_time: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Recebe até</label><input className="erp-input" type="time" value={dueForm.receipt_end_time} onChange={(e) => setDueForm((p) => ({ ...p, receipt_end_time: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Descarga (min)</label><input className="erp-input num" type="number" min={0} value={dueForm.avg_unload_minutes} onChange={(e) => setDueForm((p) => ({ ...p, avg_unload_minutes: e.target.value }))} /></div>
+                      <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void run(() => addDueDate({
+                        supplier_code: form.code!,
+                        description: dueForm.description,
+                        ranking: dueForm.ranking,
+                        // O DTO chama este campo de `payment_condition_id`; enviado como
+                        // `..._code`, o Go descartava em silêncio e o vencimento ficava
+                        // sem condição de pagamento.
+                        payment_condition_id: dueForm.payment_condition_code ? Number(dueForm.payment_condition_code) : undefined,
+                        payment_type: dueForm.payment_type,
+                        subsequent_month: dueForm.subsequent_month,
+                        receipt_start_time: dueForm.receipt_start_time || undefined,
+                        receipt_end_time: dueForm.receipt_end_time || undefined,
+                        avg_unload_minutes: Number(dueForm.avg_unload_minutes) || undefined,
+                      }), "Vencimento salvo.")} disabled={busy}>+ Vencimento</button></div>
                     </div></div>
                     <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Descrição</th><th>Tipo</th><th>Subseq.</th></tr></thead><tbody>
                       {folderRows("due_dates").length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhum vencimento.</td></tr>}

@@ -82,8 +82,13 @@ export async function addLotMaskPart(maskId: number, part: LotMaskPart): Promise
   });
   return unwrapObject(data);
 }
-/** Gera o próximo número de lote/série a partir da máscara. */
+/**
+ * Gera o próximo número de lote/série a partir da máscara.
+ *
+ * O DTO chama o campo de `lot_mask_id`. Enviado como `mask_id`, o Go descartava
+ * em silêncio e o lote saía sem seguir a máscara escolhida.
+ */
 export async function generateLot(maskId: number): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/generate`, { mask_id: maskId });
+  const { data } = await httpClient.post(`${BASE}/generate`, { lot_mask_id: maskId });
   return unwrapObject(data);
 }

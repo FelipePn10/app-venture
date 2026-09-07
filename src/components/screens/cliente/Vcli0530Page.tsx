@@ -4,6 +4,9 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type Tab = "nf" | "imposto";
 
+/** Quais impostos o tipo de nota leva para a NF-e. */
+const IMPOSTOS_NFE = ["ICMS", "IPI", "PIS", "COFINS", "ICMS_IPI", "TODOS"];
+
 const NF_TYPES = ["VENDA", "DEVOLUCAO", "REMESSA", "REMESSA_CONSIGNACAO", "REMESSA_ARMAZENAGEM", "REMESSA_BENEFICIAMENTO", "RETORNO_BENEFICIAMENTO", "SIMPLES_REMESSA", "TRANSFERENCIA", "VENDA_CONSIGNACAO", "COMPLEMENTAR_ICM", "COMPLEMENTAR_IPI", "DEMONSTRACAO", "EMPRESTIMO", "FATURAMENTO_ANTECIPADO", "PRESTACAO_SERVICOS", "OUTROS"];
 
 const NF_FIELDS: FieldSpec[] = [
@@ -23,6 +26,50 @@ const NF_FIELDS: FieldSpec[] = [
   { key: "model_nf", label: "Modelo NF", kind: "select", options: ["55", "65"], col: 2 },
   { key: "cst_icms", label: "CST ICMS", col: 2 }, { key: "csosn_icms", label: "CSOSN", col: 2 }, { key: "cst_ipi", label: "CST IPI", col: 2 }, { key: "cst_pis", label: "CST PIS", col: 2 }, { key: "cst_cofins", label: "CST COFINS", col: 2 },
   { key: "ir_pct_presumption", label: "% Presunção IR", kind: "number", col: 3 }, { key: "csll_pct_presumption", label: "% Presunção CSLL", kind: "number", col: 3 },
+
+  // ── Escrituração: onde a nota aparece nos livros e nas obrigações ────────
+  { key: "description_nf", label: "Descrição impressa na nota", col: 6 },
+  { key: "impostos_nfe", label: "Impostos que vão na NF-e", kind: "select", options: IMPOSTOS_NFE, col: 3 },
+  { key: "lista_valor_contabil", label: "Lista o valor contábil", kind: "bool", col: 3 },
+  { key: "lista_registro_saida", label: "Lista no registro de saída", kind: "bool", col: 3 },
+  { key: "lista_icms_ipi", label: "Lista no livro de ICMS/IPI", kind: "bool", col: 3 },
+  { key: "sintegra_sped_fiscal", label: "Entra no SINTEGRA / SPED Fiscal", kind: "bool", col: 3 },
+  { key: "sisdeclara", label: "Entra no Sisdeclara", kind: "bool", col: 3 },
+
+  // ── Cálculos especiais de ICMS e benefícios ─────────────────────────────
+  { key: "calc_reducao", label: "Calcula redução de base", kind: "bool", col: 3 },
+  { key: "calc_imp_ibpt", label: "Calcula impostos pela IBPT", kind: "bool", col: 3 },
+  { key: "cred_presumido_icms", label: "Crédito presumido de ICMS", kind: "bool", col: 3 },
+  { key: "desc_icms_licitacoes", label: "Desconta ICMS em licitações", kind: "bool", col: 3 },
+  { key: "vlr_agregado_base_subst", label: "Valor agregado na base da ST", kind: "bool", col: 3 },
+  { key: "icms_st_ult_entrada", label: "ICMS-ST pela última entrada", kind: "bool", col: 3 },
+  { key: "comp_ress_ret_st", label: "Compensa/ressarce ICMS-ST retido", kind: "bool", col: 3 },
+  { key: "ciap", label: "Controla CIAP", kind: "bool", col: 3 },
+  { key: "calc_fomentar", label: "Calcula Fomentar", kind: "bool", col: 3 },
+  { key: "excecao_fomentar", label: "Exceção do Fomentar", kind: "bool", col: 3 },
+
+  // ── Comportamento no pedido e no faturamento ────────────────────────────
+  { key: "busca_tipo_nf", label: "Busca o tipo de NF automaticamente", kind: "bool", col: 3 },
+  { key: "complemento_itens", label: "Aceita complemento de itens", kind: "bool", col: 3 },
+  { key: "somente_consulta_lotes", label: "Somente consulta de lotes", kind: "bool", col: 3 },
+  { key: "contrato_facon", label: "Contrato de facção", kind: "bool", col: 3 },
+  { key: "ipi_transfer_sales_table_id", label: "Tabela de venda p/ transferência de IPI", kind: "number", col: 4 },
+
+  // ── Dispositivo legal por imposto (o enquadramento que sai na nota) ──────
+  { key: "dispositivo_legal_icms_id", label: "Dispositivo legal — ICMS", kind: "number", col: 3 },
+  { key: "hierarchy_icms", label: "Hierarquia — ICMS", col: 3, placeholder: "Art. 1º, § 2º" },
+  { key: "dispositivo_legal_icms_st_id", label: "Dispositivo legal — ICMS-ST", kind: "number", col: 3 },
+  { key: "hierarchy_icms_st", label: "Hierarquia — ICMS-ST", col: 3 },
+  { key: "dispositivo_legal_ipi_id", label: "Dispositivo legal — IPI", kind: "number", col: 3 },
+  { key: "hierarchy_ipi", label: "Hierarquia — IPI", col: 3 },
+  { key: "dispositivo_legal_pis_id", label: "Dispositivo legal — PIS", kind: "number", col: 3 },
+  { key: "hierarchy_pis", label: "Hierarquia — PIS", col: 3 },
+  { key: "dispositivo_legal_cofins_id", label: "Dispositivo legal — COFINS", kind: "number", col: 3 },
+  { key: "hierarchy_cofins", label: "Hierarquia — COFINS", col: 3 },
+
+  // ── Códigos exigidos pela nota ──────────────────────────────────────────
+  { key: "cod_beneficio_fiscal", label: "Código do benefício fiscal", col: 3, placeholder: "cBenef" },
+  { key: "cod_motivo_rest_comp_icms_st", label: "Motivo da restituição do ICMS-ST", col: 4 },
 ];
 
 const TAX_FIELDS: FieldSpec[] = [

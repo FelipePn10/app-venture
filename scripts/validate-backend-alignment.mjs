@@ -79,7 +79,14 @@ for (const path of requiredPaths) {
 if (!host.includes('OPERATIONAL_ROUTINES') || !host.includes('OperationalRoutinePage')) {
   failures.push('registro dinâmico das rotinas ausente no ScreenHost');
 }
-if (!routines.includes('VPDC0200: routine("VPDC0200"') || !routines.includes('/api/purchase-order/create')) failures.push('VPDC0200 ainda não possui rotina própria para o pedido de compra real');
+// A checagem antiga exigia a rotina de JSON cru para VPDC0200 — que era o
+// avanço possível na época. Agora a tela é própria, e o que precisa ser
+// garantido é que ela existe e fala com o endpoint real.
+const pedidoCompra = readFileSync(new URL('../src/components/screens/suprimento/Vpdc0200Page.tsx', import.meta.url), 'utf8');
+if (!host.includes('VPDC0200: <Vpdc0200Page />')) failures.push('VPDC0200 não está registrada no ScreenHost');
+if (!pedidoCompra.includes('createOrder') || !pedidoCompra.includes('addOrderItem')) {
+  failures.push('a tela de pedido de compra não usa o serviço real de pedido');
+}
 if (!fiscalConfigService.includes('new FormData()') || !fiscalConfigService.includes("body.append('logo'")) failures.push('branding fiscal não usa multipart/FormData');
 if (!fiscalConfigService.includes('MAX_BRANDING_LOGO_BYTES = 2 * 1024 * 1024')) failures.push('limite de 2 MB do branding ausente');
 if (!fiscalConfigScreen.includes('Preview persistido') || !fiscalConfigScreen.includes('getFiscalBrandingLogo')) failures.push('preview persistido do logo ausente');

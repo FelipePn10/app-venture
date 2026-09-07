@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## Novidades
+- **Pedido de compra (VPDC0200)**: nova tela com capa, itens e transporte/pagamento, mostrando situação e alçada de aprovação por extenso, saldo de cada item (pedido, recebido, cancelado e a receber) e o total do pedido no rodapé.
+- **Mapa de cotação**: a cotação de compras passou a montar a matriz item × fornecedor, destacando o melhor preço de cada item, quanto se economiza em relação ao segundo colocado e se compensa pulverizar ou concentrar a compra em um único fornecedor.
+- **Configurador do produto (VCFG0100)**: virou um roteiro de cinco passos — conjuntos, perguntas, perguntas do item, gerar máscara e restrições — para você cadastrar as perguntas (comprimento, profundidade, cor…), amarrar as respostas ao item e gerar as máscaras dos itens configurados sem sair da tela.
+- **Restrições de configuração**: as combinações proibidas agora aceitam os operadores igual, diferente, maior, menor, pertence e não pertence, explicam a precedência em português e mostram quais combinações foram bloqueadas na geração da máscara.
+- **Tempo e custo do roteiro**: o roteiro de fabricação simula o lote informado e separa setup, tempo de máquina e tempo de mão de obra, mostrando o custo por peça — que cai conforme o lote cresce, como acontece na fábrica.
+- **Testar fórmula na estrutura**: o cadastro de estrutura ganhou o teste de fórmula, que pergunta os valores das variáveis e mostra a quantidade bruta, arredondada, com perda e por pedido.
+- **Histórico da estrutura**: dá para ver quem mudou o quê na estrutura do produto, com o antes e o depois em português.
+- **Abrir item para alterar**: no cadastro de item de engenharia (VENT0200) agora é possível abrir um item já cadastrado e alterar suas informações; o código fica protegido durante a alteração.
+
+## Melhorias
+- O cadastro de item passou a gravar as pastas de planejamento, engenharia e recebimento por inteiro: lote mínimo e múltiplo, estoque de segurança, item crítico e exclusivo, classe ABC, tanque, ponto de pedido, dimensões, roteiro de conferência no recebimento e safra.
+- A classificação fiscal do item (VFIS0320) foi reorganizada em blocos — chave, ICMS, ST, IPI e casos especiais — e deixou de perder informação ao abrir um registro para alterar.
+- O plano de corte passou a calcular os metros de fita de borda por peça e a registrar a rastreabilidade da chapa.
+- O cadastro de cliente (VCLI0530), a matriz de PIS/COFINS (VFIS0350), as metas de venda (VVND0500), a reserva de estoque, a NFS-e e a inspeção de recebimento passaram a expor os campos que o sistema já guardava, mas que não apareciam na tela.
+- As buscas de item base, ferramenta, centro de custo, tipo de nota e dispositivo legal ganharam lista de pesquisa.
+
+## Correções
+- Campos que eram preenchidos na tela e descartados em silêncio na gravação — condição de pagamento do fornecedor, máscara do lote e horizonte da manutenção preventiva — agora chegam ao sistema.
+- Máquinas e tipos de máquina passaram a nascer ativos, em vez de inativos.
+- Perguntas do configurador e restrições que ficavam invisíveis por causa de dois códigos diferentes do mesmo item voltaram a aparecer, e as combinações proibidas voltaram a bloquear de fato.
+- Situações que respondiam "erro interno do servidor" — como informar um ano inválido no gráfico de Gantt — agora explicam o que precisa ser corrigido.
+- Traduzimos as mensagens que ainda chegavam em inglês nas rotinas do sistema.
+
 ## [v1.1.15] — 2026-09-05
 
 ## Melhorias

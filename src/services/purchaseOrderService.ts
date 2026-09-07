@@ -8,6 +8,16 @@ const BASE = '/api/purchase-order';
  * condição de pagamento dos defaults do fornecedor. Ao adicionar item, resolve
  * preço (Tabela de Preço), UM interna (Conversões) e %IPI (Classificação Fiscal).
  */
+/** Quem paga o frete — o mesmo vocabulário da nota fiscal. */
+export const FREIGHT_TYPES = ['CIF', 'DAF', 'FOB', 'SEM_FRETE', 'CONVENIO', 'RETIRA', 'CORTESIA', 'TERCEIROS'] as const;
+
+/** O frete é um valor fechado ou um percentual sobre a mercadoria. */
+export const FREIGHT_VALUE_TYPES = ['VALOR', 'PERCENTUAL'] as const;
+/** E vale por peça ou pelo pedido inteiro. */
+export const FREIGHT_VALUE_MODES = ['UNITARIO', 'TOTAL'] as const;
+/** Destino do material comprado — decide o crédito de imposto. */
+export const UTILIZATION_TYPES = ['INDUSTRIALIZACAO', 'CONSUMO', 'IMOBILIZADO'] as const;
+
 export interface PurchaseOrderDTO {
   code?: number;
   order_number?: number;
@@ -15,12 +25,40 @@ export interface PurchaseOrderDTO {
   supplier_code?: number;
   status?: string;
   origin?: string;
+  emission_date?: string;
+  delivery_date?: string;
   currency_code?: string;
+  currency_date?: string;
   payment_term_code?: number;
-  freight_type?: string;
   price_table_code?: number;
+  invoice_type_code?: number;
+  request_type_code?: number;
+  financial_account?: string;
+  shipping_address_code?: number;
+  /** Transporte */
+  freight_type?: string;
+  freight_value_type?: string;
+  freight_value_mode?: string;
+  freight_value?: number;
+  carrier_code?: number;
+  redispatch_carrier_code?: number;
+  redispatch_freight_type?: string;
+  redispatch_freight_value?: number;
+  talao_number?: string;
+  /** Adiantamento e importação */
+  advance_date?: string;
+  advance_value?: number;
+  incoterm_code?: string;
+  shipment_date?: string;
+  is_firm?: boolean;
+  /**
+   * Situação na alçada de valores: A liberado · B aguardando autorização
+   * superior · R acima do teto, não pode ser autorizado · N ainda não avaliado.
+   */
+  alcada_status?: string;
   total_gross?: number;
   total_net?: number;
+  total_discount?: number;
   notes?: string;
   created_by?: string;
   items?: PurchaseOrderItemDTO[];
@@ -28,16 +66,41 @@ export interface PurchaseOrderDTO {
 
 export interface PurchaseOrderItemDTO {
   id?: number;
+  code?: number;
+  sequence?: number;
   item_code: string;
+  mask?: string;
   requested_qty: number;
+  /** Quanto já chegou e quanto foi cancelado — o saldo é a diferença. */
+  received_qty?: number;
+  cancelled_qty?: number;
   unit_price: number;
   discount_pct?: number;
   ipi_pct?: number;
   icms_pct?: number;
+  icms_st_pct?: number;
+  /**
+   * Tolerância de recebimento em %: o fornecedor pode entregar um pouco a mais
+   * ou a menos sem que o pedido fique pendente para sempre.
+   */
+  tolerance_pct?: number;
+  purchase_uom?: string;
+  internal_uom?: string;
   internal_qty?: number;
   internal_price?: number;
+  warehouse_id?: number;
+  delivery_date?: string;
+  promised_date?: string;
+  cost_center_code?: number;
+  accounting_account?: string;
+  operation_type_code?: number;
+  fiscal_classification_code?: number;
+  utilization_type?: string;
+  status?: string;
+  total_price?: number;
   total_gross?: number;
   total_net?: number;
+  notes?: string;
 }
 
 export interface SuggestionDTO {
@@ -73,16 +136,36 @@ function parseItem(raw: unknown): PurchaseOrderItemDTO {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID') || undefined,
+    code: parseNum(o, 'code', 'Code') || undefined,
+    sequence: parseNum(o, 'sequence', 'Sequence') || undefined,
     item_code: parseStr(o, 'item_code', 'ItemCode'),
+    mask: parseStr(o, 'mask', 'Mask') || undefined,
     requested_qty: parseNum(o, 'requested_qty', 'RequestedQty'),
+    received_qty: parseNum(o, 'received_qty', 'ReceivedQty'),
+    cancelled_qty: parseNum(o, 'cancelled_qty', 'CancelledQty'),
     unit_price: parseNum(o, 'unit_price', 'UnitPrice'),
     discount_pct: parseNum(o, 'discount_pct', 'DiscountPct'),
     ipi_pct: parseNum(o, 'ipi_pct', 'IpiPct'),
     icms_pct: parseNum(o, 'icms_pct', 'IcmsPct'),
+    icms_st_pct: parseNum(o, 'icms_st_pct', 'IcmsStPct'),
+    tolerance_pct: parseNum(o, 'tolerance_pct', 'TolerancePct'),
+    purchase_uom: parseStr(o, 'purchase_uom', 'PurchaseUOM') || undefined,
+    internal_uom: parseStr(o, 'internal_uom', 'InternalUOM') || undefined,
     internal_qty: parseNum(o, 'internal_qty', 'InternalQty') || undefined,
     internal_price: parseNum(o, 'internal_price', 'InternalPrice') || undefined,
+    warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
+    delivery_date: parseStr(o, 'delivery_date', 'DeliveryDate') || undefined,
+    promised_date: parseStr(o, 'promised_date', 'PromisedDate') || undefined,
+    cost_center_code: parseNum(o, 'cost_center_code', 'CostCenterCode') || undefined,
+    accounting_account: parseStr(o, 'accounting_account', 'AccountingAccount') || undefined,
+    operation_type_code: parseNum(o, 'operation_type_code', 'OperationTypeCode') || undefined,
+    fiscal_classification_code: parseNum(o, 'fiscal_classification_code', 'FiscalClassificationCode') || undefined,
+    utilization_type: parseStr(o, 'utilization_type', 'UtilizationType') || undefined,
+    status: parseStr(o, 'status', 'Status') || undefined,
+    total_price: parseNum(o, 'total_price', 'TotalPrice'),
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),
     total_net: parseNum(o, 'total_net', 'TotalNet'),
+    notes: parseStr(o, 'notes', 'Notes') || undefined,
   };
 }
 function parseOrder(raw: unknown): PurchaseOrderDTO {
@@ -97,7 +180,28 @@ function parseOrder(raw: unknown): PurchaseOrderDTO {
     origin: parseStr(o, 'origin', 'Origin') || undefined,
     currency_code: parseStr(o, 'currency_code', 'CurrencyCode') || undefined,
     payment_term_code: parseNum(o, 'payment_term_code', 'PaymentTermCode') || undefined,
+    emission_date: parseStr(o, 'emission_date', 'EmissionDate') || undefined,
+    delivery_date: parseStr(o, 'delivery_date', 'DeliveryDate') || undefined,
+    currency_date: parseStr(o, 'currency_date', 'CurrencyDate') || undefined,
+    price_table_code: parseNum(o, 'price_table_code', 'PriceTableCode') || undefined,
+    invoice_type_code: parseNum(o, 'invoice_type_code', 'InvoiceTypeCode') || undefined,
+    request_type_code: parseNum(o, 'request_type_code', 'RequestTypeCode') || undefined,
+    financial_account: parseStr(o, 'financial_account', 'FinancialAccount') || undefined,
     freight_type: parseStr(o, 'freight_type', 'FreightType') || undefined,
+    freight_value_type: parseStr(o, 'freight_value_type', 'FreightValueType') || undefined,
+    freight_value_mode: parseStr(o, 'freight_value_mode', 'FreightValueMode') || undefined,
+    freight_value: parseNum(o, 'freight_value', 'FreightValue'),
+    carrier_code: parseNum(o, 'carrier_code', 'CarrierCode') || undefined,
+    redispatch_carrier_code: parseNum(o, 'redispatch_carrier_code', 'RedispatchCarrierCode') || undefined,
+    redispatch_freight_type: parseStr(o, 'redispatch_freight_type', 'RedispatchFreightType') || undefined,
+    redispatch_freight_value: parseNum(o, 'redispatch_freight_value', 'RedispatchFreightValue'),
+    talao_number: parseStr(o, 'talao_number', 'TalaoNumber') || undefined,
+    advance_date: parseStr(o, 'advance_date', 'AdvanceDate') || undefined,
+    advance_value: parseNum(o, 'advance_value', 'AdvanceValue'),
+    incoterm_code: parseStr(o, 'incoterm_code', 'IncotermCode') || undefined,
+    shipment_date: parseStr(o, 'shipment_date', 'ShipmentDate') || undefined,
+    total_discount: parseNum(o, 'total_discount', 'TotalDiscount'),
+    alcada_status: parseStr(o, 'alcada_status', 'AlcadaStatus') || undefined,
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),
     total_net: parseNum(o, 'total_net', 'TotalNet'),
     notes: parseStr(o, 'notes', 'Notes') || undefined,

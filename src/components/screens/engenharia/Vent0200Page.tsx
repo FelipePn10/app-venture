@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { createItem, getItemTemplate } from "@/services/itemService";
+import { createItem, updateItem, getItemTemplate } from "@/services/itemService";
 import { listFiscalClassifications, type FiscalClassification } from "@/services/fiscalAdvancedService";
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
@@ -58,11 +58,19 @@ interface FormItem {
   description: string;
   complement: string;
   /**
-   * Antes eram três checkboxes independentes (Genérico/Configurado/Item Base),
-   * o que permitia marcar as três ao mesmo tempo. No backend é um enum único
-   * (`ItemNature`), então aqui virou um campo só.
+   * `nature` continua existindo porque o backend antigo depende dela, mas quem
+   * manda agora são os marcadores abaixo: um item pode ser base **e**
+   * configurado ao mesmo tempo — é o caso de um modelo paramétrico que também
+   * serve de molde para outros itens. Cada marcador é independente; `nature`
+   * passou a ser só o resumo derivado deles.
    */
   nature: ItemNature;
+  isBase: boolean;
+  isConfigured: boolean;
+  isGeneric: boolean;
+  isPrototype: boolean;
+  isTool: boolean;
+  isProcessItem: boolean;
   process: boolean;
   groupID: string;
   modifierID: string;
@@ -86,6 +94,10 @@ interface FormItem {
   type: TypeItem;
   typeStruct: TypeStructItem;
   oem: boolean;
+  /** Dimensões da embalagem, em milímetros — vão para o romaneio e o frete. */
+  dimLength: string;
+  dimWidth: string;
+  dimHeight: string;
 
   // Planejamento
   typePlanejamento: TypePlanejamento;
@@ -98,10 +110,14 @@ interface FormItem {
   estoqueSeguranca: string;
   tempoSeguranca: string;
   tempoReposicao: string;
+  /** Consumo médio no período de cobertura — o CM do ponto de pedido. */
+  consumoMedio: string;
   cobertura: string;
   coberturaSegDem: string;
   agrupamento: string;
   classificacaoPlan: string;
+  /** Setor/tanque onde o item é produzido. */
+  tanque: string;
   kanbanNumCartoes: string;
   critico: boolean;
   exclusivo: boolean;
@@ -153,6 +169,10 @@ interface FormItem {
   // Suprimentos
   umSuprimentos: TypeUnitOfMeasurementItem;
   almoxSuprimentos: string;
+  /** Exige conferência documentada na entrada do material. */
+  checklistRecebimento: boolean;
+  /** Item controlado por safra (agro e alimentos). */
+  controlaSafra: boolean;
   checkListReceb: boolean;
   controleSafra: boolean;
   tipoUtilizacao: TypeTipoUtilizacao;
@@ -195,11 +215,29 @@ const TIPO_UTILIZACAO_WIRE: Record<TypeTipoUtilizacao, string> = {
   "Consumo": "CONSUMO",
   "Imobilizado": "IMOBILIZADO",
 };
-const NATUREZAS: { value: ItemNature; label: string; hint: string }[] = [
-  { value: 2, label: "Item Base", hint: "Modelo reutilizável com parâmetros contábeis, comerciais, de estoque e planejamento" },
-  { value: 0, label: "Genérico", hint: "Agrupa materiais não estocáveis sob um código" },
-  { value: 1, label: "Configurado", hint: "Item com variações, como cor e medida" },
+/**
+ * Marcadores de natureza. Combináveis: marcar "Item Base" e "Configurado"
+ * juntos é legítimo e comum em produto paramétrico.
+ */
+const MARCADORES: { field: MarcadorField; label: string; hint: string }[] = [
+  { field: "isBase",        label: "Item Base",       hint: "Serve de modelo para criar outros itens (grupos, modificadores e atributos do PDM só aceitam itens marcados aqui)" },
+  { field: "isConfigured",  label: "Configurado",     hint: "Tem variações — cor, medida — resolvidas pelo configurador de produto" },
+  { field: "isGeneric",     label: "Genérico",        hint: "Agrupa materiais não estocáveis sob um único código, como material de expediente" },
+  { field: "isPrototype",   label: "Protótipo",       hint: "Item em desenvolvimento pela engenharia; o controle é manual" },
+  { field: "isTool",        label: "Ferramenta",      hint: "Entra no controle de vida útil da ferramentaria" },
+  { field: "isProcessItem", label: "Item de Processo", hint: "Item de processo em terceiros, criado a partir de operações externas" },
 ];
+type MarcadorField = "isBase" | "isConfigured" | "isGeneric" | "isPrototype" | "isTool" | "isProcessItem";
+
+/**
+ * `nature` é o resumo que o backend antigo ainda espera. Genérico e configurado
+ * têm código próprio; o resto cai em item base (2), que é o padrão.
+ */
+function natureDosMarcadores(f: Pick<FormItem, MarcadorField>): ItemNature {
+  if (f.isGeneric) return 0 as ItemNature;
+  if (f.isConfigured) return 1 as ItemNature;
+  return 2 as ItemNature;
+}
 const ORIGENS: OrigemItem[] = [
   "0 - Nacional",
   "1 - Estrangeira (Importação Direta)",
@@ -216,12 +254,41 @@ const ABAS: { id: AbaAtiva; label: string }[] = [
   { id: "suprimentos", label: "Suprimentos" },
 ];
 
+/**
+ * Ponto de pedido = (tempo de reposição × consumo médio ÷ cobertura) + estoque
+ * de segurança — a mesma conta que o backend faz.
+ *
+ * O objeto só é enviado quando a conta fecha: o backend recusa o item inteiro
+ * se a cobertura for zero ("ponto de reposição inválido"), e mandar um ponto
+ * pela metade transformaria um campo opcional em erro de cadastro.
+ */
+function montarPontoDePedido(f: FormItem): { TR: number; CM: number; CR: number; ES: number } | null {
+  const TR = Number(f.tempoReposicao) || 0;
+  const CM = Number(f.consumoMedio) || 0;
+  const CR = Number(f.cobertura) || 0;
+  const ES = Number(f.estoqueSeguranca) || 0;
+  if (TR <= 0 || CM <= 0 || CR <= 0) return null;
+  return { TR, CM, CR, ES };
+}
+
+/** O ponto de pedido resultante, para a tela mostrar antes de gravar. */
+function calcularPontoDePedido(f: FormItem): number | null {
+  const p = montarPontoDePedido(f);
+  return p ? Math.round((p.TR * p.CM) / p.CR) + p.ES : null;
+}
+
 const formInicial: FormItem = {
   code: "",
   name: "",
   description: "",
   complement: "",
   nature: 2,
+  isBase: true,
+  isConfigured: false,
+  isGeneric: false,
+  isPrototype: false,
+  isTool: false,
+  isProcessItem: false,
   process: false,
   groupID: "",
   modifierID: "",
@@ -241,6 +308,9 @@ const formInicial: FormItem = {
   type: "COMPRADO",
   typeStruct: "INDUSTRIAL",
   oem: false,
+  dimLength: "",
+  dimWidth: "",
+  dimHeight: "",
   typePlanejamento: "NORMAL_MRP",
   llc: "2",
   lotMaximo: "",
@@ -250,10 +320,12 @@ const formInicial: FormItem = {
   estoqueSeguranca: "",
   tempoSeguranca: "",
   tempoReposicao: "",
+  consumoMedio: "",
   cobertura: "",
   coberturaSegDem: "",
   agrupamento: "",
   classificacaoPlan: "",
+  tanque: "",
   kanbanNumCartoes: "",
   critico: false,
   exclusivo: false,
@@ -299,6 +371,8 @@ const formInicial: FormItem = {
   obsContabil: "",
   umSuprimentos: "UN",
   almoxSuprimentos: "",
+  checklistRecebimento: false,
+  controlaSafra: false,
   checkListReceb: false,
   controleSafra: false,
   tipoUtilizacao: "Industrialização",
@@ -324,6 +398,10 @@ export function Vent0200Page(): JSX.Element {
    * quem acabou de abrir a tela não ajuda ninguém.
    */
   const [submitTentado, setSubmitTentado] = useState(false);
+  // Código do item aberto para alteração. Vazio = a tela está criando um item
+  // novo; preenchido = está mantendo um já cadastrado.
+  const [itemEmEdicao, setItemEmEdicao] = useState("");
+  const [carregandoItem, setCarregandoItem] = useState(false);
   const [classificacoesFiscais, setClassificacoesFiscais] = useState<FiscalClassification[]>([]);
 
   useEffect(() => {
@@ -420,11 +498,18 @@ export function Vent0200Page(): JSX.Element {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : undefined;
       };
-      const created = await createItem({
+      const pontoDePedido = montarPontoDePedido(form);
+
+      const payload: Obj = {
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
         complement: form.complement.trim() || undefined,
-        nature: form.nature,
+        nature: natureDosMarcadores(form),
+        is_base: form.isBase,
+        is_configured: form.isConfigured,
+        is_prototype: form.isPrototype,
+        is_tool: form.isTool,
+        is_process_item: form.isProcessItem,
         situation: form.situation,
         health: form.health,
         pdm: {
@@ -438,6 +523,9 @@ export function Vent0200Page(): JSX.Element {
           unit_of_measurement: form.unitOfMeasurement,
           automatic_low: form.automaticLow,
           minimum_stock: Number(form.cyclicalCountMinStock) || 0,
+          ...(Number(form.consumoMedio) > 0
+            ? { average_monthly_consumption_manual: Number(form.consumoMedio) }
+            : {}),
           ...(form.cyclicalCount
             ? { cyclical_count_config: { days_interval: Number(form.cyclicalCountDays) || 0 } }
             : {}),
@@ -445,16 +533,41 @@ export function Vent0200Page(): JSX.Element {
         engineering: {
           ...(form.itemBaseCod.trim() ? { item_base_cod: form.itemBaseCod.trim() } : {}),
           weight: { gross: bruto, net: liquido, unit: "KG" },
+          // O objeto de dimensões só vai completo: o backend recusa medida
+          // parcial, e mandar pela metade transformaria um campo opcional em
+          // erro de cadastro.
+          ...(Number(form.dimLength) > 0 && Number(form.dimWidth) > 0 && Number(form.dimHeight) > 0
+            ? { dimensions: { Length: Number(form.dimLength), Width: Number(form.dimWidth), Height: Number(form.dimHeight) } }
+            : {}),
           type: form.type,
           type_struct: form.typeStruct,
           oem: form.oem,
         },
+        // A aba Planejamento coletava lote mínimo, múltiplo, estoque de
+        // segurança, crítico, exclusivo e classe ABC — e o payload mandava só
+        // três campos. Tudo o mais que o usuário digitava era descartado em
+        // silêncio, e o MRP planejava com lote 0.
         planning: {
           type_mrp: form.typePlanejamento,
           llc: Number(form.llc) || 0,
           ghost: form.fantasma,
+          minimum_lot: Number(form.lotMinimo) || 0,
+          multiple_lot: Number(form.lotMultiplo) || 0,
+          safety_stock: Number(form.estoqueSeguranca) || 0,
+          critical: form.critico,
+          exclusive: form.exclusivo,
+          active: true,
+          abc_class: form.classificacaoPlan.trim() || undefined,
+          tank_code: optionalNumber(form.tanque),
+          ...(pontoDePedido ? { reorder_point: pontoDePedido } : {}),
         },
-        supplies: { type_of_use: TIPO_UTILIZACAO_WIRE[form.tipoUtilizacao] },
+        supplies: {
+          type_of_use: TIPO_UTILIZACAO_WIRE[form.tipoUtilizacao],
+          purchase_uom: form.umSuprimentos || undefined,
+          warehouse_code: optionalNumber(form.almoxSuprimentos),
+          receiving_checklist: form.checklistRecebimento,
+          harvest: form.controlaSafra,
+        },
         commercial: {
           description: form.descrComercial.trim() || undefined,
           sale_type: form.tipoVenda.toUpperCase(),
@@ -495,7 +608,22 @@ export function Vent0200Page(): JSX.Element {
           ...(form.calculaPisCofins === "HERDAR" ? {} : { calculate_pis_cofins: form.calculaPisCofins === "SIM" }),
           notes: form.obsContabil.trim() || undefined,
         },
-      });
+      };
+
+      if (itemEmEdicao) {
+        // Na alteração o código não vai no corpo: ele identifica o item na URL
+        // e é justamente o que não pode mudar.
+        const alteracao = { ...payload };
+        delete alteracao.code;
+        const gravado = await updateItem(itemEmEdicao, alteracao);
+        const codigoGravado = parseStr(gravado, "code", "Code") || itemEmEdicao;
+        setFeedback({ type: "success", message: `Item ${codigoGravado} alterado com sucesso.` });
+        setErrors({});
+        setSubmitTentado(false);
+        return;
+      }
+
+      const created = await createItem(payload);
       const codigoGravado = parseStr(created, "code", "Code") || form.code.trim() || "gerado automaticamente";
       setFeedback({ type: "success", message: `Item ${codigoGravado} gravado com sucesso.` });
       setForm(formInicial);
@@ -503,10 +631,112 @@ export function Vent0200Page(): JSX.Element {
       setSubmitTentado(false);
       setAba("capa");
     } catch (err) {
-      setFeedback({ type: "error", message: errMessage(err, "Não foi possível gravar o item.") });
+      setFeedback({ type: "error", message: errMessage(err, itemEmEdicao ? "Não foi possível alterar o item." : "Não foi possível gravar o item.") });
     } finally {
       setIsSaving(false);
     }
+  }
+
+  /**
+   * Traduz o item que veio da API para os campos do formulário.
+   *
+   * O mesmo mapeamento serve para duas coisas: copiar as pastas de um item-base
+   * ao criar, e abrir um item existente para alterar. Manter os dois caminhos
+   * numa função só evita que um deles fique para trás quando um campo novo
+   * aparece na API.
+   */
+  function pastasParaFormulario(base: Obj, atual: FormItem): Partial<FormItem> {
+    const pdm = unwrapObject(base["pdm"] ?? base["Pdm"]);
+    const warehouse = unwrapObject(base["warehouse"] ?? base["Warehouse"]);
+    const engineering = unwrapObject(base["engineering"] ?? base["Engineering"]);
+    const weight = unwrapObject(engineering["weight"] ?? engineering["Weight"]);
+    const planning = unwrapObject(base["planning"] ?? base["Planning"]);
+    const commercial = unwrapObject(base["commercial"] ?? base["Commercial"]);
+    const accounting = unwrapObject(base["accounting"] ?? base["Accounting"]);
+    const supplies = unwrapObject(base["supplies"] ?? base["Supplies"]);
+    const opt = (o: Obj, ...keys: string[]) => parseStr(o, ...keys);
+    const numText = (o: Obj, ...keys: string[]) => {
+      const value = parseNum(o, ...keys);
+      return value === 0 ? "" : String(value);
+    };
+    const use = opt(supplies, "type_of_use", "TypeOfUse");
+    return {
+      groupID: String(parseNum(pdm, "group_code", "GroupCode") || atual.groupID),
+      modifierID: String(parseNum(pdm, "modifier_code", "ModifierCode") || atual.modifierID),
+      warehouseID: String(parseNum(warehouse, "warehouse_code", "WarehouseCode") || atual.warehouseID),
+      unitOfMeasurement: (opt(warehouse, "unit_of_measurement", "UnitOfMeasurement") || atual.unitOfMeasurement) as TypeUnitOfMeasurementItem,
+      automaticLow: parseBool(warehouse, "automatic_low", "AutomaticLow"),
+      cyclicalCountMinStock: parseNum(warehouse, "minimum_stock", "MinimumStock"),
+      grossWeight: numText(weight, "gross", "Gross"),
+      netWeight: numText(weight, "net", "Net"),
+      type: (opt(engineering, "type", "Type") || atual.type) as TypeItem,
+      typeStruct: (opt(engineering, "type_struct", "TypeStruct") || atual.typeStruct) as TypeStructItem,
+      oem: parseBool(engineering, "oem", "OEM"),
+      ...(() => {
+        const dim = unwrapObject(engineering["dimensions"] ?? engineering["Dimensions"]);
+        return {
+          dimLength: numText(dim, "length", "Length"),
+          dimWidth: numText(dim, "width", "Width"),
+          dimHeight: numText(dim, "height", "Height"),
+        };
+      })(),
+      typePlanejamento: (opt(planning, "type_mrp", "TypeMrp") || atual.typePlanejamento) as TypePlanejamento,
+      llc: String(parseNum(planning, "llc", "Llc", "LLC") || atual.llc),
+      fantasma: parseBool(planning, "ghost", "Ghost"),
+      lotMinimo: numText(planning, "minimum_lot", "MinimumLot"),
+      lotMultiplo: numText(planning, "multiple_lot", "MultipleLot"),
+      estoqueSeguranca: numText(planning, "safety_stock", "SafetyStock"),
+      critico: parseBool(planning, "critical", "Critical"),
+      exclusivo: parseBool(planning, "exclusive", "Exclusive"),
+      classificacaoPlan: opt(planning, "abc_class", "ABCClass"),
+      tanque: numText(planning, "tank_code", "TankCode"),
+      ...(() => {
+        const rop = unwrapObject(planning["reorder_point"] ?? planning["ReorderPoint"]);
+        return {
+          tempoReposicao: numText(rop, "tr", "TR"),
+          consumoMedio: numText(rop, "cm", "CM"),
+          cobertura: numText(rop, "cr", "CR"),
+        };
+      })(),
+      almoxSuprimentos: numText(supplies, "warehouse_code", "WarehouseCode"),
+      checklistRecebimento: parseBool(supplies, "receiving_checklist", "ReceivingChecklist"),
+      controlaSafra: parseBool(supplies, "harvest", "Harvest"),
+      descrComercial: opt(commercial, "description", "Description"),
+      fatorConvVol: numText(commercial, "volume_conversion_factor", "VolumeConversionFactor"),
+      multiploVenda: numText(commercial, "sale_multiple", "SaleMultiple"),
+      minVenda: numText(commercial, "minimum_sale_quantity", "MinimumSaleQuantity"),
+      entregaEstimada: numText(commercial, "estimated_delivery_days", "EstimatedDeliveryDays"),
+      tempoGarantia: numText(commercial, "warranty_days", "WarrantyDays"),
+      almoxTransf: numText(commercial, "transfer_warehouse_code", "TransferWarehouseCode"),
+      almoxAssTec: numText(commercial, "technical_assistance_warehouse_code", "TechnicalAssistanceWarehouseCode"),
+      itemEmbalagem: opt(commercial, "packaging_item_code", "PackagingItemCode"),
+      alterarDescrFat: parseBool(commercial, "allow_billing_description_change", "AllowBillingDescriptionChange"),
+      emiteEtiquetas: parseBool(commercial, "issue_loading_labels", "IssueLoadingLabels"),
+      montagemVolExp: parseBool(commercial, "assemble_shipping_volumes", "AssembleShippingVolumes"),
+      embalagDif: parseBool(commercial, "requires_special_packaging", "RequiresSpecialPackaging"),
+      retencaoPisCofins: parseBool(commercial, "withhold_pis_cofins", "WithholdPisCofins"),
+      embalagem: parseBool(commercial, "is_packaging", "IsPackaging"),
+      mobileEnabled: parseBool(commercial, "mobile_enabled", "MobileEnabled"),
+      embExportacao: parseBool(commercial, "export_packaging", "ExportPackaging"),
+      classificacaoCom: opt(commercial, "classification_code", "ClassificationCode"),
+      obsComercial: opt(commercial, "notes", "Notes"),
+      classifFiscVenda: opt(accounting, "sale_fiscal_classification_code", "SaleFiscalClassificationCode"),
+      classifFiscCompra: opt(accounting, "purchase_fiscal_classification_code", "PurchaseFiscalClassificationCode"),
+      aliqIpiVenda: numText(accounting, "sale_ipi_rate", "SaleIpiRate"),
+      aliqIpiCompra: numText(accounting, "purchase_ipi_rate", "PurchaseIpiRate"),
+      aliqIcms: numText(accounting, "icms_rate", "IcmsRate"),
+      umVenda: opt(accounting, "sale_unit_of_measurement", "SaleUnitOfMeasurement"),
+      umCompra: opt(accounting, "purchase_unit_of_measurement", "PurchaseUnitOfMeasurement"),
+      grupoInventario: numText(accounting, "inventory_group_code", "InventoryGroupCode"),
+      classificacaoCont: opt(accounting, "accounting_classification_code", "AccountingClassificationCode"),
+      cest: opt(accounting, "cest", "Cest"),
+      insumo: opt(accounting, "input_code", "InputCode"),
+      calculaPisCofins: parseBool(accounting, "calculate_pis_cofins", "CalculatePisCofins") ? "SIM" : "NAO",
+      obsContabil: opt(accounting, "notes", "Notes"),
+      umSuprimentos: (opt(supplies, "unit_of_measurement", "UnitOfMeasurement") || atual.umSuprimentos) as TypeUnitOfMeasurementItem,
+      tipoUtilizacao: use === "CONSUMO" ? "Consumo" : use === "IMOBILIZADO" ? "Imobilizado" : "Industrialização",
+      obsSuprimentos: opt(supplies, "notes", "Notes"),
+    };
   }
 
   async function aplicarItemBase(code: string | undefined) {
@@ -514,77 +744,68 @@ export function Vent0200Page(): JSX.Element {
     if (!code) return;
     try {
       const base = await getItemTemplate(code);
-      const pdm = unwrapObject(base["pdm"] ?? base["Pdm"]);
-      const warehouse = unwrapObject(base["warehouse"] ?? base["Warehouse"]);
-      const engineering = unwrapObject(base["engineering"] ?? base["Engineering"]);
-      const weight = unwrapObject(engineering["weight"] ?? engineering["Weight"]);
-      const planning = unwrapObject(base["planning"] ?? base["Planning"]);
-      const commercial = unwrapObject(base["commercial"] ?? base["Commercial"]);
-      const accounting = unwrapObject(base["accounting"] ?? base["Accounting"]);
-      const supplies = unwrapObject(base["supplies"] ?? base["Supplies"]);
-      const opt = (o: Obj, ...keys: string[]) => parseStr(o, ...keys);
-      const numText = (o: Obj, ...keys: string[]) => {
-        const value = parseNum(o, ...keys);
-        return value === 0 ? "" : String(value);
-      };
-      const use = opt(supplies, "type_of_use", "TypeOfUse");
-      setForm((current) => ({
-        ...current,
-        itemBaseCod: String(code),
-        groupID: String(parseNum(pdm, "group_code", "GroupCode") || current.groupID),
-        modifierID: String(parseNum(pdm, "modifier_code", "ModifierCode") || current.modifierID),
-        warehouseID: String(parseNum(warehouse, "warehouse_code", "WarehouseCode") || current.warehouseID),
-        unitOfMeasurement: (opt(warehouse, "unit_of_measurement", "UnitOfMeasurement") || current.unitOfMeasurement) as TypeUnitOfMeasurementItem,
-        automaticLow: parseBool(warehouse, "automatic_low", "AutomaticLow"),
-        cyclicalCountMinStock: parseNum(warehouse, "minimum_stock", "MinimumStock"),
-        grossWeight: numText(weight, "gross", "Gross"),
-        netWeight: numText(weight, "net", "Net"),
-        type: (opt(engineering, "type", "Type") || current.type) as TypeItem,
-        typeStruct: (opt(engineering, "type_struct", "TypeStruct") || current.typeStruct) as TypeStructItem,
-        oem: parseBool(engineering, "oem", "OEM"),
-        typePlanejamento: (opt(planning, "type_mrp", "TypeMrp") || current.typePlanejamento) as TypePlanejamento,
-        llc: String(parseNum(planning, "llc", "Llc", "LLC") || current.llc),
-        fantasma: parseBool(planning, "ghost", "Ghost"),
-        descrComercial: opt(commercial, "description", "Description"),
-        fatorConvVol: numText(commercial, "volume_conversion_factor", "VolumeConversionFactor"),
-        multiploVenda: numText(commercial, "sale_multiple", "SaleMultiple"),
-        minVenda: numText(commercial, "minimum_sale_quantity", "MinimumSaleQuantity"),
-        entregaEstimada: numText(commercial, "estimated_delivery_days", "EstimatedDeliveryDays"),
-        tempoGarantia: numText(commercial, "warranty_days", "WarrantyDays"),
-        almoxTransf: numText(commercial, "transfer_warehouse_code", "TransferWarehouseCode"),
-        almoxAssTec: numText(commercial, "technical_assistance_warehouse_code", "TechnicalAssistanceWarehouseCode"),
-        itemEmbalagem: opt(commercial, "packaging_item_code", "PackagingItemCode"),
-        alterarDescrFat: parseBool(commercial, "allow_billing_description_change", "AllowBillingDescriptionChange"),
-        emiteEtiquetas: parseBool(commercial, "issue_loading_labels", "IssueLoadingLabels"),
-        montagemVolExp: parseBool(commercial, "assemble_shipping_volumes", "AssembleShippingVolumes"),
-        embalagDif: parseBool(commercial, "requires_special_packaging", "RequiresSpecialPackaging"),
-        retencaoPisCofins: parseBool(commercial, "withhold_pis_cofins", "WithholdPisCofins"),
-        embalagem: parseBool(commercial, "is_packaging", "IsPackaging"),
-        mobileEnabled: parseBool(commercial, "mobile_enabled", "MobileEnabled"),
-        embExportacao: parseBool(commercial, "export_packaging", "ExportPackaging"),
-        classificacaoCom: opt(commercial, "classification_code", "ClassificationCode"),
-        obsComercial: opt(commercial, "notes", "Notes"),
-        classifFiscVenda: opt(accounting, "sale_fiscal_classification_code", "SaleFiscalClassificationCode"),
-        classifFiscCompra: opt(accounting, "purchase_fiscal_classification_code", "PurchaseFiscalClassificationCode"),
-        aliqIpiVenda: numText(accounting, "sale_ipi_rate", "SaleIpiRate"),
-        aliqIpiCompra: numText(accounting, "purchase_ipi_rate", "PurchaseIpiRate"),
-        aliqIcms: numText(accounting, "icms_rate", "IcmsRate"),
-        umVenda: opt(accounting, "sale_unit_of_measurement", "SaleUnitOfMeasurement"),
-        umCompra: opt(accounting, "purchase_unit_of_measurement", "PurchaseUnitOfMeasurement"),
-        grupoInventario: numText(accounting, "inventory_group_code", "InventoryGroupCode"),
-        classificacaoCont: opt(accounting, "accounting_classification_code", "AccountingClassificationCode"),
-        cest: opt(accounting, "cest", "Cest"),
-        insumo: opt(accounting, "input_code", "InputCode"),
-        calculaPisCofins: parseBool(accounting, "calculate_pis_cofins", "CalculatePisCofins") ? "SIM" : "NAO",
-        obsContabil: opt(accounting, "notes", "Notes"),
-        umSuprimentos: (opt(supplies, "unit_of_measurement", "UnitOfMeasurement") || current.umSuprimentos) as TypeUnitOfMeasurementItem,
-        tipoUtilizacao: use === "CONSUMO" ? "Consumo" : use === "IMOBILIZADO" ? "Imobilizado" : "Industrialização",
-        obsSuprimentos: opt(supplies, "notes", "Notes"),
-      }));
+      setForm((atual) => ({ ...atual, ...pastasParaFormulario(base, atual), itemBaseCod: String(code) }));
       setFeedback({ type: "success", message: `Configurações do item-base ${code} copiadas. Código, nome e nome técnico do novo item foram mantidos.` });
     } catch (err) {
       setFeedback({ type: "error", message: errMessage(err, "Não foi possível copiar os dados do item-base.") });
     }
+  }
+
+  /**
+   * Abre um item já cadastrado para alteração.
+   *
+   * Antes a tela só criava: para corrigir um peso, uma classificação fiscal ou
+   * a natureza de um item era preciso mexer no banco. Aqui o cadastro passa a
+   * ter os dois lados — incluir e manter.
+   */
+  async function abrirItem(code: string | undefined) {
+    if (!code) return;
+    setCarregandoItem(true);
+    setFeedback(null);
+    try {
+      const item = await getItemTemplate(String(code));
+      const pdm = unwrapObject(item["pdm"] ?? item["Pdm"]);
+      const situacao = parseStr(item, "situation", "Situation");
+      const saude = parseStr(item, "health", "Health");
+      setForm((atual) => ({
+        ...atual,
+        ...pastasParaFormulario(item, atual),
+        code: parseStr(item, "code", "Code", "business_code", "BusinessCode") || String(code),
+        name: parseStr(item, "name", "Name"),
+        description: parseStr(pdm, "description_technique", "DescriptionTechnique"),
+        complement: parseStr(item, "complement", "Complement"),
+        // Marcadores combináveis: a natureza legada só entra se o backend ainda
+        // não devolver os marcadores.
+        isBase: parseBool(item, "is_base", "IsBase") || parseNum(item, "nature", "Nature") === 2,
+        isConfigured: parseBool(item, "is_configured", "IsConfigured") || parseNum(item, "nature", "Nature") === 1,
+        isGeneric: parseNum(item, "nature", "Nature") === 0,
+        isPrototype: parseBool(item, "is_prototype", "IsPrototype"),
+        isTool: parseBool(item, "is_tool", "IsTool"),
+        isProcessItem: parseBool(item, "is_process_item", "IsProcessItem"),
+        situation: (situacao || atual.situation) as TypeSituationItem,
+        health: (saude || atual.health) as Health,
+        itemBaseCod: "",
+      }));
+      setItemEmEdicao(String(code));
+      setErrors({});
+      setSubmitTentado(false);
+      setAba("capa");
+      setFeedback({ type: "success", message: `Item ${code} aberto para alteração. O código não muda; o resto pode ser corrigido.` });
+    } catch (err) {
+      setFeedback({ type: "error", message: errMessage(err, "Não foi possível abrir o item.") });
+    } finally {
+      setCarregandoItem(false);
+    }
+  }
+
+  /** Sai do modo de alteração e volta a tela para o cadastro de um item novo. */
+  function handleNovoItem() {
+    setForm(formInicial);
+    setErrors({});
+    setSubmitTentado(false);
+    setItemEmEdicao("");
+    setAba("capa");
+    setFeedback({ type: "success", message: "Tela pronta para cadastrar um item novo." });
   }
 
   function handleLimpar() {
@@ -592,6 +813,7 @@ export function Vent0200Page(): JSX.Element {
     setErrors({});
     setFeedback(null);
     setSubmitTentado(false);
+    setItemEmEdicao("");
     setAba("capa");
   }
 
@@ -745,6 +967,9 @@ export function Vent0200Page(): JSX.Element {
 
         /* Checkbox grid */
         .it-checks { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+        .it-checks-wrap { gap: 6px 14px; padding-top: 6px; }
+        .it-open-item { min-width: 230px; }
+        .it-edit-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #eef5ea; border: 1px solid #c4dfc8; color: #1e6030; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
         .it-check-label { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
         .it-checkbox { width: 15px; height: 15px; flex-shrink: 0; border: 1.5px solid #a9b6ac; border-radius: 4px; appearance: none; cursor: pointer; background: #f8fbf6; position: relative; transition: background 0.12s, border-color 0.12s; }
         .it-checkbox:checked { background: #2f7d47; border-color: #2f7d47; }
@@ -875,40 +1100,30 @@ export function Vent0200Page(): JSX.Element {
               </svg>
               Limpar
             </button>
-            <button className="it-btn it-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+            <button className="it-btn it-btn-ghost" onClick={handleNovoItem} disabled={!itemEmEdicao && !form.code.trim()}>
+              <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
-              Apagar
+              Novo item
             </button>
           </div>
 
           <div className="it-action-group">
-            <span className="it-action-label">Ferramentas</span>
-            <button className="it-btn it-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="6"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M8 7v4M8 5.5h.01"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              Ajuda
-            </button>
+            <span className="it-action-label">Manutenção</span>
+            <div className="it-open-item">
+              <LookupField
+                value={itemEmEdicao || undefined}
+                onChange={(code) => void abrirItem(code ? String(code) : undefined)}
+                loader={loadItems}
+                entityLabel="item"
+                placeholder={carregandoItem ? "Abrindo…" : "Abrir item para alterar…"}
+              />
+            </div>
+            {itemEmEdicao && (
+              <span className="it-edit-badge" title="O código do item não pode ser alterado">
+                Alterando o item {itemEmEdicao}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1013,8 +1228,17 @@ export function Vent0200Page(): JSX.Element {
                       maxLength={60}
                       value={form.code}
                       onChange={(e) => setField("code", e.target.value.toUpperCase())}
-                      placeholder="Ex.: TEA452-0 (vazio = automático)"
+                      /* Em manutenção o código identifica o item que está sendo
+                         alterado: mudá-lo criaria outro item, não renomearia este. */
+                      readOnly={Boolean(itemEmEdicao)}
+                      disabled={Boolean(itemEmEdicao)}
+                      placeholder={itemEmEdicao ? "" : "Ex.: TEA452-0 (vazio = automático)"}
                     />
+                    {itemEmEdicao && (
+                      <span className="it-field-hint">
+                        O código não muda na alteração. Para outro código, cadastre um item novo.
+                      </span>
+                    )}
                     {errors.code && (
                       <span className="it-field-error">
                         <svg
@@ -1202,19 +1426,22 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Natureza</label>
-                    <select
-                      className="it-select"
-                      value={form.nature}
-                      onChange={(e) =>
-                        setField("nature", e.target.value as unknown as ItemNature)
-                      }
-                    >
-                      {NATUREZAS.map((n) => (
-                        <option key={n.value} value={n.value}>{n.label}</option>
+                    <div className="it-checks it-checks-wrap">
+                      {MARCADORES.map((m) => (
+                        <label className="it-check-label" key={m.field} title={m.hint}>
+                          <input
+                            type="checkbox"
+                            className="it-checkbox"
+                            checked={form[m.field]}
+                            onChange={(e) => setField(m.field, e.target.checked)}
+                          />
+                          {m.label}
+                        </label>
                       ))}
-                    </select>
+                    </div>
                     <span className="it-field-hint">
-                      {NATUREZAS.find((n) => n.value === form.nature)?.hint}
+                      {MARCADORES.filter((m) => form[m.field]).map((m) => m.hint).join(" · ")
+                        || "Marque pelo menos uma natureza — o padrão é Item Base."}
                     </span>
                   </div>
 
@@ -1414,23 +1641,17 @@ export function Vent0200Page(): JSX.Element {
                     <label className="it-label">
                       Usar item-base como modelo
                     </label>
-                    {form.nature === 2 ? (
-                      <input className="it-input" value="Indisponível para item-base" readOnly disabled />
-                    ) : (
-                      <LookupField
-                        value={form.itemBaseCod || undefined}
-                        onChange={(code) => void aplicarItemBase(code)}
-                        loader={loadBaseItems}
-                        entityLabel="item base"
-                        placeholder="Selecionar item base…"
-                      />
-                    )}
+                    <LookupField
+                      value={form.itemBaseCod || undefined}
+                      onChange={(code) => void aplicarItemBase(code)}
+                      loader={loadBaseItems}
+                      entityLabel="item base"
+                      placeholder="Selecionar item base…"
+                    />
                     {errors.itemBaseCod
                       ? <span className="it-field-error">{errors.itemBaseCod}</span>
                       : <span className="it-field-hint">
-                          {form.nature === 2
-                            ? "Você está criando um item-base; não faz sentido usar outro item-base como modelo."
-                            : "Opcional. Ao selecionar, copia as configurações das demais abas; código, nome e nome técnico continuam sendo os do novo item."}
+                          Opcional. Ao selecionar, copia as configurações das demais abas; código, nome e nome técnico continuam sendo os do novo item.
                         </span>}
                   </div>
 
@@ -1487,6 +1708,22 @@ export function Vent0200Page(): JSX.Element {
                       onChange={(e) => setField("netWeight", e.target.value)}
                       placeholder="0,00"
                     />
+                  </div>
+
+                  <div className="it-field it-col-2">
+                    <label className="it-label">Comprimento (mm)</label>
+                    <input className="it-input it-input-num" type="number" min={0}
+                      value={form.dimLength} onChange={(e) => setField("dimLength", e.target.value)} />
+                  </div>
+                  <div className="it-field it-col-2">
+                    <label className="it-label">Largura (mm)</label>
+                    <input className="it-input it-input-num" type="number" min={0}
+                      value={form.dimWidth} onChange={(e) => setField("dimWidth", e.target.value)} />
+                  </div>
+                  <div className="it-field it-col-2">
+                    <label className="it-label">Altura (mm)</label>
+                    <input className="it-input it-input-num" type="number" min={0}
+                      value={form.dimHeight} onChange={(e) => setField("dimHeight", e.target.value)} />
                   </div>
 
                   <div className="it-field it-col-2">
@@ -1655,6 +1892,17 @@ export function Vent0200Page(): JSX.Element {
                     />
                   </div>
                   <div className="it-field it-col-2">
+                    <label className="it-label">Consumo médio</label>
+                    <input
+                      className="it-input it-input-num"
+                      type="number"
+                      min={0}
+                      value={form.consumoMedio}
+                      onChange={(e) => setField("consumoMedio", e.target.value)}
+                      placeholder="No período de cobertura"
+                    />
+                  </div>
+                  <div className="it-field it-col-2">
                     <label className="it-label">Cobertura (dias)</label>
                     <input
                       className="it-input it-input-num"
@@ -1664,6 +1912,22 @@ export function Vent0200Page(): JSX.Element {
                       onChange={(e) => setField("cobertura", e.target.value)}
                       placeholder="Dias úteis"
                     />
+                  </div>
+                  <div className="it-field it-col-2">
+                    <label className="it-label">Tanque / setor</label>
+                    <input className="it-input it-input-num" type="number" min={0} value={form.tanque}
+                      onChange={(e) => setField("tanque", e.target.value)} />
+                    <span className="it-field-hint">Onde o item é produzido.</span>
+                  </div>
+                  <div className="it-field it-col-3">
+                    <label className="it-label">Ponto de pedido</label>
+                    <input className="it-input it-input-num" readOnly disabled
+                      value={calcularPontoDePedido(form) ?? ""}
+                      placeholder="preencha tempo, consumo e cobertura" />
+                    <span className="it-field-hint">
+                      (tempo de reposição × consumo médio ÷ cobertura) + estoque de segurança.
+                      Sem os três primeiros, o item é gravado sem ponto de pedido.
+                    </span>
                   </div>
                   <div className="it-field it-col-2">
                     <label className="it-label">Cob. Seg. Demanda</label>
@@ -2242,6 +2506,21 @@ export function Vent0200Page(): JSX.Element {
                         }
                         placeholder="Código do almoxarifado"
                       />
+                    </div>
+                  </div>
+                  <div className="it-field it-col-3">
+                    <label className="it-label">Recebimento</label>
+                    <div className="it-checks">
+                      <label className="it-check-label" title="Exige conferência documentada na entrada">
+                        <input type="checkbox" className="it-checkbox" checked={form.checklistRecebimento}
+                          onChange={(e) => setField("checklistRecebimento", e.target.checked)} />
+                        Exige checklist
+                      </label>
+                      <label className="it-check-label" title="Item controlado por safra">
+                        <input type="checkbox" className="it-checkbox" checked={form.controlaSafra}
+                          onChange={(e) => setField("controlaSafra", e.target.checked)} />
+                        Controla safra
+                      </label>
                     </div>
                   </div>
 

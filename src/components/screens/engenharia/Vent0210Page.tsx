@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
@@ -15,10 +15,16 @@ import {
   type UnitOfMeasurement,
   type Health,
   type ItemInfo,
+  type QuantityRounding,
+  type CostLossType,
   UNIT_OPTIONS,
+  COST_LOSS_OPTIONS,
   HEALTH_OPTIONS,
+  ROUNDING_OPTIONS,
 } from '@/services/ItemStructureService';
 import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
+import { StructureFormulaTester } from './StructureFormulaTester';
+import { StructureHistoryPanel } from './StructureHistoryPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +70,25 @@ function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
     isActive: true,
     createdAt: '',
     updatedAt: '',
+    startDate: null,
+    endDate: null,
+    quantityFormula: null,
+    lossFormula: null,
+    quantityRounding: 'NONE',
+    quantityScale: 4,
+    isCoproduct: false,
+    isFixedQty: false,
+    substituteGroup: 0,
+    substitutePriority: 1,
+    inherit: false,
+    warehouseCode: null,
+    lineWarehouseCode: null,
+    setupLoss: 0,
+    costLossType: 'PERCENTUAL',
+    costLoss: 0,
+    costCenterCode: null,
+    isCriticalMps: false,
+    generatesInspection: false,
     level: 1,
     hasChildren: false,
   };
@@ -81,6 +106,26 @@ function toPayload(row: LocalRow, mask: string | null): CreateStructurePayload {
     position:            row.position,
     notes:               row.notes || null,
     is_active:           row.isActive,
+    // O backend espera data-hora; a tela trabalha com o dia.
+    start_date:          row.startDate ? `${row.startDate}T00:00:00Z` : null,
+    end_date:            row.endDate ? `${row.endDate}T23:59:59Z` : null,
+    quantity_formula:    row.quantityFormula?.trim() || null,
+    loss_formula:        row.lossFormula?.trim() || null,
+    quantity_rounding:   row.quantityRounding,
+    quantity_scale:      row.quantityScale,
+    is_coproduct:        row.isCoproduct,
+    is_fixed_qty:        row.isFixedQty,
+    substitute_group:    row.substituteGroup,
+    substitute_priority: row.substitutePriority,
+    inherit:             row.inherit,
+    warehouse_code:      row.warehouseCode,
+    line_warehouse_code: row.lineWarehouseCode,
+    setup_loss:          row.setupLoss,
+    cost_loss_type:      row.costLossType,
+    cost_loss:           row.costLoss,
+    cost_center_code:    row.costCenterCode,
+    is_critical_mps:     row.isCriticalMps,
+    generates_inspection: row.generatesInspection,
   };
 }
 
@@ -92,7 +137,122 @@ const HEALTH_COLOR: Record<Health, string> = {
   FANTASMA: '#3a3a8a',
 };
 
+/**
+ * Recusa combinações que o planejamento não consegue explodir.
+ *
+ * Estes erros só apareceriam depois, como necessidade errada ou ordem faltando
+ * — quando já é caro descobrir. Vale barrar no cadastro.
+ */
+/**
+ * Todos os problemas da estrutura, não só o primeiro.
+ *
+ * Corrigir um erro por vez, com um salvamento entre cada um, é o que torna a
+ * digitação de uma estrutura grande insuportável — e é assim que os ERPs de
+ * mercado respondem. Aqui a tela devolve a lista inteira de uma vez.
+ */
+function listarProblemas(rows: LocalRow[]): string[] {
+  const problemas: string[] = [];
+
+  for (const r of rows) {
+    const item = r.childCode || `posição ${r.position}`;
+
+    if (r.startDate && r.endDate && r.startDate > r.endDate) {
+      problemas.push(`Item ${item}: o fim da vigência é anterior ao início.`);
+    }
+    if (!r.quantityFormula && r.quantity <= 0 && !r.isCoproduct) {
+      problemas.push(`Item ${item}: informe uma quantidade maior que zero ou uma fórmula.`);
+    }
+    if (r.quantityFormula) {
+      const f = r.quantityFormula.trim();
+      // Sem análise sintática completa: só o que quebra na certa.
+      const abre = (f.match(/\(/g) ?? []).length;
+      const fecha = (f.match(/\)/g) ?? []).length;
+      if (abre !== fecha) {
+        problemas.push(`Item ${item}: a fórmula tem parênteses não fechados.`);
+      }
+      if (/[^A-Za-z0-9_ .,+\-*/()%]/.test(f)) {
+        problemas.push(`Item ${item}: a fórmula contém um caractere que não é aceito.`);
+      }
+      if (!/[A-Za-z_]/.test(f)) {
+        problemas.push(`Item ${item}: a fórmula não usa nenhuma variável — use a quantidade fixa.`);
+      }
+    }
+    if (r.substituteGroup > 0 && r.substitutePriority < 1) {
+      problemas.push(`Item ${item}: a prioridade do alternativo deve ser 1 ou maior.`);
+    }
+    if (r.isCoproduct && r.isFixedQty) {
+      problemas.push(`Item ${item}: co-produto e quantidade por ordem não podem ser marcados juntos.`);
+    }
+  }
+
+  // Dois componentes com o mesmo grupo e a mesma prioridade: a produção não
+  // teria como escolher qual usar primeiro.
+  const porGrupo = new Map<string, string[]>();
+  for (const r of rows) {
+    if (r.substituteGroup <= 0) continue;
+    const chave = `${r.substituteGroup}|${r.substitutePriority}`;
+    porGrupo.set(chave, [...(porGrupo.get(chave) ?? []), r.childCode || `posição ${r.position}`]);
+  }
+  for (const [chave, itens] of porGrupo) {
+    if (itens.length > 1) {
+      const [grupo, prioridade] = chave.split('|');
+      problemas.push(`Alternativos do grupo ${grupo}: ${itens.join(' e ')} têm a mesma prioridade ${prioridade}. Dê prioridades diferentes para a produção saber qual usar primeiro.`);
+    }
+  }
+
+  return problemas;
+}
+
+/** Vigência do componente em relação a hoje. */
+function vigencia(row: LocalRow): 'futuro' | 'expirado' | 'vigente' {
+  const hoje = new Date().toISOString().slice(0, 10);
+  if (row.startDate && row.startDate > hoje) return 'futuro';
+  if (row.endDate && row.endDate < hoje) return 'expirado';
+  return 'vigente';
+}
+
+/**
+ * Sinaliza na grade o que muda o comportamento do componente no planejamento.
+ *
+ * Sem isso o planejador teria de abrir item por item para descobrir que uma
+ * quantidade vem de fórmula, que um componente já saiu de vigência ou que ele
+ * tem alternativo — justamente o que costuma explicar uma necessidade errada.
+ */
+const ComponentFlags = memo(function ComponentFlags({ row }: { row: LocalRow }) {
+  const situacao = vigencia(row);
+  return (
+    <>
+      {row.quantityFormula && (
+        <span className="fe-flag f-formula" title={`Quantidade por fórmula: ${row.quantityFormula}`}>ƒ</span>
+      )}
+      {situacao === 'futuro' && (
+        <span className="fe-flag f-futuro" title={`Entra em vigor em ${row.startDate}`}>◷</span>
+      )}
+      {situacao === 'expirado' && (
+        <span className="fe-flag f-expirado" title={`Fora de vigência desde ${row.endDate}`}>⊘</span>
+      )}
+      {row.substituteGroup > 0 && (
+        <span className="fe-flag f-alt" title={`Alternativo — grupo ${row.substituteGroup}, prioridade ${row.substitutePriority}`}>⇄</span>
+      )}
+      {row.isCoproduct && <span className="fe-flag f-co" title="Co-produto: sai da ordem">↥</span>}
+      {row.isFixedQty && <span className="fe-flag f-fixa" title="Quantidade por ordem, não por peça">▣</span>}
+      {row.health === 'FANTASMA' && <span className="fe-flag f-fant" title="Fantasma: não gera ordem">👻</span>}
+    </>
+  );
+});
+
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
+
+/**
+ * Área de transferência da própria tela para as fórmulas.
+ *
+ * Numa estrutura de perfil, dezenas de componentes repetem a mesma expressão
+ * com pequenas variações. Redigitar cada uma é o caminho mais curto para um
+ * erro de cálculo silencioso — copiar e colar não é conforto, é controle.
+ * Fica fora do clipboard do sistema de propósito: nada vaza da tela e não
+ * depende de permissão do webview.
+ */
+let formulaCopiada: { formula: string; rounding: QuantityRounding; scale: number } | null = null;
 
 interface DetailPanelProps {
   row: LocalRow | null;
@@ -101,6 +261,11 @@ interface DetailPanelProps {
 }
 
 const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }: DetailPanelProps) {
+  // Conferir a fórmula é uma ação do próprio componente: nada sai daqui.
+  const [simulando, setSimulando] = useState(false);
+  const [copiaAviso, setCopiaAviso] = useState('');
+  // O aviso é da linha atual: trocar de componente zera a mensagem.
+  useEffect(() => { setCopiaAviso(''); }, [row?.localId]);
   if (!row) {
     return (
       <div className="fe-detail-empty">
@@ -163,22 +328,221 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
         </div>
       </div>
 
+      <div className="fe-d-field">
+        <label className="fe-d-label">Fórmula da quantidade</label>
+        <input className="fe-d-input" value={row.quantityFormula ?? ''}
+          onChange={(e) => onUpdate({ quantityFormula: e.target.value || null })}
+          placeholder="Ex: 2*(COMPRIMENTO/1000)+2*(PROFUNDIDADE/1000)"/>
+        <span className="fe-d-hint">
+          {row.quantityFormula
+            ? 'A quantidade acima é ignorada: quem manda é a fórmula, calculada a cada configuração.'
+            : 'Deixe em branco para usar a quantidade fixa. As variáveis vêm das respostas do configurador.'}
+        </span>
+        <div className="fe-d-linkrow">
+          {row.quantityFormula && (
+            <button type="button" className="fe-d-linkbtn" onClick={() => setSimulando(true)}>
+              Simular a fórmula
+            </button>
+          )}
+          {row.quantityFormula && (
+            <button type="button" className="fe-d-linkbtn" onClick={() => {
+              formulaCopiada = {
+                formula: row.quantityFormula ?? '',
+                rounding: row.quantityRounding,
+                scale: row.quantityScale,
+              };
+              setCopiaAviso('Fórmula copiada.');
+            }}>
+              Copiar
+            </button>
+          )}
+          {formulaCopiada && (
+            <button type="button" className="fe-d-linkbtn" onClick={() => {
+              if (!formulaCopiada) return;
+              onUpdate({
+                quantityFormula: formulaCopiada.formula,
+                quantityRounding: formulaCopiada.rounding,
+                quantityScale: formulaCopiada.scale,
+              });
+              setCopiaAviso('Fórmula colada — confira antes de salvar.');
+            }} title={`Colar "${formulaCopiada.formula}"`}>
+              Colar
+            </button>
+          )}
+          {copiaAviso && <span className="fe-d-linkmsg">{copiaAviso}</span>}
+        </div>
+      </div>
+
+      {simulando && row.quantityFormula && (
+        <StructureFormulaTester
+          formula={row.quantityFormula}
+          rounding={row.quantityRounding}
+          scale={row.quantityScale}
+          lossPercentage={row.lossPercentage}
+          setupLoss={row.setupLoss}
+          onClose={() => setSimulando(false)}/>
+      )}
+
+      {row.quantityFormula && (
+        <div className="fe-d-row">
+          <div className="fe-d-field">
+            <label className="fe-d-label">Arredondamento</label>
+            <select className="fe-d-select" value={row.quantityRounding}
+              onChange={(e) => onUpdate({ quantityRounding: e.target.value as QuantityRounding })}>
+              {ROUNDING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <span className="fe-d-hint">{ROUNDING_OPTIONS.find((o) => o.value === row.quantityRounding)?.hint}</span>
+          </div>
+          <div className="fe-d-field">
+            <label className="fe-d-label">Casas decimais</label>
+            <input className="fe-d-input" type="number" min={0} max={6}
+              value={row.quantityScale}
+              onChange={(e) => onUpdate({ quantityScale: Math.min(6, Math.max(0, parseInt(e.target.value, 10) || 0)) })}
+              style={{ textAlign: 'right' }}/>
+          </div>
+        </div>
+      )}
+
       <div className="fe-d-row">
         <div className="fe-d-field">
           <label className="fe-d-label">Perda (%)</label>
           <input className="fe-d-input" type="number" min={0} max={100} step="0.01"
             value={row.lossPercentage}
             onChange={(e) => onUpdate({ lossPercentage: parseFloat(e.target.value) || 0 })}
+            disabled={Boolean(row.lossFormula)}
             style={{ textAlign: 'right' }}/>
         </div>
         <div className="fe-d-field">
-          <label className="fe-d-label">Health</label>
+          <label className="fe-d-label">Situação na estrutura</label>
           <select className="fe-d-select" value={row.health}
             onChange={(e) => onUpdate({ health: e.target.value as Health })}>
             {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{enumLabel(h)}</option>)}
           </select>
+          <span className="fe-d-hint">
+            {row.health === 'FANTASMA'
+              ? 'Fantasma: aparece na estrutura, mas o planejamento não gera ordem para ele.'
+              : row.health === 'INATIVO'
+                ? 'Inativo: não é explodido pelo planejamento.'
+                : 'Normal: explodido pelo planejamento e considerado no custo.'}
+          </span>
         </div>
       </div>
+
+      <div className="fe-d-field">
+        <label className="fe-d-label">Fórmula da perda</label>
+        <input className="fe-d-input" value={row.lossFormula ?? ''}
+          onChange={(e) => onUpdate({ lossFormula: e.target.value || null })}
+          placeholder="Opcional — quando a perda não é um percentual fixo"/>
+      </div>
+
+      <div className="fe-d-sep"/>
+      <div className="fe-d-sec">Vigência</div>
+
+      <div className="fe-d-row">
+        <div className="fe-d-field">
+          <label className="fe-d-label">Início</label>
+          <input className="fe-d-input" type="date" value={row.startDate ?? ''}
+            onChange={(e) => onUpdate({ startDate: e.target.value || null })}/>
+        </div>
+        <div className="fe-d-field">
+          <label className="fe-d-label">Fim</label>
+          <input className="fe-d-input" type="date" value={row.endDate ?? ''}
+            onChange={(e) => onUpdate({ endDate: e.target.value || null })}/>
+        </div>
+      </div>
+      <span className="fe-d-hint">
+        Fora deste intervalo o componente não é explodido. É como se troca uma matéria-prima
+        numa data futura sem manter duas estruturas.
+      </span>
+
+      <div className="fe-d-sep"/>
+      <div className="fe-d-sec">Alternativos</div>
+
+      <div className="fe-d-row">
+        <div className="fe-d-field">
+          <label className="fe-d-label">Grupo</label>
+          <input className="fe-d-input" type="number" min={0}
+            value={row.substituteGroup}
+            onChange={(e) => onUpdate({ substituteGroup: parseInt(e.target.value, 10) || 0 })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+        <div className="fe-d-field">
+          <label className="fe-d-label">Prioridade</label>
+          <input className="fe-d-input" type="number" min={1}
+            value={row.substitutePriority}
+            disabled={row.substituteGroup === 0}
+            onChange={(e) => onUpdate({ substitutePriority: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+      </div>
+      <span className="fe-d-hint">
+        {row.substituteGroup > 0
+          ? 'Componentes com o mesmo grupo se substituem; a produção usa o de menor prioridade que tiver saldo.'
+          : 'Zero = componente sem substitutos. Informe um grupo para permitir troca por alternativo.'}
+      </span>
+
+      <div className="fe-d-sep"/>
+      <div className="fe-d-sec">Consumo e custo</div>
+
+      <div className="fe-d-row">
+        <div className="fe-d-field">
+          <label className="fe-d-label">Almoxarifado</label>
+          <input className="fe-d-input" type="number" min={1} value={row.warehouseCode ?? ''}
+            placeholder="Do cadastro do item"
+            onChange={(e) => onUpdate({ warehouseCode: e.target.value ? Number(e.target.value) : null })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+        <div className="fe-d-field">
+          <label className="fe-d-label">Almox. de linha</label>
+          <input className="fe-d-input" type="number" min={1} value={row.lineWarehouseCode ?? ''}
+            placeholder="Opcional"
+            onChange={(e) => onUpdate({ lineWarehouseCode: e.target.value ? Number(e.target.value) : null })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+      </div>
+      <span className="fe-d-hint">
+        Deixe o almoxarifado vazio para usar o do cadastro do item. O de linha é o que fica
+        junto ao operador e atende a requisição.
+      </span>
+
+      <div className="fe-d-row">
+        <div className="fe-d-field">
+          <label className="fe-d-label">Perda de preparação</label>
+          <input className="fe-d-input" type="number" min={0} step="0.001" value={row.setupLoss}
+            onChange={(e) => onUpdate({ setupLoss: parseFloat(e.target.value) || 0 })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+        <div className="fe-d-field">
+          <label className="fe-d-label">Centro de custo</label>
+          <input className="fe-d-input" type="number" min={1} value={row.costCenterCode ?? ''}
+            placeholder="Opcional"
+            onChange={(e) => onUpdate({ costCenterCode: e.target.value ? Number(e.target.value) : null })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+      </div>
+      <span className="fe-d-hint">
+        A perda de preparação é consumida uma vez por ordem, não por peça.
+      </span>
+
+      <div className="fe-d-row">
+        <div className="fe-d-field">
+          <label className="fe-d-label">Perda de custo</label>
+          <input className="fe-d-input" type="number" min={0} step="0.001" value={row.costLoss}
+            onChange={(e) => onUpdate({ costLoss: parseFloat(e.target.value) || 0 })}
+            style={{ textAlign: 'right' }}/>
+        </div>
+        <div className="fe-d-field">
+          <label className="fe-d-label">Tipo da perda de custo</label>
+          <select className="fe-d-select" value={row.costLossType}
+            onChange={(e) => onUpdate({ costLossType: e.target.value as CostLossType })}>
+            {COST_LOSS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <span className="fe-d-hint">
+        A perda de custo é separada da de engenharia: a de engenharia dimensiona a necessidade,
+        esta entra apenas no custo do produto.
+      </span>
 
       <div className="fe-d-sep"/>
       <div className="fe-d-sec">Complemento</div>
@@ -210,7 +574,44 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
             onChange={(e) => onUpdate({ isActive: e.target.checked })}/>
           Ativo
         </label>
+        <label className="fe-d-check-label">
+          <input type="checkbox" className="fe-d-checkbox"
+            checked={row.isCoproduct}
+            onChange={(e) => onUpdate({ isCoproduct: e.target.checked })}/>
+          Co-produto (saída da ordem)
+        </label>
+        <label className="fe-d-check-label">
+          <input type="checkbox" className="fe-d-checkbox"
+            checked={row.isFixedQty}
+            onChange={(e) => onUpdate({ isFixedQty: e.target.checked })}/>
+          Quantidade por ordem, não por peça
+        </label>
+        <label className="fe-d-check-label">
+          <input type="checkbox" className="fe-d-checkbox"
+            checked={row.inherit}
+            onChange={(e) => onUpdate({ inherit: e.target.checked })}/>
+          Herdar o roteiro deste filho
+        </label>
+        <label className="fe-d-check-label">
+          <input type="checkbox" className="fe-d-checkbox"
+            checked={row.isCriticalMps}
+            onChange={(e) => onUpdate({ isCriticalMps: e.target.checked })}/>
+          Crítico para o plano mestre
+        </label>
+        <label className="fe-d-check-label">
+          <input type="checkbox" className="fe-d-checkbox"
+            checked={row.generatesInspection}
+            onChange={(e) => onUpdate({ generatesInspection: e.target.checked })}/>
+          Gera inspeção no processo
+        </label>
       </div>
+      <span className="fe-d-hint">
+        {row.isCoproduct
+          ? 'Co-produto: sai da ordem em vez de ser consumido — o custo do pai é rateado com ele.'
+          : row.isFixedQty
+            ? 'Quantidade fixa: consumida uma vez por ordem, independente do tamanho do lote (ex.: material de setup).'
+            : 'Sem indicadores: componente consumido proporcionalmente à quantidade do pai.'}
+      </span>
 
       {row.createdAt && (
         <>
@@ -244,6 +645,8 @@ export function Vent0210Page(): JSX.Element {
   // O configurador não tem tela própria: é este painel, aberto pelo botão da
   // barra de ações com o item pai já carregado.
   const [configuradorAberto, setConfiguradorAberto] = useState(false);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [problemas, setProblemas]             = useState<string[] | null>(null);
 
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -448,8 +851,19 @@ export function Vent0210Page(): JSX.Element {
       setFeedback({ type: 'error', msg: 'A posição de todos os itens deve ser um número positivo.' });
       return;
     }
+    // O usuário vê a lista inteira em vez de descobrir um erro por vez.
+    const erros = listarProblemas(rows.filter((r) => r.dirty));
+    if (erros.length > 0) {
+      setProblemas(erros);
+      setFeedback({
+        type: 'error',
+        msg: erros.length === 1 ? erros[0] : `${erros.length} problemas impedem a gravação — veja a lista abaixo.`,
+      });
+      return;
+    }
     setIsSaving(true);
     setFeedback(null);
+    setProblemas(null);
     try {
       const mask = rootMascara.trim() || null;
       const created = await Promise.all(newRows.map((r) => createComponent(toPayload(r, mask))));
@@ -479,6 +893,15 @@ export function Vent0210Page(): JSX.Element {
     }
   }
 
+  /**
+   * Lista todos os problemas sem tentar gravar. O salvar barra no primeiro;
+   * aqui o usuário vê tudo de uma vez e corrige de uma passada só.
+   */
+  function handleConferir() {
+    setFeedback(null);
+    setProblemas(listarProblemas(rows));
+  }
+
   function handleLimpar() {
     setRootInfo(null);
     setRootCodigo('');
@@ -488,6 +911,7 @@ export function Vent0210Page(): JSX.Element {
     setRows([]);
     setSelectedLocalId(null);
     setFeedback(null);
+    setProblemas(null);
     setTreeMeta({ totalLevels: 0, totalNodes: 0 });
   }
 
@@ -606,6 +1030,20 @@ export function Vent0210Page(): JSX.Element {
         .fe-detail-empty-sub { font-size: 11.5px; color: #94a49a; }
 
         .fe-d-field { display: flex; flex-direction: column; gap: 4px; }
+        .fe-flag { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; padding: 0 3px; border-radius: 5px; font-size: 10.5px; font-weight: 600; line-height: 1; cursor: help; }
+        .fe-flag.f-formula { background: #e4f0ff; color: #1c4f8a; border: 1px solid #b9d4f0; font-style: italic; }
+        .fe-flag.f-futuro  { background: #fff4e0; color: #8a5800; border: 1px solid #f0d090; }
+        .fe-flag.f-expirado{ background: #ffecec; color: #9a2b2b; border: 1px solid #f0c0c0; }
+        .fe-flag.f-alt     { background: #eef5ea; color: #2f7d47; border: 1px solid #c4dfc8; }
+        .fe-flag.f-co      { background: #f2eaff; color: #5a2f8a; border: 1px solid #d8c4f0; }
+        .fe-flag.f-fixa    { background: #eaf6f6; color: #1c6a6a; border: 1px solid #bde0e0; }
+        .fe-flag.f-fant    { background: #eef0f8; border: 1px solid #ccd2e8; }
+        .fe-d-hint { display: block; font-size: 10.5px; color: #7a9a84; line-height: 1.4; margin-top: 3px; }
+        .fe-d-linkbtn { align-self: flex-start; margin-top: 5px; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #2f7d47; text-decoration: underline; cursor: pointer; }
+        .fe-d-linkbtn:hover { color: #1e6030; }
+        .fe-d-linkrow { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 2px; }
+        .fe-d-linkrow .fe-d-linkbtn { margin-top: 3px; }
+        .fe-d-linkmsg { font-size: 10.5px; color: #2f7d47; margin-top: 3px; }
         .fe-d-label { font-size: 9.5px; font-weight: 600; color: #6a8068; text-transform: uppercase; letter-spacing: 0.4px; }
         .fe-d-input { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1c2b22; outline: none; transition: border-color 0.12s; }
         .fe-d-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
@@ -626,6 +1064,12 @@ export function Vent0210Page(): JSX.Element {
         .fe-feedback { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 9px; font-size: 13px; flex-shrink: 0; }
         .fe-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
         .fe-feedback.error   { background: #fff5f5; border: 1px solid #f8c0c0; border-left: 3px solid #e05252; color: #b91c1c; }
+        .fe-problemas { border-radius: 9px; padding: 10px 14px; font-size: 12.5px; flex-shrink: 0; }
+        .fe-problemas.tem { background: #fff8e8; border: 1px solid #f0d99a; border-left: 3px solid #d99b0f; color: #7a5a10; }
+        .fe-problemas.ok  { background: #f0faf2; border: 1px solid #b4dec0; border-left: 3px solid #2f7d47; color: #1e6030; }
+        .fe-problemas-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .fe-problemas-close { background: none; border: none; color: inherit; cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 4px; }
+        .fe-problemas-list { margin: 7px 0 0 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.45; }
 
         .fe-row-actions { display: flex; align-items: center; gap: 2px; }
         .fe-ib { width: 24px; height: 24px; border-radius: 5px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #7a9c84; transition: background 0.1s, color 0.1s; flex-shrink: 0; }
@@ -680,6 +1124,15 @@ export function Vent0210Page(): JSX.Element {
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="8" cy="8" r="2.6" stroke="currentColor" strokeWidth="1.4"/></svg>
               Configurador
             </button>
+            <button className="fe-btn fe-btn-ghost" onClick={handleConferir} disabled={rows.length === 0}
+              title={rows.length ? 'Listar todos os problemas da estrutura' : 'Nenhum componente para conferir'}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1.6l6 3v4.2c0 3.2-2.4 5.3-6 6.6-3.6-1.3-6-3.4-6-6.6V4.6l6-3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><path d="M5.6 8.1l1.7 1.7 3.1-3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Conferir
+            </button>
+            <button className="fe-btn fe-btn-ghost" onClick={() => setHistoricoAberto(true)} disabled={!rootInfo} title={rootInfo ? 'Ver quem alterou a estrutura' : 'Busque o item pai para ver o histórico'}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.4"/><path d="M8 4.4V8l2.4 1.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Histórico
+            </button>
             <button className="fe-btn fe-btn-danger" onClick={handleLimpar}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Limpar
@@ -699,6 +1152,24 @@ export function Vent0210Page(): JSX.Element {
                 }
               </svg>
               {feedback.msg}
+            </div>
+          )}
+
+          {problemas && (
+            <div className={`fe-problemas ${problemas.length ? 'tem' : 'ok'}`}>
+              <div className="fe-problemas-head">
+                <strong>
+                  {problemas.length
+                    ? `${problemas.length} problema${problemas.length > 1 ? 's' : ''} na estrutura`
+                    : 'Nenhum problema encontrado'}
+                </strong>
+                <button className="fe-problemas-close" onClick={() => setProblemas(null)} title="Fechar">✕</button>
+              </div>
+              {problemas.length > 0 && (
+                <ul className="fe-problemas-list">
+                  {problemas.map((p, i) => <li key={i}>{p}</li>)}
+                </ul>
+              )}
             </div>
           )}
 
@@ -828,6 +1299,7 @@ export function Vent0210Page(): JSX.Element {
                           <th style={{ width: 44 }}>Pos.</th>
                           <th style={{ width: 90 }}>Cód. Filho</th>
                           <th>Descrição</th>
+                          <th style={{ width: 92 }} title="Fórmula, vigência, alternativo, co-produto e quantidade por ordem">Sinais</th>
                           <th style={{ width: 85 }}>UM</th>
                           <th style={{ width: 75 }}>Qtde</th>
                           <th style={{ width: 70 }}>Perda %</th>
@@ -859,7 +1331,7 @@ export function Vent0210Page(): JSX.Element {
                                   onChange={(e) => updateRow(row.localId, { childCode: e.target.value })}
                                   onBlur={(e) => handleChildCodeBlur(row.localId, e.target.value)}
                                   placeholder="Código"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}
                                   style={{ textAlign: 'right' }}/>
                               </div></td>
@@ -868,16 +1340,20 @@ export function Vent0210Page(): JSX.Element {
                                 <input className="fe-ci" value={row.childDescription}
                                   onChange={(e) => updateRow(row.localId, { childDescription: e.target.value })}
                                   placeholder="Descrição"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}
                                   style={{ textOverflow: 'ellipsis' }}/>
                                 {row.hasChildren && <span className="fe-drill">↩</span>}
                               </div></td>
 
+                              <td><div className="fe-td" style={{ gap: 3 }}>
+                                <ComponentFlags row={row} />
+                              </div></td>
+
                               <td><div className="fe-td">
                                 <select className="fe-cs" value={row.unitOfMeasurement}
                                   onChange={(e) => updateRow(row.localId, { unitOfMeasurement: e.target.value as UnitOfMeasurement })}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}>
                                   {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
                                 </select>
@@ -886,9 +1362,11 @@ export function Vent0210Page(): JSX.Element {
                               <td><div className="fe-td">
                                 <input className="fe-ci" type="number" min={0} step="0.001"
                                   value={row.quantity}
+                                  disabled={Boolean(row.quantityFormula)}
+                                  title={row.quantityFormula ? `Calculada pela fórmula: ${row.quantityFormula}` : undefined}
                                   onChange={(e) => updateRow(row.localId, { quantity: parseFloat(e.target.value) || 0 })}
                                   style={{ textAlign: 'right', width: 60 }}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}/>
                               </div></td>
 
@@ -897,14 +1375,14 @@ export function Vent0210Page(): JSX.Element {
                                   value={row.lossPercentage}
                                   onChange={(e) => updateRow(row.localId, { lossPercentage: parseFloat(e.target.value) || 0 })}
                                   style={{ textAlign: 'right', width: 55 }}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}/>
                               </div></td>
 
                               <td><div className="fe-td">
                                 <select className="fe-cs" value={row.health}
                                   onChange={(e) => updateRow(row.localId, { health: e.target.value as Health })}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}
                                   style={{ color: HEALTH_COLOR[row.health] }}>
                                   {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{enumLabel(h)}</option>)}
@@ -915,14 +1393,14 @@ export function Vent0210Page(): JSX.Element {
                                 <input className="fe-ci" value={row.notes ?? ''}
                                   onChange={(e) => updateRow(row.localId, { notes: e.target.value || null })}
                                   placeholder="—"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}/>
                               </div></td>
 
                               <td><div className="fe-td" style={{ justifyContent: 'center' }}>
                                 <input type="checkbox" className="fe-ck" checked={row.isActive}
                                   onChange={(e) => updateRow(row.localId, { isActive: e.target.checked })}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => e.stopPropagation()}/>
                               </div></td>
 
@@ -995,6 +1473,12 @@ export function Vent0210Page(): JSX.Element {
           onUseMask={(mask) => void handleUsarMascaraConfigurada(mask)}
           onClose={() => setConfiguradorAberto(false)}
         />
+      )}
+
+      {historicoAberto && rootInfo && (
+        <StructureHistoryPanel
+          itemCode={rootInfo.code}
+          onClose={() => setHistoricoAberto(false)}/>
       )}
     </>
   );

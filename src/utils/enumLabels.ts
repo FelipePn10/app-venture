@@ -51,6 +51,15 @@ const LABELS: Record<string, string> = {
   ALL: 'Todos', ENTRY_INVOICE: 'Nota de entrada',
   PERCENT: 'Percentual', FIXED: 'Fixo', WARN: 'Alertar', BLOCK: 'Bloquear', ALLOW: 'Permitir',
   VALUE: 'Valor', WEIGHT: 'Peso',
+  // Inspeção: instrumentos de medição e formas de amostragem.
+  PAQUIMETRO: 'Paquímetro', MICROMETRO: 'Micrômetro', RELOGIO_COMPARADOR: 'Relógio comparador',
+  GONIOMETRO: 'Goniômetro', DUROMETRO: 'Durômetro', TRENA: 'Trena', VISUAL: 'Visual',
+  GABARITO: 'Gabarito', OUTRO: 'Outro',
+  UNIDADE: 'Unidades do lote', PERCENTUAL: 'Percentual do lote',
+  LOTE_INTEIRO: 'Lote inteiro', PRIMEIRA_PECA: 'Primeira peça',
+  // Roteiro de fabricação: o que é remetido ao terceiro.
+  DEMAND_ITEMS: 'Os componentes da demanda', ORDER_ITEM: 'O próprio item da ordem',
+  GENERIC: 'Item genérico de serviço', NONE: 'Não remete material',
 
   // Atendimento / SAC
   ORDER: 'Pedido', DISCONTINUED_ORDER: 'Pedido descontinuado',

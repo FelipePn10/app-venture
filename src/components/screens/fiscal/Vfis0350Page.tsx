@@ -88,6 +88,9 @@ export function Vfis0350Page(): JSX.Element {
 
   return (
     <div className="erp-screen">
+      <style>{`
+        .cls-sec { font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #2f7d47; border-bottom: 1px solid #dbe8d5; padding-bottom: 4px; margin-top: 4px; }
+      `}</style>
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
         <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Classificações Fiscais</span><span className="erp-crumb-code">VFIS0350</span></nav>
@@ -154,10 +157,77 @@ export function Vfis0350Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label">Indicador IPI</label>
               <select className="erp-input" value={form.ipi_indicator ?? "PERCENTUAL"} onChange={(e) => setF("ipi_indicator", e.target.value as IpiIndicator)}>
                 {INDS.map((i) => <option key={i} value={i}>{enumLabel(i)}</option>)}</select></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Alíq. PIS</label>
+            <div className="erp-field erp-c3"><label className="erp-label">CST IPI entrada</label>
+              <input className="erp-input" value={form.cst_ipi_entrada ?? ""} onChange={(e) => setF("cst_ipi_entrada", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">CST IPI saída</label>
+              <input className="erp-input" value={form.cst_ipi_saida ?? ""} onChange={(e) => setF("cst_ipi_saida", e.target.value || undefined)} /></div>
+
+            <div className="erp-field erp-c12"><div className="cls-sec">PIS — alíquota normal</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Alíquota</label>
               <input className="erp-input num" type="number" step="0.0001" value={form.pis_rate ?? 0} onChange={(e) => setF("pis_rate", Number(e.target.value))} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Alíq. COFINS</label>
+            <div className="erp-field erp-c2"><label className="erp-label">Indicador</label>
+              <select className="erp-input" value={form.pis_indicator ?? "PERCENTUAL"} onChange={(e) => setF("pis_indicator", e.target.value)}>
+                {INDS.map((i) => <option key={i} value={i}>{enumLabel(i)}</option>)}</select></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST entrada</label>
+              <input className="erp-input" value={form.cst_pis_entrada ?? ""} onChange={(e) => setF("cst_pis_entrada", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST saída</label>
+              <input className="erp-input" value={form.cst_pis_saida ?? ""} onChange={(e) => setF("cst_pis_saida", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% ST</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.pis_st_pct ?? ""} onChange={(e) => setF("pis_st_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% desconto ZF</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.desc_pis_zf_pct ?? ""} onChange={(e) => setF("desc_pis_zf_pct", Number(e.target.value))} /></div>
+
+            <div className="erp-field erp-c12"><div className="cls-sec">PIS — uso e consumo, retenção e redução</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% uso/consumo</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.pis_consumo_pct ?? ""} onChange={(e) => setF("pis_consumo_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST cons. entrada</label>
+              <input className="erp-input" value={form.cst_pis_consumo_entrada ?? ""} onChange={(e) => setF("cst_pis_consumo_entrada", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST cons. saída</label>
+              <input className="erp-input" value={form.cst_pis_consumo_saida ?? ""} onChange={(e) => setF("cst_pis_consumo_saida", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% retenção</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.pis_retencao_pct ?? ""} onChange={(e) => setF("pis_retencao_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST retenção</label>
+              <input className="erp-input" value={form.cst_pis_retencao ?? ""} onChange={(e) => setF("cst_pis_retencao", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% redução</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.pis_reducao_pct ?? ""} onChange={(e) => setF("pis_reducao_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST redução</label>
+              <input className="erp-input" value={form.cst_pis_reducao ?? ""} onChange={(e) => setF("cst_pis_reducao", e.target.value || undefined)} /></div>
+
+            <div className="erp-field erp-c12"><div className="cls-sec">COFINS — alíquota normal</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Alíquota</label>
               <input className="erp-input num" type="number" step="0.0001" value={form.cofins_rate ?? 0} onChange={(e) => setF("cofins_rate", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Indicador</label>
+              <select className="erp-input" value={form.cofins_indicator ?? "PERCENTUAL"} onChange={(e) => setF("cofins_indicator", e.target.value)}>
+                {INDS.map((i) => <option key={i} value={i}>{enumLabel(i)}</option>)}</select></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST entrada</label>
+              <input className="erp-input" value={form.cst_cofins_entrada ?? ""} onChange={(e) => setF("cst_cofins_entrada", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST saída</label>
+              <input className="erp-input" value={form.cst_cofins_saida ?? ""} onChange={(e) => setF("cst_cofins_saida", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% majorado</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.cofins_majorado_pct ?? ""} onChange={(e) => setF("cofins_majorado_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% ST</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.cofins_st_pct ?? ""} onChange={(e) => setF("cofins_st_pct", Number(e.target.value))} /></div>
+
+            <div className="erp-field erp-c12"><div className="cls-sec">COFINS — uso e consumo, retenção e redução</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% uso/consumo</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.cofins_consumo_pct ?? ""} onChange={(e) => setF("cofins_consumo_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST cons. entrada</label>
+              <input className="erp-input" value={form.cst_cofins_consumo_entrada ?? ""} onChange={(e) => setF("cst_cofins_consumo_entrada", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST cons. saída</label>
+              <input className="erp-input" value={form.cst_cofins_consumo_saida ?? ""} onChange={(e) => setF("cst_cofins_consumo_saida", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% retenção</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.cofins_retencao_pct ?? ""} onChange={(e) => setF("cofins_retencao_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST retenção</label>
+              <input className="erp-input" value={form.cst_cofins_retencao ?? ""} onChange={(e) => setF("cst_cofins_retencao", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% redução</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.cofins_reducao_pct ?? ""} onChange={(e) => setF("cofins_reducao_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">CST redução</label>
+              <input className="erp-input" value={form.cst_cofins_reducao ?? ""} onChange={(e) => setF("cst_cofins_reducao", e.target.value || undefined)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">% desconto ZF</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.desc_cofins_zf_pct ?? ""} onChange={(e) => setF("desc_cofins_zf_pct", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c12"><div className="cls-sec">Outros</div></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Apuração</label>
+              <input className="erp-input" value={form.apuracao ?? ""} onChange={(e) => setF("apuracao", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Mod. BC ICMS</label>
               <input className="erp-input" value={form.mod_bc_icms ?? ""} onChange={(e) => setF("mod_bc_icms", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Mod. BC ICMS ST</label>

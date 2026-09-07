@@ -206,8 +206,44 @@ export interface FiscalClassificationDTO {
   ex_tarifario?: string;
   ipi_rate: number;
   ipi_indicator: IpiIndicator;
+  cst_ipi_entrada?: string;
+  cst_ipi_saida?: string;
+  apuracao?: string;
+
+  /**
+   * PIS e COFINS têm quatro tratamentos que convivem: a alíquota normal, a de
+   * uso e consumo, a retenção e a redução — cada uma com o seu CST. O cadastro
+   * guardava só a alíquota normal, e a nota saía com o CST errado nos demais
+   * casos.
+   */
   pis_rate: number;
+  pis_indicator?: string;
+  cst_pis_entrada?: string;
+  cst_pis_saida?: string;
+  pis_st_pct?: number;
+  pis_consumo_pct?: number;
+  cst_pis_consumo_entrada?: string;
+  cst_pis_consumo_saida?: string;
+  pis_retencao_pct?: number;
+  cst_pis_retencao?: string;
+  pis_reducao_pct?: number;
+  cst_pis_reducao?: string;
+  desc_pis_zf_pct?: number;
+
   cofins_rate: number;
+  cofins_indicator?: string;
+  cst_cofins_entrada?: string;
+  cst_cofins_saida?: string;
+  cofins_majorado_pct?: number;
+  cofins_st_pct?: number;
+  cofins_consumo_pct?: number;
+  cst_cofins_consumo_entrada?: string;
+  cst_cofins_consumo_saida?: string;
+  cofins_retencao_pct?: number;
+  cst_cofins_retencao?: string;
+  cofins_reducao_pct?: number;
+  cst_cofins_reducao?: string;
+  desc_cofins_zf_pct?: number;
   mod_bc_icms?: string;
   mod_bc_icms_st?: string;
   cod_clas_trib?: string;

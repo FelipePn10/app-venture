@@ -10,6 +10,8 @@ import {
   listSalesGoalPeriods,
   createSalesGoalPeriod,
   getSalesGoalsReport,
+  upsertGroupTarget,
+  upsertGoalBalance,
 } from "@/services/salesGoalsService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -19,7 +21,26 @@ import { loadItems, loadRepresentatives } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "goals" | "periods";
-type DetailTab = "dados" | "itens";
+type DetailTab = "dados" | "itens" | "grupo";
+
+/** Os três patamares que o mercado usa para premiar o representante. */
+const PATAMARES = [
+  { chave: "minimum", rotulo: "Mínima" },
+  { chave: "probable", rotulo: "Provável" },
+  { chave: "ideal", rotulo: "Ideal" },
+] as const;
+
+const META_GRUPO_VAZIA = {
+  commercial_group_code: "", goal_type: "VALOR",
+  minimum_value: "", minimum_bonus_pct: "",
+  probable_value: "", probable_bonus_pct: "",
+  ideal_value: "", ideal_bonus_pct: "",
+};
+
+const SALDO_VAZIO = {
+  next_period_code: "", balance_scope: "REPRESENTANTE", goal_type: "VALOR",
+  realized_value: "", ideal_value: "", balance_value: "", notes: "",
+};
 type TargetKind = "item" | "classification" | "group";
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -41,6 +62,8 @@ export function Vvnd0500Page(): JSX.Element {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<DetailTab>("dados");
+  const [metaGrupo, setMetaGrupo] = useState({ ...META_GRUPO_VAZIA });
+  const [saldo, setSaldo] = useState({ ...SALDO_VAZIO });
   const [creating, setCreating] = useState(true);
 
   const setG = useCallback(<K extends keyof SalesGoalDTO>(k: K, v: SalesGoalDTO[K]) => setGoalForm((p) => ({ ...p, [k]: v })), []);
@@ -238,9 +261,119 @@ export function Vvnd0500Page(): JSX.Element {
                 <div className="erp-tabs">
                   <button className={`erp-tab${tab === "dados" ? " active" : ""}`} onClick={() => setTab("dados")}>Dados gerais</button>
                   <button className={`erp-tab${tab === "itens" ? " active" : ""}`} onClick={() => setTab("itens")}>Itens da meta ({items.length})</button>
+                  <button className={`erp-tab${tab === "grupo" ? " active" : ""}`} onClick={() => setTab("grupo")}>Grupo e saldo</button>
                 </div>
                 <div className="erp-detail-body">
-                  {tab === "dados" ? (
+                  {tab === "grupo" ? (
+                    <>
+                      <div className="erp-fieldset">
+                        <div className="erp-fieldset-head">Meta do grupo comercial — mínima, provável e ideal</div>
+                        <div className="erp-fieldset-body">
+                          <div className="erp-field erp-c12"><span className="erp-field-hint">
+                            A premiação do representante costuma ter três patamares: a meta mínima que garante o
+                            bônus base, a provável que é a esperada, e a ideal que puxa o esforço. Sem os três,
+                            só resta um número solto — e o comercial não sabe onde está.
+                          </span></div>
+                          <div className="erp-field erp-c3"><label className="erp-label erp-req">Grupo comercial</label>
+                            <input className="erp-input num" type="number" value={metaGrupo.commercial_group_code}
+                              onChange={(e) => setMetaGrupo((p) => ({ ...p, commercial_group_code: e.target.value }))} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Tipo de meta</label>
+                            <select className="erp-input" value={metaGrupo.goal_type}
+                              onChange={(e) => setMetaGrupo((p) => ({ ...p, goal_type: e.target.value }))}>
+                              <option value="VALOR">Valor</option><option value="QUANTIDADE">Quantidade</option>
+                            </select></div>
+                          {PATAMARES.map((pt) => (
+                            <div className="erp-field erp-c12" key={pt.chave} style={{ flexDirection: "row", gap: 10 }}>
+                              <div style={{ flex: 1 }}>
+                                <label className="erp-label">Meta {pt.rotulo.toLowerCase()}</label>
+                                <input className="erp-input num" type="number"
+                                  value={metaGrupo[`${pt.chave}_value` as keyof typeof metaGrupo]}
+                                  onChange={(e) => setMetaGrupo((p) => ({ ...p, [`${pt.chave}_value`]: e.target.value }))} />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <label className="erp-label">Bônus {pt.rotulo.toLowerCase()} (%)</label>
+                                <input className="erp-input num" type="number"
+                                  value={metaGrupo[`${pt.chave}_bonus_pct` as keyof typeof metaGrupo]}
+                                  onChange={(e) => setMetaGrupo((p) => ({ ...p, [`${pt.chave}_bonus_pct`]: e.target.value }))} />
+                              </div>
+                            </div>
+                          ))}
+                          <div className="erp-field erp-c12" style={{ flexDirection: "row" }}>
+                            <button className="erp-btn erp-btn-primary" disabled={busy} onClick={() => void run(async () => {
+                              if (!metaGrupo.commercial_group_code) { setFeedback({ type: "error", message: "Informe o grupo comercial." }); return; }
+                              const n = (v: string) => Number(v) || 0;
+                              await upsertGroupTarget({
+                                period_code: selected.period_code,
+                                commercial_group_code: Number(metaGrupo.commercial_group_code),
+                                goal_type: metaGrupo.goal_type,
+                                minimum_value: n(metaGrupo.minimum_value), minimum_bonus_pct: n(metaGrupo.minimum_bonus_pct),
+                                probable_value: n(metaGrupo.probable_value), probable_bonus_pct: n(metaGrupo.probable_bonus_pct),
+                                ideal_value: n(metaGrupo.ideal_value), ideal_bonus_pct: n(metaGrupo.ideal_bonus_pct),
+                                is_active: true,
+                              });
+                              setMetaGrupo({ ...META_GRUPO_VAZIA });
+                              setFeedback({ type: "success", message: "Meta do grupo gravada." });
+                            })}>Gravar meta do grupo</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="erp-fieldset">
+                        <div className="erp-fieldset-head">Saldo de meta — o que sobra ou falta vai para o próximo período</div>
+                        <div className="erp-fieldset-body">
+                          <div className="erp-field erp-c3"><label className="erp-label">Abrangência</label>
+                            <select className="erp-input" value={saldo.balance_scope}
+                              onChange={(e) => setSaldo((p) => ({ ...p, balance_scope: e.target.value }))}>
+                              <option value="REPRESENTANTE">Representante</option>
+                              <option value="GRUPO">Grupo comercial</option>
+                              <option value="CLIENTE">Cliente</option>
+                            </select></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Próximo período</label>
+                            <select className="erp-input" value={saldo.next_period_code}
+                              onChange={(e) => setSaldo((p) => ({ ...p, next_period_code: e.target.value }))}>
+                              <option value="">Não transfere</option>
+                              {periods.map((p) => <option key={p.code} value={p.code}>{periodLabel(p.code)}</option>)}
+                            </select></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Tipo de meta</label>
+                            <select className="erp-input" value={saldo.goal_type}
+                              onChange={(e) => setSaldo((p) => ({ ...p, goal_type: e.target.value }))}>
+                              <option value="VALOR">Valor</option><option value="QUANTIDADE">Quantidade</option>
+                            </select></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Realizado</label>
+                            <input className="erp-input num" type="number" value={saldo.realized_value}
+                              onChange={(e) => setSaldo((p) => ({ ...p, realized_value: e.target.value }))} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Meta ideal</label>
+                            <input className="erp-input num" type="number" value={saldo.ideal_value}
+                              onChange={(e) => setSaldo((p) => ({ ...p, ideal_value: e.target.value }))} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Saldo</label>
+                            <input className="erp-input num" type="number" value={saldo.balance_value}
+                              onChange={(e) => setSaldo((p) => ({ ...p, balance_value: e.target.value }))} />
+                            <span className="erp-field-hint">Positivo sobra, negativo falta.</span></div>
+                          <div className="erp-field erp-c6"><label className="erp-label">Observações</label>
+                            <input className="erp-input" value={saldo.notes}
+                              onChange={(e) => setSaldo((p) => ({ ...p, notes: e.target.value }))} /></div>
+                          <div className="erp-field erp-c12" style={{ flexDirection: "row" }}>
+                            <button className="erp-btn erp-btn-primary" disabled={busy} onClick={() => void run(async () => {
+                              const n = (v: string) => Number(v) || 0;
+                              await upsertGoalBalance({
+                                period_code: selected.period_code,
+                                next_period_code: saldo.next_period_code ? Number(saldo.next_period_code) : null,
+                                balance_scope: saldo.balance_scope,
+                                representative_code: selected.representative_code,
+                                goal_type: saldo.goal_type,
+                                realized_value: n(saldo.realized_value),
+                                ideal_value: n(saldo.ideal_value),
+                                balance_value: n(saldo.balance_value),
+                                notes: saldo.notes.trim() || null,
+                              });
+                              setSaldo({ ...SALDO_VAZIO });
+                              setFeedback({ type: "success", message: "Saldo de meta gravado." });
+                            })}>Gravar saldo</button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : tab === "dados" ? (
                     <div className="erp-fieldset">
                       <div className="erp-fieldset-head">Meta #{selected.code} <span className="erp-badge info" style={{ marginLeft: 4 }}>{selected.analysis_base === "SALES" ? "Vendas" : "Faturamento"}</span></div>
                       <div className="erp-fieldset-body">

@@ -6,7 +6,8 @@ import {
   listRoutes, createRoute, deleteRoute,
   getRouteDetail, addRouteOperation, removeRouteOperation,
   createEdge, deleteEdge, getLeadTime,
-  type RouteOpResourceDTO,
+  type RouteOpResourceDTO, type TimeUnit,
+  TIME_UNITS, THIRD_PARTY_REMITTANCES,
   listRouteOpResources, addRouteOpResource, setRouteOpResourcePrimary, removeRouteOpResource,
   listRouteOpTools, addRouteOpTool, removeRouteOpTool,
 } from "@/services/manufacturingRoutingService";
@@ -14,12 +15,17 @@ import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems } from "@/services/lookups";
+import { loadItems, loadWorkCenters, loadSuppliers, loadTools } from "@/services/lookups";
+import { RoteiroCustoPanel } from "./roteiro/RoteiroCustoPanel";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "operacoes" | "roteiros";
 
-const EMPTY_OP: OperationDTO = { name: "", origin: "INTERNA", standard_time: 0 };
+const EMPTY_OP: OperationDTO = {
+  name: "", origin: "INTERNA", standard_time: 0, setup_time: 0,
+  run_time: 0, labor_time: 0, run_base_qty: 1, queue_time: 0, wait_time: 0, move_time: 0,
+  crew_size: 1, time_unit: "HORA", third_party_remittance: "DEMAND_ITEMS",
+};
 const EMPTY_ROUTE: RouteDTO = { item_code: "", description: "", alternative: 1, is_standard: true };
 const EMPTY_RO: RouteOperationDTO = { operation_id: 0, sequence: 10, work_center_id: undefined, standard_time: undefined, setup_time: undefined, notes: "" };
 const EMPTY_EDGE: EdgeDTO = { predecessor_id: 0, successor_id: 0, overlap_pct: 0 };
@@ -53,6 +59,8 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
   const [itemCode, setItemCode] = useState("");
   const [routes, setRoutes] = useState<RouteDTO[]>([]);
   const [routeForm, setRouteForm] = useState<RouteDTO>(EMPTY_ROUTE);
+  const [custoAberto, setCustoAberto] = useState(false);
+  const [itemDestino, setItemDestino] = useState("");
   const [detail, setDetail] = useState<RouteDetail | null>(null);
   const [roForm, setRoForm] = useState<RouteOperationDTO>(EMPTY_RO);
   const [edgeForm, setEdgeForm] = useState<EdgeDTO>(EMPTY_EDGE);
@@ -213,11 +221,87 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
+  /**
+   * Copia o roteiro aberto para outro item.
+   *
+   * É o que faz um roteiro padrão valer a pena: em vez de redigitar quinze
+   * operações para cada peça parecida, copia-se o modelo e ajusta-se o que é
+   * diferente. Vão junto as operações — com os tempos que sobrescrevem a
+   * biblioteca — e a rede de dependências, que é o que define o caminho crítico.
+   */
+  async function copiarRoteiro() {
+    const atual = detail;
+    const origem = atual?.route;
+    if (!atual || !origem?.id) return;
+    const destino = itemDestino.trim();
+    if (!destino) { setFeedback({ type: "error", message: "Escolha o item de destino." }); return; }
+    if (destino === origem.item_code) { setFeedback({ type: "error", message: "O destino é o mesmo item de origem." }); return; }
+    setBusy(true); setFeedback(null);
+    try {
+      const novo = await createRoute({
+        item_code: destino,
+        alternative: origem.alternative,
+        description: `${origem.description ?? "Roteiro"} (cópia de ${origem.item_code})`,
+        is_standard: false,
+        valid_from: origem.valid_from,
+        valid_to: origem.valid_to,
+      });
+      if (!novo.id) throw new Error("o roteiro de destino não foi criado");
+
+      // As operações precisam ser recriadas antes das dependências: a rede
+      // aponta para os ids novos, não para os do roteiro de origem.
+      const equivalencia = new Map<number, number>();
+      for (const ro of [...atual.operations].sort((a, b) => a.sequence - b.sequence)) {
+        const criada = await addRouteOperation(novo.id, {
+          sequence: ro.sequence,
+          operation_id: ro.operation_id,
+          work_center_id: ro.work_center_id,
+          standard_time: ro.standard_time,
+          setup_time: ro.setup_time,
+          run_time: ro.run_time,
+          labor_time: ro.labor_time,
+          run_base_qty: ro.run_base_qty,
+          queue_time: ro.queue_time,
+          wait_time: ro.wait_time,
+          move_time: ro.move_time,
+          crew_size: ro.crew_size,
+          time_unit: ro.time_unit,
+          supplier_id: ro.supplier_id,
+          service_item_code: ro.service_item_code,
+          cost_per_unit: ro.cost_per_unit,
+          lead_time_days: ro.lead_time_days,
+          third_party_remittance: ro.third_party_remittance,
+          notes: ro.notes,
+        });
+        if (ro.id && criada.id) equivalencia.set(ro.id, criada.id);
+      }
+      let redeCopiada = 0;
+      for (const ed of atual.edges) {
+        const p = equivalencia.get(ed.predecessor_id);
+        const su = equivalencia.get(ed.successor_id);
+        if (!p || !su) continue;
+        await createEdge(novo.id, { predecessor_id: p, successor_id: su, overlap_pct: ed.overlap_pct });
+        redeCopiada += 1;
+      }
+      setItemDestino("");
+      setFeedback({
+        type: "success",
+        message: `Roteiro copiado para o item ${destino}: ${equivalencia.size} operação(ões) e ${redeCopiada} dependência(s).`,
+      });
+    } catch (e) {
+      setFeedback({ type: "error", message: errMessage(e) });
+    } finally { setBusy(false); }
+  }
+
   // helper p/ rótulo de operação do roteiro nos selects de dependência
   const roLabel = (ro: RouteOperationDTO) => `seq ${ro.sequence} · ${opName(ro.operation_id)}`;
 
   return (
     <div className="erp-screen">
+      <style>{`
+        .rot-sec { font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #2f7d47; border-bottom: 1px solid #dbe8d5; padding-bottom: 4px; margin-top: 4px; }
+        .erp-grid .num { text-align: right; }
+      `}</style>
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
         <nav className="erp-crumbs"><span className="erp-crumb-mut">Engenharia</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">{titulo}</span><span className="erp-crumb-code">{code}</span></nav>
@@ -260,25 +344,95 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
           <>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Operação  — <span style={{fontWeight:400,opacity:0.65}}>{opEditId !== null ? `Editando #${opEditId}` : "Biblioteca reutilizável"}</span></div><div className="erp-fieldset-body">
               
-                <div className="erp-field erp-c6"><label className="erp-label erp-req">Nome</label>
+                <div className="erp-field erp-c5"><label className="erp-label erp-req">Nome</label>
                   <input className="erp-input" value={opForm.name} placeholder="Corte a laser" onChange={(e) => setOpF("name", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Origem</label>
                   <select className="erp-input" value={opForm.origin} onChange={(e) => setOpF("origin", e.target.value as OpOrigin)}>
-                    {OP_ORIGINS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Tempo padrão (h)</label>
-                  <input className="erp-input num" type="number" step="0.01" value={opForm.standard_time} onChange={(e) => setOpF("standard_time", Number(e.target.value))} /></div>
-              
-              <span className="erp-field-hint">Origem define o tipo de ordem do MRP: INTERNA → OF · EXTERNA/TERCEIROS → OS.</span>
+                    {OP_ORIGINS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select>
+                  <span className="erp-field-hint">Define o tipo de ordem no MRP: interna → OF · externa/terceiros → OS.</span></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Unidade dos tempos</label>
+                  <select className="erp-input" value={opForm.time_unit ?? "HORA"} onChange={(e) => setOpF("time_unit", e.target.value as TimeUnit)}>
+                    {TIME_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}</select></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Centro padrão</label>
+                  <LookupField value={opForm.default_work_center_id ?? undefined}
+                    onChange={(c) => setOpF("default_work_center_id", c ? Number(c) : undefined)}
+                    loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Opcional" clearable /></div>
+
+                <div className="erp-field erp-c12"><div className="rot-sec">Modelo de tempo</div></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Preparação (por lote)</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.setup_time ?? 0}
+                    onChange={(e) => setOpF("setup_time", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Máquina</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.run_time ?? 0}
+                    onChange={(e) => setOpF("run_time", Number(e.target.value))} />
+                  <span className="erp-field-hint">Por lote-base.</span></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Mão de obra</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.labor_time ?? 0}
+                    onChange={(e) => setOpF("labor_time", Number(e.target.value))} />
+                  <span className="erp-field-hint">Zero = igual à máquina.</span></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Peças por ciclo</label>
+                  <input className="erp-input num" type="number" min={1} step="1" value={opForm.run_base_qty ?? 1}
+                    onChange={(e) => setOpF("run_base_qty", Number(e.target.value) || 1)} />
+                  <span className="erp-field-hint">Quantas peças saem no tempo acima.</span></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Operadores</label>
+                  <input className="erp-input num" type="number" min={1} step="1" value={opForm.crew_size ?? 1}
+                    onChange={(e) => setOpF("crew_size", Number(e.target.value) || 1)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Tempo padrão (legado)</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.standard_time}
+                    onChange={(e) => setOpF("standard_time", Number(e.target.value))} />
+                  <span className="erp-field-hint">Usado só quando máquina é zero.</span></div>
+
+                <div className="erp-field erp-c2"><label className="erp-label">Fila</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.queue_time ?? 0}
+                    onChange={(e) => setOpF("queue_time", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Espera</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.wait_time ?? 0}
+                    onChange={(e) => setOpF("wait_time", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Movimentação</label>
+                  <input className="erp-input num" type="number" step="0.001" value={opForm.move_time ?? 0}
+                    onChange={(e) => setOpF("move_time", Number(e.target.value))} /></div>
+                <div className="erp-field erp-c6"><span className="erp-field-hint">
+                  Fila, espera e movimentação são fixos por lote: entram no prazo (lead time) mas não ocupam a máquina.
+                </span></div>
+
+                {opForm.origin !== "INTERNA" && (
+                  <>
+                    <div className="erp-field erp-c12"><div className="rot-sec">Terceirização</div></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+                      <LookupField value={opForm.supplier_id ?? undefined}
+                        onChange={(c) => setOpF("supplier_id", c ? Number(c) : undefined)}
+                        loader={loadSuppliers} entityLabel="fornecedor" placeholder="Quem executa" clearable /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Item de serviço</label>
+                      <LookupField value={opForm.service_item_code ?? undefined}
+                        onChange={(c) => setOpF("service_item_code", c ? String(c) : undefined)}
+                        loader={loadItems} entityLabel="item" placeholder="Serviço comprado" clearable /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Custo por peça</label>
+                      <input className="erp-input num" type="number" step="0.0001" value={opForm.cost_per_unit ?? ""}
+                        onChange={(e) => setOpF("cost_per_unit", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Prazo (dias)</label>
+                      <input className="erp-input num" type="number" min={0} step="1" value={opForm.lead_time_days ?? ""}
+                        onChange={(e) => setOpF("lead_time_days", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">O que remeter</label>
+                      <select className="erp-input" value={opForm.third_party_remittance ?? "DEMAND_ITEMS"}
+                        onChange={(e) => setOpF("third_party_remittance", e.target.value)}>
+                        {THIRD_PARTY_REMITTANCES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
+                  </>
+                )}
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Biblioteca — <span style={{fontWeight:400,opacity:0.65}}>{ops.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
-                <thead><tr><th style={{ width: 60 }}>#</th><th>Nome</th><th>Origem</th><th>Tempo (h)</th><th style={{ width: 140 }}>Ações</th></tr></thead>
+                <thead><tr><th style={{ width: 60 }}>#</th><th>Nome</th><th>Origem</th><th className="num">Prep.</th><th className="num">Máquina</th><th className="num">Peças/ciclo</th><th className="num">Equipe</th><th>Un.</th><th style={{ width: 140 }}>Ações</th></tr></thead>
                 <tbody>
-                  {ops.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma operação cadastrada.</td></tr>}
+                  {ops.length === 0 && <tr><td colSpan={9} className="erp-grid-empty">Nenhuma operação cadastrada.</td></tr>}
                   {ops.map((o) => (
                     <tr key={o.id}>
-                      <td>{o.id}</td><td style={{ fontWeight: 600 }}>{o.name}</td><td>{originPill(o.origin)}</td><td>{o.standard_time}</td>
+                      <td>{o.id}</td><td style={{ fontWeight: 600 }}>{o.name}</td><td>{originPill(o.origin)}</td>
+                      <td className="num">{o.setup_time ?? 0}</td>
+                      <td className="num">{o.run_time || o.standard_time}</td>
+                      <td className="num">{o.run_base_qty ?? 1}</td>
+                      <td className="num">{o.crew_size ?? 1}</td>
+                      <td>{enumLabel(o.time_unit ?? "HORA")}</td>
                       <td>
                         <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => editOp(o)}>Editar</button>
                         <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => o.id && void removerOp(o.id)}>Desativar</button>
@@ -302,6 +456,13 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                   <input className="erp-input num" type="number" value={routeForm.alternative} onChange={(e) => setRF("alternative", Number(e.target.value))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Máscara</label>
                   <input className="erp-input" value={routeForm.mask ?? ""} onChange={(e) => setRF("mask", e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Início da vigência</label>
+                  <input className="erp-input" type="date" value={(routeForm.valid_from ?? "").slice(0, 10)}
+                    onChange={(e) => setRF("valid_from", e.target.value || undefined)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Fim da vigência</label>
+                  <input className="erp-input" type="date" value={(routeForm.valid_to ?? "").slice(0, 10)}
+                    onChange={(e) => setRF("valid_to", e.target.value || undefined)} />
+                  <span className="erp-field-hint">Em branco = sem prazo.</span></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Padrão (MRP/CRP)</label>
                   <div className="erp-toggle-row">
                     <label className="erp-toggle"><input type="checkbox" checked={routeForm.is_standard} onChange={(e) => setRF("is_standard", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>
@@ -332,34 +493,58 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
 
             {detail?.route && (
               <>
-                <div className="erp-fieldset-head" style={{display:"flex",alignItems:"center",gap:8}}><span>Operações do roteiro {detail.route.id}</span><span style={{flex:1}} /> <button className="erp-btn" onClick={() => void calcularLeadTime()} disabled={busy}>Calcular Lead Time (CPM)</button> {leadTime !== null && <span className="erp-status-item" style={{ fontWeight: 700 }}>Lead time: {leadTime} h</span>} <button className="erp-btn" onClick={() => setDetail(null)}>Fechar</button></div>
+                <div className="erp-fieldset-head" style={{display:"flex",alignItems:"center",gap:8}}><span>Operações do roteiro {detail.route.id}</span><span style={{flex:1}} /> <button className="erp-btn" onClick={() => void calcularLeadTime()} disabled={busy}>Calcular Lead Time (CPM)</button> <button className="erp-btn erp-btn-primary" onClick={() => setCustoAberto(true)} disabled={detail.operations.length === 0}>Tempo e custo do lote</button> {leadTime !== null && <span className="erp-status-item" style={{ fontWeight: 700 }}>Lead time: {leadTime} h</span>} <button className="erp-btn" onClick={() => setDetail(null)}>Fechar</button></div>
                 <div className="erp-fieldset"><div className="erp-fieldset-body">
-                  
+                    <div className="erp-field erp-c4"><label className="erp-label">Copiar este roteiro para</label>
+                      <LookupField value={itemDestino || undefined}
+                        onChange={(c) => setItemDestino(c ? String(c) : "")}
+                        loader={loadItems} entityLabel="item" placeholder="Item de destino…" clearable /></div>
+                    <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}>
+                      <button className="erp-btn" onClick={() => void copiarRoteiro()} disabled={busy || !itemDestino}>
+                        Copiar roteiro
+                      </button></div>
+                    <div className="erp-field erp-c5"><span className="erp-field-hint">
+                      Leva as operações com seus tempos e a rede de dependências. É assim que um roteiro padrão
+                      vira o ponto de partida de uma peça nova.
+                    </span></div>
+                    <div className="erp-field erp-c12"><div className="rot-sec">Incluir operação</div></div>
                     <div className="erp-field erp-c4"><label className="erp-label erp-req">Operação</label>
                       <select className="erp-input" value={roForm.operation_id} onChange={(e) => setRoF("operation_id", Number(e.target.value))}>
                         <option value={0}>— selecione —</option>
                         {ops.map((o) => <option key={o.id} value={o.id}>{o.name} ({enumLabel(o.origin)})</option>)}</select></div>
                     <div className="erp-field erp-c1"><label className="erp-label">Seq</label>
                       <input className="erp-input num" type="number" value={roForm.sequence} onChange={(e) => setRoF("sequence", Number(e.target.value))} /></div>
-                    <div className="erp-field erp-c2"><label className="erp-label">Centro (ID)</label>
-                      <input className="erp-input num" type="number" value={roForm.work_center_id ?? ""} onChange={(e) => setRoF("work_center_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
-                    <div className="erp-field erp-c2"><label className="erp-label">Tempo (h)</label>
-                      <input className="erp-input num" type="number" step="0.01" value={roForm.standard_time ?? ""} onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
-                    <div className="erp-field erp-c2"><label className="erp-label">Setup (h)</label>
-                      <input className="erp-input num" type="number" step="0.01" value={roForm.setup_time ?? ""} onChange={(e) => setRoF("setup_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Centro de trabalho</label>
+                      <LookupField value={roForm.work_center_id ?? undefined}
+                        onChange={(c) => setRoF("work_center_id", c ? Number(c) : undefined)}
+                        loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Herda da operação" clearable /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Máquina</label>
+                      <input className="erp-input num" type="number" step="0.001" value={roForm.standard_time ?? ""} placeholder="herda"
+                        onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Preparação</label>
+                      <input className="erp-input num" type="number" step="0.001" value={roForm.setup_time ?? ""} placeholder="herda"
+                        onChange={(e) => setRoF("setup_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
                     <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
                       <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void addRO()} disabled={busy}>+ Op</button></div>
+                    <div className="erp-field erp-c12"><span className="erp-field-hint">
+                      Campos em branco herdam o que está na operação da biblioteca — preencha só o que é diferente neste roteiro.
+                    </span></div>
                   
                 </div>
                   <div className="erp-fieldset-body">
                     <table className="erp-grid">
-                      <thead><tr><th style={{ width: 50 }}>Seq</th><th>Operação</th><th>Centro</th><th>Tempo (h)</th><th>Setup (h)</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                      <thead><tr><th style={{ width: 50 }}>Seq</th><th>Operação</th><th>Centro</th><th className="num">Preparação</th><th className="num">Máquina</th><th className="num">Mão de obra</th><th className="num">Peças/ciclo</th><th style={{ width: 150 }}>Ações</th></tr></thead>
                       <tbody>
-                        {detail.operations.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma operação no roteiro.</td></tr>}
+                        {detail.operations.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhuma operação no roteiro.</td></tr>}
                         {[...detail.operations].sort((a, b) => a.sequence - b.sequence).map((ro) => (
                           <tr key={ro.id ?? `${ro.sequence}-${ro.operation_id}`}>
-                            <td style={{ fontWeight: 600 }}>{ro.sequence}</td><td>{opName(ro.operation_id)}</td>
-                            <td>{ro.work_center_id ?? "—"}</td><td>{ro.standard_time ?? "—"}</td><td>{ro.setup_time ?? "—"}</td>
+                            <td style={{ fontWeight: 600 }}>{ro.sequence}</td>
+                            <td>{ro.operation_name || opName(ro.operation_id)}</td>
+                            <td>{ro.work_center_name || ro.work_center_id || "—"}</td>
+                            <td className="num">{ro.eff_time?.setup_hours ?? ro.effective_setup ?? ro.setup_time ?? "—"}</td>
+                            <td className="num">{ro.eff_time?.run_hours ?? ro.effective_std_time ?? ro.standard_time ?? "—"}</td>
+                            <td className="num">{ro.eff_time?.labor_hours || "—"}</td>
+                            <td className="num">{ro.eff_time?.run_base_qty ?? ro.run_base_qty ?? 1}</td>
                             <td><button className="erp-btn erp-btn-sm" onClick={() => abrirRecursos(ro.id)} disabled={!ro.id}>Rec/Ferr</button> <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => ro.id && void removeRO(ro.id)} disabled={!ro.id}>Remover</button></td>
                           </tr>
                         ))}
@@ -373,7 +558,10 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                     <div className="erp-fieldset-head" style={{display:"flex",alignItems:"center",gap:8}}><span>Recursos &amp; Ferramentas — operação {selOpId}</span><span style={{flex:1}} /> <button className="erp-btn" onClick={() => setSelOpId(null)}>Fechar</button></div>
                     <div className="erp-fieldset"><div className="erp-fieldset-body">
                       
-                        <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro (recurso alt.)</label><input className="erp-input num" type="number" value={resForm.work_center_id} onChange={(e) => setResForm((r) => ({ ...r, work_center_id: e.target.value }))} /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro (recurso alternativo)</label>
+                          <LookupField value={Number(resForm.work_center_id) || undefined}
+                            onChange={(c) => setResForm((r) => ({ ...r, work_center_id: c ? String(c) : "" }))}
+                            loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Escolher centro…" clearable /></div>
                         <div className="erp-field erp-c2"><label className="erp-label">Prioridade</label><input className="erp-input num" type="number" value={resForm.priority} onChange={(e) => setResForm((r) => ({ ...r, priority: e.target.value }))} /></div>
                         <div className="erp-field erp-c2"><label className="erp-label">Fator tempo</label><input className="erp-input num" type="number" step="0.1" value={resForm.time_factor} onChange={(e) => setResForm((r) => ({ ...r, time_factor: e.target.value }))} /></div>
                         <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}><label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={resForm.is_primary} onChange={(e) => setResForm((r) => ({ ...r, is_primary: e.target.checked }))} />primário</label><button className="erp-btn erp-btn-primary" onClick={addResource} disabled={busy}>+ Recurso</button></div>
@@ -391,7 +579,10 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                         </table>
                       </div>
                       <div className="erp-fieldset-body" style={{ marginTop: 10 }}>
-                        <div className="erp-field erp-c3"><label className="erp-label">Ferramenta (ID)</label><input className="erp-input num" type="number" value={toolIdInput} onChange={(e) => setToolIdInput(e.target.value)} /></div>
+                        <div className="erp-field erp-c4"><label className="erp-label">Ferramenta</label>
+                          <LookupField value={Number(toolIdInput) || undefined}
+                            onChange={(c) => setToolIdInput(c ? String(c) : "")}
+                            loader={loadTools} entityLabel="ferramenta" placeholder="Escolher ferramenta…" clearable /></div>
                         <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={addTool} disabled={busy}>+ Ferramenta</button></div>
                       </div>
                       <div className="erp-fieldset-body">
@@ -452,6 +643,13 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
           </>
         )}
       </div></section></div>
+
+      {custoAberto && detail && (
+        <RoteiroCustoPanel
+          operacoes={detail.operations}
+          nomeDaOperacao={opName}
+          onClose={() => setCustoAberto(false)} />
+      )}
 
       <footer className="erp-statusbar">
         <div style={{display:"contents"}}>
