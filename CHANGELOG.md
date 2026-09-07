@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.16] — 2026-09-07
+
 ## Novidades
 - **Pedido de compra (VPDC0200)**: nova tela com capa, itens e transporte/pagamento, mostrando situação e alçada de aprovação por extenso, saldo de cada item (pedido, recebido, cancelado e a receber) e o total do pedido no rodapé.
 - **Mapa de cotação**: a cotação de compras passou a montar a matriz item × fornecedor, destacando o melhor preço de cada item, quanto se economiza em relação ao segundo colocado e se compensa pulverizar ou concentrar a compra em um único fornecedor.
