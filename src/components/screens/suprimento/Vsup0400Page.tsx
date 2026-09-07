@@ -8,6 +8,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadEstablishments, loadSuppliers } from "@/services/lookups";
+import { MapaCotacaoPanel } from "./MapaCotacaoPanel";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,6 +26,9 @@ export function Vsup0400Page(): JSX.Element {
   const [priceForm, setPriceForm] = useState<QuotationPriceDTO>(EMPTY_PRICE);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  // O mapa é a leitura que decide a compra; fica num painel próprio para caber
+  // a matriz inteira sem espremer a tela de cadastro.
+  const [mapaAberto, setMapaAberto] = useState(false);
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -100,6 +104,13 @@ export function Vsup0400Page(): JSX.Element {
         <div className="erp-tgroup">
           <label className="erp-check"><input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /><span>Só abertas</span></label>
           <button className="erp-btn" onClick={() => void reload()} disabled={busy}>Atualizar</button>
+        </div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Análise</span>
+          <button className="erp-btn erp-btn-dark" onClick={() => setMapaAberto(true)} disabled={!selCode}
+            title={selCode ? "Comparar os fornecedores lado a lado" : "Abra uma cotação para ver o mapa"}>
+            Mapa da cotação
+          </button>
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VSUP0400 — Cotação de Compra" filename="vsup0400" /></div>
@@ -200,6 +211,15 @@ export function Vsup0400Page(): JSX.Element {
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
+
+      {mapaAberto && selCode && (
+        <MapaCotacaoPanel
+          quotationCode={selCode}
+          onClose={() => { setMapaAberto(false); void abrir(selCode); }}
+          aviso={(type, message) => setFeedback({ type, message })}
+        />
+      )}
+
     </div>
   );
 }

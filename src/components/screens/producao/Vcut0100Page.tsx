@@ -9,6 +9,8 @@ import {
   getCuttingSettings, updateCuttingSettings,
   type CuttingPlanDetail,
 } from "@/services/cuttingPlanService";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
@@ -21,6 +23,18 @@ const is2D = (t?: string) => t === "GUILLOTINE_2D" || t === "TRUE_SHAPE_2D";
 
 const EMPTY_PLAN: CuttingPlanDTO = { material_item_code: "", cut_type: "LINEAR_1D", description: "", kerf_mm: 3, trim_mm: 0, min_remnant_mm: 300, stock_uom: "M", uom_factor: 0, warehouse_id: 0, include_remnants: false };
 const EMPTY_PART: CuttingPartDTO = { label: "", length_mm: 0, width_mm: 0, height_mm: 0, quantity: 1 };
+
+/**
+ * Metros de fita de uma peça: cada lado marcado soma a dimensão correspondente.
+ * Superior e inferior seguem a largura; esquerdo e direito, a altura. Mostrar o
+ * total antes de gravar é o que evita orçar a fita pela metade.
+ */
+function metrosDeFita(p: CuttingPartDTO): number {
+  const largura = (p.width_mm ?? p.length_mm ?? 0) / 1000;
+  const altura = (p.height_mm ?? 0) / 1000;
+  return (p.edge_top ? largura : 0) + (p.edge_bottom ? largura : 0)
+    + (p.edge_left ? altura : 0) + (p.edge_right ? altura : 0);
+}
 const EMPTY_STOCK: CuttingStockDTO = { length_mm: 0, width_mm: 0, height_mm: 0, quantity: 1, is_remnant: false };
 
 export function Vcut0100Page(): JSX.Element {
@@ -90,6 +104,11 @@ export function Vcut0100Page(): JSX.Element {
 
   return (
     <div className="erp-screen">
+      <style>{`
+        .cut-sec { font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #2f7d47; border-bottom: 1px solid #dbe8d5; padding-bottom: 4px; margin-top: 4px; }
+        .cut-lados { display: flex; flex-wrap: wrap; gap: 6px 12px; padding-top: 4px; }
+        .cut-hint { display: block; font-size: 10.5px; color: #7a9a84; margin-top: 3px; }
+      `}</style>
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
         <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Plano de Corte</span><span className="erp-crumb-code">VCUT0100</span></nav>
@@ -168,10 +187,31 @@ export function Vcut0100Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label">Altura</label><input className="erp-input num" type="number" value={partForm.height_mm || ""} onChange={(e) => setPartForm((s) => ({ ...s, height_mm: Number(e.target.value) }))} /></div>
                       </> : <div className="erp-field erp-c6"><label className="erp-label">Comprimento (mm)</label><input className="erp-input num" type="number" value={partForm.length_mm || ""} onChange={(e) => setPartForm((s) => ({ ...s, length_mm: Number(e.target.value) }))} /></div>}
                       <div className="erp-field erp-c2"><label className="erp-label">Qtd</label><input className="erp-input num" type="number" value={partForm.quantity || ""} onChange={(e) => setPartForm((s) => ({ ...s, quantity: Number(e.target.value) }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Item da peça</label><LookupField value={partForm.item_code} loader={loadItems} entityLabel="item" placeholder="Opcional" clearable onChange={(c) => setPartForm((s) => ({ ...s, item_code: c ? Number(c) : undefined }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Origem</label><input className="erp-input" value={partForm.source_ref ?? ""} placeholder="Pedido, ordem ou projeto" onChange={(e) => setPartForm((s) => ({ ...s, source_ref: e.target.value || undefined }))} /></div>
+
+                      {/* A fita de borda é boa parte do custo da peça em movelaria
+                          e define o tempo de coladeira — precisa entrar aqui. */}
+                      <div className="erp-field erp-c12"><div className="cut-sec">Fita de borda</div></div>
+                      <div className="erp-field erp-c4">
+                        <label className="erp-label">Lados com fita</label>
+                        <div className="cut-lados">
+                          <label className="erp-check"><input type="checkbox" checked={!!partForm.edge_top} onChange={(e) => setPartForm((s) => ({ ...s, edge_top: e.target.checked }))} /> Superior</label>
+                          <label className="erp-check"><input type="checkbox" checked={!!partForm.edge_bottom} onChange={(e) => setPartForm((s) => ({ ...s, edge_bottom: e.target.checked }))} /> Inferior</label>
+                          <label className="erp-check"><input type="checkbox" checked={!!partForm.edge_left} onChange={(e) => setPartForm((s) => ({ ...s, edge_left: e.target.checked }))} /> Esquerdo</label>
+                          <label className="erp-check"><input type="checkbox" checked={!!partForm.edge_right} onChange={(e) => setPartForm((s) => ({ ...s, edge_right: e.target.checked }))} /> Direito</label>
+                        </div>
+                      </div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Fita utilizada</label><LookupField value={partForm.band_item_code} loader={loadItems} entityLabel="item" placeholder="Item da fita" clearable onChange={(c) => setPartForm((s) => ({ ...s, band_item_code: c ? Number(c) : undefined }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Custo por metro</label><input className="erp-input num" type="number" step="0.0001" value={partForm.band_cost_per_m ?? ""} onChange={(e) => setPartForm((s) => ({ ...s, band_cost_per_m: Number(e.target.value) }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Fita a aplicar</label>
+                        <input className="erp-input num" readOnly disabled value={metrosDeFita(partForm).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} />
+                        <span className="cut-hint">metros por peça</span></div>
+
                       <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={adicionarPeca} disabled={busy}>Adicionar peça</button></div>
-                      <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Etiqueta</th><th>Dim.</th><th>Qtd</th><th></th></tr></thead>
-                        <tbody>{detail.parts.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Sem peças.</td></tr>}
-                          {detail.parts.map((pt) => <tr key={pt.id}><td>{pt.label || "—"}</td><td>{pt.length_mm ? `${pt.length_mm}` : `${pt.width_mm}×${pt.height_mm}`}</td><td>{pt.quantity}</td><td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removerPeca(pt.id)} disabled={busy}>×</button></td></tr>)}</tbody>
+                      <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Etiqueta</th><th>Dim.</th><th>Qtd</th><th>Fita (m)</th><th></th></tr></thead>
+                        <tbody>{detail.parts.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem peças.</td></tr>}
+                          {detail.parts.map((pt) => <tr key={pt.id}><td>{pt.label || "—"}</td><td>{pt.length_mm ? `${pt.length_mm}` : `${pt.width_mm}×${pt.height_mm}`}</td><td>{pt.quantity}</td><td>{(metrosDeFita(pt) * pt.quantity).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}</td><td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removerPeca(pt.id)} disabled={busy}>×</button></td></tr>)}</tbody>
                       </table></div>
                     </div></div>
                   </div>

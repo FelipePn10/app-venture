@@ -51,10 +51,17 @@ export interface AtpDTO {
 export interface ReservationDTO {
   id?: number;
   item_code: string;
+  mask?: string;
   warehouse_id: number;
   quantity: number;
   reference_type?: string;
   reference_code?: number;
+  /** A linha específica do documento que originou a reserva. */
+  reference_item_code?: number;
+  /** Quando a reserva passa a valer e quando expira sozinha. */
+  reservation_date?: string;
+  expiration_date?: string;
+  notes?: string;
   status?: string;
 }
 
@@ -136,6 +143,11 @@ function parseReservation(raw: unknown): ReservationDTO {
     quantity: parseNum(o, 'quantity', 'Quantity'),
     reference_type: parseStr(o, 'reference_type', 'ReferenceType') || undefined,
     reference_code: parseNum(o, 'reference_code', 'ReferenceCode') || undefined,
+    reference_item_code: parseNum(o, 'reference_item_code', 'ReferenceItemCode') || undefined,
+    reservation_date: parseStr(o, 'reservation_date', 'ReservationDate') || undefined,
+    expiration_date: parseStr(o, 'expiration_date', 'ExpirationDate') || undefined,
+    mask: parseStr(o, 'mask', 'Mask') || undefined,
+    notes: parseStr(o, 'notes', 'Notes') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,
   };
 }

@@ -40,6 +40,21 @@ export interface SalesOrderItemDTO {
   total_gross?: number;
   total_net?: number;
   status?: string;
+
+  /** Tipo de nota da linha, quando difere do padrão do pedido. */
+  nf_type?: string;
+  /** Entrega combinada com o cliente e o cupom de entrega, no varejo. */
+  customer_delivery?: string;
+  coupon_delivery?: string;
+  paid_at_cashier?: boolean;
+  lot?: string;
+  pis_pct?: number;
+  cofins_pct?: number;
+  st_pct?: number;
+  /** Peso por unidade — alimenta o romaneio sem depender do cadastro do item. */
+  unit_weight_net?: number;
+  unit_weight_gross?: number;
+  notes?: string;
 }
 
 export interface SalesOrderDTO {
@@ -69,8 +84,45 @@ export interface SalesOrderDTO {
   is_firm?: boolean;
   is_active?: boolean;
   is_nfce?: boolean;
+
+  /**
+   * Dados que a nota fiscal e a expedição exigem e que o backend já aceitava.
+   * Sem eles, o pedido chegava ao faturamento incompleto: a NF-e precisa do
+   * indicador de presença e do tipo de nota, e o romaneio precisa do peso e do
+   * volume.
+   */
+  presence_indicator?: string;
+  sales_channel?: string;
+  default_nf_type?: string;
+  nf_type_description?: string;
+  bearer_code?: number;
+  collection_establishment_code?: number;
+  representative_order_number?: number;
+  carrier_code?: number;
+  freight_type?: string;
+  volume_quantity?: number;
+  volume_type?: string;
+  net_weight?: number;
+  gross_weight?: number;
+  project_code?: string;
+  project_name?: string;
+
   items?: SalesOrderItemDTO[];
 }
+
+/**
+ * Indicador de presença do comprador — campo obrigatório da NF-e (tag indPres).
+ * Errar isso é rejeição na SEFAZ.
+ */
+export const PRESENCE_INDICATORS = [
+  { value: '0', label: 'Não se aplica' },
+  { value: '1', label: 'Presencial' },
+  { value: '2', label: 'Internet' },
+  { value: '3', label: 'Teleatendimento' },
+  { value: '4', label: 'NFC-e em entrega a domicílio' },
+  { value: '5', label: 'Presencial fora do estabelecimento' },
+  { value: '9', label: 'Outros não presenciais' },
+] as const;
 
 function parseItem(raw: unknown): SalesOrderItemDTO {
   const o = unwrapObject(raw);
@@ -92,6 +144,17 @@ function parseItem(raw: unknown): SalesOrderItemDTO {
     discount_pct: parseNum(o, 'discount_pct', 'DiscountPct'),
     ipi_pct: parseNum(o, 'ipi_pct', 'IpiPct'),
     icms_pct: parseNum(o, 'icms_pct', 'IcmsPct'),
+    nf_type: parseStr(o, 'nf_type', 'NFType') || undefined,
+    customer_delivery: parseStr(o, 'customer_delivery', 'CustomerDelivery') || undefined,
+    coupon_delivery: parseStr(o, 'coupon_delivery', 'CouponDelivery') || undefined,
+    paid_at_cashier: parseBool(o, 'paid_at_cashier', 'PaidAtCashier'),
+    lot: parseStr(o, 'lot', 'Lot') || undefined,
+    pis_pct: parseNum(o, 'pis_pct', 'PISPct'),
+    cofins_pct: parseNum(o, 'cofins_pct', 'COFINSPct'),
+    st_pct: parseNum(o, 'st_pct', 'STPct'),
+    unit_weight_net: parseNum(o, 'unit_weight_net', 'UnitWeightNet'),
+    unit_weight_gross: parseNum(o, 'unit_weight_gross', 'UnitWeightGross'),
+    notes: parseStr(o, 'notes', 'Notes') || undefined,
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),
     total_net: parseNum(o, 'total_net', 'TotalNet'),
     status: parseStr(o, 'status', 'Status'),
@@ -128,6 +191,21 @@ function parseOrder(raw: unknown): SalesOrderDTO {
     is_firm: parseBool(o, 'is_firm', 'IsFirm'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
     is_nfce: parseBool(o, 'is_nfce', 'IsNfce'),
+    presence_indicator: parseStr(o, 'presence_indicator', 'PresenceIndicator') || undefined,
+    sales_channel: parseStr(o, 'sales_channel', 'SalesChannel') || undefined,
+    default_nf_type: parseStr(o, 'default_nf_type', 'DefaultNFType') || undefined,
+    nf_type_description: parseStr(o, 'nf_type_description', 'NFTypeDescription') || undefined,
+    bearer_code: parseNum(o, 'bearer_code', 'BearerCode') || undefined,
+    collection_establishment_code: parseNum(o, 'collection_establishment_code', 'CollectionEstablishmentCode') || undefined,
+    representative_order_number: parseNum(o, 'representative_order_number', 'RepresentativeOrderNumber') || undefined,
+    carrier_code: parseNum(o, 'carrier_code', 'CarrierCode') || undefined,
+    freight_type: parseStr(o, 'freight_type', 'FreightType') || undefined,
+    volume_quantity: parseNum(o, 'volume_quantity', 'VolumeQuantity'),
+    volume_type: parseStr(o, 'volume_type', 'VolumeType') || undefined,
+    net_weight: parseNum(o, 'net_weight', 'NetWeight'),
+    gross_weight: parseNum(o, 'gross_weight', 'GrossWeight'),
+    project_code: parseStr(o, 'project_code', 'ProjectCode') || undefined,
+    project_name: parseStr(o, 'project_name', 'ProjectName') || undefined,
     items: Array.isArray(rawItems) ? rawItems.map(parseItem) : undefined,
   };
 }

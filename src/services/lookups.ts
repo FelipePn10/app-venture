@@ -268,7 +268,10 @@ export const loadPdmModifiers = cached(async () =>
 /** Só itens marcados como **Item Base** podem ser pai de genérico/configurado. */
 export const loadBaseItems = cached(async () =>
   (await listItems())
-    .filter((i) => i.nature === 2)
+    // `is_base` é o que manda: um item pode ser base e configurado ao mesmo
+    // tempo, e nesse caso `nature` vale 1 (configurado). Só caímos na natureza
+    // quando o backend ainda não devolve o marcador.
+    .filter((i) => (i.is_base ?? i.nature === 2))
     .map((i) => ({ code: i.code ?? '', label: i.description || `Item ${i.code}`, sub: i.uom || undefined }))
     .filter((o) => o.code),
 );
@@ -290,6 +293,11 @@ export const loadWarehouses = cached(async () => {
   }
   return out.sort((a, b) => Number(a.code) - Number(b.code));
 });
+
+/** Ferramentas da ferramentaria, para vincular à operação sem digitar o ID. */
+export const loadTools = cached(() =>
+  loadEndpoint('/api/routing/tools', ['name', 'Name', 'description', 'Description'], ['code', 'Code', 'description', 'Description']),
+);
 
 export const loadWorkCenters = cached(() =>
   loadEndpoint('/api/standard-cost/work-centers?limit=500', ['name', 'Name', 'description', 'Description'], ['description', 'Description']),
@@ -315,8 +323,23 @@ export const loadRepresentatives = cached(async () =>
  * Cadastros de apoio comerciais (`/api/customers/support/*`). O backend serializa
  * essas entidades sem tags JSON, por isso os campos chegam em PascalCase.
  */
+/** Centros de custo, para o rateio contábil do item comprado. */
+export const loadCostCenters = cached(() =>
+  loadEndpoint('/api/cost-center/list', ['description', 'Description', 'name', 'Name'], ['code', 'Code']),
+);
+
 export const loadCarriers = cached(() =>
   loadEndpoint('/api/customers/support/carriers', ['Description', 'description'], ['BillingType', 'billing_type']),
+);
+
+/** Dispositivos legais (a base legal citada na nota). */
+export const loadLegalDevices = cached(() =>
+  loadEndpoint('/api/fiscal/support/dispositivos-legais/', ['description', 'Description'], ['type', 'Type']),
+);
+
+/** Tipos de nota fiscal de saída, do apoio de cliente (VCLI0530). */
+export const loadInvoiceTypes = cached(() =>
+  loadEndpoint('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']),
 );
 
 export const loadPaymentConditions = cached(() =>

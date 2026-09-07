@@ -10,6 +10,7 @@ import {
   type ConfiguratorViolation,
 } from "@/services/structureConfiguratorService";
 import { errMessage } from "@/services/fiscalShared";
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 
 /**
  * Painel do botão "Configurador" da Estrutura de Produto (VENT0210).
@@ -66,6 +67,7 @@ function pendingRequired(questions: ConfiguratorQuestion[], drafts: Record<numbe
 }
 
 export function StructureConfiguratorPanel({ itemCode, itemName, onUseMask, onClose }: Props): JSX.Element {
+  useEscapeToClose(onClose);
   const [panel, setPanel] = useState<ConfiguratorPanel | null>(null);
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [loading, setLoading] = useState(true);
@@ -409,7 +411,7 @@ export function StructureConfiguratorPanel({ itemCode, itemName, onUseMask, onCl
   );
 }
 
-const CFG_STYLES = `
+export const CFG_STYLES = `
 .cfg-backdrop { position: fixed; inset: 0; z-index: 21000; display: grid; place-items: center; padding: 20px; background: rgba(13,31,20,.5); }
 .cfg-modal { display: flex; flex-direction: column; width: min(1080px, 96vw); max-height: 92vh; background: #fff; border: 1px solid #cadfc4; border-radius: 12px; box-shadow: 0 18px 44px rgba(13,31,20,.28); overflow: hidden; font-family: 'Inter', sans-serif; color: #1c2b22; }
 .cfg-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; background: #16281d; color: #dff0e2; flex-shrink: 0; }
@@ -463,4 +465,13 @@ const CFG_STYLES = `
 .cfg-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.4); }
 .cfg-btn-sm { height: 26px; padding: 0 9px; font-size: 11.5px; }
 .cfg-w100 { width: 100%; justify-content: center; }
+/* Usadas também pelo simulador de fórmula e pelo histórico da estrutura. */
+.cfg-card-meta { margin-left: auto; font-size: 10.5px; font-weight: 500; text-transform: none; letter-spacing: 0; color: #6b7d71; }
+.cfg-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 9px; font-size: 10px; font-weight: 700; letter-spacing: .4px; }
+.cfg-tag.a-inclusao { background: #e7f4e9; color: #1e6030; border: 1px solid #bcdcc2; }
+.cfg-tag.a-alteracao { background: #fff5e2; color: #7a5a10; border: 1px solid #f0d99a; }
+.cfg-tag.a-exclusao { background: #fdeaea; color: #8e2f2f; border: 1px solid #f0c8c8; }
+.cfg-table .cfg-before { color: #8e2f2f; text-decoration: line-through; }
+.cfg-table .cfg-after { color: #1e6030; font-weight: 600; }
+
 `;

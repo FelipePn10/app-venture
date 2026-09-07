@@ -74,16 +74,127 @@ export async function updateCfop(dto: CfopDTO): Promise<Cfop> {
 
 // ─── Parâmetros básicos ICMS/IPI ────────────────────────────────────────────
 
+/** Sobre o que a redução incide: a base de cálculo ou a alíquota. */
+export const RED_TARGETS = ['BASE', 'PERCENTUAL'] as const;
+/** Natureza do acréscimo de ICMS. */
+export const ACRES_TYPES = ['FUNDO_COMBATE_POBREZA', 'OUTROS'] as const;
+/** Como o DIFAL é tratado na operação. */
+export const DIFAL_TYPES = ['TRIBUTADO', 'ISENTO_OUTRAS', 'NAO_CONSIDERA'] as const;
+/** Modalidade da base de cálculo do ICMS-ST (tag modBCST da NF-e). */
+export const BC_ST_MODALITIES = [
+  'PRECO_TABELADO', 'LISTA_NEGATIVA', 'LISTA_POSITIVA', 'LISTA_NEUTRA',
+  'MARGEM_VALOR_AGREGADO', 'PAUTA', 'VALOR_OPERACAO',
+] as const;
+
+/**
+ * Parâmetro de ICMS/IPI por NCM ou item, UF e operação.
+ *
+ * O cadastro é grande porque a tributação brasileira é: cada imposto tem
+ * alíquota, redução, substituição e acréscimo, e cada um deles se comporta
+ * diferente para contribuinte e não contribuinte. A tela só coletava sete
+ * campos — o resto do modelo, que o backend já grava, ficava inalcançável.
+ */
 export interface ParametroIcmsIpiDTO {
   id?: number;
+  // Chave de busca
   uf: string;
   ncm_code?: string;
   item_code?: string;
+  item_config_mask?: string;
   operation_type: OperationType;
+  // Filtros opcionais
+  customer_code?: number;
+  customer_establishment_code?: number;
+  market_segment_id?: number;
+  invoice_type_exit_id?: number;
+  invoice_type_entry_id?: number;
+  tax_type_id?: number;
+  is_preferred?: boolean;
+  is_simples_optante?: boolean;
+
+  // ICMS — alíquota
   icms_pct_contrib: number;
   icms_pct_non_contrib: number;
+  legal_device_icms_contrib_id?: number;
+  legal_device_icms_non_contrib_id?: number;
   cst_icms_contrib: string;
   cst_icms_non_contrib: string;
+  cst_icms_contrib_dev?: string;
+  cst_icms_non_contrib_dev?: string;
+  cst_situation_b?: string;
+  csosn_icms?: string;
+  cod_beneficio_fiscal?: string;
+
+  // ICMS — redução
+  icms_red_pct_contrib?: number;
+  icms_red_target_contrib?: string;
+  legal_device_icms_red_contrib_id?: number;
+  icms_red_pct_non_contrib?: number;
+  icms_red_target_non_contrib?: string;
+  legal_device_icms_red_non_contrib_id?: number;
+
+  // ICMS — diferimento
+  icms_deferral_pct?: number;
+  icms_deferral_target?: string;
+  legal_device_icms_deferral_id?: number;
+  cod_benef_rbc?: string;
+
+  // ICMS — substituição
+  icms_subst_pct_contrib?: number;
+  icms_subst_pct_non_contrib?: number;
+  icms_subst_pct_contrib_uc?: number;
+  icms_subst_red_pct?: number;
+  legal_device_icms_subst_contrib_id?: number;
+  legal_device_icms_subst_non_contrib_id?: number;
+  legal_device_icms_subst_red_id?: number;
+  icms_internal_pct?: number;
+  bc_icms_st_modality?: string;
+  icms_pct_for_st_contrib?: number;
+  icms_pct_for_st_non_contrib?: number;
+
+  // ICMS — acréscimos (FCP e outros)
+  icms_acres_pct_contrib?: number;
+  icms_acres_type_contrib?: string;
+  icms_acres_sum_contrib?: boolean;
+  icms_acres_pct_non_contrib?: number;
+  icms_acres_type_non_contrib?: string;
+  icms_acres_sum_non_contrib?: boolean;
+  icms_st_acres_pct_contrib?: number;
+  icms_st_acres_type_contrib?: string;
+  icms_st_acres_sum_contrib?: boolean;
+  icms_st_acres_pct_non_contrib?: number;
+  icms_st_acres_type_non_contrib?: string;
+  icms_st_acres_sum_non_contrib?: boolean;
+  fcp_st_partilha_pct?: number;
+
+  // IPI
+  ipi_red_pct_contrib?: number;
+  ipi_red_target_contrib?: string;
+  legal_device_ipi_contrib_id?: number;
+  ipi_red_pct_non_contrib?: number;
+  ipi_red_target_non_contrib?: string;
+  legal_device_ipi_non_contrib_id?: number;
+  cst_ipi_exit?: string;
+  cst_ipi_entry?: string;
+
+  // FCI, Zona Franca e benefícios
+  icms_pct_origins_1238?: number;
+  icms_subst_pct_origins_1238?: number;
+  calc_base_red_fci?: boolean;
+  cst_icms_fci?: string;
+  uses_icms_zona_franca?: boolean;
+  dif_aliq_st_contrib_uc?: number;
+  cod_benef_contrib?: string;
+  cod_benef_non_contrib?: string;
+  codigo_anexo_sn?: string;
+  origem_clas_ipi?: string;
+  description_full?: string;
+
+  // DIFAL
+  icms_difal_red_pct?: number;
+  icms_difal_type?: string;
+  difal_purchase_red_pct?: number;
+  difal_purchase_red_target?: string;
 }
 export interface ParametroIcmsIpi extends ParametroIcmsIpiDTO { id: number; is_active?: boolean; }
 

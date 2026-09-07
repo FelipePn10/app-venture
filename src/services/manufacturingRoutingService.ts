@@ -6,6 +6,20 @@ const BASE = '/api/routing';
 export type OpOrigin = 'INTERNA' | 'EXTERNA' | 'TERCEIROS';
 export const OP_ORIGINS: OpOrigin[] = ['INTERNA', 'EXTERNA', 'TERCEIROS'];
 
+/** Unidade em que os tempos da operação foram cadastrados. */
+export type TimeUnit = 'MIN' | 'HORA' | 'DIA';
+export const TIME_UNITS: { value: TimeUnit; label: string }[] = [
+  { value: 'MIN', label: 'Minutos' },
+  { value: 'HORA', label: 'Horas' },
+  { value: 'DIA', label: 'Dias' },
+];
+
+/**
+ * O que é remetido ao terceiro quando a operação sai da fábrica: os itens da
+ * demanda, o próprio item da ordem, um item genérico de serviço, ou nada.
+ */
+export const THIRD_PARTY_REMITTANCES = ['DEMAND_ITEMS', 'ORDER_ITEM', 'GENERIC', 'NONE'] as const;
+
 export interface OperationDTO {
   id?: number;
   code?: number;
@@ -13,8 +27,33 @@ export interface OperationDTO {
   description?: string;
   origin: OpOrigin;
   situation?: string;
+  default_work_center_id?: number;
+  /** Tempo achatado legado; quando zero, o cálculo usa `run_time`. */
   standard_time: number;
   setup_time?: number;
+
+  /**
+   * Modelo de tempo completo, no padrão que SAP e TOTVS usam:
+   * a preparação é por lote, o tempo de máquina e o de mão de obra são por
+   * `run_base_qty` peças, e fila/espera/movimentação são fixos por lote.
+   * Sem separar isso, o tempo de um lote de 1 peça e o de 500 saem iguais.
+   */
+  run_time?: number;
+  labor_time?: number;
+  run_base_qty?: number;
+  queue_time?: number;
+  wait_time?: number;
+  move_time?: number;
+  crew_size?: number;
+  time_unit?: TimeUnit;
+
+  /** Terceirização — vale para origem EXTERNA/TERCEIROS. */
+  supplier_id?: number;
+  service_item_code?: string;
+  cost_per_unit?: number;
+  lead_time_days?: number;
+  third_party_remittance?: string;
+
   is_active?: boolean;
 }
 
@@ -27,7 +66,22 @@ export interface RouteDTO {
   description?: string;
   situation?: string;
   is_standard: boolean;
+  /** Vigência do roteiro: fora dela o MRP não deve usá-lo. */
+  valid_from?: string;
+  valid_to?: string;
   is_active?: boolean;
+}
+
+/** Tempos já resolvidos pelo backend, em horas. */
+export interface OperationTimeBreakdown {
+  setup_hours: number;
+  run_hours: number;
+  labor_hours: number;
+  run_base_qty: number;
+  queue_hours: number;
+  wait_hours: number;
+  move_hours: number;
+  crew_size: number;
 }
 
 export interface RouteOperationDTO {
@@ -35,9 +89,31 @@ export interface RouteOperationDTO {
   route_id?: number;
   sequence: number;
   operation_id: number;
+  operation_name?: string;
   work_center_id?: number;
+  work_center_name?: string;
   standard_time?: number;
   setup_time?: number;
+  effective_std_time?: number;
+  effective_setup?: number;
+  /** Tempos resolvidos: o que a operação realmente consome. */
+  eff_time?: OperationTimeBreakdown;
+  /** Sobreposições do modelo de tempo — vazio herda da operação. */
+  run_time?: number;
+  labor_time?: number;
+  run_base_qty?: number;
+  queue_time?: number;
+  wait_time?: number;
+  move_time?: number;
+  crew_size?: number;
+  time_unit?: TimeUnit;
+  /** Terceirização — vazio herda da operação. */
+  supplier_id?: number;
+  service_item_code?: string;
+  cost_per_unit?: number;
+  lead_time_days?: number;
+  third_party_remittance?: string;
+  situation?: string;
   notes?: string;
 }
 
@@ -68,8 +144,22 @@ function parseOperation(raw: unknown): OperationDTO {
     description: parseStr(o, 'description', 'Description') || undefined,
     origin: (parseStr(o, 'origin', 'Origin') || 'INTERNA') as OpOrigin,
     situation: parseStr(o, 'situation', 'Situation') || undefined,
+    default_work_center_id: parseNum(o, 'default_work_center_id', 'DefaultWorkCenterID') || undefined,
     standard_time: parseNum(o, 'standard_time', 'StandardTime'),
     setup_time: parseNum(o, 'setup_time', 'SetupTime'),
+    run_time: parseNum(o, 'run_time', 'RunTime'),
+    labor_time: parseNum(o, 'labor_time', 'LaborTime'),
+    run_base_qty: parseNum(o, 'run_base_qty', 'RunBaseQty') || 1,
+    queue_time: parseNum(o, 'queue_time', 'QueueTime'),
+    wait_time: parseNum(o, 'wait_time', 'WaitTime'),
+    move_time: parseNum(o, 'move_time', 'MoveTime'),
+    crew_size: parseNum(o, 'crew_size', 'CrewSize') || 1,
+    time_unit: (parseStr(o, 'time_unit', 'TimeUnit') || 'HORA') as TimeUnit,
+    supplier_id: parseNum(o, 'supplier_id', 'SupplierID') || undefined,
+    service_item_code: parseStr(o, 'service_item_code', 'ServiceItemCode') || undefined,
+    cost_per_unit: parseNum(o, 'cost_per_unit', 'CostPerUnit') || undefined,
+    lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
+    third_party_remittance: parseStr(o, 'third_party_remittance', 'ThirdPartyRemittance') || undefined,
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };
 }
@@ -84,6 +174,8 @@ function parseRoute(raw: unknown): RouteDTO {
     description: parseStr(o, 'description', 'Description') || undefined,
     situation: parseStr(o, 'situation', 'Situation') || undefined,
     is_standard: parseBool(o, 'is_standard', 'IsStandard'),
+    valid_from: parseStr(o, 'valid_from', 'ValidFrom') || undefined,
+    valid_to: parseStr(o, 'valid_to', 'ValidTo') || undefined,
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };
 }
@@ -95,9 +187,43 @@ function parseRouteOp(raw: unknown): RouteOperationDTO {
     sequence: parseNum(o, 'sequence', 'Sequence'),
     operation_id: parseNum(o, 'operation_id', 'OperationID'),
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
+    operation_name: parseStr(o, 'operation_name', 'OperationName') || undefined,
+    work_center_name: parseStr(o, 'work_center_name', 'WorkCenterName') || undefined,
     standard_time: parseNum(o, 'standard_time', 'StandardTime') || undefined,
     setup_time: parseNum(o, 'setup_time', 'SetupTime') || undefined,
+    effective_std_time: parseNum(o, 'effective_std_time', 'EffectiveStdTime') || undefined,
+    effective_setup: parseNum(o, 'effective_setup', 'EffectiveSetup') || undefined,
+    eff_time: parseBreakdown(o['eff_time'] ?? o['EffTime']),
+    run_time: parseNum(o, 'run_time', 'RunTime') || undefined,
+    labor_time: parseNum(o, 'labor_time', 'LaborTime') || undefined,
+    run_base_qty: parseNum(o, 'run_base_qty', 'RunBaseQty') || undefined,
+    queue_time: parseNum(o, 'queue_time', 'QueueTime') || undefined,
+    wait_time: parseNum(o, 'wait_time', 'WaitTime') || undefined,
+    move_time: parseNum(o, 'move_time', 'MoveTime') || undefined,
+    crew_size: parseNum(o, 'crew_size', 'CrewSize') || undefined,
+    time_unit: (parseStr(o, 'time_unit', 'TimeUnit') || undefined) as TimeUnit | undefined,
+    supplier_id: parseNum(o, 'supplier_id', 'SupplierID') || undefined,
+    service_item_code: parseStr(o, 'service_item_code', 'ServiceItemCode') || undefined,
+    cost_per_unit: parseNum(o, 'cost_per_unit', 'CostPerUnit') || undefined,
+    lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
+    third_party_remittance: parseStr(o, 'third_party_remittance', 'ThirdPartyRemittance') || undefined,
+    situation: parseStr(o, 'situation', 'Situation') || undefined,
     notes: parseStr(o, 'notes', 'Notes') || undefined,
+  };
+}
+
+function parseBreakdown(raw: unknown): OperationTimeBreakdown | undefined {
+  if (!raw) return undefined;
+  const o = unwrapObject(raw);
+  return {
+    setup_hours: parseNum(o, 'setup_hours', 'Setup'),
+    run_hours: parseNum(o, 'run_hours', 'Run'),
+    labor_hours: parseNum(o, 'labor_hours', 'Labor'),
+    run_base_qty: parseNum(o, 'run_base_qty', 'RunBaseQty') || 1,
+    queue_hours: parseNum(o, 'queue_hours', 'Queue'),
+    wait_hours: parseNum(o, 'wait_hours', 'Wait'),
+    move_hours: parseNum(o, 'move_hours', 'Move'),
+    crew_size: parseNum(o, 'crew_size', 'CrewSize') || 1,
   };
 }
 function parseEdge(raw: unknown): EdgeDTO {

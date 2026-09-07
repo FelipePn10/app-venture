@@ -10,6 +10,24 @@ import { ExportButton } from "@/components/ui/ExportButton";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
 const NATURE_LABEL: Record<number, string> = { 0: "Genérico", 1: "Configurado", 2: "Item Base" };
+
+/**
+ * A natureza deixou de ser exclusiva: um item pode ser base e configurado ao
+ * mesmo tempo. Mostrar só o enum esconderia metade da verdade, então listamos
+ * os marcadores e caímos na natureza quando o backend não os devolve.
+ */
+function naturezaLegivel(i: ItemDTO): string {
+  const marcas = [
+    i.is_base && "Item Base",
+    i.is_configured && "Configurado",
+    i.is_prototype && "Protótipo",
+    i.is_tool && "Ferramenta",
+    i.is_process_item && "Item de Processo",
+  ].filter(Boolean) as string[];
+  if (marcas.length > 0) return marcas.join(" + ");
+  if (i.nature == null) return "—";
+  return NATURE_LABEL[i.nature] ?? String(i.nature);
+}
 export function Vitm0100Page(): JSX.Element {
   const [items, setItems] = useState<ItemDTO[]>([]);
   const [filter, setFilter] = useState("");
@@ -67,7 +85,7 @@ export function Vitm0100Page(): JSX.Element {
               {filtered.slice(0, 200).map((i) => (
                 <tr key={i.code} className={selected?.code === i.code ? "erp-row-sel" : ""}>
                   <td>{i.code}</td><td>{i.description ?? "—"}</td>
-                  <td>{i.nature != null ? NATURE_LABEL[i.nature] ?? i.nature : "—"}</td>
+                  <td>{naturezaLegivel(i)}</td>
                   <td>{i.eng_type ?? "—"}</td><td>{i.llc ?? "—"}</td><td>{i.type_mrp ?? "—"}</td><td>{i.situation ?? "—"}</td>
                   <td><button className="erp-btn" onClick={() => abrir(i)} disabled={busy}>Prontidão</button></td>
                 </tr>

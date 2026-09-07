@@ -42,6 +42,7 @@ export interface CuttingPlanDTO {
 
 export interface CuttingPartDTO {
   id?: number;
+  item_code?: number;
   label?: string;
   length_mm?: number;
   width_mm?: number;
@@ -49,6 +50,21 @@ export interface CuttingPartDTO {
   grain?: string;
   allow_rotation?: boolean;
   quantity: number;
+
+  /**
+   * Fita de borda: quais lados da peça levam fita, qual fita e quanto custa o
+   * metro. Em movelaria a fita responde por boa parte do custo da peça e pelo
+   * tempo de coladeira — deixar isso de fora torna o plano de corte incompleto
+   * como orçamento e como ordem de produção.
+   */
+  edge_top?: boolean;
+  edge_bottom?: boolean;
+  edge_left?: boolean;
+  edge_right?: boolean;
+  band_item_code?: number;
+  band_cost_per_m?: number;
+  /** De onde a peça veio (pedido, ordem, projeto). */
+  source_ref?: string;
 }
 
 export interface CuttingStockDTO {

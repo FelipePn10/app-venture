@@ -13,6 +13,7 @@ import {
   changeSalesOrderStatus,
   createSalesOrderItem,
   cancelSalesOrderItem,
+  PRESENCE_INDICATORS,
 } from "@/services/salesOrderService";
 import { errMessage, parseNum } from "@/services/fiscalShared";
 import { findSalesTablesForItem } from "@/services/salesPricingService";
@@ -20,7 +21,7 @@ import { getCustomer } from "@/services/customerService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadCustomers, loadEstablishments, loadItems, loadPaymentConditions, loadWarehouses, type LookupOption } from "@/services/lookups";
+import { loadCarriers, loadCustomers, loadEstablishments, loadInvoiceTypes, loadItems, loadPaymentConditions, loadWarehouses, type LookupOption } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type DetailTab = "dados" | "itens";
@@ -305,6 +306,56 @@ export function Vvnd0200Page(): JSX.Element {
                     <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" value={newOrder.commission_pct || ""} onChange={(e) => setO("commission_pct", Number(e.target.value))} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" type="date" value={newOrder.emission_date ?? ""} onChange={(e) => setO("emission_date", e.target.value)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input" type="date" value={newOrder.delivery_date ?? ""} onChange={(e) => setO("delivery_date", e.target.value)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Portador</label><input className="erp-input num" type="number" value={newOrder.bearer_code ?? ""} onChange={(e) => setO("bearer_code", e.target.value ? Number(e.target.value) : undefined)} /><span className="erp-field-hint">Banco ou carteira de cobrança do título.</span></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Canal de venda</label><input className="erp-input" value={newOrder.sales_channel ?? ""} placeholder="Ex.: representante, e-commerce" onChange={(e) => setO("sales_channel", e.target.value || undefined)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Pedido do representante</label><input className="erp-input num" type="number" value={newOrder.representative_order_number ?? ""} onChange={(e) => setO("representative_order_number", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                  </div>
+                </div>
+
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Nota fiscal</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c4">
+                      <label className="erp-label">Indicador de presença</label>
+                      <select className="erp-input" value={newOrder.presence_indicator ?? ""} onChange={(e) => setO("presence_indicator", e.target.value || undefined)}>
+                        <option value="">Usar o padrão do estabelecimento</option>
+                        {PRESENCE_INDICATORS.map((p) => <option key={p.value} value={p.value}>{p.value} — {p.label}</option>)}
+                      </select>
+                      <span className="erp-field-hint">Campo obrigatório da NF-e (indPres). Errado, a SEFAZ rejeita a nota.</span>
+                    </div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Tipo de NF padrão</label><LookupField value={newOrder.default_nf_type ? Number(newOrder.default_nf_type) : undefined} loader={loadInvoiceTypes} entityLabel="tipo de nota" placeholder="Do cadastro do cliente" clearable onChange={(code) => setO("default_nf_type", code ? String(code) : undefined)} /></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Estabelecimento de cobrança</label><LookupField value={newOrder.collection_establishment_code} loader={loadEstablishments} entityLabel="estabelecimento" placeholder="O mesmo do pedido" clearable onChange={(code) => setO("collection_establishment_code", code ? Number(code) : undefined)} /></div>
+                  </div>
+                </div>
+
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Transporte e expedição</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField value={newOrder.carrier_code} loader={loadCarriers} entityLabel="transportadora" placeholder="Opcional" clearable onChange={(code) => setO("carrier_code", code ? Number(code) : undefined)} /></div>
+                    <div className="erp-field erp-c2">
+                      <label className="erp-label">Frete</label>
+                      <select className="erp-input" value={newOrder.freight_type ?? ""} onChange={(e) => setO("freight_type", e.target.value || undefined)}>
+                        <option value="">Não informado</option>
+                        <option value="CIF">CIF — remetente paga</option>
+                        <option value="FOB">FOB — destinatário paga</option>
+                        <option value="TERCEIROS">Terceiros</option>
+                        <option value="SEM_FRETE">Sem frete</option>
+                      </select>
+                    </div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Volumes</label><input className="erp-input num" type="number" value={newOrder.volume_quantity || ""} onChange={(e) => setO("volume_quantity", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Espécie</label><input className="erp-input" value={newOrder.volume_type ?? ""} placeholder="caixa, palete" onChange={(e) => setO("volume_type", e.target.value || undefined)} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Peso líquido (kg)</label><input className="erp-input num" type="number" step="0.001" value={newOrder.net_weight || ""} onChange={(e) => setO("net_weight", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Peso bruto (kg)</label><input className="erp-input num" type="number" step="0.001" value={newOrder.gross_weight || ""} onChange={(e) => setO("gross_weight", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c12"><span className="erp-field-hint">Peso e volume alimentam o romaneio e os campos de transporte da NF-e.</span></div>
+                  </div>
+                </div>
+
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Projeto</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c3"><label className="erp-label">Código do projeto</label><input className="erp-input" value={newOrder.project_code ?? ""} onChange={(e) => setO("project_code", e.target.value || undefined)} /></div>
+                    <div className="erp-field erp-c6"><label className="erp-label">Nome do projeto</label><input className="erp-input" value={newOrder.project_name ?? ""} onChange={(e) => setO("project_name", e.target.value || undefined)} /></div>
+                    <div className="erp-field erp-c12"><span className="erp-field-hint">Usado para agrupar pedidos de uma mesma obra ou contrato.</span></div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -364,6 +415,12 @@ export function Vvnd0200Page(): JSX.Element {
                           <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço da tabela</label><input className="erp-input num" type="number" value={newItem.unit_price || ""} readOnly title="Preço calculado pela tabela selecionada para esta linha" /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">Desc.%</label><input className="erp-input num" type="number" value={newItem.discount_pct || ""} onChange={(e) => setI("discount_pct", Number(e.target.value))} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" value={newItem.lot ?? ""} placeholder="Se o item é rastreado" onChange={(e) => setI("lot", e.target.value || undefined)} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Tipo de NF da linha</label><LookupField value={newItem.nf_type ? Number(newItem.nf_type) : undefined} loader={loadInvoiceTypes} entityLabel="tipo de nota" placeholder="Do pedido" clearable onChange={(c) => setI("nf_type", c ? String(c) : undefined)} /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Entrega combinada</label><input className="erp-input" value={newItem.customer_delivery ?? ""} placeholder="O que foi prometido ao cliente" onChange={(e) => setI("customer_delivery", e.target.value || undefined)} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Peso líq. unitário</label><input className="erp-input num" type="number" step="0.001" value={newItem.unit_weight_net || ""} onChange={(e) => setI("unit_weight_net", Number(e.target.value))} /></div>
+                          <div className="erp-field erp-c2"><label className="erp-label">Peso bruto unitário</label><input className="erp-input num" type="number" step="0.001" value={newItem.unit_weight_gross || ""} onChange={(e) => setI("unit_weight_gross", Number(e.target.value))} /></div>
+                          <div className="erp-field erp-c12"><span className="erp-field-hint">Peso em branco usa o do cadastro do item; preencha só quando esta venda for diferente.</span></div>
                           <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={adicionarItem} disabled={busy}>{busy && <span className="erp-spin" />}Adicionar item ao pedido</button></div>
                         </div>
                       </div>

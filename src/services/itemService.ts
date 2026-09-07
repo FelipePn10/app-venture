@@ -21,6 +21,15 @@ export interface ItemDTO {
   /** Código comercial do item. Nunca converter para número. */
   code?: string;
   nature?: number;
+  /**
+   * Marcadores independentes. Um item pode ser base **e** configurado ao mesmo
+   * tempo, então `nature` sozinha não responde mais "isto é um item base?".
+   */
+  is_base?: boolean;
+  is_configured?: boolean;
+  is_prototype?: boolean;
+  is_tool?: boolean;
+  is_process_item?: boolean;
   description?: string;
   situation?: string;
   health?: string;
@@ -99,6 +108,11 @@ function parseItem(raw: unknown): ItemDTO {
     id: parseNum(o, 'id', 'ID') || undefined,
     code: parseStr(o, 'code', 'Code') || undefined,
     nature: parseNum(o, 'nature', 'Nature'),
+    is_base: parseBool(o, 'is_base', 'IsBase'),
+    is_configured: parseBool(o, 'is_configured', 'IsConfigured'),
+    is_prototype: parseBool(o, 'is_prototype', 'IsPrototype'),
+    is_tool: parseBool(o, 'is_tool', 'IsTool'),
+    is_process_item: parseBool(o, 'is_process_item', 'IsProcessItem'),
     description: parseStr(pdm, 'description_technique', 'DescriptionTechnique') || parseStr(o, 'description', 'Description') || undefined,
     situation: parseStr(o, 'situation', 'Situation') || undefined,
     health: parseStr(o, 'health', 'Health') || undefined,
@@ -179,5 +193,17 @@ export async function getActivationReadiness(code: string): Promise<ActivationRe
  */
 export async function createItem(dto: Obj): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/create`, { created_by: currentUserId(), ...dto });
+  return unwrapObject(data);
+}
+
+/**
+ * Altera um item já cadastrado — `PUT /api/items/{code}`.
+ *
+ * O corpo é parcial por natureza: o que não for enviado permanece como está no
+ * banco. Isso é o que permite a tela gravar só a pasta que o usuário mexeu sem
+ * apagar o resto do cadastro.
+ */
+export async function updateItem(code: string, dto: Obj): Promise<Obj> {
+  const { data } = await httpClient.put(`${BASE}/${encodeURIComponent(code)}`, dto);
   return unwrapObject(data);
 }

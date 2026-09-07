@@ -11,6 +11,8 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFraction
 const EMPTY: NfseDTO = {
   numero_rps: 0, serie_rps: "1", tipo_rps: 1, data_emissao: today(), natureza_operacao: 1, optante_simples: false,
   tomador_cnpj_cpf: "", tomador_razao_social: "", tomador_email: "", tomador_codigo_municipio: "", tomador_uf: "",
+  tomador_logradouro: "", tomador_numero: "", tomador_complemento: "", tomador_bairro: "", tomador_cep: "",
+  incentivador_cultural: false,
   item_lista_servico: "", codigo_tributario_municipio: "", discriminacao: "", codigo_municipio: "",
   valor_servicos: 0, valor_deducoes: 0, aliquota_iss: 0.05, iss_retido: false,
 };
@@ -116,6 +118,13 @@ export function Vnfs0100Page(): JSX.Element {
               <div className="erp-field erp-c5"><label className="erp-label erp-req">Razão social</label><input className="erp-input" value={form.tomador_razao_social} onChange={(e) => setF("tomador_razao_social", e.target.value)} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Cód. município</label><input className="erp-input" value={form.tomador_codigo_municipio} onChange={(e) => setF("tomador_codigo_municipio", e.target.value)} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">UF</label><input className="erp-input" maxLength={2} value={form.tomador_uf} onChange={(e) => setF("tomador_uf", e.target.value.toUpperCase())} /></div>
+              <div className="erp-field erp-c4"><label className="erp-label">Logradouro</label><input className="erp-input" value={form.tomador_logradouro ?? ""} onChange={(e) => setF("tomador_logradouro", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Número</label><input className="erp-input" value={form.tomador_numero ?? ""} onChange={(e) => setF("tomador_numero", e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Complemento</label><input className="erp-input" value={form.tomador_complemento ?? ""} onChange={(e) => setF("tomador_complemento", e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Bairro</label><input className="erp-input" value={form.tomador_bairro ?? ""} onChange={(e) => setF("tomador_bairro", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">CEP</label><input className="erp-input" value={form.tomador_cep ?? ""} onChange={(e) => setF("tomador_cep", e.target.value)} /></div>
+              <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={!!form.incentivador_cultural} onChange={(e) => setF("incentivador_cultural", e.target.checked)} /> Incentivador cultural</label></div>
+              <div className="erp-field erp-c12"><span className="erp-field-hint">A prefeitura recusa o RPS sem o endereço completo do tomador.</span></div>
               <div className="erp-field erp-c6"><label className="erp-label">E-mail</label><input className="erp-input" value={form.tomador_email ?? ""} onChange={(e) => setF("tomador_email", e.target.value)} /></div>
             </div></div>
 

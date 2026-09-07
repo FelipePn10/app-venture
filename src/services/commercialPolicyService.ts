@@ -25,7 +25,10 @@ export interface CommercialPolicyDTO {
   max_percent?: number;
   max_value?: number;
   min_gross_value?: number;
+  /** Teto do valor bruto do pedido em que a política se aplica. */
+  max_gross_value?: number;
   min_quantity?: number;
+  max_quantity?: number;
   priority?: number;
   sequence?: number;
   stackable?: boolean;
@@ -99,7 +102,9 @@ function parsePolicy(raw: unknown): CommercialPolicyDTO {
     max_percent: parseNum(o, 'max_percent', 'MaxPercent'),
     max_value: parseNum(o, 'max_value', 'MaxValue'),
     min_gross_value: parseNum(o, 'min_gross_value', 'MinGrossValue'),
+    max_gross_value: parseNum(o, 'max_gross_value', 'MaxGrossValue'),
     min_quantity: parseNum(o, 'min_quantity', 'MinQuantity'),
+    max_quantity: parseNum(o, 'max_quantity', 'MaxQuantity'),
     priority: parseNum(o, 'priority', 'Priority'),
     sequence: parseNum(o, 'sequence', 'Sequence'),
     stackable: parseBool(o, 'stackable', 'Stackable'),

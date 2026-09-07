@@ -46,7 +46,11 @@
     "test:suprimentos": "node scripts/validate-suprimentos.mjs",
     "test:almoxarifado": "node scripts/validate-almoxarifado.mjs",
     "test:planejamento": "node scripts/validate-planejamento.mjs",
-    "version:sync": "node scripts/set-release-version.mjs"
+    "version:sync": "node scripts/set-release-version.mjs",
+    "test:compras": "node scripts/validate-compras.mjs",
+    "audit:rotas": "node scripts/audit-route-sweep.mjs",
+    "audit:payload": "node scripts/audit-payload-coverage.mjs",
+    "test:cobertura": "node scripts/validate-cobertura-payload.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",
