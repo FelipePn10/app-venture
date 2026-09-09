@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.18] — 2026-09-09
+
 ## Correções
 - **Campos de busca diziam "nenhum registro cadastrado" quando na verdade a consulta tinha falhado.** Qualquer instabilidade — token expirado, rede oscilando — transformava a lista em vazia, e o vazio ficava guardado pelo resto da sessão: mesmo depois de a conexão voltar, o campo continuava mudo e só restava digitar o código de cabeça. Agora o campo mostra o que deu errado e oferece **Tentar de novo**. Vale para todos os campos de busca do sistema.
 - **Máquinas e tipos de máquina não podiam ser alterados.** Não havia como corrigir nome, capacidade ou qualquer outro dado depois de cadastrar — só criar e excluir. Os dois passaram a ter alteração.
