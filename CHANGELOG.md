@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## Correções
+- **Campos de busca diziam "nenhum registro cadastrado" quando na verdade a consulta tinha falhado.** Qualquer instabilidade — token expirado, rede oscilando — transformava a lista em vazia, e o vazio ficava guardado pelo resto da sessão: mesmo depois de a conexão voltar, o campo continuava mudo e só restava digitar o código de cabeça. Agora o campo mostra o que deu errado e oferece **Tentar de novo**. Vale para todos os campos de busca do sistema.
+- **Máquinas e tipos de máquina não podiam ser alterados.** Não havia como corrigir nome, capacidade ou qualquer outro dado depois de cadastrar — só criar e excluir. Os dois passaram a ter alteração.
+- Na fila da máquina, a **prioridade manual** era gravada e nunca reaparecia na tela; e excluir um item que não existia respondia "sucesso". Ambos corrigidos.
+- A fila de uma empresa podia ser lida e alterada por outra informando o código. Todas as consultas da agenda passaram a respeitar a empresa da sessão.
+- O tipo de máquina "Injeção" era recusado na gravação. "Moinho" e "Imprensa" viraram **Fresadora** e **Prensa**, que é como a fábrica chama.
+- As mensagens de recusa do cadastro de item que ainda saíam em inglês foram traduzidas, e a da curva ABC passou a dizer o nome do campo na tela.
+
+## Novidades
+- **Cadastro de máquina completo (VMAQ0200).** A tela pedia sete campos; o sistema guarda vinte. Entraram centro de custo, localização no chão de fábrica, uso do recurso, marca, fornecedor, data de aquisição, responsável pela manutenção, tempo de preparação e os marcadores **gargalo** e **preferencial** — que são o que o sequenciamento usa para decidir o que roda onde. O formulário foi dividido em blocos (identificação, capacidade, chão de fábrica, aquisição) e a lista mostra os marcadores como etiquetas.
+- **Cadastro de tipos de máquina na própria tela**, com alteração e o campo *exige operador* — antes só existia pela tela genérica de rotinas.
+- **Telefone e e-mail do contato do fornecedor** podem ser informados junto com o contato, e aparecem na lista. Antes o contato nascia sem forma de ser contatado.
+
+## Melhorias
+- A curva ABC do item ficou como campo próprio, com as três opções explicadas — ela decide o rigor do controle de estoque, não é a classificação do item.
+
 ## [v1.1.17] — 2026-09-09
 
 ## Correções

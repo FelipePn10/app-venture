@@ -1,16 +1,22 @@
 import axios from 'axios';
 import { httpClient } from '@/services/httpClient';
 
+/**
+ * Naturezas do recurso. Os valores são os do enum do backend — `INJECT` não
+ * existe lá (é `INJECTION`) e era recusado na gravação. Os rótulos passaram a
+ * usar o vocabulário de chão de fábrica: `MILL` é fresadora (não moinho) e
+ * `PRESS` é prensa (não imprensa).
+ */
 export const MACHINE_TYPE_ENUMS = [
-  { value: 'CUT',      label: 'Corte' },
-  { value: 'BEND',     label: 'Dobrar' },
-  { value: 'WELD',     label: 'Soldar' },
-  { value: 'ASSEMBLE', label: 'Montar' },
-  { value: 'PAINT',    label: 'Pintar' },
-  { value: 'LATHE',    label: 'Torno' },
-  { value: 'MILL',     label: 'Moinho' },
-  { value: 'PRESS',    label: 'Imprensa' },
-  { value: 'INJECT',   label: 'Injeção' },
+  { value: 'CUT',       label: 'Corte' },
+  { value: 'BEND',      label: 'Dobra' },
+  { value: 'WELD',      label: 'Solda' },
+  { value: 'ASSEMBLE',  label: 'Montagem' },
+  { value: 'PAINT',     label: 'Pintura' },
+  { value: 'LATHE',     label: 'Torno' },
+  { value: 'MILL',      label: 'Fresadora' },
+  { value: 'PRESS',     label: 'Prensa' },
+  { value: 'INJECTION', label: 'Injeção' },
 ] as const;
 
 export type MachineTypeEnum = typeof MACHINE_TYPE_ENUMS[number]['value'];
@@ -24,6 +30,8 @@ export interface MachineType {
   name: string;
   description?: string | null;
   type: string;
+  /** A operação exige um operador dedicado? Entra no cálculo de mão de obra. */
+  requires_operator?: boolean;
   is_active: boolean;
 }
 
@@ -32,7 +40,8 @@ export interface CreateMachineTypeDTO {
   name: string;
   description?: string | null;
   type: string;
-  created_by: string;
+  requires_operator?: boolean;
+  created_by?: string;
   is_active: boolean;
 }
 
@@ -49,6 +58,7 @@ function parse(raw: unknown): MachineType | null {
     name,
     description: (o.description ?? o.Description ?? null) as string | null,
     type: String(o.type ?? o.Type ?? ''),
+    requires_operator: o.requires_operator === true || o.RequiresOperator === true,
     is_active: o.is_active !== false && o.IsActive !== false,
   };
 }
@@ -81,4 +91,12 @@ export async function getMachineTypeByCode(code: number): Promise<MachineType | 
 
 export async function createMachineType(dto: CreateMachineTypeDTO): Promise<void> {
   await httpClient.post('/api/machine/types/create', dto);
+}
+
+/**
+ * Altera o tipo de máquina. Assim como a máquina, o caso de uso existia sem
+ * rota — e o SQL comparava o código com o parâmetro de `is_active`.
+ */
+export async function updateMachineType(code: number, dto: CreateMachineTypeDTO): Promise<void> {
+  await httpClient.put(`/api/machine/types/${code}`, dto);
 }

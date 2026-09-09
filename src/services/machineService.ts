@@ -22,6 +22,19 @@ export const CAPACITY_PERIODS = [
   { value: 'DIA',    label: 'Por Dia' },
 ] as const;
 
+/**
+ * Unidade do tempo de preparação. O banco só aceita MINUTE/HOUR (constraint),
+ * mas quem usa a tela lê "minuto"/"hora".
+ */
+export const PREPARATION_TIME_UNITS = [
+  { value: 'MINUTE', label: 'Minutos' },
+  { value: 'HOUR', label: 'Horas' },
+] as const;
+
+export function preparationUnitLabel(v?: string) {
+  return PREPARATION_TIME_UNITS.find((u) => u.value === v)?.label ?? 'Minutos';
+}
+
 export type CapacityUnit   = typeof CAPACITY_UNITS[number]['value'];
 export type CapacityPeriod = typeof CAPACITY_PERIODS[number]['value'];
 
@@ -39,6 +52,23 @@ export interface Machine {
   capacity_period: string;
   efficiency_rate: number;
   is_active: boolean;
+  /**
+   * Cadastro completo do recurso (equivalente ao FENG0111 do FoccoERP): a que
+   * grupo e calendário a máquina pertence, onde fica no chão de fábrica, se é
+   * gargalo, quanto tempo leva para preparar e quem responde pela manutenção.
+   */
+  resource_group_id?: number | null;
+  calendar_id?: number | null;
+  location?: string | null;
+  is_critical?: boolean;
+  usage_description?: string | null;
+  acquired_on?: string | null;
+  preparation_time?: number;
+  preparation_time_unit?: string;
+  supplier_code?: number | null;
+  brand?: string | null;
+  is_preferred?: boolean;
+  maintenance_responsible_employee_id?: number | null;
 }
 
 export interface CreateMachineDTO {
@@ -51,7 +81,24 @@ export interface CreateMachineDTO {
   capacity_period: string;
   efficiency_rate: number;
   is_active: boolean;
-  created_by: string;
+  /**
+   * Cadastro completo do recurso (equivalente ao FENG0111 do FoccoERP): a que
+   * grupo e calendário a máquina pertence, onde fica no chão de fábrica, se é
+   * gargalo, quanto tempo leva para preparar e quem responde pela manutenção.
+   */
+  resource_group_id?: number | null;
+  calendar_id?: number | null;
+  location?: string | null;
+  is_critical?: boolean;
+  usage_description?: string | null;
+  acquired_on?: string | null;
+  preparation_time?: number;
+  preparation_time_unit?: string;
+  supplier_code?: number | null;
+  brand?: string | null;
+  is_preferred?: boolean;
+  maintenance_responsible_employee_id?: number | null;
+  created_by?: string;
 }
 
 type Obj = Record<string, unknown>;
@@ -73,6 +120,19 @@ function parse(raw: unknown): Machine | null {
     capacity_period: String(o.capacity_period ?? o.CapacityPeriod ?? ''),
     efficiency_rate: Number(o.efficiency_rate ?? o.EfficiencyRate ?? 100),
     is_active: o.is_active !== false && o.IsActive !== false,
+    resource_group_id: o.resource_group_id != null ? Number(o.resource_group_id) : null,
+    calendar_id: o.calendar_id != null ? Number(o.calendar_id) : null,
+    location: (o.location as string) ?? null,
+    is_critical: o.is_critical === true,
+    usage_description: (o.usage_description as string) ?? null,
+    acquired_on: (o.acquired_on as string) ?? null,
+    preparation_time: Number(o.preparation_time ?? 0),
+    preparation_time_unit: String(o.preparation_time_unit ?? 'MINUTE'),
+    supplier_code: o.supplier_code != null ? Number(o.supplier_code) : null,
+    brand: (o.brand as string) ?? null,
+    is_preferred: o.is_preferred === true,
+    maintenance_responsible_employee_id:
+      o.maintenance_responsible_employee_id != null ? Number(o.maintenance_responsible_employee_id) : null,
   };
 }
 
@@ -104,4 +164,14 @@ export async function getMachineByCode(code: number): Promise<Machine | null> {
 
 export async function createMachine(dto: CreateMachineDTO): Promise<void> {
   await httpClient.post('/api/machine/create', dto);
+}
+
+/**
+ * Altera o cadastro da máquina. A rota `PUT /api/machine/{code}` não existia:
+ * o caso de uso estava implementado sem handler, e o SQL comparava o código com
+ * o parâmetro do período de capacidade. Máquina só podia ser criada e excluída.
+ */
+export async function updateMachine(code: number, dto: CreateMachineDTO): Promise<Machine | null> {
+  const res = await httpClient.put<unknown>(`/api/machine/${code}`, dto);
+  return parse(res.data);
 }

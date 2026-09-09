@@ -32,10 +32,26 @@ export interface LookupOption {
 
 export type LookupLoader = () => Promise<LookupOption[]>;
 
-/** Cacheia o resultado de um loader; reset via {@link resetLookups}. */
+/**
+ * Cacheia o resultado de um loader; reset via {@link resetLookups}.
+ *
+ * **Só sucesso é cacheado.** A versão anterior fazia `fn().catch(() => [])`:
+ * qualquer falha (token expirado, rede instável, 500) virava uma lista vazia
+ * — que ficava memorizada pelo resto da sessão. O campo então dizia "Nenhum
+ * registro cadastrado", que é uma afirmação falsa, e o usuário concluía que
+ * precisava digitar o código na mão. Agora a falha é propagada (o campo mostra
+ * o erro e oferece nova tentativa) e o memo é descartado, para a próxima
+ * abertura tentar de novo.
+ */
 function cached(fn: LookupLoader): LookupLoader {
   let promise: Promise<LookupOption[]> | null = null;
-  const wrapped = () => (promise ??= fn().catch(() => []));
+  const wrapped = () => {
+    promise ??= fn().catch((erro: unknown) => {
+      promise = null;
+      throw erro;
+    });
+    return promise;
+  };
   caches.push(() => { promise = null; });
   return wrapped;
 }

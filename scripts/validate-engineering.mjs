@@ -265,4 +265,42 @@ check('item envia a pasta de suprimentos completa',
 check('item lê o planejamento de volta ao abrir',
   /lotMinimo: numText\(planning/.test(vent0200) && /reorder_point/.test(vent0200));
 
+// ── Lookups: falha não pode virar "nenhum registro cadastrado" ─────────────
+//
+// `cached()` fazia `fn().catch(() => [])`: qualquer falha virava lista vazia e
+// ficava memorizada pela sessão. O campo dizia "Nenhum item base cadastrado" —
+// falso — e o usuário digitava o código na mão achando que o cadastro estava
+// vazio. Só sucesso é cacheado; a falha aparece e pode ser repetida.
+const lookupField = read('src/components/ui/LookupField.tsx');
+check('cached() não engole erro do loader', !/\?\?=\s*fn\(\)\.catch\(\(\) => \[\]\)/.test(lookups));
+check('cached() descarta o memo quando a carga falha', /promise = null;\s*\n\s*throw erro;/.test(lookups));
+check('LookupField mostra a mensagem do erro, não "nenhum cadastrado"',
+  /setError\(errMessage\(e, "Não foi possível carregar a lista\."\)\)/.test(lookupField));
+check('LookupField oferece nova tentativa', /erp-lookup-retry/.test(lookupField) && /load\(true\)/.test(lookupField));
+check('LookupField não entra em laço de retentativa', /tentouRef/.test(lookupField));
+
+// ── Cadastro de máquina no nível do mercado (FoccoERP FENG0111) ────────────
+const vmaq = read('src/components/screens/engenharia/Vmaq0200Page.tsx');
+for (const campo of ['location', 'usage_description', 'brand', 'acquired_on',
+  'preparation_time', 'is_critical', 'is_preferred', 'supplier_code',
+  'maintenance_responsible_employee_id', 'cost_center_code']) {
+  check(`VMAQ0200 expõe ${campo} da máquina`, new RegExp(`${campo}`).test(vmaq));
+}
+check('VMAQ0200 permite alterar a máquina', /updateMachine\(/.test(vmaq) && /abrirMaquina/.test(vmaq));
+check('VMAQ0200 cadastra e altera tipo de máquina',
+  /createMachineType\(/.test(vmaq) && /updateMachineType\(/.test(vmaq));
+check('enum de tipo de máquina usa INJECTION (INJECT não existe no backend)',
+  /'INJECTION'/.test(read('src/services/machineTypeService.ts'))
+  && !/'INJECT'/.test(read('src/services/machineTypeService.ts')));
+check('rótulos de máquina usam vocabulário de fábrica (fresadora/prensa)',
+  /Fresadora/.test(read('src/services/machineTypeService.ts'))
+  && /Prensa/.test(read('src/services/machineTypeService.ts')));
+
+// ── Fila da máquina ────────────────────────────────────────────────────────
+const filaSvc = read('src/services/machineScheduleService.ts');
+check('serviço da fila expõe reordenar, apontar, horários e excluir',
+  /reorderMachineSchedule/.test(filaSvc) && /updateMachineScheduleStatus/.test(filaSvc)
+  && /updateMachineScheduleTimes/.test(filaSvc) && /deleteMachineSchedule/.test(filaSvc));
+check('fila lê prioridade manual de volta', /priority_override: parseNum/.test(filaSvc));
+
 console.log(`\n${checks.length}/${checks.length} validações de engenharia aprovadas.`);

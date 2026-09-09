@@ -57,6 +57,20 @@ const expandLocalConstants = (content) => {
   return expanded;
 };
 const technical = endpoints.filter((endpoint) => endpoint.path === '/health' || endpoint.path.startsWith('/health/') || endpoint.path === '/metrics');
+/**
+ * Um caminho do front com `{}` casa qualquer segmento do endpoint. Serve para
+ * CRUDs genéricos, onde o recurso é uma variável e não um literal.
+ */
+function contentCobreComCuringa(content, endpointPath) {
+  const segmentos = endpointPath.split('/').filter(Boolean);
+  if (segmentos.length < 2) return false;
+  for (let i = 1; i < segmentos.length; i += 1) {
+    const comCuringa = '/' + segmentos.map((s, n) => (n === i ? '{}' : s)).join('/');
+    if (content.includes(comCuringa)) return true;
+  }
+  return false;
+}
+
 const missing = [];
 for (const endpoint of endpoints) {
   if (technical.includes(endpoint)) continue;
@@ -66,7 +80,12 @@ for (const endpoint of endpoints) {
   const suffix = normalize(endpoint.path.slice(group.length)) || '/';
   const covered = candidates.some((file) => {
     const content = normalize(expandLocalConstants(file.content));
-    return content.includes(full) || (suffix !== '/' && (content.includes(suffix) || content.includes(suffix.slice(1))));
+    if (content.includes(full) || (suffix !== '/' && (content.includes(suffix) || content.includes(suffix.slice(1))))) return true;
+    // Caminho montado em runtime: `${SUPPORT}/${resource}/${code}` normaliza
+    // para `/api/customers/support/{}/{}` e cobre todos os recursos de apoio.
+    // Sem isso o relatório acusava como ausente cada PUT que passa por um CRUD
+    // genérico — e a lista de "faltando" enchia de falso positivo.
+    return contentCobreComCuringa(content, full);
   });
   if (!covered) missing.push(endpoint);
 }
