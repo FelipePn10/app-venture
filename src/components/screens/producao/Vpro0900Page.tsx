@@ -35,7 +35,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { Code128Barcode } from "@/components/ui/Code128Barcode";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadMachines, loadWarehouses } from "@/services/lookups";
+import { loadItems, loadMachines, loadWarehouses, loadEmployees } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -57,7 +57,7 @@ export function Vpro0900Page(): JSX.Element {
   const [operations, setOperations] = useState<OperationDTO[]>([]);
   const [cost, setCost] = useState<CostDTO | null>(null);
   const [materials, setMaterials] = useState<MaterialDTO[]>([]);
-  const [matForm, setMatForm] = useState({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true });
+  const [matForm, setMatForm] = useState({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true, substituted_item_code: "" });
   const [newOf, setNewOf] = useState<ProductionOrderDTO>(EMPTY_OF);
   const [app, setApp] = useState<AppointmentDTO>(EMPTY_APP);
   const [cons, setCons] = useState<ConsumptionDTO>(EMPTY_CONS);
@@ -136,8 +136,13 @@ export function Vpro0900Page(): JSX.Element {
 
   const incluirMaterial = () => { const id = selected?.id; if (!id) return; void run(async () => {
     if (!matForm.item_code || !matForm.quantity) { setFeedback({ type: "error", message: "Item e quantidade do material são obrigatórios." }); return; }
-    await addMaterial({ production_order_id: id, kind: "DEMAND", item_code: matForm.item_code.trim(), quantity: matForm.quantity, warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined, automatic_issue: matForm.automatic_issue });
-    setMatForm({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true });
+    await addMaterial({
+      production_order_id: id, kind: "DEMAND", item_code: matForm.item_code.trim(), quantity: matForm.quantity,
+      warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined,
+      automatic_issue: matForm.automatic_issue,
+      substituted_item_code: matForm.substituted_item_code ? Number(matForm.substituted_item_code) : undefined,
+    });
+    setMatForm({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true, substituted_item_code: "" });
     setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: "Material incluído na OF." });
   }); };
   const alocarLotes = (m: MaterialDTO) => { const id = selected?.id; if (!id || !m.id) return; void run(async () => {
@@ -239,6 +244,16 @@ export function Vpro0900Page(): JSX.Element {
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Qtd produzida</label><input className="erp-input num" type="number" value={app.produced_qty || ""} onChange={(e) => setApp((p) => ({ ...p, produced_qty: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Qtd refugada</label><input className="erp-input num" type="number" value={app.scrapped_qty || ""} onChange={(e) => setApp((p) => ({ ...p, scrapped_qty: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Backflush depósito</label><input className="erp-input num" type="number" value={app.backflush_warehouse_id || ""} onChange={(e) => setApp((p) => ({ ...p, backflush_warehouse_id: Number(e.target.value) }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Data do apontamento</label>
+                    <input className="erp-input" type="date" value={app.appointment_date ?? ""}
+                      onChange={(e) => setApp((p) => ({ ...p, appointment_date: e.target.value }))} />
+                    <span className="erp-hint">Vazio = hoje. Use para lançar o turno da noite na manhã seguinte.</span></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Máquina</label>
+                    <LookupField value={app.machine_id || undefined} loader={loadMachines} entityLabel="máquina" clearable
+                      onChange={(code) => setApp((p) => ({ ...p, machine_id: code ? Number(code) : undefined }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Operador</label>
+                    <LookupField value={app.employee_id || undefined} loader={loadEmployees} entityLabel="funcionário" clearable
+                      onChange={(code) => setApp((p) => ({ ...p, employee_id: code ? Number(code) : undefined }))} /></div>
                   <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={apontar} disabled={busy || st !== "IN_PROGRESS"}>Apontar</button></div>
                 </div></div>
               </div>
@@ -247,6 +262,20 @@ export function Vpro0900Page(): JSX.Element {
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Item insumo</label><LookupField value={cons.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setCons((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Qtd consumida</label><input className="erp-input num" type="number" value={cons.consumed_qty || ""} onChange={(e) => setCons((p) => ({ ...p, consumed_qty: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Depósito</label><LookupField value={cons.warehouse_id || undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setCons((p) => ({ ...p, warehouse_id: code }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Data do consumo</label>
+                    <input className="erp-input" type="date" value={cons.consumption_date ?? ""}
+                      onChange={(e) => setCons((p) => ({ ...p, consumption_date: e.target.value }))} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Apontamento</label>
+                    <select className="erp-input" value={cons.appointment_id ?? ""}
+                      onChange={(e) => setCons((p) => ({ ...p, appointment_id: e.target.value ? Number(e.target.value) : undefined }))}>
+                      <option value="">Para a ordem inteira</option>
+                      {appointments.filter((a) => a.id).map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {`#${a.id} · ${(a.produced_qty ?? 0).toLocaleString("pt-BR")} peças${a.appointment_date ? ` · ${a.appointment_date.slice(0, 10)}` : ""}`}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="erp-hint">Amarrar o consumo ao apontamento diz quanto de material foi para cada lote produzido.</span></div>
                   <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
                     <button className="erp-btn erp-btn-primary" onClick={consumir} disabled={busy || st !== "IN_PROGRESS"}>Consumir (saída)</button>
                     <button className="erp-btn" onClick={retornarSucata} disabled={busy}>Retornar sucata (entrada)</button>
@@ -316,6 +345,10 @@ export function Vpro0900Page(): JSX.Element {
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={matForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setMatForm((m) => ({ ...m, item_code: String(code ?? "") }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={matForm.quantity} onChange={(e) => setMatForm((m) => ({ ...m, quantity: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><LookupField value={matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setMatForm((m) => ({ ...m, warehouse_id: code ? String(code) : "" }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Substitui o item</label>
+                  <LookupField value={Number(matForm.substituted_item_code) || undefined} loader={loadItems} entityLabel="item" placeholder="Nenhum — está na estrutura" clearable
+                    onChange={(code) => setMatForm((m) => ({ ...m, substituted_item_code: code ? String(code) : "" }))} />
+                  <span className="erp-hint">Preencha quando a fábrica trocar um componente da BOM por outro.</span></div>
                 <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={matForm.automatic_issue} onChange={(e) => setMatForm((m) => ({ ...m, automatic_issue: e.target.checked }))} />baixa auto</label>
                   <button className="erp-btn erp-btn-primary" onClick={incluirMaterial} disabled={busy}>Incluir</button>

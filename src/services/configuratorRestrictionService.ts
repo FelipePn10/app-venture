@@ -52,6 +52,16 @@ export interface Restriction {
   item_code?: string;
   customer_code?: number;
   reason_code?: number;
+  /**
+   * Abrangência por classificação: em vez de repetir a mesma regra em cada item,
+   * ela é escrita uma vez para a classificação inteira. `classification_type` é
+   * o valor que a avaliação compara; `classification_origin` guarda de que
+   * cadastro esse valor veio, para a lista poder mostrar a regra em palavras.
+   */
+  classification_type?: string;
+  classification_origin?: string;
+  /** Abrangência por divisão de vendas. */
+  division_id?: number;
   weight?: number;
   dominants: RestrictionDominant[];
   determinants: RestrictionDeterminant[];
@@ -91,11 +101,24 @@ function parseRestriction(raw: unknown): Restriction {
     item_code: parseStr(o, 'item_code', 'ItemCode') || undefined,
     customer_code: parseNum(o, 'customer_code', 'CustomerCode') || undefined,
     reason_code: parseNum(o, 'reason_code', 'ReasonCode') || undefined,
+    classification_type: parseStr(o, 'classification_type', 'ClassificationType') || undefined,
+    classification_origin: parseStr(o, 'classification_origin', 'ClassificationOrigin') || undefined,
+    division_id: parseNum(o, 'division_id', 'DivisionID') || undefined,
     weight: parseNum(o, 'weight', 'Weight') || undefined,
     dominants: unwrapArray(o['dominants'] ?? o['Dominants']).map(parseDominant)
       .sort((a, b) => a.sequence - b.sequence),
     determinants: unwrapArray(o['determinants'] ?? o['Determinants']).map(parseDeterminant),
   };
+}
+
+/**
+ * Todas as restrições ativas. Serve para mostrar, junto das regras do item, as
+ * que valem por classificação ou divisão — sem isso a regra some da tela assim
+ * que é gravada com abrangência mais larga.
+ */
+export async function listAllRestrictions(): Promise<Restriction[]> {
+  const { data } = await httpClient.get(`${BASE}/list`);
+  return unwrapArray(data).map(parseRestriction);
 }
 
 export async function listRestrictionsByItem(itemCode: string): Promise<Restriction[]> {
@@ -109,17 +132,25 @@ export async function getRestriction(code: number): Promise<Restriction> {
 }
 
 export async function createRestriction(input: {
-  itemCode: string;
+  itemCode?: string;
   /** Restrição que só vale para um cliente — vence a regra geral do item. */
   customerCode?: number;
+  /** Restrição escrita uma vez para toda uma classificação de item. */
+  classificationType?: string;
+  classificationOrigin?: string;
+  /** Restrição que vale para uma divisão de vendas inteira. */
+  divisionId?: number;
   reasonCode?: number;
   dominants: RestrictionDominant[];
   determinants: RestrictionDeterminant[];
 }): Promise<Restriction> {
   const { data } = await httpClient.post(`${BASE}/create`, {
     situation: 'ACTIVE',
-    item_code: Number(input.itemCode),
+    item_code: input.itemCode ? Number(input.itemCode) : null,
     customer_code: input.customerCode ?? null,
+    classification_type: input.classificationType ?? null,
+    classification_origin: input.classificationOrigin ?? null,
+    division_id: input.divisionId ?? null,
     reason_code: input.reasonCode ?? null,
     dominants: input.dominants,
     determinants: input.determinants,
@@ -168,10 +199,13 @@ export async function evaluateRestrictions(
   itemCode: string,
   answers: Record<number, string>,
   customerCode?: number,
+  escopo?: { classificationType?: string; divisionId?: number },
 ): Promise<RestrictionEvaluation> {
   const { data } = await httpClient.post(`${BASE}/evaluate`, {
     item_code: Number(itemCode),
     ...(customerCode ? { customer_code: customerCode } : {}),
+    ...(escopo?.classificationType ? { classification_type: escopo.classificationType } : {}),
+    ...(escopo?.divisionId ? { division_id: escopo.divisionId } : {}),
     answers,
   });
   const o = unwrapObject(data);

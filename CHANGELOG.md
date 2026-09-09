@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## Correções
+- **Cadastro de item recusava a gravação com "classe ABC inválida"**: o campo Classificação da aba Planejamento estava ligado à lista de classificações do item, mas era gravado como curva ABC — que só aceita A, B ou C. Agora é um campo próprio, **Curva ABC**, com as três opções explicadas.
+- **A busca de item base abria vazia** e obrigava a digitar o código na mão: a lista passou a aceitar tanto o marcador novo quanto os cadastros antigos e, quando nenhum item está marcado como base, mostra todos em vez de nada.
+- **Fornecedor sumia da listagem depois de ser alterado**: qualquer edição devolvia o cadastro como inativo. A situação agora é carregada, aparece como a caixa **Ativo** e só muda quando você marca. O mesmo acerto vale para cliente, representante, transportadora, condição de pagamento, tabela de venda, tipo de nota, máquina, classificação fiscal e demais cadastros de apoio.
+- O cargo do contato do fornecedor era descartado na gravação; o contato também passou a ter tipo e ordem.
+- A quantidade de ferramentas por operação do roteiro era descartada — um jogo de quatro insertos virava um.
+- O ajuste de inventário não acontecia: o sistema exigia o tipo de acerto, que a tela nunca enviava. Agora o acerto é deduzido da diferença (entrada, saída ou sem diferença) e aceita um motivo por linha.
+- A conversão de unidade de item que não aceita fração recusava tudo, porque a política de arredondamento nunca era informada; o resultado também deixou de aparecer como texto técnico.
+- A reprogramação de entregas ignorava os pedidos escolhidos e reprogramava a faixa inteira de datas.
+
+## Novidades
+- **Fila da máquina (VMAQ0200)**: a agenda passou a ser uma fila de verdade — dá para subir e descer a ordem, forçar prioridade sem renumerar tudo, corrigir horários, apontar o que foi produzido e remover o slot que não vai rodar.
+- **Parâmetros e reajustes da venda recorrente (VVRE0200)**: dia limite de faturamento, dias de entrega, representante e plano genéricos, datas de reajuste por cliente e o reajuste em massa com simulação antes de aplicar.
+- **CT-e com autorização na SEFAZ (VFIS0220)**: o conhecimento passou a aceitar os dados de emissão (trajeto, partes, tomador, produto predominante) e a ser enviado à SEFAZ pela própria tela.
+- **Origem do item no pedido de compra**: cada linha pode apontar a requisição (e a linha atendida), a cotação, o contrato, a ordem planejada, o pedido de venda ou a ordem de produção que a originou.
+- **Corte de forma real**: peças irregulares podem ter o contorno informado ponto a ponto, com prévia do desenho — sem ele, a peça era encaixada pelo retângulo que a envolve e sobrava material entre as curvas.
+- **Restrições por classificação ou divisão de vendas**: a regra pode ser escrita uma vez para a família inteira, em vez de repetida item a item.
+- **Descontos e acréscimos na tabela de preço de compra**, aplicados em cadeia, e a opção de levar o preço negociado para o valor de reposição do item.
+
+## Melhorias
+- O custo padrão passou a diluir a preparação pelo lote de referência informado, em vez de cobrar o setup inteiro de cada peça.
+- O apontamento de produção aceita a data do turno (para lançar a noite na manhã seguinte), a máquina e o operador; o consumo pode ser amarrado ao apontamento e registrar o item que substituiu.
+- Contas a pagar e a receber ganharam o vínculo com o pedido de compra e o pedido de venda, e as buscas de fornecedor e cliente deixaram de pedir o código digitado.
+- O rateio de custos indiretos passou a aceitar a conta do plano de contas e a base de alocação (horas-máquina, área, pessoas).
+- O plano de produção pode valer para todos os itens, para uma classificação ou para um item de ordem.
+- A meta do grupo comercial pode ser repartida entre os clientes que o compõem.
+- O lote de matéria-prima registra o fornecedor e a data de recebimento; a nota de entrada registra o CT-e do transporte e a de saída, o cupom fiscal que substitui.
+
 ## [v1.1.16] — 2026-09-07
 
 ## Novidades

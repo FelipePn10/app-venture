@@ -124,8 +124,13 @@ check('VENT0200 envia os marcadores ao backend',
 check('VENT0200 ainda deriva `nature` para o contrato antigo', /natureDosMarcadores\(form\)/.test(vent0200));
 check('VENT0200 permite item-base usar outro item-base como modelo',
   !/Indisponível para item-base/.test(vent0200));
-check('lookup de item-base usa is_base (não a natureza exclusiva)',
-  /i\.is_base \?\? i\.nature === 2/.test(lookups));
+// `parseBool` nunca devolve undefined — devolve `false` quando a chave falta.
+// Por isso `is_base ?? nature === 2` nunca caía na natureza, e a lista vinha
+// vazia em qualquer base anterior à migração dos marcadores.
+check('lookup de item-base aceita os dois sinais (is_base OU nature 2)',
+  /Boolean\(i\.is_base\) \|\| i\.nature === 2/.test(lookups));
+check('lookup de item-base não devolve lista vazia quando ninguém está marcado',
+  /marcados\.length > 0 \? marcados : todos/.test(lookups));
 check('serviço de itens lê os marcadores', /is_base: parseBool/.test(read('src/services/itemService.ts')));
 check('VITM0100 mostra os marcadores combinados', /naturezaLegivel/.test(read('src/components/screens/engenharia/Vitm0100Page.tsx')));
 
@@ -244,9 +249,14 @@ check('item envia lote mínimo, múltiplo e estoque de segurança',
   /minimum_lot: Number\(form\.lotMinimo\)/.test(vent0200)
   && /multiple_lot: Number\(form\.lotMultiplo\)/.test(vent0200)
   && /safety_stock: Number\(form\.estoqueSeguranca\)/.test(vent0200));
-check('item envia crítico, exclusivo e classe ABC',
+check('item envia crítico, exclusivo e curva ABC',
   /critical: form\.critico/.test(vent0200) && /exclusive: form\.exclusivo/.test(vent0200)
-  && /abc_class: form\.classificacaoPlan/.test(vent0200));
+  && /abc_class: form\.curvaAbc/.test(vent0200));
+// A curva ABC só aceita A, B ou C. Ligada a um lookup de classificação, mandava
+// o código do cadastro e o backend recusava a gravação com "classe ABC inválida".
+check('curva ABC é um select de A/B/C, não um lookup de classificação',
+  /value="A"/.test(vent0200) && /value="B"/.test(vent0200) && /value="C"/.test(vent0200)
+  && !/curvaAbc[\s\S]{0,200}loadItemClassifications/.test(vent0200));
 check('item monta o ponto de pedido só quando a conta fecha',
   /function montarPontoDePedido/.test(vent0200) && /TR <= 0 \|\| CM <= 0 \|\| CR <= 0/.test(vent0200));
 check('item mostra o ponto de pedido calculado', /function calcularPontoDePedido/.test(vent0200) && /Ponto de pedido/.test(vent0200));

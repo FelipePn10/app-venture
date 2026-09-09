@@ -29,15 +29,32 @@ export interface RescheduleRequest {
   delivery_to?: string;
   customer_code?: number;
   representative_code?: number;
-  order_codes?: number[];
-  item_codes?: string[];
+  /**
+   * Pedidos e itens específicos a reprogramar. O nome aceito pelo backend é
+   * `sales_order_codes` — enviado como `order_codes`, o filtro era descartado em
+   * silêncio e a reprogramação pegava a faixa inteira de datas. Ambos são
+   * numéricos.
+   */
+  sales_order_codes?: number[];
+  item_codes?: number[];
+  reason?: string;
   new_date: string;
 }
 
-export async function getOccupation(filters: { from_date: string; to_date: string; daily_capacity?: number }): Promise<Obj[]> {
-  const params: Record<string, string> = { from_date: filters.from_date, to_date: filters.to_date };
-  if (filters.daily_capacity) params.daily_capacity = String(filters.daily_capacity);
-  const { data } = await httpClient.get(`${BASE}/occupation`, { params });
+/**
+ * Ocupação da capacidade dia a dia. `tankCodes` restringe a consulta a tanques
+ * específicos — vai como `tank_code` repetido na URL, que é como o backend lê a
+ * lista.
+ */
+export async function getOccupation(
+  filters: { from_date: string; to_date: string; daily_capacity?: number; tank_codes?: number[] },
+): Promise<Obj[]> {
+  const params = new URLSearchParams();
+  params.set('from_date', filters.from_date);
+  params.set('to_date', filters.to_date);
+  if (filters.daily_capacity) params.set('daily_capacity', String(filters.daily_capacity));
+  for (const tanque of filters.tank_codes ?? []) params.append('tank_code', String(tanque));
+  const { data } = await httpClient.get(`${BASE}/occupation?${params.toString()}`);
   return unwrapArray(data).map(unwrapObject);
 }
 

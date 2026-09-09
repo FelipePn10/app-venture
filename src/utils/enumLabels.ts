@@ -91,6 +91,14 @@ const LABELS: Record<string, string> = {
 
   // Manutenção / paradas de máquina
   MAINTENANCE: 'Manutenção', BREAKDOWN: 'Quebra', SETUP: 'Preparação', QUALITY: 'Qualidade',
+
+  // Natureza da demanda (MRP e origem do pedido de compra)
+  SALES_ORDER: 'Pedido de venda', FORECAST: 'Previsão de vendas',
+  INDEPENDENT: 'Demanda independente', SAFETY_STOCK: 'Estoque de segurança',
+  REPLENISHMENT: 'Reposição',
+
+  // Utilização do material comprado
+  INDUSTRIALIZACAO: 'Industrialização', CONSUMO: 'Consumo', IMOBILIZADO: 'Imobilizado',
 };
 
 export function enumLabel(value: unknown): string {

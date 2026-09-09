@@ -13,7 +13,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadItems, loadWarehouses } from "@/services/lookups";
+import { loadItems, loadWarehouses, loadSuppliers } from "@/services/lookups";
 import { ReadableRecord } from "@/components/ui/ReadableRecord";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
@@ -36,7 +36,7 @@ export function Vest0100Page(): JSX.Element {
     item_code: "", warehouse_id: 0, quantity: 0, reference_type: "MANUAL", reference_code: 0,
     reference_item_code: "", reservation_date: "", expiration_date: "", notes: "",
   });
-  const [lotForm, setLotForm] = useState({ item_code: "", lot: "", heat_number: "", certificate: "" });
+  const [lotForm, setLotForm] = useState({ item_code: "", lot: "", heat_number: "", certificate: "", supplier_code: "", received_at: "" });
   const [resId, setResId] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -81,7 +81,11 @@ export function Vest0100Page(): JSX.Element {
 
   const registrarLote = () => run(async () => {
     if (!lotForm.item_code || !lotForm.lot.trim()) { setFeedback({ type: "error", message: "Item e lote são obrigatórios." }); return; }
-    await registerLot(lotForm);
+    await registerLot({
+      ...lotForm,
+      supplier_code: lotForm.supplier_code ? Number(lotForm.supplier_code) : undefined,
+      received_at: lotForm.received_at || undefined,
+    });
     setFeedback({ type: "success", message: `Lote ${lotForm.lot} registrado.` });
     if (itemCode) await listLotsByItem(itemCode.trim()).then(setLots);
   });
@@ -187,6 +191,13 @@ export function Vest0100Page(): JSX.Element {
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Lote</label><input className="erp-input" value={lotForm.lot} onChange={(e) => setLotForm((p) => ({ ...p, lot: e.target.value }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Corrida (heat)</label><input className="erp-input" value={lotForm.heat_number} onChange={(e) => setLotForm((p) => ({ ...p, heat_number: e.target.value }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Certificado</label><input className="erp-input" value={lotForm.certificate} onChange={(e) => setLotForm((p) => ({ ...p, certificate: e.target.value }))} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+            <LookupField value={Number(lotForm.supplier_code) || undefined}
+              onChange={(c) => setLotForm((p) => ({ ...p, supplier_code: c ? String(c) : "" }))}
+              loader={loadSuppliers} entityLabel="fornecedor" placeholder="De quem veio o material" clearable /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Recebido em</label>
+            <input className="erp-input" type="date" value={lotForm.received_at}
+              onChange={(e) => setLotForm((p) => ({ ...p, received_at: e.target.value }))} /></div>
           <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={registrarLote} disabled={busy}>Registrar lote</button></div>
         </div></div>
         <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">

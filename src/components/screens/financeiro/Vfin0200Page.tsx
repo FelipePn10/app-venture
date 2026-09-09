@@ -5,6 +5,8 @@ import {
 } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadSuppliers, loadPurchaseOrders } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -217,10 +219,15 @@ export function Vfin0200Page(): JSX.Element {
                   <input className="erp-input" value={form.numero_documento} placeholder="NF-5500" onChange={(e) => setF("numero_documento", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Tipo Doc.</label>
                   <input className="erp-input" value={form.tipo_documento ?? ""} onChange={(e) => setF("tipo_documento", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Fornecedor (ID)</label>
-                  <input className="erp-input num" type="number" value={form.fornecedor_id ?? ""} onChange={(e) => setF("fornecedor_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+                  <LookupField value={form.fornecedor_id} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Escolher fornecedor" clearable
+                    onChange={(c) => setF("fornecedor_id", c ? Number(c) : undefined)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">NF Entrada (ID)</label>
                   <input className="erp-input num" type="number" value={form.fiscal_entry_id ?? ""} onChange={(e) => setF("fiscal_entry_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Pedido de compra</label>
+                  <LookupField value={form.purchase_order_id} loader={loadPurchaseOrders} entityLabel="pedido de compra" placeholder="Opcional" clearable
+                    onChange={(c) => setF("purchase_order_id", c ? Number(c) : undefined)} />
+                  <span className="erp-hint">Fecha o ciclo pedido → nota → pagamento: sem o vínculo, o título fica sem a compra que o originou.</span></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Forma Pagamento</label>
                   <input className="erp-input" value={form.forma_pagamento ?? ""} onChange={(e) => setF("forma_pagamento", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>

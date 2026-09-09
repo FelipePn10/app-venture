@@ -33,9 +33,11 @@ export function Vcus0100Page(): JSX.Element {
   const [pcForm, setPcForm] = useState({ item_code: "", cost: 0 });
   const [pcResult, setPcResult] = useState<PurchaseCost | null>(null);
   const [rollupItem, setRollupItem] = useState("");
+  /** Lote de referência para diluir o setup das operações no custo padrão. */
+  const [rollupLote, setRollupLote] = useState("1");
   const [rollup, setRollup] = useState<StandardCost | null>(null);
   const [baseForm, setBaseForm] = useState<AllocationBase>({ code: 0, description: "", period: "" });
-  const [ovhForm, setOvhForm] = useState({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100 });
+  const [ovhForm, setOvhForm] = useState({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100, plan_account_code: 0, base_code: 0 });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -68,7 +70,7 @@ export function Vcus0100Page(): JSX.Element {
   });
   const rodarRollup = () => run(async () => {
     if (!rollupItem) { setFeedback({ type: "error", message: "Informe o item." }); return; }
-    setRollup(await calculateStandardCost(rollupItem));
+    setRollup(await calculateStandardCost(rollupItem, undefined, Number(rollupLote) || 1));
     setFeedback({ type: "success", message: `Composição de custos do item ${rollupItem} recalculada.` });
   });
   const salvarBase = () => run(async () => {
@@ -85,10 +87,12 @@ export function Vcus0100Page(): JSX.Element {
       period_start: ovhForm.period_start,
       period_end: ovhForm.period_end,
       allocation_type: ovhForm.allocation_type,
+      plan_account_code: ovhForm.plan_account_code || undefined,
+      base_code: ovhForm.allocation_type === "BASE" ? (ovhForm.base_code || undefined) : undefined,
       description: ovhForm.description || undefined,
       targets: ovhForm.target_cost_center ? [{ cost_center_code: ovhForm.target_cost_center, percentage: ovhForm.target_pct }] : [],
     });
-    setOvhForm({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100 });
+    setOvhForm({ cost_center_code: 0, period_start: "", period_end: "", allocation_type: "PERCENTAGE", description: "", target_cost_center: 0, target_pct: 100, plan_account_code: 0, base_code: 0 });
     setOvhs(await listOverheadAllocations());
     setFeedback({ type: "success", message: "Rateio de custos indiretos criado." });
   });
@@ -114,6 +118,10 @@ export function Vcus0100Page(): JSX.Element {
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Composição do custo padrão</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={rollupItem} loader={loadItems} entityLabel="item" onChange={(code) => setRollupItem(String(code ?? ""))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Lote de referência</label>
+                <input className="erp-input num" type="number" min="1" step="1" value={rollupLote}
+                  onChange={(e) => setRollupLote(e.target.value)} />
+                <span className="erp-hint">O setup das operações é diluído por esse lote. Com 1, cada peça carrega o setup inteiro.</span></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={rodarRollup} disabled={busy}>Recalcular composição</button></div>
               {rollup && <>
                 <div className="erp-field erp-c2"><label className="erp-label">Material</label><input className="erp-input num" value={money(rollup.material_cost)} readOnly /></div>
@@ -166,6 +174,25 @@ export function Vcus0100Page(): JSX.Element {
               <div className="erp-field erp-c2"><label className="erp-label">Alvo (centro)</label><input className="erp-input num" type="number" value={ovhForm.target_cost_center || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_cost_center: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Alvo %</label><input className="erp-input num" type="number" step="0.01" value={ovhForm.target_pct || ""} onChange={(e) => setOvhForm((p) => ({ ...p, target_pct: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Descrição</label><input className="erp-input" value={ovhForm.description} onChange={(e) => setOvhForm((p) => ({ ...p, description: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Conta do plano</label>
+                <input className="erp-input num" type="number" value={ovhForm.plan_account_code || ""}
+                  onChange={(e) => setOvhForm((p) => ({ ...p, plan_account_code: Number(e.target.value) }))} />
+                <span className="erp-hint">Em branco, rateia o centro de custo inteiro.</span></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Critério do rateio</label>
+                <select className="erp-input" value={ovhForm.allocation_type}
+                  onChange={(e) => setOvhForm((p) => ({ ...p, allocation_type: e.target.value }))}>
+                  <option value="PERCENTAGE">Percentual fixo</option>
+                  <option value="BASE">Base de alocação</option>
+                </select></div>
+              {ovhForm.allocation_type === "BASE" && (
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Base de alocação</label>
+                  <select className="erp-input" value={ovhForm.base_code || ""}
+                    onChange={(e) => setOvhForm((p) => ({ ...p, base_code: Number(e.target.value) }))}>
+                    <option value="">Escolha o critério</option>
+                    {bases.map((b) => <option key={b.code} value={b.code}>{b.description}</option>)}
+                  </select>
+                  <span className="erp-hint">Horas-máquina, área ocupada, pessoas — o que decide quanto cada centro recebe.</span></div>
+              )}
               <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={salvarOvh} disabled={busy}>Criar rateio</button></div>
               <div className="erp-field erp-c12"><table className="erp-grid">
                 <thead><tr><th>Centro custo</th><th>Período</th><th>Tipo</th><th>Alvos</th></tr></thead>

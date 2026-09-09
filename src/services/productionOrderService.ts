@@ -42,6 +42,12 @@ export interface AppointmentDTO {
   scrap_reason?: string;
   machine_id?: number;
   employee_id?: number;
+  /**
+   * Dia a que o apontamento se refere (YYYY-MM-DD). O turno da noite costuma ser
+   * lançado na manhã seguinte: sem essa data a produção cai no dia errado e o
+   * custo do período sai torto. Vazio = hoje.
+   */
+  appointment_date?: string;
   /** Baixa automática da BOM proporcional à qtd produzida (backflush §18). */
   backflush_warehouse_id?: number;
   notes?: string;
@@ -50,11 +56,19 @@ export interface AppointmentDTO {
 export interface ConsumptionDTO {
   id?: number;
   production_order_id: number;
+  /**
+   * Apontamento que puxou este consumo. Amarrar os dois é o que permite saber
+   * quanto de material foi para cada lote produzido, em vez de só para a ordem
+   * inteira — é o que a rastreabilidade cobra quando uma peça volta do cliente.
+   */
+  appointment_id?: number;
   item_code: string;
   /** Campo correto no backend é `consumed_qty`. */
   consumed_qty: number;
   warehouse_id?: number;
   lot?: string;
+  /** Dia do consumo (YYYY-MM-DD). Vazio = hoje. */
+  consumption_date?: string;
   notes?: string;
 }
 
@@ -123,6 +137,9 @@ function parseAppointment(raw: unknown): AppointmentDTO {
     produced_qty: parseNum(o, 'produced_qty', 'ProducedQty'),
     scrapped_qty: parseNum(o, 'scrapped_qty', 'ScrappedQty'),
     scrap_reason: parseStr(o, 'scrap_reason', 'ScrapReason') || undefined,
+    appointment_date: parseStr(o, 'appointment_date', 'AppointmentDate') || undefined,
+    machine_id: parseNum(o, 'machine_id', 'MachineID') || undefined,
+    employee_id: parseNum(o, 'employee_id', 'EmployeeID') || undefined,
   };
 }
 
@@ -135,6 +152,8 @@ function parseConsumption(raw: unknown): ConsumptionDTO {
     consumed_qty: parseNum(o, 'consumed_qty', 'ConsumedQty'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     lot: parseStr(o, 'lot', 'Lot') || undefined,
+    consumption_date: parseStr(o, 'consumption_date', 'ConsumptionDate') || undefined,
+    appointment_id: parseNum(o, 'appointment_id', 'AppointmentID') || undefined,
   };
 }
 
@@ -268,6 +287,12 @@ export interface MaterialDTO {
   production_order_id?: number;
   kind?: MaterialKind;
   item_code: string;
+  /**
+   * Item que este material substitui na estrutura. Quando a fábrica troca um
+   * componente por outro (faltou o parafuso M6, entrou o M8), registrar a troca
+   * é o que explica depois por que a ordem consumiu algo que não está na BOM.
+   */
+  substituted_item_code?: number;
   quantity: number | string;
   warehouse_id?: number;
   automatic_issue?: boolean;
@@ -308,6 +333,7 @@ function parseMaterial(raw: unknown): MaterialDTO {
     quantity: parseNum(o, 'quantity', 'Quantity'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     automatic_issue: parseBool(o, 'automatic_issue', 'AutomaticIssue'),
+    substituted_item_code: parseNum(o, 'substituted_item_code', 'SubstitutedItemCode') || undefined,
     allocated_qty: parseNum(o, 'AttendedQuantity', 'attended_quantity'),
     balance: parseNum(o, 'balance', 'Balance'),
   };

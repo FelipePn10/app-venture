@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type PriceTableDTO, type PriceTableItemDTO,
+  type PriceAdjustmentDTO, PRICE_ADJUSTMENT_KINDS, PRICE_CALCULATION_TYPES,
   listPriceTables, createPriceTable, listPriceTableItems, upsertPriceTableItem, deletePriceTableItem,
 } from "@/services/purchasingMasterService";
 import { errMessage } from "@/services/fiscalShared";
@@ -20,6 +21,23 @@ export function Vsup0120Page(): JSX.Element {
   const [selected, setSelected] = useState<PriceTableDTO | null>(null);
   const [items, setItems] = useState<PriceTableItemDTO[]>([]);
   const [itemForm, setItemForm] = useState<PriceTableItemDTO>(EMPTY_ITEM);
+
+  /** Descontos e acréscimos incidem em cadeia — a ordem importa. */
+  const adicionarAjuste = () => setItemForm((p) => ({
+    ...p,
+    adjustments: [...(p.adjustments ?? []), {
+      sequence: (p.adjustments?.length ?? 0) + 1,
+      kind: "DISCOUNT", calculation_type: "PERCENT", value: 0,
+    }],
+  }));
+  const setAjuste = (indice: number, patch: Partial<PriceAdjustmentDTO>) => setItemForm((p) => ({
+    ...p,
+    adjustments: (p.adjustments ?? []).map((a, i) => (i === indice ? { ...a, ...patch } : a)),
+  }));
+  const removerAjuste = (indice: number) => setItemForm((p) => ({
+    ...p,
+    adjustments: (p.adjustments ?? []).filter((_, i) => i !== indice).map((a, i) => ({ ...a, sequence: i + 1 })),
+  }));
   const [creating, setCreating] = useState(true);
   const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -144,6 +162,47 @@ export function Vsup0120Page(): JSX.Element {
                       <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.uom ?? ""} onChange={(e) => setIF("uom", e.target.value.toUpperCase())} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Qtd mín.</label><input className="erp-input num" type="number" value={itemForm.min_qty ?? 0} onChange={(e) => setIF("min_qty", Number(e.target.value))} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label><LookupField value={itemForm.supplier_code} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Genérico" onChange={(c) => setIF("supplier_code", c)} /></div>
+                      <div className="erp-field erp-c4">
+                        <label className="erp-check">
+                          <input type="checkbox" checked={itemForm.update_replacement_value ?? false}
+                            onChange={(e) => setIF("update_replacement_value", e.target.checked)} />
+                          Atualizar o valor de reposição do item
+                        </label>
+                        <span className="erp-hint">Sem marcar, o preço vale só para o pedido e o planejamento continua com o custo antigo.</span>
+                      </div>
+                      <div className="erp-field erp-c12">
+                        <label className="erp-label">Descontos e acréscimos em cadeia</label>
+                        <table className="erp-grid">
+                          <thead><tr><th style={{ width: 60 }}>Ordem</th><th>Natureza</th><th>Cálculo</th><th className="num">Valor</th><th style={{ width: 70 }} /></tr></thead>
+                          <tbody>
+                            {(itemForm.adjustments ?? []).length === 0 && (
+                              <tr><td colSpan={5} className="erp-grid-empty">Sem descontos — o preço vale como está.</td></tr>
+                            )}
+                            {(itemForm.adjustments ?? []).map((a, i) => (
+                              <tr key={i}>
+                                <td>{a.sequence}</td>
+                                <td>
+                                  <select className="erp-input" value={a.kind} onChange={(e) => setAjuste(i, { kind: e.target.value })}>
+                                    {PRICE_ADJUSTMENT_KINDS.map((k) => <option key={k} value={k}>{k === "DISCOUNT" ? "Desconto" : "Acréscimo"}</option>)}
+                                  </select>
+                                </td>
+                                <td>
+                                  <select className="erp-input" value={a.calculation_type} onChange={(e) => setAjuste(i, { calculation_type: e.target.value })}>
+                                    {PRICE_CALCULATION_TYPES.map((c) => <option key={c} value={c}>{c === "PERCENT" ? "Percentual" : "Valor fixo"}</option>)}
+                                  </select>
+                                </td>
+                                <td className="num">
+                                  <input className="erp-input num" type="number" step="0.01" min="0" value={a.value}
+                                    onChange={(e) => setAjuste(i, { value: Number(e.target.value) })} />
+                                </td>
+                                <td><button className="erp-btn erp-btn-sm erp-btn-danger" onClick={() => removerAjuste(i)}>✕</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <button className="erp-btn erp-btn-sm" style={{ marginTop: 8 }} onClick={adicionarAjuste}>+ Desconto/acréscimo</button>
+                        <span className="erp-hint">Aplicados na ordem: cada linha incide sobre o preço que a anterior deixou.</span>
+                      </div>
                       <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void addItem()} disabled={busy}>{busy && <span className="erp-spin" />}Adicionar preço</button></div>
                     </div>
                   </div>

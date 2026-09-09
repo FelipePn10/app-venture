@@ -269,6 +269,10 @@ export function Vfis0210Page(): JSX.Element {
                   <div className="erp-field erp-c3"><label className="erp-label">Desconto</label>
                     <input className="erp-input num" type="number" step="0.01" value={form.valor_desconto}
                       onChange={(e) => setForm((p) => withTotals({ ...p, valor_desconto: Number(e.target.value) }))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">CT-e do transporte</label>
+                    <input className="erp-input num" type="number" value={form.cte_code ?? ""}
+                      onChange={(e) => setForm((p) => ({ ...p, cte_code: e.target.value ? Number(e.target.value) : undefined }))} />
+                    <span className="erp-hint">Amarra o frete desta entrada ao conhecimento — sem isso o custo do transporte não entra no custo do material.</span></div>
                 
               </div>
             </div>

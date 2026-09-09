@@ -67,7 +67,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     create("/api/procurement/supplier-scorecards", '{"supplier_code":10,"period_start":"2026-01-01","period_end":"2026-06-30","quality_score":95,"delivery_score":90,"commercial_score":100,"service_score":98,"total_receipts":20,"rejected_receipts":1,"late_receipts":2,"notes":"Avaliação manual"}'),
   ]),
   VSUP0610: routine("VSUP0610", "Alçadas e parâmetros de compras", "Administra limites de aprovação e parâmetros operacionais de suprimentos.", [
-    list("/api/procurement/approval-limits", [], [], "Consultar alçadas"), create("/api/procurement/approval-limits", '{"enterprise_code":1,"scope":"GLOBAL","currency":"BRL","auto_approve_max":10000,"block_above":50000,"valid_from":"2026-01-01","notes":"Alçada padrão"}', true),
+    list("/api/procurement/approval-limits", [], [], "Consultar alçadas"), create("/api/procurement/approval-limits", '{"enterprise_code":1,"scope":"SUPPLIER","scope_ref":"10","currency":"BRL","auto_approve_max":10000,"block_above":50000,"valid_from":"2026-01-01","notes":"Alçada do fornecedor 10"}', true),
     list("/api/procurement/parameters", [{ name: "domain", label: "Domínio" }], ["domain"], "Consultar parâmetros"),
     { label: "Salvar parâmetro", method: "PUT", path: "/api/procurement/parameters", adminOnly: true, fields: [json('{"enterprise_code":1,"domain":"RECEIVING_NOTICE","param_key":"REQUIRE_NOTICE","param_value":"true","value_type":"BOOL","description":"Exigir aviso"}')] },
   ]),

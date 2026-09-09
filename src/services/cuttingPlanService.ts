@@ -65,6 +65,33 @@ export interface CuttingPartDTO {
   band_cost_per_m?: number;
   /** De onde a peça veio (pedido, ordem, projeto). */
   source_ref?: string;
+  /**
+   * Contorno da peça de forma real (polígono fechado, em milímetros). É o que
+   * permite o aninhamento de peças irregulares — chapa de metalúrgica, tampo
+   * recortado — em vez de tratar tudo como retângulo. Sem contorno, a peça é
+   * encaixada pelo retângulo que a envolve e sobra material entre as curvas.
+   */
+  geometry?: CuttingPointDTO[];
+}
+
+/** Vértice do contorno, em milímetros. */
+export interface CuttingPointDTO { x: number; y: number; }
+
+/**
+ * Lê o contorno digitado como "x,y" por linha. Aceita vírgula ou ponto e vírgula
+ * como separador e ignora linhas vazias; devolve `null` quando o texto não forma
+ * um polígono com pelo menos três vértices, que é o mínimo que o nester aceita.
+ */
+export function parseGeometry(texto: string): CuttingPointDTO[] | null {
+  const pontos: CuttingPointDTO[] = [];
+  for (const linha of texto.split('\n')) {
+    const limpa = linha.trim();
+    if (!limpa) continue;
+    const partes = limpa.split(/[,;]/).map((p) => Number(p.trim().replace(',', '.')));
+    if (partes.length < 2 || !Number.isFinite(partes[0]) || !Number.isFinite(partes[1])) return null;
+    pontos.push({ x: partes[0] as number, y: partes[1] as number });
+  }
+  return pontos.length >= 3 ? pontos : null;
 }
 
 export interface CuttingStockDTO {

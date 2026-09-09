@@ -15,7 +15,21 @@ export interface ItemConversionDTO {
   from_uom: string;
   to_uom: string;
   factor: number;
+  /**
+   * Política de arredondamento para item que não aceita fração. A conversão
+   * arredonda para o inteiro mais próximo e só aceita se a sobra couber em
+   * `rounding_percent` (% da quantidade) mais a tolerância. Tudo em zero recusa
+   * qualquer conversão que não dê inteiro exato — que era o comportamento até
+   * aqui, porque a tela nunca enviava esses três campos.
+   */
+  rounding_percent?: number;
+  tolerance_value?: number;
+  /** `PERCENT` (% da quantidade) ou `FIXED` (valor absoluto). */
+  tolerance_type?: string;
 }
+
+/** Como a tolerância de conversão é interpretada. */
+export const CONVERSION_TOLERANCE_TYPES = ['PERCENT', 'FIXED'] as const;
 function parseConv(raw: unknown): ItemConversionDTO {
   const o = unwrapObject(raw);
   return {
@@ -24,6 +38,9 @@ function parseConv(raw: unknown): ItemConversionDTO {
     from_uom: parseStr(o, 'from_uom', 'FromUom'),
     to_uom: parseStr(o, 'to_uom', 'ToUom'),
     factor: parseNum(o, 'factor', 'Factor'),
+    rounding_percent: parseNum(o, 'rounding_percent', 'RoundingPercent'),
+    tolerance_value: parseNum(o, 'tolerance_value', 'ToleranceValue'),
+    tolerance_type: parseStr(o, 'tolerance_type', 'ToleranceType') || undefined,
   };
 }
 export async function listItemConversions(itemCode: string): Promise<ItemConversionDTO[]> {
@@ -37,9 +54,25 @@ export async function upsertItemConversion(dto: ItemConversionDTO): Promise<Item
 export async function deleteItemConversion(id: number): Promise<void> {
   await httpClient.delete(`/api/item-conversions/${id}`);
 }
-export async function convertItem(itemCode: string, from: string, to: string, qty: number): Promise<Obj> {
+/** Resultado legível da conversão — a tela mostra isso, não o JSON cru. */
+export interface ConversionResult {
+  from_uom: string;
+  to_uom: string;
+  factor: number;
+  quantity: number;
+  converted_qty: number;
+}
+
+export async function convertItem(itemCode: string, from: string, to: string, qty: number): Promise<ConversionResult> {
   const { data } = await httpClient.get('/api/item-conversions/convert', { params: { item: itemCode, from, to, qty } });
-  return unwrapObject(data);
+  const o = unwrapObject(data);
+  return {
+    from_uom: parseStr(o, 'from_uom', 'FromUom'),
+    to_uom: parseStr(o, 'to_uom', 'ToUom'),
+    factor: parseNum(o, 'factor', 'Factor'),
+    quantity: parseNum(o, 'quantity', 'Quantity'),
+    converted_qty: parseNum(o, 'converted_qty', 'ConvertedQty'),
+  };
 }
 
 // ── §12 Tabela de Preço de Compra ──
@@ -51,6 +84,19 @@ export interface PriceTableDTO {
   valid_from: string;
   valid_to?: string;
 }
+/** Desconto ou acréscimo aplicado em cadeia sobre o preço da tabela. */
+export interface PriceAdjustmentDTO {
+  sequence: number;
+  /** `DISCOUNT` (desconto) ou `SURCHARGE` (acréscimo). */
+  kind: string;
+  /** `PERCENT` (% sobre o preço corrente) ou `FIXED` (valor absoluto). */
+  calculation_type: string;
+  value: number;
+}
+
+export const PRICE_ADJUSTMENT_KINDS = ['DISCOUNT', 'SURCHARGE'] as const;
+export const PRICE_CALCULATION_TYPES = ['PERCENT', 'FIXED'] as const;
+
 export interface PriceTableItemDTO {
   id?: number;
   table_code?: number;
@@ -59,6 +105,13 @@ export interface PriceTableItemDTO {
   uom: string;
   min_qty: number;
   supplier_code?: number;
+  /**
+   * Leva o preço negociado para o valor de reposição do item. É o que faz a
+   * nova tabela refletir no custo de reposição usado pelo planejamento — sem
+   * marcar, a tabela vale só para o pedido.
+   */
+  update_replacement_value?: boolean;
+  adjustments?: PriceAdjustmentDTO[];
 }
 function parseTable(raw: unknown): PriceTableDTO {
   const o = unwrapObject(raw);
@@ -81,6 +134,16 @@ function parseTableItem(raw: unknown): PriceTableItemDTO {
     uom: parseStr(o, 'uom', 'Uom'),
     min_qty: parseNum(o, 'min_qty', 'MinQty'),
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode') || undefined,
+    update_replacement_value: parseBool(o, 'update_replacement_value', 'UpdateReplacementValue') ?? undefined,
+    adjustments: unwrapArray(o['adjustments'] ?? o['Adjustments']).map((a) => {
+      const ao = unwrapObject(a);
+      return {
+        sequence: parseNum(ao, 'sequence', 'Sequence'),
+        kind: parseStr(ao, 'kind', 'Kind'),
+        calculation_type: parseStr(ao, 'calculation_type', 'CalculationType'),
+        value: parseNum(ao, 'value', 'Value'),
+      };
+    }),
   };
 }
 export async function listPriceTables(): Promise<PriceTableDTO[]> {
