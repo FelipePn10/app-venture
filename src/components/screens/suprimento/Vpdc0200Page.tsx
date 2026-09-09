@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type PurchaseOrderDTO, type PurchaseOrderItemDTO,
-  FREIGHT_TYPES, FREIGHT_VALUE_TYPES, FREIGHT_VALUE_MODES, UTILIZATION_TYPES,
+  FREIGHT_TYPES, FREIGHT_VALUE_TYPES, FREIGHT_VALUE_MODES, UTILIZATION_TYPES, DEMAND_TYPES,
   listOrders, getOrder, createOrder, updateOrder, cancelOrder, addOrderItem,
   approveOrder, authorizeOrder,
 } from "@/services/purchaseOrderService";
@@ -12,7 +12,11 @@ import { enumLabel } from "@/utils/enumLabels";
 import {
   loadItems, loadSuppliers, loadWarehouses, loadCarriers,
   loadPaymentConditions, loadCostCenters, loadItemClassifications,
+  loadInvoiceTypes, loadEmployees, loadSalesOrders,
+  loadPurchaseRequisitions, loadPurchaseQuotations, loadSupplierContracts,
+  loadPlannedOrders, loadProductionOrders,
 } from "@/services/lookups";
+import { getRequisition, type RequisitionItemDTO } from "@/services/purchaseRequisitionService";
 
 /**
  * VPDC0200 — Pedido de Compra.
@@ -36,11 +40,21 @@ const CAPA_INICIAL: PurchaseOrderDTO = {
   is_firm: false,
 };
 
+/** Saldo ainda em aberto de uma linha de requisição (pedido − atendido − cancelado). */
+function saldoDaRequisicao(i: RequisitionItemDTO): number {
+  return Math.max(0, i.quantity - (i.attended_qty ?? 0) - (i.cancelled_qty ?? 0));
+}
+
 const ITEM_INICIAL = {
   item_code: "", requested_qty: "1", unit_price: "", purchase_uom: "",
   discount_pct: "0", ipi_pct: "", icms_pct: "0", tolerance_pct: "0",
   warehouse_id: "", delivery_date: "", cost_center_code: "", notes: "",
-  utilization_type: "", fiscal_classification_code: "",
+  utilization_type: "", fiscal_classification_code: "", invoice_type_code: "",
+  requester_employee_code: "",
+  // Origem: de onde veio a necessidade desta linha.
+  purchase_requisition_code: "", purchase_requisition_item_id: "",
+  quotation_code: "", contract_code: "", planned_order_code: "",
+  demand_type: "", demand_code: "", sales_order_code: "", production_order_id: "",
 };
 
 const brl = (v?: number) => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -74,6 +88,7 @@ export function Vpdc0200Page(): JSX.Element {
   const [capa, setCapa] = useState<PurchaseOrderDTO>({ ...CAPA_INICIAL });
   const [itens, setItens] = useState<PurchaseOrderItemDTO[]>([]);
   const [itemForm, setItemForm] = useState({ ...ITEM_INICIAL });
+  const [itensDaRequisicao, setItensDaRequisicao] = useState<RequisitionItemDTO[]>([]);
   const [aberto, setAberto] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -165,6 +180,27 @@ export function Vpdc0200Page(): JSX.Element {
   }
 
   /**
+   * Ao escolher a requisição carregamos as linhas dela para o usuário dizer
+   * *qual* linha este item atende — sem isso a requisição fica atendida "no
+   * todo" e o saldo por linha nunca fecha.
+   */
+  async function escolherRequisicao(code: number | undefined) {
+    setItemForm((f) => ({
+      ...f,
+      purchase_requisition_code: code ? String(code) : "",
+      purchase_requisition_item_id: "",
+    }));
+    if (!code) { setItensDaRequisicao([]); return; }
+    try {
+      const req = await getRequisition(code);
+      setItensDaRequisicao((req.items ?? []).filter((i) => i.id !== undefined));
+    } catch {
+      setItensDaRequisicao([]);
+      setFeedback({ type: "error", message: "Não foi possível carregar as linhas da requisição." });
+    }
+  }
+
+  /**
    * O preço, a UM interna e o %IPI são resolvidos pelo backend quando não vêm
    * preenchidos — tabela de preço, conversões do item e classificação fiscal.
    * Por isso os campos podem ficar em branco de propósito.
@@ -191,9 +227,21 @@ export function Vpdc0200Page(): JSX.Element {
         delivery_date: itemForm.delivery_date || undefined,
         utilization_type: itemForm.utilization_type || undefined,
         fiscal_classification_code: opcional(itemForm.fiscal_classification_code),
+        invoice_type_code: opcional(itemForm.invoice_type_code),
+        requester_employee_code: opcional(itemForm.requester_employee_code),
+        purchase_requisition_code: opcional(itemForm.purchase_requisition_code),
+        purchase_requisition_item_id: opcional(itemForm.purchase_requisition_item_id),
+        quotation_code: opcional(itemForm.quotation_code),
+        contract_code: opcional(itemForm.contract_code),
+        planned_order_code: opcional(itemForm.planned_order_code),
+        demand_type: itemForm.demand_type || undefined,
+        demand_code: opcional(itemForm.demand_code),
+        sales_order_code: opcional(itemForm.sales_order_code),
+        production_order_id: opcional(itemForm.production_order_id),
         notes: itemForm.notes.trim() || undefined,
       } as PurchaseOrderItemDTO);
       setItemForm({ ...ITEM_INICIAL });
+      setItensDaRequisicao([]);
       setFeedback({ type: "success", message: "Item incluído." });
       await abrir(aberto);
     });
@@ -549,9 +597,104 @@ export function Vpdc0200Page(): JSX.Element {
                           onChange={(c) => setItemForm((f) => ({ ...f, fiscal_classification_code: c ? String(c) : "" }))}
                           loader={loadItemClassifications} entityLabel="classificação" placeholder="Do cadastro do item" clearable />
                       </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Tipo de nota</label>
+                        <LookupField value={Number(itemForm.invoice_type_code) || undefined}
+                          onChange={(c) => setItemForm((f) => ({ ...f, invoice_type_code: c ? String(c) : "" }))}
+                          loader={loadInvoiceTypes} entityLabel="tipo de nota" placeholder="Do fornecedor" clearable />
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Solicitante</label>
+                        <LookupField value={Number(itemForm.requester_employee_code) || undefined}
+                          onChange={(c) => setItemForm((f) => ({ ...f, requester_employee_code: c ? String(c) : "" }))}
+                          loader={loadEmployees} entityLabel="funcionário" placeholder="Quem pediu" clearable />
+                      </div>
                       <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
                         <button className="erp-btn erp-btn-primary" style={{ width: "100%" }}
                           onClick={incluirItem} disabled={busy || !aberto}>+ Item</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">
+                      Origem da linha <span className="erp-hint">(opcional — informe antes de clicar em “+ Item”)</span>
+                    </div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c12">
+                        <p className="erp-note">
+                          Um pedido de compra raramente nasce sozinho: ele atende uma requisição,
+                          fecha uma cotação, consome um contrato ou firma uma ordem planejada do MRP.
+                          Guardar esse vínculo é o que responde depois <em>por que compramos isso</em> —
+                          e é por ele que o recebimento dá baixa na origem certa.
+                        </p>
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Requisição</label>
+                        <LookupField value={Number(itemForm.purchase_requisition_code) || undefined}
+                          onChange={(c) => { void escolherRequisicao(c ? Number(c) : undefined); }}
+                          loader={loadPurchaseRequisitions} entityLabel="requisição" placeholder="Nenhuma" clearable />
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Item da requisição</label>
+                        <select className="erp-input" value={itemForm.purchase_requisition_item_id}
+                          disabled={itensDaRequisicao.length === 0}
+                          onChange={(e) => setItemForm((f) => ({ ...f, purchase_requisition_item_id: e.target.value }))}>
+                          <option value="">
+                            {itemForm.purchase_requisition_code ? "Escolha a linha atendida" : "Escolha a requisição primeiro"}
+                          </option>
+                          {itensDaRequisicao.map((i) => (
+                            <option key={i.id} value={String(i.id)}>
+                              {`Item ${i.item_code} · saldo ${saldoDaRequisicao(i).toLocaleString("pt-BR")} ${i.uom ?? ""}`.trim()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Cotação</label>
+                        <LookupField value={Number(itemForm.quotation_code) || undefined}
+                          onChange={(c) => setItemForm((f) => ({ ...f, quotation_code: c ? String(c) : "" }))}
+                          loader={loadPurchaseQuotations} entityLabel="cotação" placeholder="Nenhuma" clearable />
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Contrato de fornecimento</label>
+                        <LookupField value={Number(itemForm.contract_code) || undefined}
+                          onChange={(c) => setItemForm((f) => ({ ...f, contract_code: c ? String(c) : "" }))}
+                          loader={loadSupplierContracts} entityLabel="contrato" placeholder="Nenhum" clearable />
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Ordem planejada (MRP)</label>
+                        <LookupField value={Number(itemForm.planned_order_code) || undefined}
+                          onChange={(c) => setItemForm((f) => ({ ...f, planned_order_code: c ? String(c) : "" }))}
+                          loader={loadPlannedOrders} entityLabel="ordem planejada" placeholder="Nenhuma" clearable />
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Natureza da demanda</label>
+                        <select className="erp-input" value={itemForm.demand_type}
+                          onChange={(e) => setItemForm((f) => ({ ...f, demand_type: e.target.value, demand_code: "" }))}>
+                          <option value="">Não informada</option>
+                          {DEMAND_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}
+                        </select>
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Pedido de venda</label>
+                        <LookupField value={Number(itemForm.sales_order_code) || undefined}
+                          onChange={(c) => setItemForm((f) => ({
+                            ...f,
+                            sales_order_code: c ? String(c) : "",
+                            // O pedido de venda é a própria demanda: a natureza e o
+                            // código seguem juntos para o backend não ficar com meia
+                            // informação de origem.
+                            demand_type: c ? "SALES_ORDER" : f.demand_type,
+                            demand_code: c ? String(c) : f.demand_code,
+                          }))}
+                          loader={loadSalesOrders} entityLabel="pedido de venda" placeholder="Nenhum" clearable />
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <label className="erp-label">Ordem de produção</label>
+                        <LookupField value={Number(itemForm.production_order_id) || undefined}
+                          onChange={(c) => setItemForm((f) => ({ ...f, production_order_id: c ? String(c) : "" }))}
+                          loader={loadProductionOrders} entityLabel="ordem de produção" placeholder="Nenhuma" clearable />
                       </div>
                     </div>
                   </div>

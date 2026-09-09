@@ -37,6 +37,7 @@ const EMPTY: SupplierDTO = {
   name: "", trade_name: "", person_type: "JURIDICA", document_type: "CNPJ", document_number: "",
   state_registration: "", supplier_type_code: undefined, freight_type: "CIF", icms_contributor: "CONTRIBUINTE",
   is_representative: false, is_customer: false, is_mei: false, viticola_obligation: "NUNCA", tracking_platform: "NENHUM",
+  is_active: true,
 };
 const NO_IE_KINDS = ["TRANSPORTADORA", "TRANSP_REDESP", "REDESPACHO"];
 const FOLDERS: Folder[] = ["dados", "endereco", "telefones", "emails", "vencimentos", "contatos", "empresas"];
@@ -65,7 +66,13 @@ export function Vsup0500Page(): JSX.Element {
     description: "", ranking: 1, payment_condition_code: "", payment_type: "MENSAL", subsequent_month: false,
     receipt_start_time: "", receipt_end_time: "", avg_unload_minutes: "",
   });
-  const [contactForm, setContactForm] = useState({ name: "", role: "", department: "", purchase_order_tag: "", observation: "" });
+  /**
+   * O cargo vai no campo `position` — enviado como `role`, era descartado em
+   * silêncio e o contato ficava sem cargo. `contact_type_id` diz de que tipo é
+   * o contato (comercial, fiscal, logística…), que é o que o comprador usa para
+   * saber a quem mandar o pedido.
+   */
+  const [contactForm, setContactForm] = useState({ name: "", position: "", department: "", purchase_order_tag: "", observation: "", contact_type_id: "", ranking: "0" });
   const [entForm, setEntForm] = useState<{ enterprise_code?: number; financial_account: string; ipi: boolean; default_invoice_type_id: string; purchase_price_table_id: string }>({ enterprise_code: undefined, financial_account: "", ipi: false, default_invoice_type_id: "", purchase_price_table_id: "" });
   const [entCode] = useState("1");
 
@@ -174,6 +181,9 @@ export function Vsup0500Page(): JSX.Element {
         is_representative: !!parseStr(parsed, "is_representative") || (parsed.is_representative as boolean) || false,
         is_customer: (parsed.is_customer as boolean) ?? false, is_mei: (parsed.is_mei as boolean) ?? false,
         homologated: (parsed.homologated as boolean) ?? false,
+        // Sem ler a situação aqui, a gravação mandava o fornecedor de volta como
+        // inativo e ele sumia da listagem, que mostra só os ativos.
+        is_active: parsed.is_active !== false && parsed.IsActive !== false,
         billing_receipt_status: (parseStr(parsed, "billing_receipt_status", "BillingReceiptStatus") || undefined) as SupplierDTO["billing_receipt_status"],
         last_sefaz_query: parseStr(parsed, "last_sefaz_query", "LastSefazQuery") || undefined,
       });
@@ -196,7 +206,7 @@ export function Vsup0500Page(): JSX.Element {
     const err = validar(); if (err) { setFeedback({ type: "error", message: err }); return; }
     setBusy(true); setFeedback(null);
     try {
-      if (editing) { await updateSupplier(form); setFeedback({ type: "success", message: "Fornecedor atualizado." }); }
+      if (editing) { await updateSupplier({ ...form, is_active: form.is_active !== false }); setFeedback({ type: "success", message: "Fornecedor atualizado." }); }
       else {
         const created = await createSupplier({ ...form, created_by: SYS_USER });
         if (created?.code) { setFeedback({ type: "success", message: `Fornecedor ${created.code} criado.` }); await abrir(created.code); await reload(); return; }
@@ -472,6 +482,7 @@ export function Vsup0500Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label">Código pai</label><input className="erp-input num" type="number" value={form.corporate_code ?? ""} onChange={(e) => setF("corporate_code", e.target.value ? Number(e.target.value) : undefined)} /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Flags</label>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                            <label className="erp-check"><input type="checkbox" checked={form.is_active !== false} onChange={(e) => setF("is_active", e.target.checked)} /><span>Ativo</span></label>
                             <label className="erp-check"><input type="checkbox" checked={!!form.is_representative} onChange={(e) => setF("is_representative", e.target.checked)} /><span>Representante</span></label>
                             <label className="erp-check"><input type="checkbox" checked={!!form.is_customer} onChange={(e) => setF("is_customer", e.target.checked)} /><span>Cliente</span></label>
                             <label className="erp-check"><input type="checkbox" checked={!!form.is_mei} onChange={(e) => setF("is_mei", e.target.checked)} /><span>MEI</span></label>
@@ -560,14 +571,38 @@ export function Vsup0500Page(): JSX.Element {
                   {folder === "contatos" && (<>
                     <div className="erp-fieldset"><div className="erp-fieldset-head">Novo contato</div><div className="erp-fieldset-body">
                       <div className="erp-field erp-c3"><label className="erp-label">Nome</label><input className="erp-input" value={contactForm.name} onChange={(e) => setContactForm((p) => ({ ...p, name: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2"><label className="erp-label">Cargo</label><input className="erp-input" value={contactForm.role} onChange={(e) => setContactForm((p) => ({ ...p, role: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Cargo</label><input className="erp-input" value={contactForm.position} onChange={(e) => setContactForm((p) => ({ ...p, position: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Tipo de contato</label>
+                        <select className="erp-input" value={contactForm.contact_type_id} onChange={(e) => setContactForm((p) => ({ ...p, contact_type_id: e.target.value }))}>
+                          <option value="">Não classificado</option>
+                          {contactTypes.map((t) => <option key={t.code} value={String(t.code)}>{t.description}</option>)}
+                        </select></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Ordem</label><input className="erp-input num" type="number" min="0" value={contactForm.ranking} onChange={(e) => setContactForm((p) => ({ ...p, ranking: e.target.value }))} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Departamento</label><input className="erp-input" value={contactForm.department} onChange={(e) => setContactForm((p) => ({ ...p, department: e.target.value }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Tag do PC</label><input className="erp-input" value={contactForm.purchase_order_tag} onChange={(e) => setContactForm((p) => ({ ...p, purchase_order_tag: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void run(() => addContact({ supplier_code: form.code!, ...contactForm }), "Contato salvo.")} disabled={busy}>+ Contato</button></div>
+                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void run(() => addContact({
+                        supplier_code: form.code!,
+                        name: contactForm.name,
+                        position: contactForm.position || undefined,
+                        department: contactForm.department || undefined,
+                        purchase_order_tag: contactForm.purchase_order_tag || undefined,
+                        observation: contactForm.observation || undefined,
+                        contact_type_id: contactForm.contact_type_id ? Number(contactForm.contact_type_id) : undefined,
+                        ranking: Number(contactForm.ranking) || 0,
+                      }), "Contato salvo.")} disabled={busy}>+ Contato</button></div>
                     </div></div>
-                    <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Nome</th><th>Cargo</th><th>Depto</th><th>Tag PC</th></tr></thead><tbody>
-                      {folderRows("contacts").length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum contato.</td></tr>}
-                      {folderRows("contacts").map((c, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{parseStr(c, "name", "Name")}</td><td>{parseStr(c, "role", "Role")}</td><td>{parseStr(c, "department", "Department")}</td><td>{parseStr(c, "purchase_order_tag", "PurchaseOrderTag")}</td></tr>)}
+                    <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Nome</th><th>Cargo</th><th>Tipo</th><th>Depto</th><th>Tag PC</th></tr></thead><tbody>
+                      {folderRows("contacts").length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum contato.</td></tr>}
+                      {folderRows("contacts").map((c, i) => {
+                        const tipo = parseNum(c, "contact_type_id", "ContactTypeID");
+                        return <tr key={i}>
+                          <td style={{ fontWeight: 600 }}>{parseStr(c, "name", "Name")}</td>
+                          <td>{parseStr(c, "position", "Position") || "—"}</td>
+                          <td>{contactTypes.find((t) => t.code === tipo)?.description ?? "—"}</td>
+                          <td>{parseStr(c, "department", "Department")}</td>
+                          <td>{parseStr(c, "purchase_order_tag", "PurchaseOrderTag")}</td>
+                        </tr>;
+                      })}
                     </tbody></table></div>
                   </>)}
 

@@ -41,6 +41,16 @@ export interface CreateExitDTO {
   valor_seguro: number;
   valor_desconto: number;
   sales_order_code?: number;
+  /** Carga de expedição que originou a nota, quando a saída vem do romaneio. */
+  shipment_load_code?: number;
+  /**
+   * Cupom fiscal que esta nota substitui. É o caso do varejo que emite cupom no
+   * balcão e depois converte em NF-e a pedido do cliente: o número, a data e o
+   * ECF ficam na nota para a fiscalização amarrar os dois documentos.
+   */
+  fiscal_coupon_number?: string;
+  fiscal_coupon_date?: string;
+  fiscal_coupon_ecf_serial?: string;
   itens: ExitItemDTO[];
 }
 
@@ -178,6 +188,12 @@ export interface CreateEntryDTO {
   valor_total: number;
   tipo_documento: string;
   purchase_order_code?: number;
+  /**
+   * CT-e que trouxe a mercadoria. Amarrar a nota ao conhecimento é o que permite
+   * apropriar o frete àquela entrada — sem o vínculo, o custo do transporte fica
+   * solto e não entra no custo do material.
+   */
+  cte_code?: number;
   itens: EntryItemDTO[];
 }
 
@@ -231,6 +247,60 @@ export async function importNfeByKey(accessKey: string): Promise<FiscalEntry> {
 
 // ─── CT-e ───────────────────────────────────────────────────────────────────
 
+/**
+ * Dados de emissão do CT-e exigidos pela SEFAZ. Sem eles o conhecimento existe
+ * só como registro local: a autorização é recusada com "não possui emission_data".
+ * O emitente é preenchido pelo backend a partir da configuração fiscal — aqui
+ * vão as partes e o trajeto.
+ */
+export interface CteEmissionData {
+  natureza_operacao?: string;
+  tipo_cte?: number;
+  tipo_servico?: number;
+  modal?: string;
+  uf_inicio: string;
+  municipio_inicio: string;
+  uf_fim: string;
+  municipio_fim: string;
+  tomador_servico?: number;
+  remetente: CteParte;
+  destinatario: CteParte;
+  produto_predominante?: string;
+  valor_carga?: number;
+  rntrc?: string;
+}
+
+export interface CteParte {
+  cnpj?: string;
+  cpf?: string;
+  inscricao_estadual?: string;
+  nome?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  municipio?: string;
+  codigo_municipio?: string;
+  uf?: string;
+  cep?: string;
+}
+
+/** Quem paga o frete, na codificação da SEFAZ. */
+export const CTE_TOMADORES = [
+  { value: 0, label: 'Remetente' },
+  { value: 1, label: 'Expedidor' },
+  { value: 2, label: 'Recebedor' },
+  { value: 3, label: 'Destinatário' },
+  { value: 4, label: 'Outros' },
+] as const;
+
+/** Finalidade do conhecimento. */
+export const CTE_TIPOS = [
+  { value: 0, label: 'Normal' },
+  { value: 1, label: 'Complemento de valores' },
+  { value: 2, label: 'Anulação' },
+  { value: 3, label: 'Substituto' },
+] as const;
+
 export interface CreateCteDTO {
   numero_cte: number;
   serie: string;
@@ -250,6 +320,7 @@ export interface CreateCteDTO {
   cst_icms: string;
   tipo_rateio: TipoRateio;
   fiscal_entry_id?: number;
+  emission_data?: CteEmissionData;
 }
 
 export interface Cte {
@@ -289,5 +360,14 @@ export async function listCtes(): Promise<Cte[]> {
 }
 export async function createCte(dto: CreateCteDTO): Promise<Cte> {
   const { data } = await httpClient.post(`${BASE}/cte/create`, dto);
+  return parseCte(data);
+}
+
+/**
+ * Envia o CT-e à SEFAZ. Só funciona quando o conhecimento foi gravado com os
+ * dados de emissão — o backend recusa a autorização sem eles.
+ */
+export async function authorizeCte(code: number): Promise<Cte> {
+  const { data } = await httpClient.post(`${BASE}/cte/${code}/authorize`, {});
   return parseCte(data);
 }

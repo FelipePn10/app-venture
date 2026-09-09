@@ -11,13 +11,14 @@ import {
   createSalesGoalPeriod,
   getSalesGoalsReport,
   upsertGroupTarget,
+  addGroupCustomer,
   upsertGoalBalance,
 } from "@/services/salesGoalsService";
-import { errMessage } from "@/services/fiscalShared";
+import { errMessage, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadItems, loadRepresentatives } from "@/services/lookups";
+import { loadItems, loadRepresentatives, loadCustomers } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "goals" | "periods";
@@ -32,6 +33,14 @@ const PATAMARES = [
 
 const META_GRUPO_VAZIA = {
   commercial_group_code: "", goal_type: "VALOR",
+  minimum_value: "", minimum_bonus_pct: "",
+  probable_value: "", probable_bonus_pct: "",
+  ideal_value: "", ideal_bonus_pct: "",
+};
+
+/** Repartição da meta do grupo entre os clientes que o compõem. */
+const CLIENTE_META_VAZIA = {
+  customer_code: "", representative_code: "",
   minimum_value: "", minimum_bonus_pct: "",
   probable_value: "", probable_bonus_pct: "",
   ideal_value: "", ideal_bonus_pct: "",
@@ -63,6 +72,8 @@ export function Vvnd0500Page(): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<DetailTab>("dados");
   const [metaGrupo, setMetaGrupo] = useState({ ...META_GRUPO_VAZIA });
+  const [metaGrupoId, setMetaGrupoId] = useState<number | null>(null);
+  const [clienteMeta, setClienteMeta] = useState({ ...CLIENTE_META_VAZIA });
   const [saldo, setSaldo] = useState({ ...SALDO_VAZIO });
   const [creating, setCreating] = useState(true);
 
@@ -302,7 +313,7 @@ export function Vvnd0500Page(): JSX.Element {
                             <button className="erp-btn erp-btn-primary" disabled={busy} onClick={() => void run(async () => {
                               if (!metaGrupo.commercial_group_code) { setFeedback({ type: "error", message: "Informe o grupo comercial." }); return; }
                               const n = (v: string) => Number(v) || 0;
-                              await upsertGroupTarget({
+                              const gravada = await upsertGroupTarget({
                                 period_code: selected.period_code,
                                 commercial_group_code: Number(metaGrupo.commercial_group_code),
                                 goal_type: metaGrupo.goal_type,
@@ -311,9 +322,80 @@ export function Vvnd0500Page(): JSX.Element {
                                 ideal_value: n(metaGrupo.ideal_value), ideal_bonus_pct: n(metaGrupo.ideal_bonus_pct),
                                 is_active: true,
                               });
+                              const id = parseNum(gravada, "id", "ID", "group_goal_id", "GroupGoalID");
+                              setMetaGrupoId(id || null);
                               setMetaGrupo({ ...META_GRUPO_VAZIA });
-                              setFeedback({ type: "success", message: "Meta do grupo gravada." });
+                              setFeedback({
+                                type: "success",
+                                message: id
+                                  ? "Meta do grupo gravada — agora dá para repartir entre os clientes."
+                                  : "Meta do grupo gravada.",
+                              });
                             })}>Gravar meta do grupo</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="erp-fieldset">
+                        <div className="erp-fieldset-head">Clientes da meta do grupo</div>
+                        <div className="erp-fieldset-body">
+                          <div className="erp-field erp-c12">
+                            <p className="erp-note">
+                              A meta do grupo é o teto; aqui ela é repartida entre os clientes que compõem
+                              o grupo. É o que permite cobrar o representante por cliente, e não só pelo
+                              total — sem isso a meta do grupo fica sem dono.
+                            </p>
+                          </div>
+                          {!metaGrupoId && (
+                            <div className="erp-field erp-c12">
+                              <span className="erp-hint">Grave a meta do grupo acima para liberar a divisão por cliente.</span>
+                            </div>
+                          )}
+                          <div className="erp-field erp-c3">
+                            <label className="erp-label erp-req">Cliente</label>
+                            <LookupField value={Number(clienteMeta.customer_code) || undefined}
+                              onChange={(c) => setClienteMeta((p) => ({ ...p, customer_code: c ? String(c) : "" }))}
+                              loader={loadCustomers} entityLabel="cliente" placeholder="Escolher cliente" clearable />
+                          </div>
+                          <div className="erp-field erp-c3">
+                            <label className="erp-label">Representante</label>
+                            <LookupField value={Number(clienteMeta.representative_code) || undefined}
+                              onChange={(c) => setClienteMeta((p) => ({ ...p, representative_code: c ? String(c) : "" }))}
+                              loader={loadRepresentatives} entityLabel="representante" placeholder="Do cliente" clearable />
+                          </div>
+                          {PATAMARES.map((pt) => (
+                            <div className="erp-field erp-c12" key={`cli-${pt.chave}`} style={{ flexDirection: "row", gap: 10 }}>
+                              <div style={{ flex: 1 }}>
+                                <label className="erp-label">Meta {pt.rotulo.toLowerCase()}</label>
+                                <input className="erp-input num" type="number"
+                                  value={clienteMeta[`${pt.chave}_value` as keyof typeof clienteMeta]}
+                                  onChange={(e) => setClienteMeta((p) => ({ ...p, [`${pt.chave}_value`]: e.target.value }))} />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <label className="erp-label">Bônus {pt.rotulo.toLowerCase()} (%)</label>
+                                <input className="erp-input num" type="number"
+                                  value={clienteMeta[`${pt.chave}_bonus_pct` as keyof typeof clienteMeta]}
+                                  onChange={(e) => setClienteMeta((p) => ({ ...p, [`${pt.chave}_bonus_pct`]: e.target.value }))} />
+                              </div>
+                            </div>
+                          ))}
+                          <div className="erp-field erp-c12">
+                            <button className="erp-btn erp-btn-primary" disabled={busy || !metaGrupoId} onClick={() => void run(async () => {
+                              if (!metaGrupoId) { setFeedback({ type: "error", message: "Grave a meta do grupo antes." }); return; }
+                              if (!clienteMeta.customer_code) { setFeedback({ type: "error", message: "Escolha o cliente." }); return; }
+                              const n = (v: string) => Number(v) || 0;
+                              await addGroupCustomer({
+                                group_goal_id: metaGrupoId,
+                                customer_code: Number(clienteMeta.customer_code),
+                                representative_code: clienteMeta.representative_code ? Number(clienteMeta.representative_code) : undefined,
+                                minimum_value: n(clienteMeta.minimum_value), minimum_bonus_pct: n(clienteMeta.minimum_bonus_pct),
+                                probable_value: n(clienteMeta.probable_value), probable_bonus_pct: n(clienteMeta.probable_bonus_pct),
+                                ideal_value: n(clienteMeta.ideal_value), ideal_bonus_pct: n(clienteMeta.ideal_bonus_pct),
+                                is_active: true,
+                              });
+                              setClienteMeta({ ...CLIENTE_META_VAZIA });
+                              setFeedback({ type: "success", message: "Cliente incluído na meta do grupo." });
+                            })}>Incluir cliente na meta</button>
                           </div>
                         </div>
                       </div>

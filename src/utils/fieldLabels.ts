@@ -172,6 +172,7 @@ export const FIELD_LABELS: Record<string, string> = {
   acceptance_qty: "Qtde. de aceitação", rejection_qty: "Qtde. de rejeição", attributes: "Atributos",
   quality_score: "Nota de qualidade", delivery_score: "Nota de entrega", total_receipts: "Total de recebimentos",
   rejected_receipts: "Recebimentos rejeitados", late_receipts: "Recebimentos em atraso", scope: "Abrangência",
+  scope_ref: "Código da abrangência (fornecedor, centro de custo ou categoria)",
   auto_approve_max: "Aprovação automática até", block_above: "Bloquear acima de", domain: "Domínio",
   param_key: "Parâmetro", param_value: "Valor do parâmetro", message_type: "Tipo de mensagem",
   qty_tolerance: "Tolerância de quantidade", price_tolerance: "Tolerância de preço", homologated_min: "Mínimo de homologados",

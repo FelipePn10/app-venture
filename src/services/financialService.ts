@@ -50,6 +50,12 @@ export interface ContaPagarDTO {
   tipo_documento: string;
   fornecedor_id?: number;
   fiscal_entry_id?: number;
+  /**
+   * Pedido de compra que originou o título. É o vínculo que fecha o ciclo
+   * pedido → nota → pagamento: sem ele, o financeiro paga sem saber a que
+   * compra o título corresponde.
+   */
+  purchase_order_id?: number;
   data_emissao: string;
   data_vencimento: string;
   valor_bruto: number;
@@ -75,6 +81,8 @@ export interface ContaReceberDTO {
   numero_documento: string;
   cliente_id?: number;
   fiscal_exit_id?: number;
+  /** Pedido de venda que originou o título — fecha o ciclo pedido → nota → recebimento. */
+  sales_order_id?: number;
   data_emissao: string;
   data_vencimento: string;
   valor_bruto: number;

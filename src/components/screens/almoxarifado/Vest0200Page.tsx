@@ -21,6 +21,8 @@ export function Vest0200Page(): JSX.Element {
   const [types, setTypes] = useState<MovementTypeDTO[]>([]);
   const [newInv, setNewInv] = useState({ warehouse_id: 0, description: "" });
   const [countForm, setCountForm] = useState({ item_code: "", warehouse_id: 0, counted_qty: 0 });
+  /** Motivo do acerto por linha, chaveado por `item|depósito`. */
+  const [motivos, setMotivos] = useState<Record<string, string>>({});
   const [typeForm, setTypeForm] = useState<MovementTypeDTO>({ sigla: "", description: "", tipo: "IN" });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -46,10 +48,31 @@ export function Vest0200Page(): JSX.Element {
     setItems(await listInventoryItems(id));
     setFeedback({ type: "success", message: "Contagem registrada." });
   }); };
-  const ajustar = (itemCode: string, warehouseId: number) => { const id = selected?.id; if (!id) return; void run(async () => {
-    await adjustInventoryItem({ inventory_id: id, item_code: itemCode, warehouse_id: warehouseId });
+  /**
+   * O acerto entra como entrada quando a contagem achou mais do que o sistema
+   * tinha, e como saída quando achou menos — é a diferença que decide, não o
+   * usuário. `NONE` cobre a linha que bateu certo e só precisa ser fechada.
+   * O backend recusa a chamada sem esse tipo, e era por isso que o botão
+   * "Ajustar" não fazia nada até aqui.
+   */
+  const ajustar = (itemCode: string, warehouseId: number, diferenca: number) => { const id = selected?.id; if (!id) return; void run(async () => {
+    const chave = `${itemCode}|${warehouseId}`;
+    const tipo = diferenca > 0 ? "IN" : diferenca < 0 ? "OUT" : "NONE";
+    await adjustInventoryItem({
+      inventory_id: id,
+      item_code: itemCode,
+      warehouse_id: warehouseId,
+      adjustment_type: tipo,
+      adjustment_reason: (motivos[chave] ?? "").trim() || undefined,
+    });
     setItems(await listInventoryItems(id));
-    setFeedback({ type: "success", message: "Ajuste aplicado (movimento de acerto gerado)." });
+    setMotivos((p) => { const proximo = { ...p }; delete proximo[chave]; return proximo; });
+    setFeedback({
+      type: "success",
+      message: tipo === "NONE"
+        ? "Linha conferida sem diferença — nenhum movimento gerado."
+        : `Ajuste aplicado como ${tipo === "IN" ? "entrada" : "saída"} (movimento de acerto gerado).`,
+    });
   }); };
   const fechar = () => { const id = selected?.id; if (!id) return; void run(async () => {
     await closeInventory(id); setSelected(await getInventory(id)); setInvs(await listInventories());
@@ -117,16 +140,28 @@ export function Vest0200Page(): JSX.Element {
             </div></div>
             <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
-                <thead><tr><th>Item</th><th>Depósito</th><th>Saldo sist.</th><th>Contado</th><th>Diferença</th><th></th></tr></thead>
+                <thead><tr><th>Item</th><th>Depósito</th><th>Saldo sist.</th><th>Contado</th><th>Diferença</th><th>Acerto</th><th>Motivo</th><th></th></tr></thead>
                 <tbody>
-                  {items.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem contagens.</td></tr>}
+                  {items.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Sem contagens.</td></tr>}
                   {items.map((it, i) => {
                     const item_code = parseStr(it, "item_code", "ItemCode");
                     const wh = parseNum(it, "warehouse_id", "WarehouseID");
                     const sys = parseNum(it, "system_qty", "SystemQty", "balance_qty");
                     const counted = parseNum(it, "counted_qty", "CountedQty");
                     const diff = parseNum(it, "difference", "Difference") || counted - sys;
-                    return <tr key={i}><td><EntityName code={item_code} loader={loadItems} prefix="Item" /></td><td><EntityName code={wh} loader={loadWarehouses} prefix="Depósito" /></td><td>{sys}</td><td>{counted}</td><td>{diff}</td><td><button className="erp-btn" onClick={() => ajustar(item_code, wh)} disabled={busy || selected.status !== "OPEN" || !parseStr(it, "status")}>Ajustar</button></td></tr>;
+                    const chave = `${item_code}|${wh}`;
+                    const acerto = diff > 0 ? "Entrada" : diff < 0 ? "Saída" : "Sem diferença";
+                    return <tr key={i}>
+                      <td><EntityName code={item_code} loader={loadItems} prefix="Item" /></td>
+                      <td><EntityName code={wh} loader={loadWarehouses} prefix="Depósito" /></td>
+                      <td>{sys}</td><td>{counted}</td><td>{diff}</td>
+                      <td>{acerto}</td>
+                      <td><input className="erp-input" placeholder="Por que o saldo mudou"
+                        value={motivos[chave] ?? ""}
+                        onChange={(e) => { const v = e.target.value; setMotivos((p) => ({ ...p, [chave]: v })); }} /></td>
+                      <td><button className="erp-btn" onClick={() => ajustar(item_code, wh, diff)}
+                        disabled={busy || selected.status !== "OPEN" || !parseStr(it, "status")}>Ajustar</button></td>
+                    </tr>;
                   })}
                 </tbody>
               </table>

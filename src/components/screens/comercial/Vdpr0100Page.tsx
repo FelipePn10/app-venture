@@ -6,7 +6,7 @@ import {
 import { errMessage, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadCustomers } from "@/services/lookups";
+import { loadItems, loadCustomers, loadRepresentatives } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "occupation" | "reservation" | "reschedule";
@@ -36,6 +36,13 @@ export function Vdpr0100Page(): JSX.Element {
   const [rsTo, setRsTo] = useState("");
   const [rsCustomer, setRsCustomer] = useState<number | undefined>(undefined);
   const [rsNewDate, setRsNewDate] = useState(plusDays(20));
+  const [rsRepresentative, setRsRepresentative] = useState<number | undefined>(undefined);
+  /** Tanques a considerar na ocupação, separados por vírgula. Vazio = todos. */
+  const [occTanks, setOccTanks] = useState("");
+  /** Pedidos e itens específicos, separados por vírgula. Vazio = toda a faixa. */
+  const [rsOrders, setRsOrders] = useState("");
+  const [rsItems, setRsItems] = useState("");
+  const [rsReason, setRsReason] = useState("");
   const [rescheduleResult, setRescheduleResult] = useState<Obj | null>(null);
 
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -47,7 +54,12 @@ export function Vdpr0100Page(): JSX.Element {
   }, []);
 
   const carregarOcupacao = () => run(async () => {
-    setOccupation(await getOccupation({ from_date: occFrom, to_date: occTo, daily_capacity: capacity ? Number(capacity) : undefined }));
+    const tanques = occTanks.split(",").map((p) => Number(p.trim())).filter((n) => Number.isFinite(n) && n > 0);
+    setOccupation(await getOccupation({
+      from_date: occFrom, to_date: occTo,
+      daily_capacity: capacity ? Number(capacity) : undefined,
+      tank_codes: tanques.length ? tanques : undefined,
+    }));
     setFeedback({ type: "info", message: "Ocupação diária carregada." });
   });
 
@@ -73,7 +85,19 @@ export function Vdpr0100Page(): JSX.Element {
 
   const reprogramar = () => run(async () => {
     if (!rsNewDate) { setFeedback({ type: "error", message: "Informe a nova data de entrega." }); return; }
-    const r = await rescheduleBatch({ delivery_from: rsFrom || undefined, delivery_to: rsTo || undefined, customer_code: rsCustomer, new_date: rsNewDate });
+    const numeros = (texto: string) => texto.split(",").map((p) => Number(p.trim())).filter((n) => Number.isFinite(n) && n > 0);
+    const pedidos = numeros(rsOrders);
+    const itens = numeros(rsItems);
+    const r = await rescheduleBatch({
+      delivery_from: rsFrom || undefined,
+      delivery_to: rsTo || undefined,
+      customer_code: rsCustomer,
+      representative_code: rsRepresentative,
+      sales_order_codes: pedidos.length ? pedidos : undefined,
+      item_codes: itens.length ? itens : undefined,
+      reason: rsReason.trim() || undefined,
+      new_date: rsNewDate,
+    });
     setRescheduleResult(r);
     const o = unwrapObject(r);
     setFeedback({ type: "success", message: `Reprogramação: ${parseNum(o, "rescheduled_orders", "RescheduledOrders") ?? 0} pedido(s) / ${parseNum(o, "rescheduled_items", "RescheduledItems") ?? 0} item(ns) alterados.` });
@@ -116,6 +140,7 @@ export function Vdpr0100Page(): JSX.Element {
               <div className="erp-field erp-c3"><label className="erp-label erp-req">De</label><input className="erp-input" type="date" value={occFrom} onChange={(e) => setOccFrom(e.target.value)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Até</label><input className="erp-input" type="date" value={occTo} onChange={(e) => setOccTo(e.target.value)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Capacidade diária</label><input className="erp-input num" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Tanques</label><input className="erp-input" value={occTanks} placeholder="Ex.: 1, 2 — vazio considera todos" onChange={(e) => setOccTanks(e.target.value)} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={carregarOcupacao} disabled={busy}>{busy && <span className="erp-spin" />}Calcular ocupação</button></div>
             </div>
           </div>
@@ -203,6 +228,11 @@ export function Vdpr0100Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label">Entrega até</label><input className="erp-input" type="date" value={rsTo} onChange={(e) => setRsTo(e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><LookupField value={rsCustomer} loader={loadCustomers} entityLabel="cliente" placeholder="Todos" onChange={(c) => setRsCustomer(c)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label erp-req">Nova data</label><input className="erp-input" type="date" value={rsNewDate} onChange={(e) => setRsNewDate(e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Representante</label><LookupField value={rsRepresentative} loader={loadRepresentatives} entityLabel="representante" placeholder="Todos" clearable onChange={(c) => setRsRepresentative(c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Pedidos específicos</label><input className="erp-input" value={rsOrders} placeholder="Ex.: 1201, 1202" onChange={(e) => setRsOrders(e.target.value)} />
+              <span className="erp-hint">Em branco, reprograma toda a faixa de datas do filtro.</span></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Itens específicos</label><input className="erp-input" value={rsItems} placeholder="Ex.: 100, 101" onChange={(e) => setRsItems(e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Motivo</label><input className="erp-input" value={rsReason} placeholder="Fica no histórico do pedido" onChange={(e) => setRsReason(e.target.value)} /></div>
             <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={reprogramar} disabled={busy}>{busy && <span className="erp-spin" />}Reprogramar em lote</button></div>
           </div>
           {rescheduleResult && <p style={{ fontSize: 12, color: "var(--v-text-3)", padding: "0 14px 12px" }}>{Object.entries(unwrapObject(rescheduleResult)).map(([k, v]) => `${k}: ${String(v)}`).join(" · ")}</p>}

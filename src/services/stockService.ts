@@ -262,11 +262,17 @@ export async function createInventory(dto: InventoryDTO): Promise<InventoryDTO> 
 export async function closeInventory(id: number): Promise<void> {
   await httpClient.post(`${INVENTORY}/${id}/close`, {});
 }
-export async function countInventoryItem(dto: { inventory_id: number; item_code: string; warehouse_id: number; counted_qty: number }): Promise<Obj> {
+export async function countInventoryItem(dto: { inventory_id: number; item_code: string; warehouse_id: number; counted_qty: number; adjustment_type?: string; adjustment_reason?: string }): Promise<Obj> {
   const { data } = await httpClient.post(`${INVENTORY}/count`, dto);
   return unwrapObject(data);
 }
-export async function adjustInventoryItem(dto: { inventory_id: number; item_code: string; warehouse_id: number }): Promise<Obj> {
+/**
+ * Aplica o acerto de inventário. `adjustment_type` é obrigatório no backend
+ * (`IN`, `OUT` ou `NONE`) — sem ele a chamada volta 422 e o ajuste não acontece.
+ * O motivo é o que a auditoria lê depois para saber por que o saldo mudou sem
+ * nota nem produção.
+ */
+export async function adjustInventoryItem(dto: { inventory_id: number; item_code: string; warehouse_id: number; adjustment_type: string; adjustment_reason?: string }): Promise<Obj> {
   const { data } = await httpClient.post(`${INVENTORY}/adjust`, dto);
   return unwrapObject(data);
 }
@@ -290,7 +296,12 @@ export async function createMovementType(dto: MovementTypeDTO): Promise<Movement
 }
 
 // ── §7 Lotes / genealogia ──
-export async function registerLot(dto: { item_code: string; lot: string; heat_number?: string; certificate?: string; supplier_code?: number }): Promise<Obj> {
+/**
+ * Registra a rastreabilidade do lote de matéria-prima. `received_at` é a data em
+ * que o material entrou (YYYY-MM-DD): é dela que sai a idade do lote no PEPS e a
+ * resposta para "de que remessa veio essa peça?" numa auditoria.
+ */
+export async function registerLot(dto: { item_code: string; lot: string; heat_number?: string; certificate?: string; supplier_code?: number; received_at?: string }): Promise<Obj> {
   const { data } = await httpClient.post('/api/stock/lots/register', dto);
   return unwrapObject(data);
 }

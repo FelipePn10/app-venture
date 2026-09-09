@@ -5,6 +5,8 @@ import {
 } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCustomers, loadSalesOrders } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -196,10 +198,15 @@ export function Vfin0210Page(): JSX.Element {
               
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Nº Documento</label>
                   <input className="erp-input" value={form.numero_documento} placeholder="NF-1001" onChange={(e) => setF("numero_documento", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Cliente (ID)</label>
-                  <input className="erp-input num" type="number" value={form.cliente_id ?? ""} onChange={(e) => setF("cliente_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Cliente</label>
+                  <LookupField value={form.cliente_id} loader={loadCustomers} entityLabel="cliente" placeholder="Escolher cliente" clearable
+                    onChange={(c) => setF("cliente_id", c ? Number(c) : undefined)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">NF Saída (ID)</label>
                   <input className="erp-input num" type="number" value={form.fiscal_exit_id ?? ""} onChange={(e) => setF("fiscal_exit_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Pedido de venda</label>
+                  <LookupField value={form.sales_order_id} loader={loadSalesOrders} entityLabel="pedido de venda" placeholder="Opcional" clearable
+                    onChange={(c) => setF("sales_order_id", c ? Number(c) : undefined)} />
+                  <span className="erp-hint">Fecha o ciclo pedido → nota → recebimento.</span></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Forma Pagamento</label>
                   <input className="erp-input" value={form.forma_pagamento ?? ""} onChange={(e) => setF("forma_pagamento", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Valor Bruto</label>

@@ -18,6 +18,12 @@ export const FREIGHT_VALUE_MODES = ['UNITARIO', 'TOTAL'] as const;
 /** Destino do material comprado — decide o crédito de imposto. */
 export const UTILIZATION_TYPES = ['INDUSTRIALIZACAO', 'CONSUMO', 'IMOBILIZADO'] as const;
 
+/**
+ * Natureza da demanda que originou a linha (`demand_type_enum` no backend). É a
+ * mesma classificação que o MRP usa para explicar de onde veio a necessidade.
+ */
+export const DEMAND_TYPES = ['SALES_ORDER', 'FORECAST', 'INDEPENDENT', 'SAFETY_STOCK', 'REPLENISHMENT'] as const;
+
 export interface PurchaseOrderDTO {
   code?: number;
   order_number?: number;
@@ -96,6 +102,24 @@ export interface PurchaseOrderItemDTO {
   operation_type_code?: number;
   fiscal_classification_code?: number;
   utilization_type?: string;
+  /**
+   * Origem da linha. Um item de pedido de compra quase nunca nasce do nada: ele
+   * atende uma requisição, fecha uma cotação, consome um contrato de
+   * fornecimento ou firma uma ordem planejada do MRP. Guardar o vínculo é o que
+   * permite responder depois por que aquilo foi comprado — e é o que o
+   * recebimento usa para dar baixa na origem certa.
+   */
+  contract_code?: number;
+  quotation_code?: number;
+  planned_order_code?: number;
+  purchase_requisition_code?: number;
+  purchase_requisition_item_id?: number;
+  sales_order_code?: number;
+  production_order_id?: number;
+  demand_type?: string;
+  demand_code?: number;
+  requester_employee_code?: number;
+  invoice_type_code?: number;
   status?: string;
   total_price?: number;
   total_gross?: number;
@@ -161,6 +185,17 @@ function parseItem(raw: unknown): PurchaseOrderItemDTO {
     operation_type_code: parseNum(o, 'operation_type_code', 'OperationTypeCode') || undefined,
     fiscal_classification_code: parseNum(o, 'fiscal_classification_code', 'FiscalClassificationCode') || undefined,
     utilization_type: parseStr(o, 'utilization_type', 'UtilizationType') || undefined,
+    contract_code: parseNum(o, 'contract_code', 'ContractCode') || undefined,
+    quotation_code: parseNum(o, 'quotation_code', 'QuotationCode') || undefined,
+    planned_order_code: parseNum(o, 'planned_order_code', 'PlannedOrderCode') || undefined,
+    purchase_requisition_code: parseNum(o, 'purchase_requisition_code', 'PurchaseRequisitionCode') || undefined,
+    purchase_requisition_item_id: parseNum(o, 'purchase_requisition_item_id', 'PurchaseRequisitionItemID') || undefined,
+    sales_order_code: parseNum(o, 'sales_order_code', 'SalesOrderCode') || undefined,
+    production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID') || undefined,
+    demand_type: parseStr(o, 'demand_type', 'DemandType') || undefined,
+    demand_code: parseNum(o, 'demand_code', 'DemandCode') || undefined,
+    requester_employee_code: parseNum(o, 'requester_employee_code', 'RequesterEmployeeCode') || undefined,
+    invoice_type_code: parseNum(o, 'invoice_type_code', 'InvoiceTypeCode') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,
     total_price: parseNum(o, 'total_price', 'TotalPrice'),
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),

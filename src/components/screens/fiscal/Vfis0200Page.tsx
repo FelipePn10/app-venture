@@ -294,7 +294,33 @@ export function Vfis0200Page(): JSX.Element {
                     <input className="erp-input num" type="number" step="0.01" value={form.valor_seguro} onChange={(e) => setF("valor_seguro", Number(e.target.value))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Desconto</label>
                     <input className="erp-input num" type="number" step="0.01" value={form.valor_desconto} onChange={(e) => setF("valor_desconto", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Carga de expedição</label>
+                    <input className="erp-input num" type="number" value={form.shipment_load_code ?? ""}
+                      onChange={(e) => setF("shipment_load_code", e.target.value ? Number(e.target.value) : undefined)} />
+                    <span className="erp-hint">Preenchido sozinho quando a nota nasce do romaneio; informe aqui só na emissão avulsa.</span></div>
                 
+              </div>
+            </div>
+
+            <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Cupom fiscal substituído   — <span style={{fontWeight:400,opacity:0.65}}>Preencha só quando esta nota substitui um cupom emitido no balcão</span></div>
+              <div className="erp-fieldset-body">
+                <div className="erp-field erp-c3"><label className="erp-label">Número do cupom</label>
+                  <input className="erp-input" value={form.fiscal_coupon_number ?? ""}
+                    onChange={(e) => setF("fiscal_coupon_number", e.target.value || undefined)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Data do cupom</label>
+                  <input className="erp-input" type="date" value={form.fiscal_coupon_date ?? ""}
+                    onChange={(e) => setF("fiscal_coupon_date", e.target.value || undefined)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Série do ECF</label>
+                  <input className="erp-input" value={form.fiscal_coupon_ecf_serial ?? ""}
+                    onChange={(e) => setF("fiscal_coupon_ecf_serial", e.target.value || undefined)} /></div>
+                <div className="erp-field erp-c12">
+                  <p className="erp-note">
+                    O cliente compra no balcão, leva o cupom e depois pede a nota. Registrar
+                    número, data e ECF do cupom aqui é o que amarra os dois documentos para a
+                    fiscalização — sem isso, a mesma venda aparece duas vezes.
+                  </p>
+                </div>
               </div>
             </div>
 

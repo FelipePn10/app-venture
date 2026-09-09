@@ -70,6 +70,8 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
   const [resForm, setResForm] = useState({ work_center_id: "", priority: "1", time_factor: "1", is_primary: false });
   const [opTools, setOpTools] = useState<Obj[]>([]);
   const [toolIdInput, setToolIdInput] = useState("");
+  /** Quantas peças daquela ferramenta a operação consome (jogo de insertos, por ex.). */
+  const [toolQtyInput, setToolQtyInput] = useState("1");
   const [leadTime, setLeadTime] = useState<number | null>(null);
 
   const opName = useCallback((id: number) => ops.find((o) => o.id === id)?.name ?? `Op ${id}`, [ops]);
@@ -185,7 +187,8 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
   }); };
   const addTool = () => { const rid = detail?.route?.id; if (!rid || !selOpId) return; void wrap(async () => {
     if (!toolIdInput) { setFeedback({ type: "error", message: "Informe o ID da ferramenta." }); return; }
-    await addRouteOpTool(rid, selOpId, Number(toolIdInput)); setToolIdInput("");
+    await addRouteOpTool(rid, selOpId, Number(toolIdInput), Number(toolQtyInput) || 1);
+    setToolIdInput(""); setToolQtyInput("1");
     setOpTools(await listRouteOpTools(rid, selOpId)); setFeedback({ type: "success", message: "Ferramenta vinculada à operação." });
   }); };
   const removeTool = (linkId: number) => { const rid = detail?.route?.id; if (!rid || !selOpId) return; void wrap(async () => {
@@ -583,15 +586,19 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                           <LookupField value={Number(toolIdInput) || undefined}
                             onChange={(c) => setToolIdInput(c ? String(c) : "")}
                             loader={loadTools} entityLabel="ferramenta" placeholder="Escolher ferramenta…" clearable /></div>
+                        <div className="erp-field erp-c2"><label className="erp-label">Qtd necessária</label>
+                          <input className="erp-input num" type="number" min="1" step="1" value={toolQtyInput}
+                            onChange={(e) => setToolQtyInput(e.target.value)} /></div>
                         <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={addTool} disabled={busy}>+ Ferramenta</button></div>
                       </div>
                       <div className="erp-fieldset-body">
                         <table className="erp-grid">
-                          <thead><tr><th>Vínculo</th><th>Ferramenta</th><th>Descrição</th><th style={{ width: 90 }}>Ações</th></tr></thead>
+                          <thead><tr><th>Vínculo</th><th>Ferramenta</th><th>Descrição</th><th className="num">Qtd</th><th style={{ width: 90 }}>Ações</th></tr></thead>
                           <tbody>
-                            {opTools.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma ferramenta vinculada.</td></tr>}
+                            {opTools.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma ferramenta vinculada.</td></tr>}
                             {opTools.map((t, i) => { const lid = Number(t.id ?? t.ID ?? 0); return (
                               <tr key={i}><td>{lid || "—"}</td><td>{String(t.tool_id ?? t.ToolID ?? "—")}</td><td>{String(t.tool_name ?? t.name ?? "—")}</td>
+                                <td className="num">{String(t.qty_required ?? t.QtyRequired ?? 1)}</td>
                                 <td>{lid ? <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeTool(lid)}>Remover</button> : "—"}</td></tr>
                             ); })}
                           </tbody>

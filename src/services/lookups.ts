@@ -265,16 +265,31 @@ export const loadPdmModifiers = cached(async () =>
   })).filter((o) => o.code),
 );
 
-/** Só itens marcados como **Item Base** podem ser pai de genérico/configurado. */
-export const loadBaseItems = cached(async () =>
-  (await listItems())
-    // `is_base` é o que manda: um item pode ser base e configurado ao mesmo
-    // tempo, e nesse caso `nature` vale 1 (configurado). Só caímos na natureza
-    // quando o backend ainda não devolve o marcador.
-    .filter((i) => (i.is_base ?? i.nature === 2))
-    .map((i) => ({ code: i.code ?? '', label: i.description || `Item ${i.code}`, sub: i.uom || undefined }))
-    .filter((o) => o.code),
-);
+/**
+ * Itens que servem de modelo (**Item Base**) para genérico/configurado.
+ *
+ * Os dois sinais valem: `is_base` é o marcador novo e `nature = 2` é como a
+ * base antiga registrava o mesmo fato — um item pode ser base *e* configurado,
+ * e aí `nature` vale 1. Usar só o marcador deixava a lista vazia em qualquer
+ * cadastro anterior à migração, e o usuário tinha de digitar o código na mão.
+ *
+ * Quando nenhum item está marcado, devolvemos a lista inteira em vez de um
+ * modal vazio: o marcador é uma convenção de cadastro, não uma trava do
+ * backend, e um campo que não abre nada é pior que um campo abrangente.
+ */
+export const loadBaseItems = cached(async () => {
+  const todos = (await listItems())
+    .map((i) => ({
+      code: i.code ?? '',
+      label: i.description || `Item ${i.code}`,
+      sub: i.uom || undefined,
+      base: Boolean(i.is_base) || i.nature === 2,
+    }))
+    .filter((o) => o.code);
+  const marcados = todos.filter((o) => o.base);
+  const escolhidos = marcados.length > 0 ? marcados : todos;
+  return escolhidos.map(({ code, label, sub }) => ({ code, label, sub }));
+});
 
 // A rota de listagem é `/api/warehouse/list`; `/api/warehouse` (sem sufixo) é
 // 404 e deixava todo campo de almoxarifado abrindo vazio.
@@ -364,4 +379,36 @@ export const loadSalesOrders = cached(async () =>
     label: `Pedido ${o.code}`,
     sub: o.customer_code ? `Cliente ${o.customer_code}` : undefined,
   })).filter((o) => o.code),
+);
+
+/**
+ * Origem do pedido de compra. Um pedido raramente nasce sozinho: ele vem de uma
+ * requisição, de uma cotação vencida, de um contrato de fornecimento ou de uma
+ * ordem planejada do MRP. Amarrar o item do pedido à sua origem é o que permite
+ * responder depois "por que compramos isso?" — é assim no FoccoERP (FPDC0200) e
+ * no SAP (ME21N, campo Referência).
+ */
+export const loadPurchaseRequisitions = cached(() =>
+  loadEndpoint('/api/purchase-requisitions', ['notes', 'Notes', 'status', 'Status'], ['status', 'Status']),
+);
+
+export const loadPurchaseQuotations = cached(() =>
+  loadEndpoint('/api/purchase-quotations', ['notes', 'Notes', 'status', 'Status'], ['status', 'Status']),
+);
+
+export const loadPlannedOrders = cached(() =>
+  loadEndpoint('/api/planned-order/list', ['order_type', 'OrderType'], ['status', 'Status']),
+);
+
+export const loadSupplierContracts = cached(() =>
+  loadEndpoint('/api/procurement/supplier-contracts', ['contract_number', 'ContractNumber', 'description', 'Description'], ['status', 'Status']),
+);
+
+export const loadProductionOrders = cached(() =>
+  loadEndpoint('/api/production-order/list', ['item_code', 'ItemCode'], ['status', 'Status']),
+);
+
+/** Pedidos de compra, para amarrar o título financeiro à compra que o originou. */
+export const loadPurchaseOrders = cached(() =>
+  loadEndpoint('/api/purchase-order/list', ['status', 'Status'], ['emission_date', 'EmissionDate']),
 );

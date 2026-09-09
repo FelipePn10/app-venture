@@ -73,8 +73,19 @@ function parsePurchaseCost(raw: unknown): PurchaseCost {
 }
 
 // ── Custo padrão do item ──
-export async function calculateStandardCost(itemCode: string, mask?: string): Promise<StandardCost> {
-  const { data } = await httpClient.post(`${BASE}/rollup`, { item_code: itemCode, mask: mask ?? '', calculated_by: currentUserId() });
+/**
+ * `lotSize` é o lote de referência sobre o qual o setup das operações é diluído
+ * (setup ÷ lote). Com lote 1 o setup inteiro cai em cada peça e o custo padrão
+ * sai muito acima do que a fábrica pratica; com o lote real de produção o
+ * número fecha com o chão de fábrica. Vazio = 1, que é o default do backend.
+ */
+export async function calculateStandardCost(itemCode: string, mask?: string, lotSize?: number): Promise<StandardCost> {
+  const { data } = await httpClient.post(`${BASE}/rollup`, {
+    item_code: itemCode,
+    mask: mask ?? '',
+    lot_size: lotSize && lotSize > 0 ? lotSize : 1,
+    calculated_by: currentUserId(),
+  });
   return parseCost(data);
 }
 export async function getStandardCost(itemCode: string): Promise<StandardCost> {

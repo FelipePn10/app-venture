@@ -9,6 +9,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers, loadEstablishments, loadItems, loadRepresentatives, loadSalesTables } from "@/services/lookups";
+import { RecorrenciaParametrosPanel } from "./RecorrenciaParametrosPanel";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -46,6 +47,15 @@ export function Vvre0200Page(): JSX.Element {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelEffectiveDate, setCancelEffectiveDate] = useState(today());
   const [futureOrdersPolicy, setFutureOrdersPolicy] = useState("NAO_GERAR_NOVOS");
+  const [parametrosAbertos, setParametrosAbertos] = useState(false);
+  /**
+   * Competência (AAAA-MM) do pedido a gerar. Em branco o backend deduz da data
+   * de venda, o que serve para o contrato novo — mas a rodada mensal precisa
+   * dizer de que mês é o faturamento, senão a segunda geração do mesmo contrato
+   * é recusada como duplicidade.
+   */
+  const [competencia, setCompetencia] = useState("");
+  const [confirmarPedido, setConfirmarPedido] = useState(false);
 
   const setF = useCallback(<K extends keyof RecurringSaleDTO>(k: K, v: RecurringSaleDTO[K]) => setForm((p) => ({ ...p, [k]: v })), []);
   const run = useCallback(async (fn: () => Promise<void>) => {
@@ -73,8 +83,17 @@ export function Vvre0200Page(): JSX.Element {
   });
 
   const gerarPedido = (code?: number) => { if (code) void run(async () => {
-    await generateRecurringOrder(code); await refreshSelected(code);
-    setFeedback({ type: "success", message: "Pedido de venda gerado e vinculado à recorrência." });
+    await generateRecurringOrder(code, {
+      ...(competencia ? { competence: competencia } : {}),
+      confirm_order: confirmarPedido,
+    });
+    await refreshSelected(code);
+    setFeedback({
+      type: "success",
+      message: confirmarPedido
+        ? "Pedido de venda gerado, confirmado e vinculado à recorrência."
+        : "Pedido de venda gerado e vinculado à recorrência.",
+    });
   }); };
   const cancelar = () => { if (!selected?.code || !cancelReason.trim()) return;
     const code = selected.code;
@@ -114,8 +133,19 @@ export function Vvre0200Page(): JSX.Element {
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Recorrência</span>
+          <input className="erp-input" type="month" style={{ width: 130, height: 32 }} value={competencia}
+            title="Competência do faturamento (AAAA-MM). Em branco, o sistema deduz da data de venda."
+            onChange={(e) => setCompetencia(e.target.value)} />
+          <label className="erp-check" title="Já confirma o pedido gerado, em vez de deixá-lo em rascunho">
+            <input type="checkbox" checked={confirmarPedido} onChange={(e) => setConfirmarPedido(e.target.checked)} />
+            Confirmar
+          </label>
           <button className="erp-btn erp-btn-dark" onClick={() => gerarPedido(selected?.code)} disabled={busy || !selected || selected.can_generate_order === false}>Gerar pedido</button>
           <button className="erp-btn erp-btn-danger" onClick={() => setCancelOpen(true)} disabled={busy || !selected || selected.can_cancel === false || selected.is_active === false}>Cancelar</button>
+        </div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Contrato</span>
+          <button className="erp-btn" onClick={() => setParametrosAbertos(true)} disabled={busy}>Parâmetros e reajustes</button>
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup">
@@ -253,6 +283,14 @@ export function Vvre0200Page(): JSX.Element {
         <div className="erp-modal-actions"><button className="erp-btn" onClick={() => setCancelOpen(false)}>Voltar</button><button className="erp-btn erp-btn-danger" onClick={cancelar} disabled={busy || !cancelReason.trim()}>Confirmar cancelamento</button></div>
       </section></div>}
       </div>
+
+      {parametrosAbertos && (
+        <RecorrenciaParametrosPanel
+          enterpriseCode={form.enterprise_code || 1}
+          onClose={() => setParametrosAbertos(false)}
+          aviso={(tipo, msg) => setFeedback({ type: tipo, message: msg })}
+        />
+      )}
 
       <footer className="erp-statusbar">
         <div className="erp-status-item">Recorrências: <strong>{rows.length}</strong></div>

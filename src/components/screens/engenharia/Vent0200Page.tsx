@@ -115,7 +115,9 @@ interface FormItem {
   cobertura: string;
   coberturaSegDem: string;
   agrupamento: string;
-  classificacaoPlan: string;
+  /** Curva ABC do item no planejamento: A, B ou C. Não é a classificação do
+   * item — essa vive nas pastas Comercial e Contábil. */
+  curvaAbc: string;
   /** Setor/tanque onde o item é produzido. */
   tanque: string;
   kanbanNumCartoes: string;
@@ -324,7 +326,7 @@ const formInicial: FormItem = {
   cobertura: "",
   coberturaSegDem: "",
   agrupamento: "",
-  classificacaoPlan: "",
+  curvaAbc: "",
   tanque: "",
   kanbanNumCartoes: "",
   critico: false,
@@ -557,7 +559,7 @@ export function Vent0200Page(): JSX.Element {
           critical: form.critico,
           exclusive: form.exclusivo,
           active: true,
-          abc_class: form.classificacaoPlan.trim() || undefined,
+          abc_class: form.curvaAbc.trim() || undefined,
           tank_code: optionalNumber(form.tanque),
           ...(pontoDePedido ? { reorder_point: pontoDePedido } : {}),
         },
@@ -688,7 +690,7 @@ export function Vent0200Page(): JSX.Element {
       estoqueSeguranca: numText(planning, "safety_stock", "SafetyStock"),
       critico: parseBool(planning, "critical", "Critical"),
       exclusivo: parseBool(planning, "exclusive", "Exclusive"),
-      classificacaoPlan: opt(planning, "abc_class", "ABCClass"),
+      curvaAbc: opt(planning, "abc_class", "ABCClass"),
       tanque: numText(planning, "tank_code", "TankCode"),
       ...(() => {
         const rop = unwrapObject(planning["reorder_point"] ?? planning["ReorderPoint"]);
@@ -916,6 +918,7 @@ export function Vent0200Page(): JSX.Element {
         .it-input.err { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
 
         .it-input-num { text-align: right; font-variant-numeric: tabular-nums; }
+        .it-help { font-size: 10.5px; line-height: 1.35; color: #7e9186; font-style: italic; margin-top: 3px; }
 
         .it-textarea { width: 100%; min-height: 64px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 8px 10px; font-family: 'Inter', sans-serif; font-size: 13px; color: #1c2b22; outline: none; resize: vertical; transition: border-color 0.13s, box-shadow 0.13s; }
         .it-textarea:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
@@ -1765,14 +1768,21 @@ export function Vent0200Page(): JSX.Element {
                   </div>
 
                   <div className="it-field it-col-4">
-                    <label className="it-label">Classificação</label>
-                    <LookupField
-                      value={form.classificacaoPlan || undefined}
-                      onChange={(code) => setField("classificacaoPlan", code ? String(code) : "")}
-                      loader={loadItemClassifications}
-                      entityLabel="classificação"
-                      placeholder="Selecionar classificação"
-                    />
+                    <label className="it-label">Curva ABC</label>
+                    <select
+                      className="it-select"
+                      value={form.curvaAbc}
+                      onChange={(e) => setField("curvaAbc", e.target.value)}
+                    >
+                      <option value="">Não classificado</option>
+                      <option value="A">A — poucos itens, maior parte do valor</option>
+                      <option value="B">B — valor intermediário</option>
+                      <option value="C">C — muitos itens, pouco valor</option>
+                    </select>
+                    <span className="it-help">
+                      É a curva de valor do estoque, não a classificação do item — essa fica nas
+                      pastas Comercial e Contábil.
+                    </span>
                   </div>
 
                   <div className="it-field it-col-2">

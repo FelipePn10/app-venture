@@ -18,6 +18,17 @@ export interface ProductionPlanDTO {
   independent_demands?: string;
   group_same_date_orders?: boolean;
   planning_types?: string[];
+  /**
+   * Abrangência do plano. Ou o plano roda para uma classificação de itens
+   * (`classification`, opcionalmente restrita a códigos específicos em
+   * `class_item_codes`, separados por vírgula), ou roda para um item de ordem
+   * (`order_item_code`) — o backend recusa os dois juntos.
+   */
+  classification?: string;
+  class_item_codes?: string;
+  order_item_code?: number;
+  /** Parâmetros livres do plano. `from_date` é obrigatório com demandas a partir de uma data. */
+  parameters?: Record<string, unknown>;
   is_active?: boolean;
 }
 
@@ -31,6 +42,9 @@ function parsePlan(raw: unknown): ProductionPlanDTO {
     independent_demands: parseStr(o, 'independent_demands', 'IndependentDemands') || undefined,
     group_same_date_orders: parseBool(o, 'group_same_date_orders', 'GroupSameDateOrders'),
     planning_types: Array.isArray(pt) ? (pt as string[]) : [],
+    classification: parseStr(o, 'classification', 'Classification') || undefined,
+    class_item_codes: parseStr(o, 'class_item_codes', 'ClassItemCodes') || undefined,
+    order_item_code: parseNum(o, 'order_item_code', 'OrderItemCode') || undefined,
     is_active: o['is_active'] !== false && o['IsActive'] !== false,
   };
 }

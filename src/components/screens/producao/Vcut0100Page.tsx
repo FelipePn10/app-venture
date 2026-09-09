@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   type CuttingPlanDTO, type CuttingPartDTO, type CuttingStockDTO, type PatternDTO, type CuttingSettings,
   CUT_TYPES,
@@ -7,7 +7,8 @@ import {
   optimizeCuttingPlan, releaseCuttingPlan, exportCuttingMap,
   getCuttingProgram, scheduleCuttingPlan,
   getCuttingSettings, updateCuttingSettings,
-  type CuttingPlanDetail,
+  type CuttingPlanDetail, type CuttingPointDTO,
+  parseGeometry,
 } from "@/services/cuttingPlanService";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
@@ -20,6 +21,17 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const pct = (n?: number) => `${(n ?? 0).toFixed(1)}%`;
 const STATUS_LABEL: Record<string, string> = { RASCUNHO: "Rascunho", OTIMIZADO: "Otimizado", FIRMADO: "Firmado", EM_EXECUCAO: "Em execução", CONCLUIDO: "Concluído" };
 const is2D = (t?: string) => t === "GUILLOTINE_2D" || t === "TRUE_SHAPE_2D";
+
+/** Enquadra a prévia do contorno com uma folga de 5% em cada lado. */
+function viewBoxDoContorno(pontos: CuttingPointDTO[]): string {
+  const xs = pontos.map((p) => p.x); const ys = pontos.map((p) => p.y);
+  const minX = Math.min(...xs); const maxX = Math.max(...xs);
+  const minY = Math.min(...ys); const maxY = Math.max(...ys);
+  const largura = Math.max(maxX - minX, 1); const altura = Math.max(maxY - minY, 1);
+  const folga = Math.max(largura, altura) * 0.05;
+  return `${minX - folga} ${minY - folga} ${largura + folga * 2} ${altura + folga * 2}`;
+}
+const isFormaReal = (t?: string) => t === "TRUE_SHAPE_2D";
 
 const EMPTY_PLAN: CuttingPlanDTO = { material_item_code: "", cut_type: "LINEAR_1D", description: "", kerf_mm: 3, trim_mm: 0, min_remnant_mm: 300, stock_uom: "M", uom_factor: 0, warehouse_id: 0, include_remnants: false };
 const EMPTY_PART: CuttingPartDTO = { label: "", length_mm: 0, width_mm: 0, height_mm: 0, quantity: 1 };
@@ -45,6 +57,8 @@ export function Vcut0100Page(): JSX.Element {
   const [settings, setSettings] = useState<CuttingSettings | null>(null);
   const [newPlan, setNewPlan] = useState<CuttingPlanDTO>({ ...EMPTY_PLAN });
   const [partForm, setPartForm] = useState<CuttingPartDTO>({ ...EMPTY_PART });
+  /** Contorno da peça de forma real, digitado como "x,y" por linha. */
+  const [contorno, setContorno] = useState("");
   const [stockForm, setStockForm] = useState<CuttingStockDTO>({ ...EMPTY_STOCK });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -70,7 +84,13 @@ export function Vcut0100Page(): JSX.Element {
 
   const adicionarPeca = () => { const id = planId(); if (!id) return; void run(async () => {
     if (!partForm.quantity) { setFeedback({ type: "error", message: "Quantidade é obrigatória." }); return; }
-    await addPart(id, partForm); setPartForm({ ...EMPTY_PART }); await refresh(id); setFeedback({ type: "success", message: "Peça adicionada." });
+    if (formaReal && contorno.trim() && !contornoPontos) {
+      setFeedback({ type: "error", message: "O contorno precisa de ao menos três vértices no formato x,y por linha." });
+      return;
+    }
+    await addPart(id, { ...partForm, geometry: contornoPontos ?? undefined });
+    setPartForm({ ...EMPTY_PART }); setContorno(""); await refresh(id);
+    setFeedback({ type: "success", message: "Peça adicionada." });
   }); };
   const removerPeca = (partId?: number) => { const id = planId(); if (!id || !partId) return; void run(async () => { await removePart(id, partId); await refresh(id); }); };
   const adicionarEstoque = () => { const id = planId(); if (!id) return; void run(async () => {
@@ -101,6 +121,8 @@ export function Vcut0100Page(): JSX.Element {
 
   const p = detail?.plan;
   const twoD = is2D(p?.cut_type ?? newPlan.cut_type);
+  const formaReal = isFormaReal(p?.cut_type ?? newPlan.cut_type);
+  const contornoPontos = useMemo(() => parseGeometry(contorno), [contorno]);
 
   return (
     <div className="erp-screen">
@@ -189,6 +211,37 @@ export function Vcut0100Page(): JSX.Element {
                       <div className="erp-field erp-c2"><label className="erp-label">Qtd</label><input className="erp-input num" type="number" value={partForm.quantity || ""} onChange={(e) => setPartForm((s) => ({ ...s, quantity: Number(e.target.value) }))} /></div>
                       <div className="erp-field erp-c4"><label className="erp-label">Item da peça</label><LookupField value={partForm.item_code} loader={loadItems} entityLabel="item" placeholder="Opcional" clearable onChange={(c) => setPartForm((s) => ({ ...s, item_code: c ? Number(c) : undefined }))} /></div>
                       <div className="erp-field erp-c4"><label className="erp-label">Origem</label><input className="erp-input" value={partForm.source_ref ?? ""} placeholder="Pedido, ordem ou projeto" onChange={(e) => setPartForm((s) => ({ ...s, source_ref: e.target.value || undefined }))} /></div>
+
+                      {formaReal && (
+                        <div className="erp-field erp-c12">
+                          <label className="erp-label">Contorno da peça (forma real)</label>
+                          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                            <textarea className="erp-input" rows={5} style={{ flex: 1, fontFamily: "monospace" }}
+                              placeholder={"0,0\n800,0\n800,400\n300,600\n0,400"}
+                              value={contorno} onChange={(e) => setContorno(e.target.value)} />
+                            <div style={{ width: 150 }}>
+                              {contornoPontos ? (
+                                <svg viewBox={viewBoxDoContorno(contornoPontos)} width="150" height="110"
+                                  role="img" aria-label="Prévia do contorno da peça"
+                                  style={{ border: "1px solid var(--v-border)", borderRadius: 4, background: "var(--v-surface-2)" }}>
+                                  <polygon points={contornoPontos.map((pt) => `${pt.x},${pt.y}`).join(" ")}
+                                    fill="rgba(46,125,80,.18)" stroke="var(--v-primary, #2e7d32)" strokeWidth="6" vectorEffect="non-scaling-stroke" />
+                                </svg>
+                              ) : (
+                                <span className="erp-hint">
+                                  Um vértice por linha, em milímetros (<code>x,y</code>). Com três ou mais,
+                                  a prévia aparece aqui.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="erp-hint">
+                            Sem contorno a peça é encaixada pelo retângulo que a envolve — e o material
+                            entre as curvas vira sobra. Largura e altura continuam valendo como
+                            retângulo envolvente.
+                          </span>
+                        </div>
+                      )}
 
                       {/* A fita de borda é boa parte do custo da peça em movelaria
                           e define o tempo de coladeira — precisa entrar aqui. */}

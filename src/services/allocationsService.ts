@@ -16,12 +16,28 @@ export interface AllocationBase {
 export interface OverheadAllocation {
   id?: number;
   cost_center_code: number;
+  /**
+   * Conta do plano de contas de onde o indireto sai. Sem ela o rateio distribui
+   * o centro de custo inteiro; com ela dá para ratear só a energia, só o
+   * aluguel — que é como a contabilidade separa o gasto.
+   */
+  plan_account_code?: number;
+  account_code?: string;
   period_start: string;
   period_end: string;
   allocation_type?: string;
+  /**
+   * Base de alocação (cadastrada em "Base de alocação"): o critério que decide
+   * quanto cada centro recebe — horas-máquina, área ocupada, número de pessoas.
+   * Só faz sentido quando o tipo de rateio não é percentual fixo.
+   */
+  base_code?: number;
   description?: string;
   targets?: { cost_center_code: number; percentage: number }[];
 }
+
+/** Como o indireto é distribuído entre os centros de destino. */
+export const ALLOCATION_TYPES = ['PERCENTAGE', 'BASE'] as const;
 
 function parseBase(raw: unknown): AllocationBase {
   const o = unwrapObject(raw);
@@ -43,6 +59,9 @@ function parseOverhead(raw: unknown): OverheadAllocation {
     period_start: parseStr(o, 'period_start', 'PeriodStart') || '',
     period_end: parseStr(o, 'period_end', 'PeriodEnd') || '',
     allocation_type: parseStr(o, 'allocation_type', 'AllocationType') || undefined,
+    plan_account_code: parseNum(o, 'plan_account_code', 'PlanAccountCode') || undefined,
+    account_code: parseStr(o, 'account_code', 'AccountCode') || undefined,
+    base_code: parseNum(o, 'base_code', 'BaseCode') || undefined,
     description: parseStr(o, 'description', 'Description') || undefined,
     targets,
   };

@@ -1,18 +1,25 @@
 import { useState } from "react";
-import { type ItemConversionDTO, listItemConversions, upsertItemConversion, deleteItemConversion, convertItem } from "@/services/purchasingMasterService";
+import { type ItemConversionDTO, type ConversionResult, CONVERSION_TOLERANCE_TYPES, listItemConversions, upsertItemConversion, deleteItemConversion, convertItem } from "@/services/purchasingMasterService";
+import { enumLabel } from "@/utils/enumLabels";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const EMPTY: ItemConversionDTO = { item_code: "", from_uom: "", to_uom: "", factor: 1 };
+const EMPTY: ItemConversionDTO = {
+  item_code: "", from_uom: "", to_uom: "", factor: 1,
+  rounding_percent: 0, tolerance_value: 0, tolerance_type: "PERCENT",
+};
+
+const numero = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 6 });
 
 export function Vsup0110Page(): JSX.Element {
   const [item, setItem] = useState<string | undefined>(undefined);
   const [list, setList] = useState<ItemConversionDTO[]>([]);
   const [form, setForm] = useState<ItemConversionDTO>(EMPTY);
-  const [conv, setConv] = useState({ from: "", to: "", qty: "1", result: "" });
+  const [conv, setConv] = useState({ from: "", to: "", qty: "1" });
+  const [convResult, setConvResult] = useState<ConversionResult | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,7 +42,7 @@ export function Vsup0110Page(): JSX.Element {
   async function converter() {
     if (!item || !conv.from || !conv.to) { setFeedback({ type: "error", message: "Informe item, de e para." }); return; }
     setBusy(true); setFeedback(null);
-    try { const r = await convertItem(item, conv.from, conv.to, Number(conv.qty) || 1); setConv((p) => ({ ...p, result: JSON.stringify(r) })); }
+    try { setConvResult(await convertItem(item, conv.from, conv.to, Number(conv.qty) || 1)); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -76,7 +83,7 @@ export function Vsup0110Page(): JSX.Element {
               {list.map((c) => (
                 <div key={c.id} className="erp-list-row" style={{ cursor: "default" }}>
                   <span className="erp-list-code">{c.from_uom}→{c.to_uom}</span>
-                  <span className="erp-list-sub">fator {c.factor}</span>
+                  <span className="erp-list-sub">fator {c.factor}{c.rounding_percent ? ` · arred. ${c.rounding_percent}%` : ""}</span>
                   <div className="erp-list-meta">
                     <button className="erp-btn erp-btn-danger erp-btn-sm" style={{ marginLeft: "auto" }} onClick={() => c.id && void remover(c.id)} disabled={busy}>Excluir</button>
                   </div>
@@ -94,6 +101,19 @@ export function Vsup0110Page(): JSX.Element {
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">De (UM)</label><input className="erp-input" value={form.from_uom} placeholder="CX" onChange={(e) => setF("from_uom", e.target.value.toUpperCase())} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Para (UM)</label><input className="erp-input" value={form.to_uom} placeholder="UN" onChange={(e) => setF("to_uom", e.target.value.toUpperCase())} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Fator</label><input className="erp-input num" type="number" step="0.0001" value={form.factor} onChange={(e) => setF("factor", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Arredondamento (%)</label><input className="erp-input num" type="number" step="0.01" min="0" value={form.rounding_percent ?? 0} onChange={(e) => setF("rounding_percent", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Tolerância</label><input className="erp-input num" type="number" step="0.0001" min="0" value={form.tolerance_value ?? 0} onChange={(e) => setF("tolerance_value", Number(e.target.value))} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Tolerância em</label>
+                    <select className="erp-input" value={form.tolerance_type ?? "PERCENT"} onChange={(e) => setF("tolerance_type", e.target.value)}>
+                      {CONVERSION_TOLERANCE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}
+                    </select></div>
+                  <div className="erp-field erp-c12">
+                    <p className="erp-note">
+                      Para item que <strong>não aceita fração</strong>, a conversão arredonda para o inteiro mais
+                      próximo e só é aceita se a sobra couber no arredondamento mais a tolerância. Com os três
+                      campos em zero, qualquer conversão que não dê inteiro exato é recusada.
+                    </p>
+                  </div>
                   <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>Salvar conversão</button></div>
                 </div>
               </div>
@@ -104,7 +124,14 @@ export function Vsup0110Page(): JSX.Element {
                   <div className="erp-field erp-c2"><label className="erp-label">Para</label><input className="erp-input" value={conv.to} onChange={(e) => setConv((p) => ({ ...p, to: e.target.value.toUpperCase() }))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Qtde</label><input className="erp-input num" type="number" value={conv.qty} onChange={(e) => setConv((p) => ({ ...p, qty: e.target.value }))} /></div>
                   <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={() => void converter()} disabled={busy}>Converter</button></div>
-                  <div className="erp-field erp-c4"><label className="erp-label">Resultado</label><input className="erp-input" readOnly value={conv.result} /></div>
+                  <div className="erp-field erp-c6">
+                    <label className="erp-label">Resultado</label>
+                    <input className="erp-input" readOnly
+                      value={convResult
+                        ? `${numero(convResult.quantity)} ${convResult.from_uom} = ${numero(convResult.converted_qty)} ${convResult.to_uom}`
+                        : ""} />
+                    {convResult && <span className="erp-hint">Fator aplicado: 1 {convResult.from_uom} = {numero(convResult.factor)} {convResult.to_uom}.</span>}
+                  </div>
                 </div>
               </div>
             </div>

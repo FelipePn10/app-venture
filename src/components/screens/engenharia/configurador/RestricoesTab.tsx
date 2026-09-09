@@ -4,13 +4,13 @@ import {
   type RestrictionReason, type RestrictionOperator,
   RESTRICTION_OPERATORS, RESTRICTION_CONNECTORS,
   type RestrictionEvaluation,
-  listRestrictionsByItem, createRestriction, deactivateRestriction,
+  listRestrictionsByItem, listAllRestrictions, createRestriction, deactivateRestriction,
   listRestrictionReasons, createRestrictionReason, evaluateRestrictions,
   precedenciaEmPalavras,
 } from "@/services/configuratorRestrictionService";
 import { type CfgItemCharacteristic, listItemQuestions } from "@/services/configuratorCfgService";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadCustomers } from "@/services/lookups";
+import { loadItems, loadCustomers, loadItemClassifications, loadSalesDivisions } from "@/services/lookups";
 import { errMessage } from "@/services/fiscalShared";
 
 /**
@@ -38,6 +38,15 @@ const MOTIVOS_SUGERIDOS = [
   "Global — combinação bloqueada por qualquer motivo",
 ];
 
+/** Abrangência da regra em palavras, para a coluna da lista. */
+function escopoEmPalavras(r: Restriction): string {
+  if (r.customer_code) return `Cliente ${r.customer_code}`;
+  if (r.item_code) return "Este item";
+  if (r.classification_type) return r.classification_origin || `Classificação ${r.classification_type}`;
+  if (r.division_id) return `Divisão de vendas ${r.division_id}`;
+  return "Todos os itens";
+}
+
 const DOMINANTE_VAZIA: RestrictionDominant = { question_id: 0, operator: "EQUAL", condition_type: "AND", answer_value: "", sequence: 1 };
 const DETERMINANTE_VAZIA: RestrictionDeterminant = { question_id: 0, operator: "INVALID", answer_value: "" };
 
@@ -50,6 +59,14 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
   const [ses, setSes] = useState<RestrictionDominant[]>([{ ...DOMINANTE_VAZIA }]);
   const [entaos, setEntaos] = useState<RestrictionDeterminant[]>([{ ...DETERMINANTE_VAZIA }]);
   const [cliente, setCliente] = useState<number | undefined>(undefined);
+  /**
+   * Abrangência da regra. Item é o caso comum; classificação escreve a regra uma
+   * vez para a família inteira e divisão a aplica a toda uma divisão de vendas —
+   * é a mesma escala de precedência que o backend usa para desempatar.
+   */
+  const [abrangencia, setAbrangencia] = useState<"item" | "classificacao" | "divisao">("item");
+  const [classificacao, setClassificacao] = useState<{ code: number; label: string } | undefined>(undefined);
+  const [divisao, setDivisao] = useState<number | undefined>(undefined);
   const [auditoria, setAuditoria] = useState<RestrictionEvaluation | null>(null);
   const [respostasAudit, setRespostasAudit] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
@@ -61,12 +78,20 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
 
   const carregar = useCallback((code: string) => executar(async () => {
     if (!code.trim()) { setPerguntas([]); setRegras([]); return; }
-    const [qs, rs, ms] = await Promise.all([
+    const [qs, rs, todas, ms] = await Promise.all([
       listItemQuestions(code.trim()),
       listRestrictionsByItem(code.trim()),
+      listAllRestrictions().catch(() => [] as Restriction[]),
       listRestrictionReasons(),
     ]);
-    setPerguntas(qs); setRegras(rs); setMotivos(ms);
+    // As regras de classificação e divisão não voltam na busca por item, mas
+    // valem para ele — sem juntá-las aqui, a regra some da tela logo depois de
+    // ser gravada.
+    const daFamilia = todas.filter((r) => !r.item_code && (r.classification_type || r.division_id));
+    const jaListadas = new Set(rs.map((r) => r.code));
+    setPerguntas(qs);
+    setRegras([...rs, ...daFamilia.filter((r) => !jaListadas.has(r.code))]);
+    setMotivos(ms);
   }), [executar]);
 
   // O item escolhido é compartilhado entre as abas: ao entrar aqui já vindo de
@@ -80,15 +105,20 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
     RESTRICTION_OPERATORS.find((o) => o.value === op)?.label ?? op;
 
   function gravar() {
-    if (!itemCode.trim()) { aviso("error", "Escolha o item."); return; }
+    if (!itemCode.trim()) { aviso("error", "Escolha o item — é dele que vêm as perguntas da regra."); return; }
+    if (abrangencia === "classificacao" && !classificacao) { aviso("error", "Escolha a classificação a que a regra se aplica."); return; }
+    if (abrangencia === "divisao" && !divisao) { aviso("error", "Escolha a divisão de vendas a que a regra se aplica."); return; }
     const condicoes = ses.filter((d) => d.question_id > 0);
     const consequencias = entaos.filter((d) => d.question_id > 0);
     if (condicoes.length === 0) { aviso("error", "Informe ao menos uma condição (SE)."); return; }
     if (consequencias.length === 0) { aviso("error", "Informe ao menos uma consequência (ENTÃO)."); return; }
     void executar(async () => {
       await createRestriction({
-        itemCode: itemCode.trim(),
-        customerCode: cliente,
+        itemCode: abrangencia === "item" ? itemCode.trim() : undefined,
+        customerCode: abrangencia === "item" ? cliente : undefined,
+        classificationType: abrangencia === "classificacao" && classificacao ? String(classificacao.code) : undefined,
+        classificationOrigin: abrangencia === "classificacao" && classificacao ? classificacao.label : undefined,
+        divisionId: abrangencia === "divisao" ? divisao : undefined,
         reasonCode: Number(motivo) || undefined,
         dominants: condicoes.map((d, i) => ({ ...d, sequence: i + 1 })),
         determinants: consequencias,
@@ -148,20 +178,76 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
             </div>
 
             <div className="erp-field erp-c4">
-              <label className="erp-label">Vale só para o cliente</label>
-              <LookupField
-                value={cliente}
-                onChange={(c) => setCliente(c ? Number(c) : undefined)}
-                loader={loadCustomers}
-                entityLabel="cliente"
-                placeholder="Opcional — em branco vale para todos"
-                clearable
-              />
+              <label className="erp-label">Abrangência da regra</label>
+              <select className="erp-input" value={abrangencia}
+                onChange={(e) => setAbrangencia(e.target.value as typeof abrangencia)}>
+                <option value="item">Este item</option>
+                <option value="classificacao">Uma classificação inteira</option>
+                <option value="divisao">Uma divisão de vendas</option>
+              </select>
               <span className="cfgw-hint">
-                Uma regra de cliente vence a regra geral do item: é assim que se libera
-                uma combinação para um cliente sem abrir para o resto.
+                A precedência é fixa: cliente vence item, item vence classificação,
+                classificação vence divisão. As perguntas da regra saem sempre do
+                item escolhido acima.
               </span>
             </div>
+
+            {abrangencia === "item" && (
+              <div className="erp-field erp-c4">
+                <label className="erp-label">Vale só para o cliente</label>
+                <LookupField
+                  value={cliente}
+                  onChange={(c) => setCliente(c ? Number(c) : undefined)}
+                  loader={loadCustomers}
+                  entityLabel="cliente"
+                  placeholder="Opcional — em branco vale para todos"
+                  clearable
+                />
+                <span className="cfgw-hint">
+                  Uma regra de cliente vence a regra geral do item: é assim que se libera
+                  uma combinação para um cliente sem abrir para o resto.
+                </span>
+              </div>
+            )}
+
+            {abrangencia === "classificacao" && (
+              <div className="erp-field erp-c4">
+                <label className="erp-label erp-req">Classificação</label>
+                <LookupField
+                  value={classificacao?.code}
+                  onChange={async (c) => {
+                    if (!c) { setClassificacao(undefined); return; }
+                    const opcoes = await loadItemClassifications();
+                    const achada = opcoes.find((o) => String(o.code) === String(c));
+                    setClassificacao({ code: Number(c), label: achada?.label ?? `Classificação ${c}` });
+                  }}
+                  loader={loadItemClassifications}
+                  entityLabel="classificação"
+                  placeholder="Escolher classificação"
+                  clearable
+                />
+                <span className="cfgw-hint">
+                  Escreve a regra uma vez para a família inteira, em vez de repeti-la item a item.
+                </span>
+              </div>
+            )}
+
+            {abrangencia === "divisao" && (
+              <div className="erp-field erp-c4">
+                <label className="erp-label erp-req">Divisão de vendas</label>
+                <LookupField
+                  value={divisao}
+                  onChange={(c) => setDivisao(c ? Number(c) : undefined)}
+                  loader={loadSalesDivisions}
+                  entityLabel="divisão"
+                  placeholder="Escolher divisão"
+                  clearable
+                />
+                <span className="cfgw-hint">
+                  É a regra mais ampla: qualquer outra abrangência a vence.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -255,7 +341,10 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
                     const respostas = Object.fromEntries(
                       Object.entries(respostasAudit).filter(([, v]) => v.trim()).map(([k, v]) => [Number(k), v]),
                     );
-                    setAuditoria(await evaluateRestrictions(itemCode.trim(), respostas, cliente));
+                    setAuditoria(await evaluateRestrictions(itemCode.trim(), respostas, cliente, {
+                      classificationType: classificacao ? String(classificacao.code) : undefined,
+                      divisionId: divisao,
+                    }));
                   })}>Conferir combinação</button>
                 {auditoria && <button className="erp-btn erp-btn-sm" onClick={() => setAuditoria(null)}>Limpar</button>}
               </div>
@@ -285,20 +374,21 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
         )}
 
         <div className="erp-fieldset">
-          <div className="erp-fieldset-head">Restrições do item ({regras.length})</div>
+          <div className="erp-fieldset-head">Restrições que valem para este item ({regras.length})</div>
           <div className="erp-fieldset-body">
             <div className="erp-field erp-c12">
               <table className="erp-grid">
-                <thead><tr><th>Código</th><th>Regra</th><th>Situação</th><th /></tr></thead>
+                <thead><tr><th>Código</th><th>Abrangência</th><th>Regra</th><th>Situação</th><th /></tr></thead>
                 <tbody>
                   {regras.length === 0 && (
-                    <tr><td colSpan={4} className="erp-grid-empty">
+                    <tr><td colSpan={5} className="erp-grid-empty">
                       {itemCode ? "Nenhuma restrição cadastrada para este item." : "Escolha o item."}
                     </td></tr>
                   )}
                   {regras.map((r) => (
                     <tr key={r.code}>
                       <td>#{r.code}</td>
+                      <td>{escopoEmPalavras(r)}</td>
                       <td className="cfgw-rule">
                         {r.dominants.length === 0 && r.determinants.length === 0
                           ? <em>regra sem condições — abra para conferir</em>

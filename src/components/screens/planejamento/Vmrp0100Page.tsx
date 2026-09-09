@@ -36,7 +36,11 @@ export function Vmrp0100Page(): JSX.Element {
   const [planCode, setPlanCode] = useState("1");
   const [initialOrder, setInitialOrder] = useState("10000");
   const [plans, setPlans] = useState<ProductionPlanDTO[]>([]);
-  const [newPlan, setNewPlan] = useState({ code: "", name: "" });
+  const [newPlan, setNewPlan] = useState({
+    code: "", name: "",
+    abrangencia: "todos" as "todos" | "classificacao" | "ordem",
+    classification: "", class_item_codes: "", order_item_code: "",
+  });
   const [runResult, setRunResult] = useState<MrpRunResult | null>(null);
   const [suggestions, setSuggestions] = useState<MrpSuggestion[]>([]);
   const [planned, setPlanned] = useState<PlannedOrder[]>([]);
@@ -71,8 +75,22 @@ export function Vmrp0100Page(): JSX.Element {
     const code = Number(newPlan.code);
     if (!code) { setFeedback({ type: "error", message: "Informe um código de plano positivo." }); return; }
     if (!newPlan.name.trim()) { setFeedback({ type: "error", message: "Nome do plano é obrigatório." }); return; }
-    await createProductionPlan({ code, name: newPlan.name.trim(), planning_types: ["MRP"] });
-    setNewPlan({ code: "", name: "" });
+    if (newPlan.abrangencia === "classificacao" && !newPlan.classification.trim()) {
+      setFeedback({ type: "error", message: "Informe a classificação a que o plano se aplica." }); return;
+    }
+    if (newPlan.abrangencia === "ordem" && !Number(newPlan.order_item_code)) {
+      setFeedback({ type: "error", message: "Informe o item da ordem." }); return;
+    }
+    await createProductionPlan({
+      code,
+      name: newPlan.name.trim(),
+      planning_types: ["MRP"],
+      classification: newPlan.abrangencia === "classificacao" ? newPlan.classification.trim() : undefined,
+      class_item_codes: newPlan.abrangencia === "classificacao" && newPlan.class_item_codes.trim()
+        ? newPlan.class_item_codes.trim() : undefined,
+      order_item_code: newPlan.abrangencia === "ordem" ? Number(newPlan.order_item_code) : undefined,
+    });
+    setNewPlan({ code: "", name: "", abrangencia: "todos", classification: "", class_item_codes: "", order_item_code: "" });
     setPlans(await listProductionPlans());
     setPlanCode(String(code));
     setFeedback({ type: "success", message: `Plano ${code} criado — selecionado para rodar o MRP.` });
@@ -191,6 +209,27 @@ export function Vmrp0100Page(): JSX.Element {
         <div className="erp-fieldset"><div className="erp-fieldset-head">Planos de produção (MRP)</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label">Novo — código</label><input className="erp-input num" type="number" value={newPlan.code} onChange={(e) => setNewPlan((p) => ({ ...p, code: e.target.value }))} /></div>
           <div className="erp-field erp-c4"><label className="erp-label">Nome</label><input className="erp-input" value={newPlan.name} onChange={(e) => setNewPlan((p) => ({ ...p, name: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Abrangência</label>
+            <select className="erp-input" value={newPlan.abrangencia}
+              onChange={(e) => setNewPlan((p) => ({ ...p, abrangencia: e.target.value as typeof p.abrangencia }))}>
+              <option value="todos">Todos os itens</option>
+              <option value="classificacao">Uma classificação</option>
+              <option value="ordem">Um item de ordem</option>
+            </select></div>
+          {newPlan.abrangencia === "classificacao" && (<>
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Classificação</label>
+              <input className="erp-input" value={newPlan.classification}
+                onChange={(e) => setNewPlan((p) => ({ ...p, classification: e.target.value }))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Itens da classificação</label>
+              <input className="erp-input" value={newPlan.class_item_codes} placeholder="Ex.: 100,101,102 — vazio pega todos"
+                onChange={(e) => setNewPlan((p) => ({ ...p, class_item_codes: e.target.value }))} /></div>
+          </>)}
+          {newPlan.abrangencia === "ordem" && (
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Item da ordem</label>
+              <input className="erp-input num" type="number" value={newPlan.order_item_code}
+                onChange={(e) => setNewPlan((p) => ({ ...p, order_item_code: e.target.value }))} />
+              <span className="erp-hint">Não pode ser combinado com filtro de classificação.</span></div>
+          )}
           <div className="erp-field erp-c3" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
             <button className="erp-btn erp-btn-primary" onClick={criarPlano} disabled={busy}>Criar plano</button>
             <button className="erp-btn" onClick={carregarPlanos} disabled={busy}>Listar planos</button></div>

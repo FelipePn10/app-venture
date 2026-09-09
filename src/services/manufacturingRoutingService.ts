@@ -342,8 +342,14 @@ export async function listRouteOpTools(routeId: number, opId: number): Promise<O
   const { data } = await httpClient.get(`${BASE}/route-operations/${routeId}/${opId}/tools`);
   return unwrapArray(data).map(unwrapObject);
 }
-export async function addRouteOpTool(routeId: number, opId: number, toolId: number, quantity = 1): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}/${opId}/tools`, { route_operation_id: opId, tool_id: toolId, quantity });
+/**
+ * Vincula a ferramenta à operação. A quantidade vai como `qty_required` — que é
+ * o nome que o DTO aceita; enviada como `quantity`, era descartada em silêncio e
+ * toda ferramenta ficava como se fosse uma só, mesmo quando a operação precisa
+ * de um jogo de quatro insertos.
+ */
+export async function addRouteOpTool(routeId: number, opId: number, toolId: number, qtyRequired = 1): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}/${opId}/tools`, { route_operation_id: opId, tool_id: toolId, qty_required: qtyRequired });
   return unwrapObject(data);
 }
 export async function removeRouteOpTool(routeId: number, opId: number, toolLinkId: number): Promise<void> {
