@@ -244,8 +244,22 @@ export async function addEmail(body: Obj): Promise<void> {
 export async function addDueDate(body: Obj): Promise<void> {
   await httpClient.post(`${BASE}/due-dates`, body);
 }
-export async function addContact(body: Obj): Promise<void> {
-  await httpClient.post(`${BASE}/contacts`, body);
+export async function addContact(body: Obj): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/contacts`, body);
+  return unwrapObject(data);
+}
+
+/**
+ * Telefone e e-mail **do contato** (não do fornecedor). As rotas existiam mas
+ * só eram alcançáveis pela tela genérica de rotinas: pela tela do fornecedor,
+ * um contato nascia sem forma de ser contatado.
+ */
+export async function addContactPhone(contactId: number, value: string, ranking = 1): Promise<void> {
+  await httpClient.post(`${BASE}/contacts/phones`, { contact_id: contactId, value, ranking });
+}
+
+export async function addContactEmail(contactId: number, value: string, ranking = 1): Promise<void> {
+  await httpClient.post(`${BASE}/contacts/emails`, { contact_id: contactId, value, ranking });
 }
 
 // ── Vínculo com empresa ──

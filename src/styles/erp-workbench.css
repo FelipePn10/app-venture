@@ -375,6 +375,10 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-lookup-list::-webkit-scrollbar { width: 8px; }
 .erp-lookup-list::-webkit-scrollbar-thumb { background: var(--v-border-strong); border-radius: 8px; }
 .erp-lookup-msg { padding: 20px 12px; text-align: center; color: var(--v-text-muted); font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* Falha ao carregar é diferente de lista vazia: cor de erro e ação de repetir. */
+.erp-lookup-msg-err { flex-direction: column; gap: 10px; color: var(--v-err); padding: 16px 12px; }
+.erp-lookup-retry { height: 28px; padding: 0 12px; border: 1px solid var(--v-border-strong); border-radius: var(--v-r-sm); background: var(--v-surface); color: var(--v-text); font-size: 12px; font-weight: 600; cursor: pointer; }
+.erp-lookup-retry:hover { background: var(--v-surface-2); border-color: var(--v-primary); color: var(--v-primary); }
 .erp-lookup-item {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 11px; border: none;
   background: none; cursor: pointer; text-align: left; font-family: var(--v-font); border-bottom: 1px solid var(--v-border-soft);
@@ -497,3 +501,26 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-chart-legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 9px 8px 0; color: #52685b; font-size: 12px; }
 .erp-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .erp-chart-legend i { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── Subtítulo de seção dentro de um bloco ───────────────────────────────── */
+/* Separa assuntos num formulário longo sem criar mais um quadro: o usuário
+   varre a tela pelos títulos em vez de ler campo a campo. */
+.erp-sec {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 0 2px;
+  font-size: 10px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase;
+  color: var(--v-text-muted);
+}
+.erp-sec::after { content: ""; flex: 1; height: 1px; background: var(--v-border); }
+
+/* ── Etiquetas de estado em grade ────────────────────────────────────────── */
+/* Ler "Gargalo" custa menos que decifrar uma coluna booleana com "Sim/Não". */
+.erp-tag {
+  display: inline-block; margin: 0 4px 2px 0; padding: 1px 7px;
+  border: 1px solid var(--v-border-strong); border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; line-height: 1.5;
+  color: var(--v-primary); background: var(--v-surface-2); white-space: nowrap;
+}
+.erp-tag-warn { color: #9a6a12; border-color: #e2c489; background: #fdf6e6; }
+.erp-tag-off  { color: var(--v-text-muted); border-color: var(--v-border); background: transparent; }

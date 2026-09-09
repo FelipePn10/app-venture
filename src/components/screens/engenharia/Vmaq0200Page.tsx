@@ -5,10 +5,16 @@ import {
   CAPACITY_PERIODS,
   capacityUnitLabel,
   capacityPeriodLabel,
+  PREPARATION_TIME_UNITS,
+  preparationUnitLabel,
   listMachines,
   createMachine,
+  updateMachine,
 } from "@/services/machineService";
-import { type MachineType, listMachineTypes, machineTypeLabel } from "@/services/machineTypeService";
+import {
+  type MachineType, MACHINE_TYPE_ENUMS,
+  listMachineTypes, machineTypeLabel, createMachineType, updateMachineType,
+} from "@/services/machineTypeService";
 import {
   type CreateItemMachineTimeDTO,
   type ProductionCalcResult,
@@ -29,7 +35,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { useAuthStore } from "@/store/authStore";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadItemMasks, loadMachines } from "@/services/lookups";
+import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadEmployees } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -46,7 +52,20 @@ function resolveUserId(id: string | undefined, token: string | null): string {
 
 const TIME_UNITS = CAPACITY_PERIODS; // produção usa o mesmo enum de período (MINUTO/HORA/DIA)
 
-const EMPTY_MACHINE = { code: 0, name: "", machine_type_code: 0, capacity: 0, capacity_per_unit: "PEÇAS", capacity_period: "DIA", efficiency_rate: 0.9 };
+/**
+ * Cadastro completo do recurso. A tela pedia sete campos; a tabela guarda vinte.
+ * Os que faltavam são os que o chão de fábrica usa para sequenciar: onde a
+ * máquina fica, se é gargalo, quanto tempo leva para preparar, qual calendário
+ * segue e quem responde pela manutenção.
+ */
+const EMPTY_MACHINE = {
+  code: 0, name: "", machine_type_code: 0, capacity: 0,
+  capacity_per_unit: "PEÇAS", capacity_period: "DIA", efficiency_rate: 0.9,
+  is_active: true, is_critical: false, is_preferred: false,
+  location: "", usage_description: "", brand: "", acquired_on: "",
+  preparation_time: 0, preparation_time_unit: "MINUTE",
+  cost_center_code: 0, supplier_code: 0, maintenance_responsible_employee_id: 0,
+};
 const EMPTY_TIME: CreateItemMachineTimeDTO = { item_code: "", mask: "", machine_code: 0, production_time: 0, production_time_unit: "MINUTO", production_base_qty: 1, setup_time: 0, priority: 1 };
 
 /** Situações do slot na fila (`machine_schedules.status`). */
@@ -72,6 +91,10 @@ export function Vmaq0200Page(): JSX.Element {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [types, setTypes] = useState<MachineType[]>([]);
   const [mForm, setMForm] = useState({ ...EMPTY_MACHINE });
+  /** Código em edição; null = cadastrando um novo recurso. */
+  const [mEdit, setMEdit] = useState<number | null>(null);
+  const [tipoForm, setTipoForm] = useState({ code: 0, name: "", description: "", type: "CUT", requires_operator: false, is_active: true });
+  const [tipoEdit, setTipoEdit] = useState<number | null>(null);
   const [tForm, setTForm] = useState<CreateItemMachineTimeDTO>({ ...EMPTY_TIME });
   const [calc, setCalc] = useState({ item_code: "", mask: "", machine_code: 0, demand_qty: 0 });
   const [calcResult, setCalcResult] = useState<ProductionCalcResult | null>(null);
@@ -93,14 +116,98 @@ export function Vmaq0200Page(): JSX.Element {
 
   useEffect(() => { void loadAll(); }, [loadAll]);
 
-  const criarMaquina = () => run(async () => {
+  /** Zero em campo de vínculo significa "não informado", não o código 0. */
+  const vinculo = (v: number) => (v > 0 ? v : null);
+
+  const corpoDaMaquina = () => ({
+    code: mForm.code,
+    name: mForm.name.trim(),
+    machine_type_code: mForm.machine_type_code,
+    capacity: mForm.capacity,
+    capacity_per_unit: mForm.capacity_per_unit,
+    capacity_period: mForm.capacity_period,
+    efficiency_rate: mForm.efficiency_rate,
+    is_active: mForm.is_active,
+    cost_center_code: vinculo(mForm.cost_center_code),
+    supplier_code: vinculo(mForm.supplier_code),
+    maintenance_responsible_employee_id: vinculo(mForm.maintenance_responsible_employee_id),
+    location: mForm.location.trim() || null,
+    usage_description: mForm.usage_description.trim() || null,
+    brand: mForm.brand.trim() || null,
+    acquired_on: mForm.acquired_on || null,
+    preparation_time: Number(mForm.preparation_time) || 0,
+    preparation_time_unit: mForm.preparation_time_unit,
+    is_critical: mForm.is_critical,
+    is_preferred: mForm.is_preferred,
+  });
+
+  const salvarMaquina = () => run(async () => {
     if (!mForm.code || !mForm.name.trim()) { setFeedback({ type: "error", message: "Código e nome são obrigatórios." }); return; }
     if (!mForm.machine_type_code) { setFeedback({ type: "error", message: "Tipo de máquina é obrigatório." }); return; }
-    await createMachine({ ...mForm, name: mForm.name.trim(), is_active: true, created_by: resolveUserId(user?.id, token) });
-    setFeedback({ type: "success", message: `Máquina "${mForm.name.trim()}" criada.` });
-    setMForm({ ...EMPTY_MACHINE });
+    if (!(mForm.capacity > 0)) { setFeedback({ type: "error", message: "A capacidade deve ser maior que zero." }); return; }
+    if (mEdit !== null) {
+      await updateMachine(mEdit, corpoDaMaquina());
+      setFeedback({ type: "success", message: `Máquina ${mEdit} alterada.` });
+    } else {
+      await createMachine({ ...corpoDaMaquina(), created_by: resolveUserId(user?.id, token) });
+      setFeedback({ type: "success", message: `Máquina "${mForm.name.trim()}" criada.` });
+    }
+    novaMaquina();
     setMachines(await listMachines());
   });
+
+  function novaMaquina() { setMEdit(null); setMForm({ ...EMPTY_MACHINE }); }
+
+  function novoTipo() {
+    setTipoEdit(null);
+    setTipoForm({ code: 0, name: "", description: "", type: "CUT", requires_operator: false, is_active: true });
+  }
+
+  function abrirTipo(t: MachineType) {
+    setTipoEdit(t.code);
+    setTipoForm({
+      code: t.code, name: t.name, description: t.description ?? "", type: t.type,
+      requires_operator: t.requires_operator ?? false, is_active: t.is_active,
+    });
+    setFeedback(null);
+  }
+
+  const salvarTipo = () => run(async () => {
+    if (!tipoForm.code || !tipoForm.name.trim()) { setFeedback({ type: "error", message: "Código e nome do tipo são obrigatórios." }); return; }
+    const corpo = {
+      code: tipoForm.code, name: tipoForm.name.trim(),
+      description: tipoForm.description.trim() || null, type: tipoForm.type,
+      requires_operator: tipoForm.requires_operator, is_active: tipoForm.is_active,
+    };
+    if (tipoEdit !== null) {
+      await updateMachineType(tipoEdit, corpo);
+      setFeedback({ type: "success", message: `Tipo ${tipoEdit} alterado.` });
+    } else {
+      await createMachineType({ ...corpo, created_by: resolveUserId(user?.id, token) });
+      setFeedback({ type: "success", message: `Tipo "${corpo.name}" cadastrado.` });
+    }
+    novoTipo();
+    setTypes(await listMachineTypes());
+  });
+
+  /** Abre o recurso para alteração, trazendo o cadastro completo. */
+  function abrirMaquina(m: Machine) {
+    setMEdit(m.code);
+    setMForm({
+      code: m.code, name: m.name, machine_type_code: m.machine_type_code,
+      capacity: m.capacity, capacity_per_unit: m.capacity_per_unit,
+      capacity_period: m.capacity_period, efficiency_rate: m.efficiency_rate,
+      is_active: m.is_active, is_critical: m.is_critical ?? false, is_preferred: m.is_preferred ?? false,
+      location: m.location ?? "", usage_description: m.usage_description ?? "", brand: m.brand ?? "",
+      acquired_on: (m.acquired_on ?? "").slice(0, 10),
+      preparation_time: m.preparation_time ?? 0,
+      preparation_time_unit: m.preparation_time_unit ?? "MINUTE",
+      cost_center_code: m.cost_center_code ?? 0,
+      supplier_code: m.supplier_code ?? 0,
+      maintenance_responsible_employee_id: m.maintenance_responsible_employee_id ?? 0,
+    });
+    setFeedback(null);
+  }
 
   const criarTempo = () => run(async () => {
     if (!tForm.item_code || !tForm.machine_code) { setFeedback({ type: "error", message: "Item e máquina são obrigatórios." }); return; }
@@ -242,42 +349,223 @@ export function Vmaq0200Page(): JSX.Element {
         )}
         </div></div>
 
-        {/* ── Máquinas ───────────────────────────────────────────────────── */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Nova máquina</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={mForm.code || ""} onChange={(e) => setMForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c3"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={mForm.name} onChange={(e) => setMForm((p) => ({ ...p, name: e.target.value }))} /></div>
-          <div className="erp-field erp-c3"><label className="erp-label erp-req">Tipo</label>
-            <select className="erp-input" value={mForm.machine_type_code || ""} onChange={(e) => setMForm((p) => ({ ...p, machine_type_code: Number(e.target.value) }))}>
-              <option value="">—</option>{types.map((t) => <option key={t.code} value={t.code}>{t.code} · {t.name} ({machineTypeLabel(t.type)})</option>)}
-            </select></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Capacidade</label><input className="erp-input num" type="number" value={mForm.capacity || ""} onChange={(e) => setMForm((p) => ({ ...p, capacity: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Eficiência</label><input className="erp-input num" type="number" step="0.01" value={mForm.efficiency_rate} onChange={(e) => setMForm((p) => ({ ...p, efficiency_rate: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c3"><label className="erp-label">Unidade de capacidade</label>
-            <select className="erp-input" value={mForm.capacity_per_unit} onChange={(e) => setMForm((p) => ({ ...p, capacity_per_unit: e.target.value }))}>
-              {CAPACITY_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
-            </select></div>
-          <div className="erp-field erp-c3"><label className="erp-label">Período</label>
-            <select className="erp-input" value={mForm.capacity_period} onChange={(e) => setMForm((p) => ({ ...p, capacity_period: e.target.value }))}>
-              {CAPACITY_PERIODS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
-            </select></div>
-          <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={criarMaquina} disabled={busy}>Criar máquina</button></div>
-        </div></div>
+        {/* ── Tipos de máquina ───────────────────────────────────────────── */}
+        <div className="erp-fieldset">
+          <div className="erp-fieldset-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{tipoEdit !== null ? `Tipo de máquina ${tipoEdit} — alterando` : "Tipos de máquina"}</span>
+            <span style={{ flex: 1 }} />
+            {tipoEdit !== null && <button className="erp-btn erp-btn-sm" onClick={novoTipo}>Cancelar alteração</button>}
+          </div>
+          <div className="erp-fieldset-body">
+            <div className="erp-field erp-c12">
+              <p className="erp-note">
+                O tipo agrupa recursos que fazem a mesma coisa — todas as serras, todas as dobradeiras.
+                É por ele que o roteiro pede "uma serra" em vez de uma máquina específica, e
+                <strong> exige operador</strong> diz se a operação consome mão de obra além da máquina.
+              </p>
+            </div>
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label>
+              <input className="erp-input num" type="number" value={tipoForm.code || ""} disabled={tipoEdit !== null}
+                onChange={(e) => setTipoForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Nome</label>
+              <input className="erp-input" value={tipoForm.name}
+                onChange={(e) => setTipoForm((p) => ({ ...p, name: e.target.value }))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Natureza</label>
+              <select className="erp-input" value={tipoForm.type}
+                onChange={(e) => setTipoForm((p) => ({ ...p, type: e.target.value }))}>
+                {MACHINE_TYPE_ENUMS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Descrição</label>
+              <input className="erp-input" value={tipoForm.description}
+                onChange={(e) => setTipoForm((p) => ({ ...p, description: e.target.value }))} /></div>
+            <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+              <label className="erp-check"><input type="checkbox" checked={tipoForm.requires_operator}
+                onChange={(e) => setTipoForm((p) => ({ ...p, requires_operator: e.target.checked }))} /> Exige operador</label>
+              <label className="erp-check"><input type="checkbox" checked={tipoForm.is_active}
+                onChange={(e) => setTipoForm((p) => ({ ...p, is_active: e.target.checked }))} /> Ativo</label>
+            </div>
+            <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
+              <button className="erp-btn erp-btn-primary" onClick={salvarTipo} disabled={busy}>
+                {tipoEdit !== null ? "Gravar alteração" : "Cadastrar tipo"}
+              </button>
+              {tipoEdit !== null && <button className="erp-btn" onClick={novoTipo} disabled={busy}>Novo tipo</button>}
+            </div>
+            <div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th style={{ width: 70 }}>Código</th><th>Nome</th><th>Natureza</th><th>Descrição</th><th>Marcadores</th><th style={{ width: 80 }} /></tr></thead>
+                <tbody>
+                  {types.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum tipo cadastrado.</td></tr>}
+                  {types.map((t) => (
+                    <tr key={t.code} className={tipoEdit === t.code ? "erp-row-sel" : ""}>
+                      <td>{t.code}</td>
+                      <td style={{ fontWeight: 600 }}>{t.name}</td>
+                      <td>{machineTypeLabel(t.type)}</td>
+                      <td>{t.description || "—"}</td>
+                      <td>
+                        {t.requires_operator && <span className="erp-tag">Exige operador</span>}
+                        {!t.is_active && <span className="erp-tag erp-tag-off">Inativo</span>}
+                        {!t.requires_operator && t.is_active && "—"}
+                      </td>
+                      <td><button className="erp-btn erp-btn-sm" onClick={() => abrirTipo(t)} disabled={busy}>Abrir</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-          <table className="erp-grid">
-            <thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Capacidade</th><th>Unidade</th><th>Período</th><th>Efic.</th></tr></thead>
-            <tbody>
-              {machines.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma máquina.</td></tr>}
-              {machines.map((m) => (
-                <tr key={m.code}>
-                  <td>{m.code}</td><td>{m.name}</td><td>{m.machine_type_code}</td>
-                  <td>{m.capacity}</td><td>{capacityUnitLabel(m.capacity_per_unit)}</td><td>{capacityPeriodLabel(m.capacity_period)}</td>
-                  <td>{(m.efficiency_rate * 100).toFixed(0)}%</td>
+        {/* ── Máquinas ───────────────────────────────────────────────────── */}
+        <div className="erp-fieldset">
+          <div className="erp-fieldset-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{mEdit !== null ? `Recurso ${mEdit} — alterando` : "Novo recurso (máquina)"}</span>
+            <span style={{ flex: 1 }} />
+            {mEdit !== null && <button className="erp-btn erp-btn-sm" onClick={novaMaquina}>Cancelar alteração</button>}
+          </div>
+          <div className="erp-fieldset-body">
+            <div className="erp-field erp-c12">
+              <p className="erp-note">
+                O recurso é o que o roteiro aloca e o sequenciamento enxerga. Além da capacidade,
+                o que decide a programação é o resto: <strong>grupo e calendário</strong> dizem quando
+                ele pode rodar, <strong>gargalo</strong> marca quem limita a fábrica e o
+                <strong> tempo de preparação</strong> é o que se paga toda vez que a produção troca de item.
+              </p>
+            </div>
+
+            <div className="erp-field erp-c12"><div className="erp-sec">Identificação</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label>
+              <input className="erp-input num" type="number" value={mForm.code || ""} disabled={mEdit !== null}
+                onChange={(e) => setMForm((p) => ({ ...p, code: Number(e.target.value) }))} />
+              {mEdit !== null && <span className="erp-hint">O código identifica o recurso e não muda.</span>}</div>
+            <div className="erp-field erp-c4"><label className="erp-label erp-req">Nome</label>
+              <input className="erp-input" value={mForm.name} onChange={(e) => setMForm((p) => ({ ...p, name: e.target.value }))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Tipo</label>
+              <select className="erp-input" value={mForm.machine_type_code || ""}
+                onChange={(e) => setMForm((p) => ({ ...p, machine_type_code: Number(e.target.value) }))}>
+                <option value="">—</option>
+                {types.map((t) => <option key={t.code} value={t.code}>{t.code} · {t.name} ({machineTypeLabel(t.type)})</option>)}
+              </select></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Marca</label>
+              <input className="erp-input" value={mForm.brand} placeholder="Fabricante"
+                onChange={(e) => setMForm((p) => ({ ...p, brand: e.target.value }))} /></div>
+
+            <div className="erp-field erp-c12"><div className="erp-sec">Capacidade e desempenho</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label erp-req">Capacidade</label>
+              <input className="erp-input num" type="number" value={mForm.capacity || ""}
+                onChange={(e) => setMForm((p) => ({ ...p, capacity: Number(e.target.value) }))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Unidade</label>
+              <select className="erp-input" value={mForm.capacity_per_unit}
+                onChange={(e) => setMForm((p) => ({ ...p, capacity_per_unit: e.target.value }))}>
+                {CAPACITY_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Período</label>
+              <select className="erp-input" value={mForm.capacity_period}
+                onChange={(e) => setMForm((p) => ({ ...p, capacity_period: e.target.value }))}>
+                {CAPACITY_PERIODS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Eficiência</label>
+              <input className="erp-input num" type="number" step="0.01" min="0" max="1" value={mForm.efficiency_rate}
+                onChange={(e) => setMForm((p) => ({ ...p, efficiency_rate: Number(e.target.value) }))} />
+              <span className="erp-hint">0 a 1. {(mForm.efficiency_rate * 100).toFixed(0)}% da capacidade nominal.</span></div>
+            <div className="erp-field erp-c3">
+              <label className="erp-label">Tempo de preparação</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input className="erp-input num" type="number" min="0" style={{ flex: 1 }} value={mForm.preparation_time || ""}
+                  onChange={(e) => setMForm((p) => ({ ...p, preparation_time: Number(e.target.value) }))} />
+                <select className="erp-input" style={{ width: 110 }} value={mForm.preparation_time_unit}
+                  onChange={(e) => setMForm((p) => ({ ...p, preparation_time_unit: e.target.value }))}>
+                  {PREPARATION_TIME_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                </select>
+              </div>
+              <span className="erp-hint">Setup: limpeza, troca de ferramenta, ajuste.</span></div>
+
+            <div className="erp-field erp-c12"><div className="erp-sec">Chão de fábrica</div></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Centro de custo</label>
+              <LookupField value={mForm.cost_center_code || undefined} loader={loadCostCenters} entityLabel="centro de custo"
+                placeholder="Onde o custo é apropriado" clearable
+                onChange={(c) => setMForm((p) => ({ ...p, cost_center_code: c ? Number(c) : 0 }))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Localização</label>
+              <input className="erp-input" value={mForm.location} placeholder="Ex.: Galpão A · Linha 2"
+                onChange={(e) => setMForm((p) => ({ ...p, location: e.target.value }))} /></div>
+            <div className="erp-field erp-c6"><label className="erp-label">Uso do recurso</label>
+              <input className="erp-input" value={mForm.usage_description} placeholder="O que esta máquina faz"
+                onChange={(e) => setMForm((p) => ({ ...p, usage_description: e.target.value }))} /></div>
+            <div className="erp-field erp-c3">
+              <label className="erp-check"><input type="checkbox" checked={mForm.is_critical}
+                onChange={(e) => setMForm((p) => ({ ...p, is_critical: e.target.checked }))} /> Gargalo</label>
+              <span className="erp-hint">Único recurso capaz de fazer a operação — limita a fábrica.</span></div>
+            <div className="erp-field erp-c3">
+              <label className="erp-check"><input type="checkbox" checked={mForm.is_preferred}
+                onChange={(e) => setMForm((p) => ({ ...p, is_preferred: e.target.checked }))} /> Preferencial</label>
+              <span className="erp-hint">Alocado primeiro quando a operação aceita mais de um recurso.</span></div>
+            <div className="erp-field erp-c3">
+              <label className="erp-check"><input type="checkbox" checked={mForm.is_active}
+                onChange={(e) => setMForm((p) => ({ ...p, is_active: e.target.checked }))} /> Ativo</label>
+              <span className="erp-hint">Recurso inativo sai das listas e dos roteiros.</span></div>
+
+            <div className="erp-field erp-c12"><div className="erp-sec">Aquisição e manutenção</div></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+              <LookupField value={mForm.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor"
+                placeholder="De quem foi comprada" clearable
+                onChange={(c) => setMForm((p) => ({ ...p, supplier_code: c ? Number(c) : 0 }))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Data de aquisição</label>
+              <input className="erp-input" type="date" value={mForm.acquired_on}
+                onChange={(e) => setMForm((p) => ({ ...p, acquired_on: e.target.value }))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Responsável pela manutenção</label>
+              <LookupField value={mForm.maintenance_responsible_employee_id || undefined} loader={loadEmployees}
+                entityLabel="funcionário" placeholder="Quem cuida do recurso" clearable
+                onChange={(c) => setMForm((p) => ({ ...p, maintenance_responsible_employee_id: c ? Number(c) : 0 }))} /></div>
+
+            <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
+              <button className="erp-btn erp-btn-primary" onClick={salvarMaquina} disabled={busy}>
+                {mEdit !== null ? "Gravar alteração" : "Criar máquina"}
+              </button>
+              {mEdit !== null && <button className="erp-btn" onClick={novaMaquina} disabled={busy}>Novo recurso</button>}
+            </div>
+          </div>
+        </div>
+
+        <div className="erp-fieldset">
+          <div className="erp-fieldset-head">Recursos cadastrados ({machines.length})</div>
+          <div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <table className="erp-grid">
+              <thead>
+                <tr>
+                  <th style={{ width: 70 }}>Código</th><th>Nome</th><th>Tipo</th>
+                  <th className="num">Capacidade</th><th className="num">Efic.</th>
+                  <th className="num">Setup</th><th>Local</th><th>Marcadores</th>
+                  <th style={{ width: 80 }} />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div></div>
+              </thead>
+              <tbody>
+                {machines.length === 0 && <tr><td colSpan={9} className="erp-grid-empty">Nenhum recurso cadastrado.</td></tr>}
+                {machines.map((m) => {
+                  const tipo = types.find((t) => t.code === m.machine_type_code);
+                  return (
+                    <tr key={m.code} className={mEdit === m.code ? "erp-row-sel" : ""}>
+                      <td>{m.code}</td>
+                      <td style={{ fontWeight: 600 }}>{m.name}
+                        {m.usage_description && <><br /><small style={{ color: "var(--v-text-muted)" }}>{m.usage_description}</small></>}
+                      </td>
+                      <td>{tipo ? tipo.name : m.machine_type_code}</td>
+                      <td className="num">{m.capacity.toLocaleString("pt-BR")} {capacityUnitLabel(m.capacity_per_unit)}<br />
+                        <small style={{ color: "var(--v-text-muted)" }}>{capacityPeriodLabel(m.capacity_period)}</small></td>
+                      <td className="num">{(m.efficiency_rate * 100).toFixed(0)}%</td>
+                      <td className="num">{m.preparation_time ? `${m.preparation_time} ${preparationUnitLabel(m.preparation_time_unit).toLowerCase()}` : "—"}</td>
+                      <td>{m.location || "—"}</td>
+                      <td>
+                        {m.is_critical && <span className="erp-tag erp-tag-warn">Gargalo</span>}
+                        {m.is_preferred && <span className="erp-tag">Preferencial</span>}
+                        {!m.is_active && <span className="erp-tag erp-tag-off">Inativo</span>}
+                        {!m.is_critical && !m.is_preferred && m.is_active && "—"}
+                      </td>
+                      <td><button className="erp-btn erp-btn-sm" onClick={() => abrirMaquina(m)} disabled={busy}>Abrir</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div></div>
         </div>
 
         {/* ── Tempo item × máquina ───────────────────────────────────────── */}

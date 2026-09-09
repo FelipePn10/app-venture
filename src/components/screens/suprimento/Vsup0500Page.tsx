@@ -5,6 +5,7 @@ import {
   PERSON_TYPES, DOCUMENT_TYPES, FREIGHT_TYPES, ICMS_CONTRIBUTORS, VITICOLA, TRACKING_PLATFORMS,
   listSuppliers, getSupplier, createSupplier, updateSupplier, blockSupplier, unblockSupplier,
   listSupplierTypes, addAddress, addPhone, addEmail, addDueDate, addContact,
+  addContactPhone, addContactEmail,
   listEnterprises, addEnterprise, sefazQuery, getPurchasingDefaults,
   type ContactTypeDTO, type SupplierParametersDTO, type SupplierKind, SUPPLIER_KINDS,
   createSupplierType, updateSupplierType, listContactTypes, createContactType,
@@ -73,6 +74,13 @@ export function Vsup0500Page(): JSX.Element {
    * saber a quem mandar o pedido.
    */
   const [contactForm, setContactForm] = useState({ name: "", position: "", department: "", purchase_order_tag: "", observation: "", contact_type_id: "", ranking: "0" });
+  /**
+   * Telefone e e-mail informados junto com o contato. Um contato sem forma de
+   * contato não serve para nada — e as rotas para gravá-los já existiam, só não
+   * eram alcançáveis por esta tela.
+   */
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [entForm, setEntForm] = useState<{ enterprise_code?: number; financial_account: string; ipi: boolean; default_invoice_type_id: string; purchase_price_table_id: string }>({ enterprise_code: undefined, financial_account: "", ipi: false, default_invoice_type_id: "", purchase_price_table_id: "" });
   const [entCode] = useState("1");
 
@@ -578,28 +586,50 @@ export function Vsup0500Page(): JSX.Element {
                           {contactTypes.map((t) => <option key={t.code} value={String(t.code)}>{t.description}</option>)}
                         </select></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Ordem</label><input className="erp-input num" type="number" min="0" value={contactForm.ranking} onChange={(e) => setContactForm((p) => ({ ...p, ranking: e.target.value }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Telefone do contato</label>
+                        <input className="erp-input" value={contactPhone} placeholder="Gravado junto com o contato"
+                          onChange={(e) => setContactPhone(e.target.value)} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">E-mail do contato</label>
+                        <input className="erp-input" type="email" value={contactEmail} placeholder="Gravado junto com o contato"
+                          onChange={(e) => setContactEmail(e.target.value)} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Departamento</label><input className="erp-input" value={contactForm.department} onChange={(e) => setContactForm((p) => ({ ...p, department: e.target.value }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Tag do PC</label><input className="erp-input" value={contactForm.purchase_order_tag} onChange={(e) => setContactForm((p) => ({ ...p, purchase_order_tag: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void run(() => addContact({
-                        supplier_code: form.code!,
-                        name: contactForm.name,
-                        position: contactForm.position || undefined,
-                        department: contactForm.department || undefined,
-                        purchase_order_tag: contactForm.purchase_order_tag || undefined,
-                        observation: contactForm.observation || undefined,
-                        contact_type_id: contactForm.contact_type_id ? Number(contactForm.contact_type_id) : undefined,
-                        ranking: Number(contactForm.ranking) || 0,
-                      }), "Contato salvo.")} disabled={busy}>+ Contato</button></div>
+                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void run(async () => {
+                        const criado = await addContact({
+                          supplier_code: form.code!,
+                          name: contactForm.name,
+                          position: contactForm.position || undefined,
+                          department: contactForm.department || undefined,
+                          purchase_order_tag: contactForm.purchase_order_tag || undefined,
+                          observation: contactForm.observation || undefined,
+                          contact_type_id: contactForm.contact_type_id ? Number(contactForm.contact_type_id) : undefined,
+                          ranking: Number(contactForm.ranking) || 0,
+                        });
+                        const id = parseNum(criado, "id", "ID");
+                        if (id) {
+                          if (contactPhone.trim()) await addContactPhone(id, contactPhone.trim());
+                          if (contactEmail.trim()) await addContactEmail(id, contactEmail.trim());
+                        }
+                        setContactPhone(""); setContactEmail("");
+                        setContactForm({ name: "", position: "", department: "", purchase_order_tag: "", observation: "", contact_type_id: "", ranking: "0" });
+                      }, "Contato salvo.")} disabled={busy}>+ Contato</button></div>
                     </div></div>
-                    <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Nome</th><th>Cargo</th><th>Tipo</th><th>Depto</th><th>Tag PC</th></tr></thead><tbody>
-                      {folderRows("contacts").length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum contato.</td></tr>}
+                    <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Nome</th><th>Cargo</th><th>Tipo</th><th>Depto</th><th>Contato</th><th>Tag PC</th></tr></thead><tbody>
+                      {folderRows("contacts").length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum contato.</td></tr>}
                       {folderRows("contacts").map((c, i) => {
                         const tipo = parseNum(c, "contact_type_id", "ContactTypeID");
+                        const fones = Array.isArray(c.phones) ? (c.phones as Obj[]) : [];
+                        const mails = Array.isArray(c.emails) ? (c.emails as Obj[]) : [];
                         return <tr key={i}>
                           <td style={{ fontWeight: 600 }}>{parseStr(c, "name", "Name")}</td>
                           <td>{parseStr(c, "position", "Position") || "—"}</td>
                           <td>{contactTypes.find((t) => t.code === tipo)?.description ?? "—"}</td>
                           <td>{parseStr(c, "department", "Department")}</td>
+                          <td>
+                            {fones.map((f, n) => <div key={`f${n}`}>{parseStr(f, "value", "Value")}</div>)}
+                            {mails.map((m, n) => <div key={`m${n}`} style={{ color: "var(--v-text-muted)" }}>{parseStr(m, "value", "Value")}</div>)}
+                            {fones.length === 0 && mails.length === 0 && "—"}
+                          </td>
                           <td>{parseStr(c, "purchase_order_tag", "PurchaseOrderTag")}</td>
                         </tr>;
                       })}

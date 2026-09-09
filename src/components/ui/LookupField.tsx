@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { LookupLoader, LookupOption } from "@/services/lookups";
+import { errMessage } from "@/services/fiscalShared";
 
 interface LookupFieldProps<T extends string | number> {
   /** Código selecionado (ou undefined/0 = vazio). */
@@ -27,22 +28,47 @@ export function LookupField<T extends string | number = number>({
 }: LookupFieldProps<T>): JSX.Element {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [error, setError] = useState(false);
+  /** Mensagem da falha; vazio = sem falha. Distingue "falhou" de "não há registros". */
+  const [error, setError] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
 
-  const load = useCallback(async () => {
-    if (loaded || loading) return;
-    setLoading(true); setError(false);
-    try { setOptions(await loader()); setLoaded(true); }
-    catch { setError(true); }
-    finally { setLoading(false); }
-  }, [loader, loaded, loading]);
+  /**
+   * Uma tentativa por montagem. O controle fica em ref, não em estado: como
+   * `load` entra na lista de dependências do efeito, guardar isso em estado
+   * recriava a função a cada carga e o efeito se redisparava — com a lista
+   * falhando, virava retentativa infinita.
+   */
+  const tentouRef = useRef(false);
+
+  /**
+   * Carrega a lista. `forcar` ignora a tentativa anterior — é o "tentar de
+   * novo" depois de uma falha.
+   *
+   * O erro precisa aparecer: dizer "nenhum registro cadastrado" quando a
+   * consulta falhou faz o usuário desistir do campo e digitar o código de
+   * cabeça, achando que o cadastro está vazio.
+   */
+  const load = useCallback(async (forcar = false) => {
+    if (!forcar && tentouRef.current) return;
+    tentouRef.current = true;
+    setLoading(true); setError("");
+    try {
+      setOptions(await loader());
+    } catch (e) {
+      setOptions([]);
+      setError(errMessage(e, "Não foi possível carregar a lista."));
+    } finally {
+      setLoading(false);
+    }
+  }, [loader]);
+
+  // Troca de fonte de dados = nova tentativa.
+  useEffect(() => { tentouRef.current = false; }, [loader]);
 
   // Resolve o rótulo do valor atual assim que a tela monta.
   useEffect(() => { void load(); }, [load]);
@@ -123,7 +149,12 @@ export function LookupField<T extends string | number = number>({
           </div>
           <div className="erp-lookup-list">
             {loading && <div className="erp-lookup-msg"><span className="erp-spin" /> Carregando…</div>}
-            {!loading && error && <div className="erp-lookup-msg">Não foi possível carregar a lista.</div>}
+            {!loading && error && (
+              <div className="erp-lookup-msg erp-lookup-msg-err">
+                <span>{error}</span>
+                <button type="button" className="erp-lookup-retry" onClick={() => void load(true)}>Tentar de novo</button>
+              </div>
+            )}
             {!loading && !error && filtered.length === 0 && (
               <div className="erp-lookup-msg">{options.length === 0 ? `Nenhum ${entityLabel} cadastrado.` : "Nenhum resultado."}</div>
             )}
