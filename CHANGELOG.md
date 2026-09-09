@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.17] — 2026-09-09
+
 ## Correções
 - **Cadastro de item recusava a gravação com "classe ABC inválida"**: o campo Classificação da aba Planejamento estava ligado à lista de classificações do item, mas era gravado como curva ABC — que só aceita A, B ou C. Agora é um campo próprio, **Curva ABC**, com as três opções explicadas.
 - **A busca de item base abria vazia** e obrigava a digitar o código na mão: a lista passou a aceitar tanto o marcador novo quanto os cadastros antigos e, quando nenhum item está marcado como base, mostra todos em vez de nada.
