@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [v1.1.21] — 2026-09-10
+
+## Correções
+- Corrigimos o cadastro de estruturas com códigos de item alfanuméricos.
+- O sistema agora mostra a causa real quando um componente não pode ser salvo.
+- Evitamos inclusões duplicadas quando uma requisição é repetida.
+
 ## [v1.1.19] — 2026-09-10
 
 ## Correções
