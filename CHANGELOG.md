@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## Correções
+- O campo **Altura (mm)** do cadastro de item passou a aceitar espessuras decimais, como 6,35 mm, preservando o valor correto ao gravar e reabrir o item.
+
 ## [v1.1.18] — 2026-09-09
 
 ## Correções
