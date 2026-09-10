@@ -30,6 +30,14 @@ httpClient.interceptors.request.use(async (config) => {
 httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    const responseBody = error?.response?.data;
+    const apiMessage = typeof responseBody === 'string'
+      ? responseBody.trim()
+      : responseBody?.error ?? responseBody?.message;
+    if (typeof apiMessage === 'string' && apiMessage.trim()) {
+      error.message = apiMessage.trim();
+    }
+
     if (error?.response?.status === 426) {
       const body = error.response.data as ClientUpgradeRequiredDetail | undefined;
       notifyClientUpgradeRequired({

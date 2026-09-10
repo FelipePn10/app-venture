@@ -156,6 +156,10 @@ function listarProblemas(rows: LocalRow[]): string[] {
   for (const r of rows) {
     const item = r.childCode || `posição ${r.position}`;
 
+    if (!r.childCode.trim()) {
+      problemas.push(`Item ${item}: informe o código do componente.`);
+    }
+
     if (r.startDate && r.endDate && r.startDate > r.endDate) {
       problemas.push(`Item ${item}: o fim da vigência é anterior ao início.`);
     }

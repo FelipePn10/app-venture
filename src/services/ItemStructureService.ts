@@ -34,6 +34,7 @@ export const COST_LOSS_OPTIONS: { value: CostLossType; label: string }[] = [
 export interface ItemInfo {
   id: number;
   code: string;
+  legacyCode: number;
   name: string;
   unit: UnitOfMeasurement;
 }
@@ -201,6 +202,7 @@ function mapItemInfo(raw: unknown): ItemInfo {
   return {
     id:   Number(inner['ID'] ?? inner['id'] ?? 0),
     code: String(code),
+    legacyCode: Number(inner['legacy_code'] ?? inner['LegacyCode'] ?? 0),
     name: String(pdm?.['DescriptionTechnique'] ?? inner['name'] ?? ''),
     unit: (String(wh?.['UnitOfMeasurement'] ?? inner['unit'] ?? 'UN')) as UnitOfMeasurement,
   };
@@ -309,16 +311,38 @@ export async function resolveChildLevel(
 
 /** POST /api/items/structure/create — o backend lê a posição via campo `sequence`. */
 export async function createComponent(payload: CreateStructurePayload): Promise<StructureComponent> {
+  const [parent, child] = await Promise.all([
+    findItemByCode(payload.parent_code),
+    findItemByCode(payload.child_code),
+  ]);
+  if (parent.legacyCode <= 0 || child.legacyCode <= 0) {
+    throw new Error('Não foi possível resolver os códigos internos dos itens da estrutura.');
+  }
   const res = await httpClient.post<RawComponent>('/api/items/structure/create', {
     ...payload,
+    parent_code: parent.legacyCode,
+    child_code: child.legacyCode,
     sequence: payload.position,
+  }, {
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
   });
   return mapComponent(res.data, 1, false);
 }
 
 /** PUT /api/items/structure/update — atualiza quantidade/UM/perda/posição/notas do componente. */
 export async function updateComponent(payload: CreateStructurePayload): Promise<StructureComponent> {
-  const res = await httpClient.put<RawComponent>('/api/items/structure/update', payload);
+  const [parent, child] = await Promise.all([
+    findItemByCode(payload.parent_code),
+    findItemByCode(payload.child_code),
+  ]);
+  if (parent.legacyCode <= 0 || child.legacyCode <= 0) {
+    throw new Error('Não foi possível resolver os códigos internos dos itens da estrutura.');
+  }
+  const res = await httpClient.put<RawComponent>('/api/items/structure/update', {
+    ...payload,
+    parent_code: parent.legacyCode,
+    child_code: child.legacyCode,
+  });
   return mapComponent(res.data, 1, false);
 }
 
