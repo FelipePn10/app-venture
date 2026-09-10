@@ -493,11 +493,13 @@ export function Vent0200Page(): JSX.Element {
     setIsSaving(true);
     setFeedback(null);
     try {
-      const bruto = Number(form.grossWeight || 0);
-      const liquido = Number(form.netWeight || 0);
+      const parseDecimal = (value: string): number =>
+        Number(value.trim().replace(",", "."));
+      const bruto = parseDecimal(form.grossWeight || "0");
+      const liquido = parseDecimal(form.netWeight || "0");
       const optionalNumber = (value: string): number | undefined => {
         if (!value.trim()) return undefined;
-        const parsed = Number(value);
+        const parsed = parseDecimal(value);
         return Number.isFinite(parsed) ? parsed : undefined;
       };
       const pontoDePedido = montarPontoDePedido(form);
@@ -538,8 +540,8 @@ export function Vent0200Page(): JSX.Element {
           // O objeto de dimensões só vai completo: o backend recusa medida
           // parcial, e mandar pela metade transformaria um campo opcional em
           // erro de cadastro.
-          ...(Number(form.dimLength) > 0 && Number(form.dimWidth) > 0 && Number(form.dimHeight) > 0
-            ? { dimensions: { Length: Number(form.dimLength), Width: Number(form.dimWidth), Height: Number(form.dimHeight) } }
+          ...(parseDecimal(form.dimLength) > 0 && parseDecimal(form.dimWidth) > 0 && parseDecimal(form.dimHeight) > 0
+            ? { dimensions: { Length: Number(form.dimLength), Width: Number(form.dimWidth), Height: parseDecimal(form.dimHeight) } }
             : {}),
           type: form.type,
           type_struct: form.typeStruct,
@@ -1725,7 +1727,7 @@ export function Vent0200Page(): JSX.Element {
                   </div>
                   <div className="it-field it-col-2">
                     <label className="it-label">Altura (mm)</label>
-                    <input className="it-input it-input-num" type="number" min={0}
+                    <input className="it-input it-input-num" type="number" min={0} step="0.01"
                       value={form.dimHeight} onChange={(e) => setField("dimHeight", e.target.value)} />
                   </div>
 
