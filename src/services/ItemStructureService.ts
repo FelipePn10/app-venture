@@ -312,6 +312,8 @@ export async function createComponent(payload: CreateStructurePayload): Promise<
   const res = await httpClient.post<RawComponent>('/api/items/structure/create', {
     ...payload,
     sequence: payload.position,
+  }, {
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
   });
   return mapComponent(res.data, 1, false);
 }
