@@ -3,6 +3,11 @@ import { createPortal } from "react-dom";
 import type { LookupLoader, LookupOption } from "@/services/lookups";
 import { errMessage } from "@/services/fiscalShared";
 
+/** Minúsculas e sem acento: "Técnica" e "tecnica" são a mesma busca. */
+function normalizarBusca(texto: string): string {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 interface LookupFieldProps<T extends string | number> {
   /** Código selecionado (ou undefined/0 = vazio). */
   value?: T;
@@ -100,10 +105,15 @@ export function LookupField<T extends string | number = number>({
   const selected = useMemo(() => options.find((o) => o.code === value), [options, value]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // A busca normalizava só o texto digitado: o código ficava em maiúsculas e
+    // "RT-666791" virava "rt-666791", que nunca casava. Todo código com letra —
+    // TP-01001-A, RN-01001, BU-120/50 — dava "Nenhum resultado" em todos os
+    // modais, e o usuário acabava digitando o código à mão. Os dois lados
+    // passam pela mesma normalização, que também ignora acento.
+    const q = normalizarBusca(query.trim());
     if (!q) return options.slice(0, 200);
     return options
-      .filter((o) => String(o.code).includes(q) || o.label.toLowerCase().includes(q) || (o.sub ?? "").toLowerCase().includes(q))
+      .filter((o) => normalizarBusca(String(o.code)).includes(q) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.sub ?? "").includes(q))
       .slice(0, 200);
   }, [options, query]);
 

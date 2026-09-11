@@ -92,6 +92,11 @@ const LABELS: Record<string, string> = {
   // Manutenção / paradas de máquina
   MAINTENANCE: 'Manutenção', BREAKDOWN: 'Quebra', SETUP: 'Preparação', QUALITY: 'Qualidade',
 
+  // Destino do material na inspeção de recebimento
+  ACCEPT_WITH_RESTRICTION: 'Aceitar com ressalva', CONCESSION: 'Aceitar por concessão',
+  SORTING: 'Separar (selecionar peça a peça)', REWORK: 'Retrabalhar',
+  RETURN_TO_SUPPLIER: 'Devolver ao fornecedor', SCRAP: 'Sucatear',
+
   // Natureza da demanda (MRP e origem do pedido de compra)
   SALES_ORDER: 'Pedido de venda', FORECAST: 'Previsão de vendas',
   INDEPENDENT: 'Demanda independente', SAFETY_STOCK: 'Estoque de segurança',

@@ -41,6 +41,12 @@ export interface ItemInfo {
 
 export interface StructureComponent {
   id: number;
+  /** Máscara derivada para este componente; null quando é genérico. */
+  effectiveMask?: string | null;
+  /** O componente é configurado mas falta origem para alguma característica. */
+  incompleteConfiguration?: boolean;
+  /** Características do filho que ninguém responde. */
+  missingCharacteristics?: string[];
   parentCode: string;
   childCode: string;
   childDescription: string;
@@ -176,6 +182,11 @@ interface RawTreeNode {
   component: RawComponent;
   level: number;
   children: RawTreeNode[];
+  /** Máscara do filho derivada da configuração do pai. */
+  effective_mask?: string | null;
+  /** O filho tem característica sem origem: a configuração não fecha. */
+  incomplete_configuration?: boolean;
+  missing_characteristics?: string[];
 }
 
 interface RawResolveResponse {
@@ -253,9 +264,14 @@ function mapComponent(r: RawComponent, level: number, hasChildren: boolean): Str
 
 /** Flattens tree into a flat list for the current visible level only */
 function flattenLevel(nodes: RawTreeNode[]): StructureComponent[] {
-  return nodes.map((n) =>
-    mapComponent(n.component, n.level, n.children.length > 0)
-  );
+  return nodes.map((n) => ({
+    ...mapComponent(n.component, n.level, n.children.length > 0),
+    // A máscara do filho não é a do pai: ela é derivada da configuração. Descer
+    // um nível levando a máscara do pai mostrava a estrutura errada.
+    effectiveMask: n.effective_mask ?? null,
+    incompleteConfiguration: n.incomplete_configuration === true,
+    missingCharacteristics: n.missing_characteristics ?? [],
+  }));
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -309,19 +325,20 @@ export async function resolveChildLevel(
   return flattenLevel(res.data.components ?? []);
 }
 
-/** POST /api/items/structure/create — o backend lê a posição via campo `sequence`. */
+/**
+ * POST /api/items/structure/create — o backend lê a posição via campo `sequence`.
+ *
+ * Manda o código **público** do item, que é o contrato da API. A tela chegou a
+ * traduzir para a chave interna antes de enviar, e era isso que gravava o
+ * componente no item errado: o backend traduz o código público por conta
+ * própria, então a chave interna chegava e era reinterpretada como se fosse
+ * outro código público. Numa base com códigos comerciais numéricos — "5"
+ * convivendo com a chave interna 5 — o componente ia parar em outro item, a
+ * gravação respondia 201 e a estrutura aparecia vazia ao recarregar.
+ */
 export async function createComponent(payload: CreateStructurePayload): Promise<StructureComponent> {
-  const [parent, child] = await Promise.all([
-    findItemByCode(payload.parent_code),
-    findItemByCode(payload.child_code),
-  ]);
-  if (parent.legacyCode <= 0 || child.legacyCode <= 0) {
-    throw new Error('Não foi possível resolver os códigos internos dos itens da estrutura.');
-  }
   const res = await httpClient.post<RawComponent>('/api/items/structure/create', {
     ...payload,
-    parent_code: parent.legacyCode,
-    child_code: child.legacyCode,
     sequence: payload.position,
   }, {
     headers: { 'Idempotency-Key': crypto.randomUUID() },
@@ -329,20 +346,12 @@ export async function createComponent(payload: CreateStructurePayload): Promise<
   return mapComponent(res.data, 1, false);
 }
 
-/** PUT /api/items/structure/update — atualiza quantidade/UM/perda/posição/notas do componente. */
+/**
+ * PUT /api/items/structure/update — atualiza quantidade/UM/perda/posição/notas.
+ * Envia o código público pelo mesmo motivo descrito em `createComponent`.
+ */
 export async function updateComponent(payload: CreateStructurePayload): Promise<StructureComponent> {
-  const [parent, child] = await Promise.all([
-    findItemByCode(payload.parent_code),
-    findItemByCode(payload.child_code),
-  ]);
-  if (parent.legacyCode <= 0 || child.legacyCode <= 0) {
-    throw new Error('Não foi possível resolver os códigos internos dos itens da estrutura.');
-  }
-  const res = await httpClient.put<RawComponent>('/api/items/structure/update', {
-    ...payload,
-    parent_code: parent.legacyCode,
-    child_code: child.legacyCode,
-  });
+  const res = await httpClient.put<RawComponent>('/api/items/structure/update', payload);
   return mapComponent(res.data, 1, false);
 }
 
@@ -417,4 +426,44 @@ export async function listStructureHistory(itemCode: string, limit = 100): Promi
     { params: { limit } },
   );
   return Array.isArray(data) ? data : [];
+}
+
+/** Um componente na verificação de configuração da estrutura. */
+export interface ConfiguracaoDoComponente {
+  childCode: string;
+  childDescription: string;
+  configured: boolean;
+  inherits: boolean;
+  requiresMask: boolean;
+  missingCharacteristics: string[];
+}
+
+/**
+ * GET /api/items/structure/{code}/configuration-check
+ *
+ * Aponta, ainda no cadastro, o componente cuja configuração não fecha: uma
+ * característica do filho que o pai não responde, que nenhuma regra de
+ * equivalência deriva e que não tem resposta padrão. Sem isso o problema só
+ * aparecia na ordem de produção, com a estrutura genérica no lugar da
+ * configurada.
+ */
+export async function verificarConfiguracao(
+  parentCode: string,
+  mask?: string | null,
+): Promise<ConfiguracaoDoComponente[]> {
+  const params: Record<string, string> = {};
+  if (mask) params['mask'] = mask;
+  const res = await httpClient.get<unknown>(
+    `/api/items/structure/${encodeURIComponent(parentCode)}/configuration-check`,
+    { params },
+  );
+  const lista = Array.isArray(res.data) ? res.data : ((res.data as { data?: unknown[] })?.data ?? []);
+  return (lista as Record<string, unknown>[]).map((r) => ({
+    childCode: String(r['child_code'] ?? ''),
+    childDescription: String(r['child_description'] ?? ''),
+    configured: r['configured'] === true,
+    inherits: r['inherits'] === true,
+    requiresMask: r['requires_mask'] === true,
+    missingCharacteristics: (r['missing_characteristics'] as string[] | undefined) ?? [],
+  }));
 }

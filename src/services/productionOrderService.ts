@@ -94,7 +94,15 @@ export interface CostDTO {
   labor_cost_std?: number;
   overhead_cost_std?: number;
   total_cost_std?: number;
+  /** Desvio por componente: onde a ordem escapou do padrão. */
+  material_variance?: number;
+  labor_variance?: number;
+  overhead_variance?: number;
   total_variance?: number;
+  /** Desvio em % do padrão — é por ele que o custo olha primeiro. */
+  variance_pct?: number;
+  currency?: string;
+  settled_at?: string;
 }
 
 export interface ScrapReturnDTO {
@@ -184,7 +192,13 @@ function parseCost(raw: unknown): CostDTO {
     labor_cost_std: parseNum(o, 'labor_cost_std', 'LaborCostStd'),
     overhead_cost_std: parseNum(o, 'overhead_cost_std', 'OverheadCostStd'),
     total_cost_std: parseNum(o, 'total_cost_std', 'TotalCostStd'),
+    material_variance: parseNum(o, 'material_variance', 'MaterialVariance'),
+    labor_variance: parseNum(o, 'labor_variance', 'LaborVariance'),
+    overhead_variance: parseNum(o, 'overhead_variance', 'OverheadVariance'),
     total_variance: parseNum(o, 'total_variance', 'TotalVariance'),
+    variance_pct: parseNum(o, 'variance_pct', 'VariancePct'),
+    currency: parseStr(o, 'currency', 'Currency') || undefined,
+    settled_at: parseStr(o, 'settled_at', 'SettledAt') || undefined,
   };
 }
 

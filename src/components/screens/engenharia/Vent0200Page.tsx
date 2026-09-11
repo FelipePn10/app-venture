@@ -3,7 +3,7 @@ import { createItem, updateItem, getItemTemplate } from "@/services/itemService"
 import { listFiscalClassifications, type FiscalClassification } from "@/services/fiscalAdvancedService";
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadItems, loadItemClassifications, loadFiscalClassifications } from "@/services/lookups";
+import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadWarehousesByCode, loadItems, loadItemClassifications, loadFiscalClassifications } from "@/services/lookups";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
 //
@@ -38,7 +38,13 @@ type OrigemItem =
   | ""
   | "0 - Nacional"
   | "1 - Estrangeira (Importação Direta)"
-  | "2 - Estrangeira (Adquirida no Mercado Interno)";
+  | "2 - Estrangeira (Adquirida no Mercado Interno)"
+  | "3 - Nacional, conteúdo de importação > 40% e ≤ 70%"
+  | "4 - Nacional, produção conforme PPB"
+  | "5 - Nacional, conteúdo de importação ≤ 40%"
+  | "6 - Estrangeira (Importação Direta), sem similar nacional (CAMEX)"
+  | "7 - Estrangeira (Mercado Interno), sem similar nacional (CAMEX)"
+  | "8 - Nacional, conteúdo de importação > 70%";
 
 type AbaAtiva =
   | "capa"
@@ -123,6 +129,8 @@ interface FormItem {
   kanbanNumCartoes: string;
   critico: boolean;
   exclusivo: boolean;
+  /** O MRP considera o item. Ia sempre `true`: salvar reativava item desativado. */
+  ativoPlanejamento: boolean;
   fantasma: boolean;
   tipoBaixaAut: TypeBaixaAut;
   tipoBaixaOF: TypeBaixaOF;
@@ -235,15 +243,33 @@ type MarcadorField = "isBase" | "isConfigured" | "isGeneric" | "isPrototype" | "
  * `nature` é o resumo que o backend antigo ainda espera. Genérico e configurado
  * têm código próprio; o resto cai em item base (2), que é o padrão.
  */
+/**
+ * Natureza a partir dos marcadores. Sem marcador o item é **Genérico**: antes
+ * ele caía em "Item Base", e como o formulário ainda nascia com "Item Base"
+ * marcado, todo item cadastrado — chapa, bucha, lateral — virava modelo e
+ * passava a aparecer na busca de itens-base.
+ */
 function natureDosMarcadores(f: Pick<FormItem, MarcadorField>): ItemNature {
   if (f.isGeneric) return 0 as ItemNature;
   if (f.isConfigured) return 1 as ItemNature;
-  return 2 as ItemNature;
+  if (f.isBase) return 2 as ItemNature;
+  return 0 as ItemNature;
 }
+/**
+ * Origem da mercadoria — tabela A do CST do ICMS, códigos 0 a 8. A tela só
+ * oferecia 0–2: um item de origem 3 a 8 abria com o campo em branco e não havia
+ * como corrigi-lo por aqui.
+ */
 const ORIGENS: OrigemItem[] = [
   "0 - Nacional",
   "1 - Estrangeira (Importação Direta)",
   "2 - Estrangeira (Adquirida no Mercado Interno)",
+  "3 - Nacional, conteúdo de importação > 40% e ≤ 70%",
+  "4 - Nacional, produção conforme PPB",
+  "5 - Nacional, conteúdo de importação ≤ 40%",
+  "6 - Estrangeira (Importação Direta), sem similar nacional (CAMEX)",
+  "7 - Estrangeira (Mercado Interno), sem similar nacional (CAMEX)",
+  "8 - Nacional, conteúdo de importação > 70%",
 ];
 
 const ABAS: { id: AbaAtiva; label: string }[] = [
@@ -284,8 +310,8 @@ const formInicial: FormItem = {
   name: "",
   description: "",
   complement: "",
-  nature: 2,
-  isBase: true,
+  nature: 0,
+  isBase: false,
   isConfigured: false,
   isGeneric: false,
   isPrototype: false,
@@ -331,6 +357,7 @@ const formInicial: FormItem = {
   kanbanNumCartoes: "",
   critico: false,
   exclusivo: false,
+  ativoPlanejamento: true,
   fantasma: false,
   tipoBaixaAut: "Direta",
   tipoBaixaOF: "Não faz",
@@ -560,7 +587,7 @@ export function Vent0200Page(): JSX.Element {
           safety_stock: Number(form.estoqueSeguranca) || 0,
           critical: form.critico,
           exclusive: form.exclusivo,
-          active: true,
+          active: form.ativoPlanejamento,
           abc_class: form.curvaAbc.trim() || undefined,
           tank_code: optionalNumber(form.tanque),
           ...(pontoDePedido ? { reorder_point: pontoDePedido } : {}),
@@ -571,6 +598,8 @@ export function Vent0200Page(): JSX.Element {
           warehouse_code: optionalNumber(form.almoxSuprimentos),
           receiving_checklist: form.checklistRecebimento,
           harvest: form.controlaSafra,
+          // Havia campo na tela e nenhuma chave no payload: o texto sumia.
+          notes: form.obsSuprimentos.trim() || undefined,
         },
         commercial: {
           description: form.descrComercial.trim() || undefined,
@@ -580,8 +609,11 @@ export function Vent0200Page(): JSX.Element {
           minimum_sale_quantity: optionalNumber(form.minVenda),
           estimated_delivery_days: optionalNumber(form.entregaEstimada),
           warranty_days: optionalNumber(form.tempoGarantia) ?? 0,
-          transfer_warehouse_code: optionalNumber(form.almoxTransf),
-          technical_assistance_warehouse_code: optionalNumber(form.almoxAssTec),
+          // Código do almoxarifado (texto, ex.: ALM-PA) — a coluna tem chave
+          // estrangeira para warehouse(code). Convertido para número, como era,
+          // todo código alfanumérico virava `undefined` e sumia sem erro.
+          transfer_warehouse_code: form.almoxTransf.trim() || undefined,
+          technical_assistance_warehouse_code: form.almoxAssTec.trim() || undefined,
           packaging_item_code: form.itemEmbalagem.trim() || undefined,
           allow_billing_description_change: form.alterarDescrFat,
           issue_loading_labels: form.emiteEtiquetas,
@@ -664,6 +696,26 @@ export function Vent0200Page(): JSX.Element {
       return value === 0 ? "" : String(value);
     };
     const use = opt(supplies, "type_of_use", "TypeOfUse");
+    // Campos que a API devolve e a tela não lia de volta. Eles abriam com o
+    // valor padrão do formulário e o próximo salvar gravava esse padrão por
+    // cima: item de REVENDA virava VENDA, IPI por VALOR virava PERCENTUAL, a
+    // UM de compra voltava para a do estoque e o item desativado no
+    // planejamento era reativado. O mesmo mapeamento copia o item-base, então
+    // esses valores também não passavam do item-base para o item novo.
+    const cru = (o: Obj, ...keys: string[]): unknown => {
+      for (const k of keys) if (o[k] !== undefined) return o[k];
+      return undefined;
+    };
+    const origemCrua = cru(accounting, "origin", "Origin");
+    const origemLida: OrigemItem =
+      origemCrua === null || origemCrua === undefined || origemCrua === ""
+        ? ""
+        : (ORIGENS.find((o) => o.startsWith(`${Number(origemCrua)} -`)) ?? "");
+    const pisCofins = cru(accounting, "calculate_pis_cofins", "CalculatePisCofins");
+    const ativoCru = cru(planning, "active", "Active");
+    const ciclica = unwrapObject(warehouse["cyclical_count_config"] ?? warehouse["CyclicalCountConfig"]);
+    const diasCiclica = parseNum(ciclica, "days_interval", "DaysInterval");
+    const ipi = (valor: string): TipoIPI => (valor.toUpperCase() === "VALOR" ? "Valor" : "Percentual");
     return {
       groupID: String(parseNum(pdm, "group_code", "GroupCode") || atual.groupID),
       modifierID: String(parseNum(pdm, "modifier_code", "ModifierCode") || atual.modifierID),
@@ -698,7 +750,7 @@ export function Vent0200Page(): JSX.Element {
         const rop = unwrapObject(planning["reorder_point"] ?? planning["ReorderPoint"]);
         return {
           tempoReposicao: numText(rop, "tr", "TR"),
-          consumoMedio: numText(rop, "cm", "CM"),
+          consumoMedio: numText(warehouse, "average_monthly_consumption_manual", "AverageMonthlyConsumptionManual") || numText(rop, "cm", "CM"),
           cobertura: numText(rop, "cr", "CR"),
         };
       })(),
@@ -711,8 +763,8 @@ export function Vent0200Page(): JSX.Element {
       minVenda: numText(commercial, "minimum_sale_quantity", "MinimumSaleQuantity"),
       entregaEstimada: numText(commercial, "estimated_delivery_days", "EstimatedDeliveryDays"),
       tempoGarantia: numText(commercial, "warranty_days", "WarrantyDays"),
-      almoxTransf: numText(commercial, "transfer_warehouse_code", "TransferWarehouseCode"),
-      almoxAssTec: numText(commercial, "technical_assistance_warehouse_code", "TechnicalAssistanceWarehouseCode"),
+      almoxTransf: opt(commercial, "transfer_warehouse_code", "TransferWarehouseCode") || numText(commercial, "transfer_warehouse_code"),
+      almoxAssTec: opt(commercial, "technical_assistance_warehouse_code", "TechnicalAssistanceWarehouseCode") || numText(commercial, "technical_assistance_warehouse_code"),
       itemEmbalagem: opt(commercial, "packaging_item_code", "PackagingItemCode"),
       alterarDescrFat: parseBool(commercial, "allow_billing_description_change", "AllowBillingDescriptionChange"),
       emiteEtiquetas: parseBool(commercial, "issue_loading_labels", "IssueLoadingLabels"),
@@ -735,10 +787,17 @@ export function Vent0200Page(): JSX.Element {
       classificacaoCont: opt(accounting, "accounting_classification_code", "AccountingClassificationCode"),
       cest: opt(accounting, "cest", "Cest"),
       insumo: opt(accounting, "input_code", "InputCode"),
-      calculaPisCofins: parseBool(accounting, "calculate_pis_cofins", "CalculatePisCofins") ? "SIM" : "NAO",
+      calculaPisCofins: pisCofins === null || pisCofins === undefined ? "HERDAR" : pisCofins === true ? "SIM" : "NAO",
       obsContabil: opt(accounting, "notes", "Notes"),
-      umSuprimentos: (opt(supplies, "unit_of_measurement", "UnitOfMeasurement") || atual.umSuprimentos) as TypeUnitOfMeasurementItem,
+      umSuprimentos: (opt(supplies, "purchase_uom", "PurchaseUom", "unit_of_measurement") || atual.umSuprimentos) as TypeUnitOfMeasurementItem,
       tipoUtilizacao: use === "CONSUMO" ? "Consumo" : use === "IMOBILIZADO" ? "Imobilizado" : "Industrialização",
+      tipoVenda: opt(commercial, "sale_type", "SaleType").toUpperCase() === "REVENDA" ? "Revenda" : "Venda",
+      tipoIpiVenda: ipi(opt(accounting, "sale_ipi_type", "SaleIpiType")),
+      tipoIpiCompra: ipi(opt(accounting, "purchase_ipi_type", "PurchaseIpiType")),
+      origem: origemLida,
+      ativoPlanejamento: ativoCru === undefined ? true : ativoCru === true,
+      cyclicalCount: diasCiclica > 0,
+      cyclicalCountDays: diasCiclica,
       obsSuprimentos: opt(supplies, "notes", "Notes"),
     };
   }
@@ -788,7 +847,7 @@ export function Vent0200Page(): JSX.Element {
         isProcessItem: parseBool(item, "is_process_item", "IsProcessItem"),
         situation: (situacao || atual.situation) as TypeSituationItem,
         health: (saude || atual.health) as Health,
-        itemBaseCod: "",
+        itemBaseCod: parseStr(unwrapObject(item["engineering"] ?? item["Engineering"]), "item_base_cod", "ItemBaseCod"),
       }));
       setItemEmEdicao(String(code));
       setErrors({});
@@ -1274,7 +1333,7 @@ export function Vent0200Page(): JSX.Element {
                     </span>
                   </div>
 
-                  <div className="it-field it-col-7">
+                  <div className="it-field it-col-6">
                     <label className="it-label">
                       Nome <span className="it-label-req">*</span>
                     </label>
@@ -1446,7 +1505,7 @@ export function Vent0200Page(): JSX.Element {
                     </div>
                     <span className="it-field-hint">
                       {MARCADORES.filter((m) => form[m.field]).map((m) => m.hint).join(" · ")
-                        || "Marque pelo menos uma natureza — o padrão é Item Base."}
+                        || "Sem marcação, o item é Genérico. Item Base serve de modelo para criar outros itens."}
                     </span>
                   </div>
 
@@ -2022,6 +2081,11 @@ export function Vent0200Page(): JSX.Element {
                             label: "Fantasma",
                             hint: "Nível na estrutura sem controle de estoque",
                           },
+                          {
+                            key: "ativoPlanejamento",
+                            label: "Ativo no planejamento",
+                            hint: "Desmarcado, o MRP deixa de gerar necessidade para o item",
+                          },
                         ] as {
                           key: keyof FormItem;
                           label: string;
@@ -2160,30 +2224,24 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Almox. Transferência</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.almoxTransf}
-                        onChange={(e) =>
-                          setField("almoxTransf", e.target.value)
-                        }
-                        placeholder="Código"
-                      />
-                    </div>
+                    <LookupField
+                      value={form.almoxTransf || undefined}
+                      onChange={(code) => setField("almoxTransf", code ? String(code) : "")}
+                      loader={loadWarehousesByCode}
+                      entityLabel="almoxarifado"
+                      placeholder="Selecionar almoxarifado…"
+                    />
                   </div>
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Almox. Ass. Técnica</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.almoxAssTec}
-                        onChange={(e) =>
-                          setField("almoxAssTec", e.target.value)
-                        }
-                        placeholder="Código"
-                      />
-                    </div>
+                    <LookupField
+                      value={form.almoxAssTec || undefined}
+                      onChange={(code) => setField("almoxAssTec", code ? String(code) : "")}
+                      loader={loadWarehousesByCode}
+                      entityLabel="almoxarifado"
+                      placeholder="Selecionar almoxarifado…"
+                    />
                   </div>
 
                   <div className="it-field it-col-4">
@@ -2435,16 +2493,17 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-3">
                     <label className="it-label">Grupo de Inventário</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.grupoInventario}
-                        onChange={(e) =>
-                          setField("grupoInventario", e.target.value)
-                        }
-                        placeholder="Código"
-                      />
-                    </div>
+                    {/* O banco amarra este campo ao cadastro de grupos
+                        (fk_items_accounting_inventory_group → groups). Digitado
+                        à mão, um código inexistente derrubava o salvar inteiro
+                        com "referência desconhecida". */}
+                    <LookupField
+                      value={Number(form.grupoInventario) || undefined}
+                      onChange={(code) => setField("grupoInventario", code ? String(code) : "")}
+                      loader={loadPdmGroups}
+                      entityLabel="grupo"
+                      placeholder="Selecionar grupo…"
+                    />
                   </div>
 
                   <div className="it-field it-col-3">
@@ -2509,16 +2568,13 @@ export function Vent0200Page(): JSX.Element {
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Almoxarifado</label>
-                    <div className="it-input-wrap">
-                      <input
-                        className="it-input"
-                        value={form.almoxSuprimentos}
-                        onChange={(e) =>
-                          setField("almoxSuprimentos", e.target.value)
-                        }
-                        placeholder="Código do almoxarifado"
-                      />
-                    </div>
+                    <LookupField
+                      value={Number(form.almoxSuprimentos) || undefined}
+                      onChange={(code) => setField("almoxSuprimentos", code ? String(code) : "")}
+                      loader={loadWarehouses}
+                      entityLabel="almoxarifado"
+                      placeholder="Selecionar almoxarifado…"
+                    />
                   </div>
                   <div className="it-field it-col-3">
                     <label className="it-label">Recebimento</label>

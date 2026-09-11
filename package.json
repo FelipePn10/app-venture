@@ -1,6 +1,6 @@
 {
   "name": "erp-desktop-frontend",
-  "version": "1.1.21",
+  "version": "1.1.22",
   "private": true,
   "type": "module",
   "scripts": {
@@ -50,7 +50,10 @@
     "test:compras": "node scripts/validate-compras.mjs",
     "audit:rotas": "node scripts/audit-route-sweep.mjs",
     "audit:payload": "node scripts/audit-payload-coverage.mjs",
-    "test:cobertura": "node scripts/validate-cobertura-payload.mjs"
+    "test:cobertura": "node scripts/validate-cobertura-payload.mjs",
+    "audit:enums": "PG_ENUMS=${PG_ENUMS:-/tmp/pgenums.txt} node scripts/audit-enums.mjs",
+    "audit:tenant": "node scripts/audit-tenant-isolation.mjs",
+    "audit:roundtrip": "node scripts/audit-roundtrip.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",

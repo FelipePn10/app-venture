@@ -9,7 +9,7 @@ import { listMachines } from '@/services/machineService';
 import { listConsumers, listCalls as listConsumerCalls } from '@/services/consumerServiceService';
 import { listRecurringSales } from '@/services/recurringSalesService';
 import { listCalls as listTechnicalCalls } from '@/services/technicalAssistanceService';
-import { listEmployees } from '@/services/employeeService';
+import { listEmployees, listEmployeesByRole } from '@/services/employeeService';
 import { listOperations } from '@/services/manufacturingRoutingService';
 import { listCrpPlans } from '@/services/crpService';
 
@@ -309,6 +309,30 @@ export const loadBaseItems = cached(async () => {
 
 // A rota de listagem é `/api/warehouse/list`; `/api/warehouse` (sem sufixo) é
 // 404 e deixava todo campo de almoxarifado abrindo vazio.
+/**
+ * Almoxarifados identificados pelo CÓDIGO — não pelo id.
+ *
+ * O item guarda o almoxarifado de duas formas diferentes: o almoxarifado
+ * padrão (`warehouse_code`) é o id, e é assim que a OF e o estoque o leem; já
+ * os de transferência e de assistência técnica têm chave estrangeira para
+ * `warehouse(code)`. Usar `loadWarehouses` nesses dois gravaria o id onde o
+ * banco espera o código — escolher "Almoxarifado geral" (id 8, código 1)
+ * apontaria para outro almoxarifado ou violaria a chave.
+ */
+export const loadWarehousesByCode = cached(async () => {
+  const { data } = await httpClient.get<unknown>('/api/warehouse/list');
+  const out: LookupOption[] = [];
+  for (const raw of unwrapArray(data)) {
+    const o = unwrapObject(raw);
+    if (!o) continue;
+    const code = parseStr(o, 'code', 'Code');
+    if (!code) continue;
+    const desc = parseStr(o, 'description', 'Description', 'descricao', 'nome', 'name');
+    out.push({ code, label: desc || `Almoxarifado ${code}`, sub: `código ${code}` });
+  }
+  return out.sort((a, b) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }));
+});
+
 export const loadWarehouses = cached(async () => {
   const { data } = await httpClient.get<unknown>('/api/warehouse/list');
   const out: LookupOption[] = [];
@@ -428,3 +452,22 @@ export const loadProductionOrders = cached(() =>
 export const loadPurchaseOrders = cached(() =>
   loadEndpoint('/api/purchase-order/list', ['status', 'Status'], ['emission_date', 'EmissionDate']),
 );
+
+/**
+ * Funcionários de uma função específica. O cadastro de máquina usa isso para
+ * oferecer só mecânicos como responsável pela manutenção — é o comportamento do
+ * FoccoERP (FENG0111): a lista já vem filtrada, porque oferecer a empresa
+ * inteira convida a apontar alguém que não cuida de máquina.
+ */
+export function loadEmployeesByRole(role: string): LookupLoader {
+  return cached(async () =>
+    (await listEmployeesByRole(role)).map((e) => ({
+      code: e.code ?? 0,
+      label: e.name || `Funcionário ${e.code}`,
+      sub: e.role || undefined,
+    })).filter((o) => o.code),
+  );
+}
+
+/** Mecânicos — responsáveis por manutenção de recurso. */
+export const loadMaintenanceResponsibles = loadEmployeesByRole('MECANICO');

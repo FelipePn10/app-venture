@@ -378,6 +378,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "comercial",
   },
   {
+    code: "VCUS0200",
+    title: "Margem de Contribuição",
+    description: "Quanto sobra de cada venda depois de impostos, custo, despesas e do descasamento de caixa; parâmetros do mês e apuração por item e cliente.",
+    module: "custo",
+  },
+  {
     code: "VCUS0100",
     title: "Custos — Centro, Compra, Alocação e Overhead",
     description: "Custo/hora por centro de trabalho, custo de compra por item, base de alocação, overhead e rollup do custo padrão.",

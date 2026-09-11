@@ -10,9 +10,17 @@ import { ExportButton } from "@/components/ui/ExportButton";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const SOURCES: InspectionOrderSource[] = ["MANUAL", "PURCHASE_RECEIPT", "RECEIVING_NOTICE", "FISCAL_ENTRY"];
 const SOURCE_LABELS: Record<string, string> = { MANUAL: "Manual", PURCHASE_RECEIPT: "Recebimento de compra", RECEIVING_NOTICE: "Aviso de recebimento", FISCAL_ENTRY: "Entrada fiscal" };
-const TREATMENT_LABELS: Record<string, string> = { ACCEPT: "Aceitar", REWORK: "Retrabalhar", RETURN: "Devolver", SCRAP: "Sucatear", CONDITIONAL: "Aceitar com ressalva" };
+/** O que fazer com o material inspecionado, em palavras de quem recebe. */
+const TREATMENT_LABELS: Record<string, string> = {
+  ACCEPT_WITH_RESTRICTION: "Aceitar com ressalva",
+  CONCESSION: "Aceitar por concessão",
+  SORTING: "Separar (selecionar peça a peça)",
+  REWORK: "Retrabalhar",
+  RETURN_TO_SUPPLIER: "Devolver ao fornecedor",
+  SCRAP: "Sucatear",
+};
 const GEN_INI = { source: "MANUAL" as InspectionOrderSource, item_code: "", mask: "", warehouse_id: "", quantity: "", supplier_code: "", lot: "" };
-const AN_INI = { conform_qty: "", rejected_qty: "", rework_qty: "", restricted_qty: "", treatment: "ACCEPT", affects_supplier_score: true, move_stock: false, destination_warehouse_id: "", rejection_warehouse_id: "" };
+const AN_INI = { conform_qty: "", rejected_qty: "", rework_qty: "", restricted_qty: "", treatment: "ACCEPT_WITH_RESTRICTION", affects_supplier_score: true, move_stock: false, destination_warehouse_id: "", rejection_warehouse_id: "" };
 
 export function Vins0201Page(): JSX.Element {
   const [orders, setOrders] = useState<Obj[]>([]);
