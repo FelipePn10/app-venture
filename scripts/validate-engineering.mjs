@@ -35,8 +35,15 @@ check('VENT0210 preenche descrição/UM do filho automaticamente', /handleChildC
 check('VENT0210 atualiza componente (updateComponent)', /updateComponent/.test(structure) && /updateComponent\(toPayload/.test(vent0210));
 check('VENT0210 remove componente persistido (deleteComponent)', /deleteComponent/.test(structure) && /deleteComponent\(row\.parentCode/.test(vent0210));
 check('criação de componente envia posição como sequence', /sequence: payload\.position/.test(structure));
-check('estrutura resolve códigos comerciais antes de gravar',
-  /parent_code: parent\.legacyCode/.test(structure) && /child_code: child\.legacyCode/.test(structure));
+// A regra é o INVERSO do que este teste exigia antes, e a inversão foi o que
+// corrigiu o defeito de produção: a tela grava o código PÚBLICO do item. Quando
+// ela convertia para a chave interna, o backend — que traduz o código público
+// por conta própria — relia essa chave como se fosse outro código público.
+// Numa base com códigos comerciais numéricos ("5" ao lado da chave interna 5) o
+// componente era gravado sob OUTRO item: resposta 201 e estrutura vazia ao
+// recarregar.
+check('estrutura grava com o código público do item, sem converter para a chave interna',
+  !/parent_code: parent\.legacyCode/.test(structure) && !/child_code: child\.legacyCode/.test(structure));
 check('estrutura usa chave de idempotência na inclusão', /Idempotency-Key/.test(structure));
 check('API mostra a mensagem real de validação',
   /responseBody\?\.error/.test(httpClient) && /error\.message = apiMessage/.test(httpClient));

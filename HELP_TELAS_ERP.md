@@ -8681,7 +8681,44 @@ padrão de um item.
 ##### Telas relacionadas
 
 - **VPRO0300 (Custo Padrão)** · **VPRO0900 (OF — custo real)** · **VCTB0102 (Centro de
-  Custo)**.
+  Custo)** · **VCUS0200 (Margem de Contribuição)**.
+
+---
+
+#### VCUS0200 — Margem de Contribuição
+
+##### Objetivo
+
+Apurar **quanto sobra de cada venda** depois de tudo: impostos, custo de matéria-prima,
+custo de transformação, despesas comerciais e o **custo financeiro do prazo**. Responde
+a pergunta que o faturamento não responde — *este pedido deu lucro?*
+
+##### Passo a passo
+
+1. **Parâmetros do mês**: informe os percentuais de despesa administrativa, comissão,
+   frete e provisão de IR, a **taxa financeira mensal** e os prazos médios de venda,
+   de compra e o ciclo de produção. Sem os parâmetros do mês, a apuração é recusada —
+   um resultado calculado com percentual do mês passado enganaria mais do que ajudaria.
+2. **Apuração**: escolha o período e a **base de custo** (médio ou padrão) e gere. Cada
+   nota de saída vira uma linha da cascata.
+3. **Leitura**: a lista vem ordenada pela **pior margem primeiro** — onde agir, não onde
+   há volume. As linhas com prejuízo aparecem destacadas.
+
+##### Observações importantes
+
+- A **despesa financeira** não é um percentual chutado: cada parcela é trazida a valor
+  presente pelo seu próprio prazo. Vender a 45 dias comprando a 30 custa dinheiro, e
+  esse custo aparece aqui. Um pedido lucrativo no papel e ruim no caixa é sinalizado
+  como ruim.
+- O **ciclo de caixa** é `prazo de venda − prazo de compra + ciclo de produção`, e a
+  taxa aplicada é capitalizada: `(1 + taxa)^(ciclo/30) − 1`.
+- A **base de custo usada fica gravada junto com o resultado**. Sem isso ninguém
+  consegue explicar a apuração meses depois, porque médio e padrão dão números
+  diferentes.
+
+##### Telas relacionadas
+
+- **VCUS0100 (Custos)** · **VPRO0900 (OF — custo real)** · **VFIS0100 (Notas de saída)**.
 
 ---
 

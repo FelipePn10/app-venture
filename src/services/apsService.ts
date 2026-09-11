@@ -28,8 +28,71 @@ function parseGantt(raw: unknown): GanttEntry {
   };
 }
 
-export async function sequenceAps(): Promise<void> {
-  await httpClient.post(`${BASE}/sequence`, {});
+/** Sentido da programação. */
+export const SEQUENCE_DIRECTIONS = [
+  { value: 'FORWARD', label: 'Para frente — a partir de hoje' },
+  { value: 'BACKWARD', label: 'Para trás — a partir da entrega' },
+] as const;
+
+export interface SequenceResult {
+  scheduled_operations: number;
+  orders_processed: number;
+  /** Ordens que não cabem no prazo: para entregar na data teriam de começar no passado. */
+  late_orders: number[];
+}
+
+/**
+ * Sequencia as ordens. `BACKWARD` parte da data de entrega e recua — é o que
+ * responde "quando preciso começar", e o que revela as ordens que já nascem
+ * atrasadas. As inviáveis são reprogramadas para frente automaticamente.
+ */
+export async function sequenceAps(direction: string = 'FORWARD'): Promise<SequenceResult> {
+  const { data } = await httpClient.post(`${BASE}/sequence`, { direction });
+  const o = unwrapObject(data);
+  return {
+    scheduled_operations: parseNum(o, 'scheduled_operations', 'ScheduledOperations'),
+    orders_processed: parseNum(o, 'orders_processed', 'OrdersProcessed'),
+    late_orders: unwrapArray(o['late_orders'] ?? o['LateOrders']).map((x) => Number(x)),
+  };
+}
+
+// ── Matriz de tempo de preparação (setup dependente da sequência) ───────────
+
+export interface SetupTransitionDTO {
+  id?: number;
+  work_center_id: number;
+  from_item_code?: number | null;
+  to_item_code?: number | null;
+  from_family?: string | null;
+  to_family?: string | null;
+  setup_minutes: number;
+  notes?: string | null;
+  is_active?: boolean;
+}
+
+export async function listSetupMatrix(workCenterID: number): Promise<SetupTransitionDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/setup-matrix/${workCenterID}`);
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    return {
+      id: parseNum(o, 'id', 'ID') || undefined,
+      work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID'),
+      from_item_code: parseNum(o, 'from_item_code', 'FromItemCode') || null,
+      to_item_code: parseNum(o, 'to_item_code', 'ToItemCode') || null,
+      from_family: parseStr(o, 'from_family', 'FromFamily') || null,
+      to_family: parseStr(o, 'to_family', 'ToFamily') || null,
+      setup_minutes: parseNum(o, 'setup_minutes', 'SetupMinutes'),
+      is_active: o['is_active'] !== false,
+    };
+  });
+}
+
+export async function upsertSetupTransition(dto: SetupTransitionDTO): Promise<void> {
+  await httpClient.post(`${BASE}/setup-matrix`, dto);
+}
+
+export async function deleteSetupTransition(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/setup-matrix/${id}`);
 }
 export async function ganttByOrder(orderId: number): Promise<GanttEntry[]> {
   const { data } = await httpClient.get(`${BASE}/gantt/order/${orderId}`);

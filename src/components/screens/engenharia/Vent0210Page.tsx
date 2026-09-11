@@ -21,6 +21,7 @@ import {
   COST_LOSS_OPTIONS,
   HEALTH_OPTIONS,
   ROUNDING_OPTIONS,
+  verificarConfiguracao,
 } from '@/services/ItemStructureService';
 import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
 import { StructureFormulaTester } from './StructureFormulaTester';
@@ -31,6 +32,8 @@ import { StructureHistoryPanel } from './StructureHistoryPanel';
 interface BreadcrumbEntry {
   code: string;
   label: string;
+  /** Máscara derivada deste nível; null quando o componente é genérico. */
+  mask: string | null;
 }
 
 interface LocalRow extends StructureComponent {
@@ -189,6 +192,29 @@ function listarProblemas(rows: LocalRow[]): string[] {
     }
   }
 
+  // O mesmo componente duas vezes no mesmo nível. Em produção isso aconteceu
+  // (o índice único não pegava estrutura sem máscara) e o MRP contava a
+  // quantidade em dobro. Hoje o banco recusa a segunda linha; o Conferir avisa
+  // antes, em vez de deixar o salvar falhar.
+  const vezes = new Map<string, number>();
+  for (const r of rows) {
+    const c = r.childCode.trim().toUpperCase();
+    if (c) vezes.set(c, (vezes.get(c) ?? 0) + 1);
+  }
+  for (const [codigo, n] of vezes) {
+    if (n > 1) {
+      problemas.push(`Item ${codigo}: aparece ${n} vezes nesta estrutura. Some as quantidades numa linha só, ou use grupo de alternativos se for opção de material.`);
+    }
+  }
+
+  // Um item não pode ser componente de si mesmo — seria um ciclo imediato.
+  for (const r of rows) {
+    const pai = String(r.parentCode ?? '').trim().toUpperCase();
+    if (pai && r.childCode.trim().toUpperCase() === pai) {
+      problemas.push(`Item ${r.childCode}: não pode ser componente de si mesmo.`);
+    }
+  }
+
   // Dois componentes com o mesmo grupo e a mesma prioridade: a produção não
   // teria como escolher qual usar primeiro.
   const porGrupo = new Map<string, string[]>();
@@ -205,6 +231,13 @@ function listarProblemas(rows: LocalRow[]): string[] {
   }
 
   return problemas;
+}
+
+/** Data ISO (aaaa-mm-dd) no formato do país. */
+function formatarDia(iso?: string | null): string {
+  if (!iso) return '—';
+  const [a, m, d] = iso.slice(0, 10).split('-');
+  return `${d}/${m}/${a}`;
 }
 
 /** Vigência do componente em relação a hoje. */
@@ -651,6 +684,8 @@ export function Vent0210Page(): JSX.Element {
   const [configuradorAberto, setConfiguradorAberto] = useState(false);
   const [historicoAberto, setHistoricoAberto] = useState(false);
   const [problemas, setProblemas]             = useState<string[] | null>(null);
+  /** Detalhe recolhido dá a largura inteira para a grade de componentes. */
+  const [detalheAberto, setDetalheAberto]     = useState(true);
 
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -766,7 +801,7 @@ export function Vent0210Page(): JSX.Element {
       if (rootInfo) await loadRoot(rootInfo.code, rootMascara || null);
     } else {
       setBreadcrumb((p) => p.slice(0, index + 1));
-      await loadChildLevel(breadcrumb[index].code, rootMascara || null);
+      await loadChildLevel(breadcrumb[index].code, breadcrumb[index].mask);
     }
   }
 
@@ -777,14 +812,27 @@ export function Vent0210Page(): JSX.Element {
     clickTimerRef.current = setTimeout(() => setSelectedLocalId(localId), 200);
   }
 
+  /**
+   * Abre a estrutura do componente. Vale para qualquer componente já gravado,
+   * inclusive sem filhos — é assim que se monta a estrutura de um nível novo.
+   * Antes exigia `hasChildren`, então não havia como descer num componente
+   * folha para cadastrar os componentes dele.
+   */
   async function handleRowDoubleClick(row: LocalRow) {
     if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
-    if (!row.childCode || row.isNew || !row.hasChildren) return;
+    if (!row.childCode || row.isNew) return;
+    if (dirtyCount > 0 && !window.confirm(`Há ${dirtyCount} alteração(ões) não salva(s). Abrir o componente descarta o que não foi gravado. Continuar?`)) return;
+    // O duplo clique dentro de um campo seleciona a palavra; sem limpar, a
+    // seleção fica presa na tela nova.
+    window.getSelection()?.removeAllRanges();
+    // A máscara do filho é derivada da configuração do pai — não é a do pai.
+    const mascaraFilho = row.effectiveMask ?? null;
     setBreadcrumb((p) => [...p, {
       code: row.childCode,
       label: row.childDescription || String(row.childCode),
+      mask: mascaraFilho,
     }]);
-    await loadChildLevel(row.childCode, rootMascara || null);
+    await loadChildLevel(row.childCode, mascaraFilho);
   }
 
   // ── row mutations ────────────────────────────────────────────────────────────
@@ -888,7 +936,7 @@ export function Vent0210Page(): JSX.Element {
       if (breadcrumb.length === 0 && rootInfo) {
         await loadRoot(rootInfo.code, mask);
       } else if (currentLevel) {
-        await loadChildLevel(currentLevel.code, mask);
+        await loadChildLevel(currentLevel.code, currentLevel.mask);
       }
     } catch (e) {
       setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Erro ao salvar.' });
@@ -901,9 +949,44 @@ export function Vent0210Page(): JSX.Element {
    * Lista todos os problemas sem tentar gravar. O salvar barra no primeiro;
    * aqui o usuário vê tudo de uma vez e corrige de uma passada só.
    */
-  function handleConferir() {
+  async function handleConferir() {
     setFeedback(null);
-    setProblemas(listarProblemas(rows));
+    // A vigência entra só aqui, como aviso: não pode ir para `listarProblemas`
+    // porque ela também barra o salvar, e encerrar a vigência de um componente
+    // é uma operação legítima. OF, MRP e plano de corte ignoram o componente
+    // fora de vigência — o usuário precisa saber disso ao conferir.
+    const avisos = rows
+      .filter((r) => r.childCode.trim())
+      .flatMap((r) => {
+        const v = vigencia(r);
+        if (v === 'expirado') return [`Item ${r.childCode}: fora de vigência desde ${formatarDia(r.endDate)} — não entra em OF, MRP nem plano de corte.`];
+        if (v === 'futuro') return [`Item ${r.childCode}: só entra em vigor em ${formatarDia(r.startDate)} — até lá não é consumido.`];
+        return [];
+      });
+    // A conferência de configuração vem do servidor: é ele que conhece as
+    // características do filho, as regras de equivalência e as respostas
+    // padrão. Sem ela, o problema só apareceria na ordem de produção.
+    const deConfiguracao: string[] = [];
+    const pai = currentParentCode;
+    if (pai) {
+      try {
+        for (const c of await verificarConfiguracao(pai, rootMascara.trim() || null)) {
+          if (c.missingCharacteristics.length > 0) {
+            deConfiguracao.push(
+              `Item ${c.childCode}: ${c.missingCharacteristics.join(', ')} — o pai não responde essa(s) característica(s), e não há regra de equivalência nem resposta padrão. A configuração não fecha e a estrutura específica do filho não será usada.`,
+            );
+          }
+          if (c.requiresMask) {
+            deConfiguracao.push(
+              `Item ${c.childCode}: é configurado e não herda a máscara do pai — a estrutura dele não é explodida automaticamente. Marque "herda máscara" ou informe a máscara do componente.`,
+            );
+          }
+        }
+      } catch {
+        deConfiguracao.push('Não foi possível verificar a configuração dos componentes no servidor.');
+      }
+    }
+    setProblemas([...listarProblemas(rows), ...avisos, ...deConfiguracao]);
   }
 
   function handleLimpar() {
@@ -980,7 +1063,8 @@ export function Vent0210Page(): JSX.Element {
 
         .fe-split { display: flex; gap: 12px; flex: 1; min-height: 0; }
         .fe-left  { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-        .fe-right { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; }
+        .fe-right { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; }
+        .fe-right.oculto { display: none; }
 
         .fe-grid-card { background: #fff; border: 1px solid #dbe8d5; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
         .fe-grid-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #edf5e8; background: #fafcf9; flex-shrink: 0; gap: 8px; }
@@ -1128,10 +1212,15 @@ export function Vent0210Page(): JSX.Element {
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="8" cy="8" r="2.6" stroke="currentColor" strokeWidth="1.4"/></svg>
               Configurador
             </button>
-            <button className="fe-btn fe-btn-ghost" onClick={handleConferir} disabled={rows.length === 0}
+            <button className="fe-btn fe-btn-ghost" onClick={() => void handleConferir()} disabled={rows.length === 0}
               title={rows.length ? 'Listar todos os problemas da estrutura' : 'Nenhum componente para conferir'}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1.6l6 3v4.2c0 3.2-2.4 5.3-6 6.6-3.6-1.3-6-3.4-6-6.6V4.6l6-3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><path d="M5.6 8.1l1.7 1.7 3.1-3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Conferir
+            </button>
+            <button className="fe-btn fe-btn-ghost" onClick={() => setDetalheAberto((v) => !v)}
+              title={detalheAberto ? 'Recolher o painel de detalhe e usar a tela toda para a grade' : 'Mostrar o painel de detalhe do componente'}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d={detalheAberto ? 'M10.5 2.5v11' : 'M5.5 2.5v11'} stroke="currentColor" strokeWidth="1.3"/></svg>
+              {detalheAberto ? 'Ocultar detalhe' : 'Mostrar detalhe'}
             </button>
             <button className="fe-btn fe-btn-ghost" onClick={() => setHistoricoAberto(true)} disabled={!rootInfo} title={rootInfo ? 'Ver quem alterou a estrutura' : 'Busque o item pai para ver o histórico'}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.4"/><path d="M8 4.4V8l2.4 1.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1199,7 +1288,7 @@ export function Vent0210Page(): JSX.Element {
             </div>
 
             <div className="fe-header-card-body">
-              <div className="fe-h-field" style={{ minWidth: 180 }}>
+              <div className="fe-h-field" style={{ minWidth: 300 }}>
                 <label className="fe-h-label">Código do Item Pai <span style={{ color: '#c84040' }}>*</span></label>
                 <div className="fe-h-input-wrap" style={{ display: 'flex', gap: 6 }}>
                   <div style={{ flex: 1, minWidth: 160 }}>
@@ -1301,14 +1390,14 @@ export function Vent0210Page(): JSX.Element {
                       <thead>
                         <tr>
                           <th style={{ width: 44 }}>Pos.</th>
-                          <th style={{ width: 90 }}>Cód. Filho</th>
-                          <th>Descrição</th>
+                          <th style={{ width: 132 }}>Cód. Filho</th>
+                          <th style={{ minWidth: 240 }}>Descrição</th>
                           <th style={{ width: 92 }} title="Fórmula, vigência, alternativo, co-produto e quantidade por ordem">Sinais</th>
                           <th style={{ width: 85 }}>UM</th>
                           <th style={{ width: 75 }}>Qtde</th>
                           <th style={{ width: 70 }}>Perda %</th>
-                          <th style={{ width: 90 }}>Health</th>
-                          <th style={{ width: 160 }}>Observações</th>
+                          <th style={{ width: 104 }}>Situação</th>
+                          <th style={{ width: 130 }}>Observações</th>
                           <th style={{ width: 50, textAlign: 'center' }}>Ativo</th>
                           <th style={{ width: 68 }}>Ações</th>
                         </tr>
@@ -1322,7 +1411,7 @@ export function Vent0210Page(): JSX.Element {
                               className={[isSel ? 'sel' : '', !row.isActive ? 'inact' : ''].filter(Boolean).join(' ')}
                               onClick={() => handleRowClick(row.localId)}
                               onDoubleClick={() => handleRowDoubleClick(row)}
-                              title={row.hasChildren ? 'Duplo clique para ver filhos' : ''}
+                              title="Duplo clique abre a estrutura deste componente" 
                             >
                               <td><div className="fe-td">
                                 <span className="fe-pos">{row.position}</span>
@@ -1336,16 +1425,16 @@ export function Vent0210Page(): JSX.Element {
                                   onBlur={(e) => handleChildCodeBlur(row.localId, e.target.value)}
                                   placeholder="Código"
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}
                                   style={{ textAlign: 'right' }}/>
                               </div></td>
 
-                              <td><div className="fe-td" style={{ maxWidth: 220 }}>
+                              <td><div className="fe-td">
                                 <input className="fe-ci" value={row.childDescription}
                                   onChange={(e) => updateRow(row.localId, { childDescription: e.target.value })}
                                   placeholder="Descrição"
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}
                                   style={{ textOverflow: 'ellipsis' }}/>
                                 {row.hasChildren && <span className="fe-drill">↩</span>}
                               </div></td>
@@ -1358,7 +1447,7 @@ export function Vent0210Page(): JSX.Element {
                                 <select className="fe-cs" value={row.unitOfMeasurement}
                                   onChange={(e) => updateRow(row.localId, { unitOfMeasurement: e.target.value as UnitOfMeasurement })}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}>
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}>
                                   {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
                                 </select>
                               </div></td>
@@ -1371,7 +1460,7 @@ export function Vent0210Page(): JSX.Element {
                                   onChange={(e) => updateRow(row.localId, { quantity: parseFloat(e.target.value) || 0 })}
                                   style={{ textAlign: 'right', width: 60 }}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}/>
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
                               </div></td>
 
                               <td><div className="fe-td">
@@ -1380,14 +1469,14 @@ export function Vent0210Page(): JSX.Element {
                                   onChange={(e) => updateRow(row.localId, { lossPercentage: parseFloat(e.target.value) || 0 })}
                                   style={{ textAlign: 'right', width: 55 }}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}/>
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
                               </div></td>
 
                               <td><div className="fe-td">
                                 <select className="fe-cs" value={row.health}
                                   onChange={(e) => updateRow(row.localId, { health: e.target.value as Health })}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}
                                   style={{ color: HEALTH_COLOR[row.health] }}>
                                   {HEALTH_OPTIONS.map((h) => <option key={h} value={h}>{enumLabel(h)}</option>)}
                                 </select>
@@ -1398,18 +1487,23 @@ export function Vent0210Page(): JSX.Element {
                                   onChange={(e) => updateRow(row.localId, { notes: e.target.value || null })}
                                   placeholder="—"
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}/>
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
                               </div></td>
 
                               <td><div className="fe-td" style={{ justifyContent: 'center' }}>
                                 <input type="checkbox" className="fe-ck" checked={row.isActive}
                                   onChange={(e) => updateRow(row.localId, { isActive: e.target.checked })}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => e.stopPropagation()}/>
+                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
                               </div></td>
 
                               <td><div className="fe-td">
                                 <div className="fe-row-actions">
+                                  <button className="fe-ib" title="Abrir a estrutura deste componente"
+                                    disabled={row.isNew || !row.childCode}
+                                    onClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}>
+                                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 2v4a2 2 0 002 2h5M7 5l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  </button>
                                   <button className="fe-ib" title="Subir" disabled={idx === 0}
                                     onClick={(e) => { e.stopPropagation(); handleMoveRow(row.localId, 'up'); }}>
                                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 8l4-4 4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1435,7 +1529,7 @@ export function Vent0210Page(): JSX.Element {
             </div>
 
             {/* DETAIL PANEL */}
-            <div className="fe-right">
+            <div className={`fe-right${detalheAberto ? '' : ' oculto'}`}>
               <div className="fe-detail-card">
                 <div className="fe-detail-header">
                   {selectedRow

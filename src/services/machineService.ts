@@ -175,3 +175,12 @@ export async function updateMachine(code: number, dto: CreateMachineDTO): Promis
   const res = await httpClient.put<unknown>(`/api/machine/${code}`, dto);
   return parse(res.data);
 }
+
+/**
+ * Máquinas de um tipo. É o que responde "quais recursos atendem quando o
+ * roteiro pede uma serra" — sem isso o tipo é só um rótulo no cadastro.
+ */
+export async function listMachinesByType(typeCode: number): Promise<Machine[]> {
+  const res = await httpClient.get<unknown>(`/api/machine/types/${typeCode}/machines`);
+  return unwrap(res.data).map(parse).filter(Boolean) as Machine[];
+}

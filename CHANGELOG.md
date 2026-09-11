@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## [v1.1.22] — 2026-09-11
+
+### Correções
+- **Campos de busca não encontravam códigos com letras.** Procurar por `TP-01001-A` respondia "Nenhum resultado" e só restava digitar o código à mão. Valia para todos os campos de busca do sistema. A busca também deixou de diferenciar acentos.
+- **Cadastro de item: o que você salvava voltava ao padrão ao reabrir.** Tipo de venda, tipo de IPI de venda e de compra, origem da mercadoria, unidade de compra, consumo médio, contagem cíclica e "ativo no planejamento" não eram lidos de volta — e a gravação seguinte apagava o que estava guardado. Um item de revenda virava venda sozinho. O mesmo acontecia ao copiar um item-base: esses campos não vinham junto.
+- **Todo item novo nascia marcado como "Item Base".** Agora, sem marcação, o item é Genérico.
+- **Estrutura de produto: o duplo clique não abria o componente.** O clique caía no campo da linha e só selecionava o texto. Agora abre a estrutura do componente — inclusive de um componente sem filhos, que é como se monta um nível novo — e há um botão de abrir na coluna Ações.
+- **Ao descer um nível, a máscara usada era a do item pai**, e não a do componente.
+- Origem da mercadoria oferecia apenas três opções; agora traz as nove da tabela oficial (0 a 8).
+
+### Melhorias
+- **Cadastro de item**: o campo Nome ficou maior, que é o que aparece nas listas.
+- **Estrutura de produto**: código do item pai e código do filho com mais espaço, coluna "Health" renomeada para "Situação" e um botão para recolher o painel de detalhe e usar a tela inteira para a grade.
+- **Botão Conferir mais completo**: além dos erros de preenchimento, aponta componente repetido, componente igual ao pai, componente fora de vigência e configuração incompleta.
+- Almoxarifado de transferência, de assistência técnica, de suprimentos e grupo de inventário passaram a ter busca em vez de digitação do código.
+
 ## [v1.1.21] — 2026-09-10
 
 ## Correções

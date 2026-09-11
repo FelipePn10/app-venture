@@ -186,7 +186,20 @@ export type InspectionBasis = 'ITEM' | 'CLASSIFICATION';
 export type InspectionStepKind = 'VALUE' | 'ATTRIBUTE' | 'STRUCTURE';
 export type InspectionAppointmentMode = 'ALL_MEASUREMENTS' | 'SINGLE_INTERVAL' | 'MULTIPLE_INTERVAL' | 'STATUS_ONLY';
 export type InspectionOrderSource = 'PURCHASE_RECEIPT' | 'RECEIVING_NOTICE' | 'FISCAL_ENTRY' | 'MANUAL';
-export const INSPECTION_TREATMENTS = ['ACCEPT', 'REWORK', 'RETURN', 'SCRAP', 'CONDITIONAL'] as const;
+/**
+ * Destinos possíveis para o material inspecionado — são os valores do enum
+ * `receiving_inspection_treatment` do banco. A lista anterior (`ACCEPT`,
+ * `RETURN`, `CONDITIONAL`) não existia no backend: a análise era recusada com
+ * "tratamento inválido", inclusive no valor que a tela trazia por padrão.
+ */
+export const INSPECTION_TREATMENTS = [
+  'ACCEPT_WITH_RESTRICTION',
+  'CONCESSION',
+  'SORTING',
+  'REWORK',
+  'RETURN_TO_SUPPLIER',
+  'SCRAP',
+] as const;
 
 /** Cria um roteiro de inspeção de recebimento (por item ou classificação, com etapas). */
 export async function createInspectionRoute(dto: Obj): Promise<Obj> {

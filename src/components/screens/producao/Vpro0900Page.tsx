@@ -49,6 +49,36 @@ const EMPTY_OF: ProductionOrderDTO = { item_code: "", planned_qty: 1, priority: 
 const EMPTY_APP: AppointmentDTO = { production_order_id: 0, produced_qty: 0, scrapped_qty: 0 };
 const EMPTY_CONS: ConsumptionDTO = { production_order_id: 0, item_code: "", consumed_qty: 0, warehouse_id: 0 };
 
+/** Uma linha da análise de variação: real, padrão e o desvio entre os dois. */
+function linhasDeCusto(c: CostDTO) {
+  const linha = (rotulo: string, real?: number, padrao?: number, total = false) => ({
+    rotulo, real: real ?? 0, padrao: padrao ?? 0, desvio: (real ?? 0) - (padrao ?? 0), total,
+  });
+  return [
+    linha("Material", c.material_cost_real, c.material_cost_std),
+    linha("Mão de obra", c.labor_cost_real, c.labor_cost_std),
+    linha("Indiretos", c.overhead_cost_real, c.overhead_cost_std),
+    linha("Total", c.total_cost_real, c.total_cost_std, true),
+  ];
+}
+
+/** Verde economizou, vermelho estourou, neutro quando não há desvio relevante. */
+function corDoDesvio(desvio: number): string {
+  if (Math.abs(desvio) < 0.005) return "inherit";
+  return desvio > 0 ? "var(--v-err)" : "var(--v-primary)";
+}
+
+/**
+ * Traduz o desvio para uma frase. Um número sozinho não diz se é bom ou ruim —
+ * e a faixa de 2% evita transformar arredondamento em alarme.
+ */
+function leituraDoDesvio(desvio: number, padrao: number): string {
+  if (padrao === 0) return desvio === 0 ? "—" : "sem padrão para comparar";
+  const pct = (desvio / padrao) * 100;
+  if (Math.abs(pct) < 2) return "dentro do padrão";
+  return pct > 0 ? `estourou ${pct.toFixed(1)}%` : `economizou ${Math.abs(pct).toFixed(1)}%`;
+}
+
 export function Vpro0900Page(): JSX.Element {
   const [orders, setOrders] = useState<ProductionOrderDTO[]>([]);
   const [selected, setSelected] = useState<ProductionOrderDTO | null>(null);
@@ -291,16 +321,64 @@ export function Vpro0900Page(): JSX.Element {
               <div className="erp-field erp-c6" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={concluir} disabled={busy || st !== "IN_PROGRESS"}>Concluir (→ Concluída)</button></div>
             </div></div>
 
-            {/* Custo */}
+            {/* Valorização da ordem — real × padrão, com o desvio por componente */}
             {cost && (
-              <>
-                <div className="erp-fieldset"><div className="erp-fieldset-head">Custo real × padrão</div><div className="erp-fieldset-body">
-                  <div className="erp-field erp-c3"><label className="erp-label">Material real</label><input className="erp-input num" value={money(cost.material_cost_real)} readOnly /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Total real</label><input className="erp-input num" value={money(cost.total_cost_real)} readOnly /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Unit. real</label><input className="erp-input num" value={money(cost.unit_cost_real)} readOnly /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Variância total</label><input className="erp-input num" value={money(cost.total_variance)} readOnly /></div>
-                </div></div>
-              </>
+              <div className="erp-fieldset">
+                <div className="erp-fieldset-head">
+                  Valorização da ordem
+                  {cost.settled_at && <span style={{ fontWeight: 400, opacity: .65 }}> — apurada em {cost.settled_at.slice(0, 10).split("-").reverse().join("/")}</span>}
+                </div>
+                <div className="erp-fieldset-body">
+                  <div className="erp-field erp-c12">
+                    <p className="erp-note">
+                      O que a ordem <strong>custou de verdade</strong> contra o que deveria ter custado pelo padrão.
+                      O desvio por componente diz onde procurar: material aponta para consumo acima da
+                      estrutura ou preço de compra; mão de obra, para tempo além do roteiro; indiretos,
+                      para o rateio do centro.
+                    </p>
+                  </div>
+                  <div className="erp-field erp-c12">
+                    <table className="erp-grid">
+                      <thead>
+                        <tr>
+                          <th>Componente</th>
+                          <th className="num">Real</th>
+                          <th className="num">Padrão</th>
+                          <th className="num">Desvio</th>
+                          <th>Leitura</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {linhasDeCusto(cost).map((l) => (
+                          <tr key={l.rotulo} className={l.total ? "erp-row-sel" : ""}>
+                            <td style={{ fontWeight: l.total ? 700 : 400 }}>{l.rotulo}</td>
+                            <td className="num">{money(l.real)}</td>
+                            <td className="num">{money(l.padrao)}</td>
+                            <td className="num" style={{ color: corDoDesvio(l.desvio), fontWeight: 600 }}>
+                              {l.desvio > 0 ? "+" : ""}{money(l.desvio)}
+                            </td>
+                            <td>{leituraDoDesvio(l.desvio, l.padrao)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Quantidade produzida</label>
+                    <input className="erp-input num" value={(cost.produced_qty ?? 0).toLocaleString("pt-BR")} readOnly /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Custo unitário real</label>
+                    <input className="erp-input num" value={money(cost.unit_cost_real)} readOnly />
+                    <span className="erp-hint">É este número que alimenta o custo médio do estoque na entrada do acabado.</span></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Desvio total</label>
+                    <input className="erp-input num" readOnly
+                      style={{ color: corDoDesvio(cost.total_variance ?? 0), fontWeight: 600 }}
+                      value={`${(cost.total_variance ?? 0) > 0 ? "+" : ""}${money(cost.total_variance)}`} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Desvio sobre o padrão</label>
+                    <input className="erp-input num" readOnly
+                      style={{ color: corDoDesvio(cost.variance_pct ?? 0), fontWeight: 600 }}
+                      value={`${(cost.variance_pct ?? 0) > 0 ? "+" : ""}${(cost.variance_pct ?? 0).toFixed(1)}%`} />
+                    <span className="erp-hint">R$ 500 pesam diferente numa ordem de R$ 2 mil e numa de R$ 200 mil.</span></div>
+                </div>
+              </div>
             )}
 
             {/* Operações / Apontamentos / Consumos */}

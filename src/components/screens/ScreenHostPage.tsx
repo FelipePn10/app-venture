@@ -102,6 +102,7 @@ import { Vpro0600Page } from "./producao/Vpro0600Page";
 import { Vpro0700Page } from "./producao/Vpro0700Page";
 import { Vpro0800Page } from "./producao/Vpro0800Page";
 import { Vcus0100Page } from "./custo/Vcus0100Page";
+import { Vcus0200Page } from "@/components/screens/custo/Vcus0200Page";
 import { Vest0100Page } from "./almoxarifado/Vest0100Page";
 import { Vcut0100Page } from "./producao/Vcut0100Page";
 import { Vmrp0100Page } from "./planejamento/Vmrp0100Page";
@@ -232,6 +233,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VPRO0700: <Vpro0700Page />,
   VPRO0800: <Vpro0800Page />,
   VCUS0100: <Vcus0100Page />,
+  VCUS0200: <Vcus0200Page />,
   VEST0100: <Vest0100Page />,
   VEST0200: <Vest0200Page />,
   VCUT0100: <Vcut0100Page />,

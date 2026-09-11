@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   type GanttEntry, type GanttBoard, type GanttBar, type GanttGroupBy,
-  sequenceAps, ganttByOrder, ganttByWorkCenter,
+  SEQUENCE_DIRECTIONS, sequenceAps, ganttByOrder, ganttByWorkCenter,
   ganttMonth, rescheduleGantt, exportGanttMonth,
 } from "@/services/apsService";
 import { downloadBlob } from "@/services/fileDownload";
@@ -28,6 +28,7 @@ export function Vpro0210Page(): JSX.Element {
   const [rows, setRows] = useState<GanttEntry[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  const [sentido, setSentido] = useState("FORWARD");
   // Quadro mensal (§3.1)
   const [year, setYear] = useState(String(now.getFullYear()));
   const [month, setMonth] = useState(String(now.getMonth() + 1));
@@ -68,7 +69,16 @@ export function Vpro0210Page(): JSX.Element {
 
   async function sequenciar() {
     setBusy(true); setFeedback(null);
-    try { await sequenceAps(); setFeedback({ type: "success", message: "Sequenciamento das ordens abertas gerado (EDD)." }); }
+    try {
+      const r = await sequenceAps(sentido);
+      const base = `${r.scheduled_operations} operação(ões) sequenciada(s) em ${r.orders_processed} ordem(ns).`;
+      setFeedback(r.late_orders.length > 0
+        // Programando para trás, ordem que precisaria começar no passado não
+        // cabe no prazo. É a informação que o PCP procura — não pode virar só
+        // uma data no Gantt.
+        ? { type: "info", message: `${base} ${r.late_orders.length} ordem(ns) não cabe(m) no prazo e foram reprogramadas para frente: ${r.late_orders.join(", ")}.` }
+        : { type: "success", message: base });
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function verGantt() {
@@ -94,6 +104,11 @@ export function Vpro0210Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Planejamento</span>
+          <select className="erp-input" style={{ width: 230, height: 32 }} value={sentido}
+            title="Para trás parte da data de entrega e revela as ordens que já nascem atrasadas"
+            onChange={(e) => setSentido(e.target.value)}>
+            {SEQUENCE_DIRECTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+          </select>
           <button className="erp-btn erp-btn-primary" onClick={() => void sequenciar()} disabled={busy}>{busy ? "..." : "Sequenciar ordens"}</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Gantt</span>
           <button className={`erp-btn ${mode === "order" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("order")}>Por ordem</button>

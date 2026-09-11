@@ -29,6 +29,16 @@ export async function listEmployees(): Promise<EmployeeDTO[]> {
   const { data } = await httpClient.get(`${BASE}/list`);
   return unwrapArray(data).map(parseEmployee);
 }
+
+/**
+ * Funcionários de uma função. Usado onde a escolha só faz sentido dentro de um
+ * papel — responsável pela manutenção do recurso é mecânico, comprador do
+ * pedido é comprador.
+ */
+export async function listEmployeesByRole(role: string): Promise<EmployeeDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/by-role/${encodeURIComponent(role)}`);
+  return unwrapArray(data).map(parseEmployee);
+}
 export async function getEmployee(code: number): Promise<EmployeeDTO> {
   const { data } = await httpClient.get(`${BASE}/${code}`);
   return parseEmployee(data);

@@ -45,7 +45,10 @@ check('classificação separa PIS/COFINS normal, consumo, retenção e redução
 
 // ── Item (VENT0200) ────────────────────────────────────────────────────────
 const item = read('src/components/screens/engenharia/Vent0200Page.tsx');
-check('item envia as dimensões só quando completas', /dimLength\) > 0 && Number\(form\.dimWidth\) > 0/.test(item));
+// A tela passou a aceitar altura decimal (c2b77bd) e troca Number por
+// parseDecimal; o que importa é a regra — só envia com as medidas completas.
+check('item envia as dimensões só quando completas',
+  /(?:Number|parseDecimal)\(form\.dimLength\) > 0 && (?:Number|parseDecimal)\(form\.dimWidth\) > 0/.test(item));
 check('item coleta tanque, checklist de recebimento e safra',
   /tank_code: optionalNumber\(form\.tanque\)/.test(item)
   && /receiving_checklist: form\.checklistRecebimento/.test(item)

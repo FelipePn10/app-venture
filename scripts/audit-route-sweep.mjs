@@ -19,6 +19,25 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const API = process.env.API_URL ?? 'http://localhost:5070';
+
+/**
+ * A API limita 50 req/s por IP. Sem ritmo, boa parte da varredura voltava 429 —
+ * e como 429 não é 5xx nem mensagem em inglês, era somada às rotas "limpas".
+ * O placar dizia que estava tudo certo justamente porque quase nada tinha sido
+ * exercitado. Passo fixo mais reenvio com espera crescente.
+ */
+const PASSO_MS = Number(process.env.PASSO_MS ?? 30);
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function busca(rota, token, tentativa = 0) {
+  await pausa(PASSO_MS);
+  const r = await fetch(API + rota, { headers: { Authorization: `Bearer ${token}` } });
+  if (r.status === 429 && tentativa < 5) {
+    await pausa(250 * 2 ** tentativa);
+    return busca(rota, token, tentativa + 1);
+  }
+  return r;
+}
 const TOKEN = await (async () => {
   if (process.env.TOK_FILE) return readFileSync(process.env.TOK_FILE, 'utf8').trim();
   const r = await fetch(`${API}${process.env.LOGIN_PATH ?? '/users/login'}`, {
@@ -66,22 +85,27 @@ const concretas = [...rotas]
 
 const INGLES = /\b(invalid|not found|failed|error occurred|unauthorized|forbidden|missing|required field|internal server error|cannot|unable to|does not exist|already exists|bad request|unexpected)\b/i;
 
-const cincoXX = [], ingles = [];
+const cincoXX = [], ingles = [], limitadas = [];
 let ok = 0;
 for (const rota of [...new Set(concretas)].sort()) {
   try {
-    const r = await fetch(API + rota, { headers: { Authorization: `Bearer ${TOKEN}` } });
+    const r = await busca(rota, TOKEN);
     const txt = (await r.text()).slice(0, 400);
-    if (r.status >= 500) cincoXX.push(`${r.status} ${rota} :: ${txt.slice(0,150)}`);
+    if (r.status === 429) limitadas.push(rota);
+    else if (r.status >= 500) cincoXX.push(`${r.status} ${rota} :: ${txt.slice(0,150)}`);
     else if (INGLES.test(txt) && txt.length < 400) ingles.push(`${r.status} ${rota} :: ${txt.slice(0,150)}`);
     else ok++;
   } catch (e) { cincoXX.push(`ERRO ${rota} :: ${e.message}`); }
 }
-console.log(`rotas exercitadas: ${new Set(concretas).size} | limpas: ${ok}`);
+console.log(`rotas exercitadas: ${new Set(concretas).size} | limpas: ${ok} | barradas pelo limitador: ${limitadas.length}`);
 console.log(`\n── 5xx (${cincoXX.length}) ──`); cincoXX.forEach((l)=>console.log('  '+l));
 console.log(`\n── resposta com inglês (${ingles.length}) ──`); ingles.forEach((l)=>console.log('  '+l));
 
 
+if (limitadas.length > 0) {
+  console.error(`\n✗ ${limitadas.length} rota(s) não foram exercitadas (429 mesmo após reenvio) — o resultado não cobre o sistema todo.`);
+  process.exit(1);
+}
 if (cincoXX.length > 0) {
   console.error(`\n✗ ${cincoXX.length} rota(s) respondendo 5xx.`);
   process.exit(1);

@@ -10,6 +10,7 @@ import {
   listMachines,
   createMachine,
   updateMachine,
+  listMachinesByType,
 } from "@/services/machineService";
 import {
   type MachineType, MACHINE_TYPE_ENUMS,
@@ -31,11 +32,15 @@ import {
   deleteMachineSchedule,
 } from "@/services/machineScheduleService";
 import { enumLabel } from "@/utils/enumLabels";
+import {
+  type SetupTransitionDTO,
+  listSetupMatrix, upsertSetupTransition, deleteSetupTransition,
+} from "@/services/apsService";
 import { errMessage } from "@/services/fiscalShared";
 import { useAuthStore } from "@/store/authStore";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadEmployees } from "@/services/lookups";
+import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadWorkCenters, loadMaintenanceResponsibles } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -95,6 +100,16 @@ export function Vmaq0200Page(): JSX.Element {
   const [mEdit, setMEdit] = useState<number | null>(null);
   const [tipoForm, setTipoForm] = useState({ code: 0, name: "", description: "", type: "CUT", requires_operator: false, is_active: true });
   const [tipoEdit, setTipoEdit] = useState<number | null>(null);
+  /** Recursos que atendem o tipo aberto — o tipo deixa de ser só um rótulo. */
+  const [maquinasDoTipo, setMaquinasDoTipo] = useState<Machine[]>([]);
+  /**
+   * Matriz de preparação: quanto custa trocar de um item (ou família) para
+   * outro no centro. É o que permite ao sequenciamento agrupar itens parecidos
+   * — sem ela, trocar de preto para preto custa o mesmo que de branco para preto.
+   */
+  const [setupCentro, setSetupCentro] = useState<number>(0);
+  const [setupLinhas, setSetupLinhas] = useState<SetupTransitionDTO[]>([]);
+  const [setupForm, setSetupForm] = useState({ from_family: "", to_family: "", from_item_code: "", to_item_code: "", setup_minutes: "" });
   const [tForm, setTForm] = useState<CreateItemMachineTimeDTO>({ ...EMPTY_TIME });
   const [calc, setCalc] = useState({ item_code: "", mask: "", machine_code: 0, demand_qty: 0 });
   const [calcResult, setCalcResult] = useState<ProductionCalcResult | null>(null);
@@ -160,17 +175,54 @@ export function Vmaq0200Page(): JSX.Element {
 
   function novoTipo() {
     setTipoEdit(null);
+    setMaquinasDoTipo([]);
     setTipoForm({ code: 0, name: "", description: "", type: "CUT", requires_operator: false, is_active: true });
   }
 
   function abrirTipo(t: MachineType) {
     setTipoEdit(t.code);
+    void listMachinesByType(t.code).then(setMaquinasDoTipo).catch(() => setMaquinasDoTipo([]));
     setTipoForm({
       code: t.code, name: t.name, description: t.description ?? "", type: t.type,
       requires_operator: t.requires_operator ?? false, is_active: t.is_active,
     });
     setFeedback(null);
   }
+
+  const carregarSetup = (wc: number) => run(async () => {
+    setSetupCentro(wc);
+    setSetupLinhas(wc > 0 ? await listSetupMatrix(wc) : []);
+  });
+
+  const salvarSetup = () => run(async () => {
+    if (!setupCentro) { setFeedback({ type: "error", message: "Escolha o centro de trabalho." }); return; }
+    const minutos = Number(setupForm.setup_minutes);
+    if (!(minutos >= 0)) { setFeedback({ type: "error", message: "Informe o tempo de preparação em minutos." }); return; }
+    const temCriterio = setupForm.from_family.trim() || setupForm.to_family.trim()
+      || setupForm.from_item_code || setupForm.to_item_code;
+    if (!temCriterio) {
+      setFeedback({ type: "error", message: "Informe ao menos o item ou a família de origem ou destino — sem critério a linha valeria para tudo." });
+      return;
+    }
+    await upsertSetupTransition({
+      work_center_id: setupCentro,
+      from_family: setupForm.from_family.trim() || null,
+      to_family: setupForm.to_family.trim() || null,
+      from_item_code: setupForm.from_item_code ? Number(setupForm.from_item_code) : null,
+      to_item_code: setupForm.to_item_code ? Number(setupForm.to_item_code) : null,
+      setup_minutes: minutos,
+      is_active: true,
+    });
+    setSetupForm({ from_family: "", to_family: "", from_item_code: "", to_item_code: "", setup_minutes: "" });
+    setSetupLinhas(await listSetupMatrix(setupCentro));
+    setFeedback({ type: "success", message: "Transição de preparação gravada." });
+  });
+
+  const excluirSetup = (id: number) => run(async () => {
+    await deleteSetupTransition(id);
+    setSetupLinhas(await listSetupMatrix(setupCentro));
+    setFeedback({ type: "success", message: "Transição removida." });
+  });
 
   const salvarTipo = () => run(async () => {
     if (!tipoForm.code || !tipoForm.name.trim()) { setFeedback({ type: "error", message: "Código e nome do tipo são obrigatórios." }); return; }
@@ -390,6 +442,15 @@ export function Vmaq0200Page(): JSX.Element {
               </button>
               {tipoEdit !== null && <button className="erp-btn" onClick={novoTipo} disabled={busy}>Novo tipo</button>}
             </div>
+            {tipoEdit !== null && (
+              <div className="erp-field erp-c12">
+                <span className="erp-hint">
+                  {maquinasDoTipo.length === 0
+                    ? "Nenhum recurso usa este tipo ainda."
+                    : `Recursos deste tipo: ${maquinasDoTipo.map((m) => `${m.code} · ${m.name}`).join(" · ")}`}
+                </span>
+              </div>
+            )}
             <div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th style={{ width: 70 }}>Código</th><th>Nome</th><th>Natureza</th><th>Descrição</th><th>Marcadores</th><th style={{ width: 80 }} /></tr></thead>
@@ -512,8 +573,8 @@ export function Vmaq0200Page(): JSX.Element {
               <input className="erp-input" type="date" value={mForm.acquired_on}
                 onChange={(e) => setMForm((p) => ({ ...p, acquired_on: e.target.value }))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Responsável pela manutenção</label>
-              <LookupField value={mForm.maintenance_responsible_employee_id || undefined} loader={loadEmployees}
-                entityLabel="funcionário" placeholder="Quem cuida do recurso" clearable
+              <LookupField value={mForm.maintenance_responsible_employee_id || undefined} loader={loadMaintenanceResponsibles}
+                entityLabel="mecânico" placeholder="Quem cuida do recurso" clearable
                 onChange={(c) => setMForm((p) => ({ ...p, maintenance_responsible_employee_id: c ? Number(c) : 0 }))} /></div>
 
             <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
@@ -566,6 +627,74 @@ export function Vmaq0200Page(): JSX.Element {
               </tbody>
             </table>
           </div></div>
+        </div>
+
+        {/* ── Matriz de preparação ───────────────────────────────────────── */}
+        <div className="erp-fieldset">
+          <div className="erp-fieldset-head">Matriz de tempo de preparação (setup por transição)</div>
+          <div className="erp-fieldset-body">
+            <div className="erp-field erp-c12">
+              <p className="erp-note">
+                O setup real depende do que estava na máquina: trocar de preto para preto
+                não custa o mesmo que de branco para preto. Cadastre aqui as transições que
+                importam e o sequenciamento passa a <strong>agrupar itens parecidos</strong> para
+                economizar preparação — é o principal ganho de um sequenciador de verdade.
+                Sem nenhuma linha, vale o setup fixo da operação.
+              </p>
+            </div>
+            <div className="erp-field erp-c4">
+              <label className="erp-label erp-req">Centro de trabalho</label>
+              <LookupField value={setupCentro || undefined} loader={loadWorkCenters} entityLabel="centro de trabalho"
+                placeholder="Escolher centro" clearable
+                onChange={(c) => carregarSetup(c ? Number(c) : 0)} />
+            </div>
+
+            {setupCentro > 0 && (<>
+              <div className="erp-field erp-c12"><div className="erp-sec">Nova transição</div></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Família de origem</label>
+                <input className="erp-input" value={setupForm.from_family} placeholder="Ex.: PRETO"
+                  onChange={(e) => setSetupForm((p) => ({ ...p, from_family: e.target.value }))} />
+                <span className="erp-hint">Em branco = qualquer.</span></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Família de destino</label>
+                <input className="erp-input" value={setupForm.to_family} placeholder="Ex.: BRANCO"
+                  onChange={(e) => setSetupForm((p) => ({ ...p, to_family: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Item de origem</label>
+                <LookupField value={Number(setupForm.from_item_code) || undefined} loader={loadItems}
+                  entityLabel="item" placeholder="Qualquer" clearable
+                  onChange={(c) => setSetupForm((p) => ({ ...p, from_item_code: c ? String(c) : "" }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Item de destino</label>
+                <LookupField value={Number(setupForm.to_item_code) || undefined} loader={loadItems}
+                  entityLabel="item" placeholder="Qualquer" clearable
+                  onChange={(c) => setSetupForm((p) => ({ ...p, to_item_code: c ? String(c) : "" }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Preparação (min)</label>
+                <input className="erp-input num" type="number" min="0" value={setupForm.setup_minutes}
+                  onChange={(e) => setSetupForm((p) => ({ ...p, setup_minutes: e.target.value }))} /></div>
+              <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={salvarSetup} disabled={busy}>+ Transição</button>
+              </div>
+
+              <div className="erp-field erp-c12">
+                <table className="erp-grid">
+                  <thead><tr><th>De</th><th>Para</th><th className="num">Preparação</th><th style={{ width: 90 }} /></tr></thead>
+                  <tbody>
+                    {setupLinhas.length === 0 && (
+                      <tr><td colSpan={4} className="erp-grid-empty">
+                        Nenhuma transição cadastrada — o sequenciamento usa o setup fixo da operação.
+                      </td></tr>
+                    )}
+                    {setupLinhas.map((l) => (
+                      <tr key={l.id}>
+                        <td>{l.from_item_code ? `Item ${l.from_item_code}` : (l.from_family || "Qualquer")}</td>
+                        <td>{l.to_item_code ? `Item ${l.to_item_code}` : (l.to_family || "Qualquer")}</td>
+                        <td className="num">{l.setup_minutes.toLocaleString("pt-BR")} min</td>
+                        <td>{l.id && <button className="erp-btn erp-btn-sm erp-btn-danger" onClick={() => excluirSetup(l.id!)} disabled={busy}>Excluir</button>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>)}
+          </div>
         </div>
 
         {/* ── Tempo item × máquina ───────────────────────────────────────── */}
