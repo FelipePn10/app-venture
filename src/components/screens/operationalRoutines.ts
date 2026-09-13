@@ -116,7 +116,10 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   VCFG0200: routine("VCFG0200", "Características do configurador", "Manutenção avançada das características. O cadastro guiado (com pergunta, tipo e limites em formulário) é a VCFG0100.", [
     list("/api/configurator/characteristics"), create("/api/configurator/characteristics", '{"code":"COR","description":"Cor","type":"ESCOLHA","set_id":1,"mask":"","is_required":true,"is_special":false,"affects_price":false,"controls_goals":false,"receiving_type":"","field_source":"","formula":"","option_true":"Sim","option_false":"Não"}'),
     { label: "Abrir característica", method: "GET", path: "/api/configurator/characteristics/{id}", fields: [id()] },
-    { label: "Alterar característica", method: "PUT", path: "/api/configurator/characteristics/{id}", fields: [id(), json('{"code":"COR","description":"Cor","type":"ESCOLHA","is_active":true,"is_required":true}')] }, remove("/api/configurator/characteristics/{id}"),
+    // O PUT substitui a característica inteira: campo que não vier no corpo é
+    // gravado vazio. O exemplo trazia só 5 campos, então salvar por aqui apagava
+    // máscara, limites numéricos, fórmula e as opções de sim/não sem aviso.
+    { label: "Alterar característica", method: "PUT", path: "/api/configurator/characteristics/{id}", fields: [id(), json('{"code":"COR","description":"Cor","type":"ESCOLHA","is_active":true,"set_id":1,"mask":"","is_required":true,"is_special":false,"affects_price":false,"controls_goals":false,"receiving_type":"","field_source":"","formula":"","num_min":null,"num_max":null,"num_multiple":null,"option_true":"Sim","option_false":"Não"}')] }, remove("/api/configurator/characteristics/{id}"),
     { label: "Traduzir característica", method: "POST", path: "/api/configurator/characteristics/{id}/languages", fields: [id(), json('{"language":"en","description":"Color","mask":"COLOR"}')] },
     remove("/api/configurator/characteristics/languages/{langId}", [id("langId", "Tradução")], false, "Excluir tradução da característica"),
     { label: "Listar itens vinculados", method: "GET", path: "/api/configurator/characteristics/{id}/items", fields: [id()] },

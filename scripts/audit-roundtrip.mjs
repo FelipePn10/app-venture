@@ -147,7 +147,7 @@ console.log(`entidades verificadas: ${ENTIDADES.length} | idempotentes: ${aprova
 if (semDados.length) { console.log('\n── não deu para exercitar ──'); semDados.forEach((s) => console.log('  ' + s)); }
 if (riscos.length) {
   console.log(`\n── RISCO: campo sobrescrito quando o corpo o omite (${riscos.length}) ──`);
-  console.log('   (o backend recebe `bool` puro: ausente e false são indistinguíveis)');
+  console.log('   (PUT substitui o registro inteiro: campo ausente é gravado vazio)');
   for (const r of riscos) {
     console.log(`  ${r.nome} (chave ${r.chave})`);
     r.itens.forEach((i) => console.log('      ' + i));
