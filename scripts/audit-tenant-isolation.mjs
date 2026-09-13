@@ -274,7 +274,10 @@ if (process.env.VERBOSE && falhas.length) {
 }
 if (vazamentos.length) {
   console.log(`\n── VAZAMENTO ENTRE EMPRESAS (${vazamentos.length}) ──`);
-  for (const v of vazamentos) console.log(`  ${v.rota}\n      dona=${v.na} · sonda=${v.nb} · ${v.comuns} registro(s) IDÊNTICO(S) nas duas\n      ${v.amostra}`);
+  // "dona=1 · sonda=1" era lido como se fossem ids de empresa e passava a
+  // impressão de que a sonda era a própria empresa dona — falso positivo. São
+  // contagens de registro; o rótulo agora diz isso.
+  for (const v of vazamentos) console.log(`  ${v.rota}\n      ${v.na} registro(s) na empresa dona · ${v.nb} na sonda · ${v.comuns} IDÊNTICO(S) nas duas\n      ${v.amostra}`);
   console.error(`\n✗ ${vazamentos.length} rota(s) entregam dado de outra empresa.`);
   process.exit(1);
 }

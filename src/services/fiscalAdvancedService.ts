@@ -312,15 +312,29 @@ export async function addClassificationExportAttribute(dto: ClassificationExport
 
 // ─── §35 Operações de entrada (+ grupos de estado) ──────────────────────────
 
+/**
+ * Os códigos são NUMÉRICOS no backend (`*int64`). Estavam declarados como texto
+ * aqui, e o envio quebrava com `json: cannot unmarshal string into Go struct
+ * field CreateEntryOperationDTO.invoice_type_code of type int64` — erro cru do
+ * Go na tela. Os outros serviços (cliente, pedido de compra) já usavam número.
+ */
+/**
+ * O campo de formulário devolve texto, mas o backend exige número — por isso o
+ * tipo aceita os dois e `comCodigosNumericos` converte antes de enviar. Declarar
+ * apenas `string`, como estava, fazia o envio quebrar no backend; declarar
+ * apenas `number` obrigaria a tela a converter em cada `onChange`.
+ */
+export type CodigoNumerico = number | string;
+
 export interface EntryOperationDTO {
-  code: string;
+  code: CodigoNumerico;
   description: string;
-  invoice_type_code: string;
+  invoice_type_code?: CodigoNumerico;
   nature_operation: string;
   classification_type?: string;
   classification_code?: string;
-  state_group_code: string;
-  supplier_type_code: string;
+  state_group_code?: CodigoNumerico;
+  supplier_type_code?: CodigoNumerico;
   is_active?: boolean;
 }
 export interface StateGroupDTO {
@@ -336,12 +350,23 @@ export async function listEntryOperations(): Promise<EntryOperationDTO[]> {
   const { data } = await httpClient.get(`${ENTRY_OP}`);
   return asList(data);
 }
+/** Campos de input chegam como texto; o backend exige número nos códigos. */
+function comCodigosNumericos(dto: EntryOperationDTO): EntryOperationDTO {
+  const num = (v: unknown) => (v === '' || v == null ? undefined : Number(v));
+  return {
+    ...dto,
+    code: Number(dto.code),
+    invoice_type_code: num(dto.invoice_type_code),
+    state_group_code: num(dto.state_group_code),
+    supplier_type_code: num(dto.supplier_type_code),
+  };
+}
 export async function createEntryOperation(dto: EntryOperationDTO): Promise<EntryOperationDTO> {
-  const { data } = await httpClient.post(`${ENTRY_OP}`, dto);
+  const { data } = await httpClient.post(`${ENTRY_OP}`, comCodigosNumericos(dto));
   return asOne(data);
 }
 export async function updateEntryOperation(dto: EntryOperationDTO): Promise<EntryOperationDTO> {
-  const { data } = await httpClient.put(`${ENTRY_OP}`, dto);
+  const { data } = await httpClient.put(`${ENTRY_OP}`, comCodigosNumericos(dto));
   return asOne(data);
 }
 export async function validateEntryOperation(code: string, uf: string): Promise<EntryOperationValidation> {

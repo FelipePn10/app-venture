@@ -171,6 +171,11 @@ const descartadas = [...enviadas.entries()]
 // Item B é o contrário: só o que é de fato entrada de requisição conta, senão
 // o relatório vira a lista de todo campo de todo struct do sistema.
 const aceitasNoCorpo = new Map();
+// Alguns endpoints declaram o corpo num struct privado dentro do próprio
+// handler (ex.: `conferItemRequest` em shipment_handler.go) em vez de um DTO na
+// pasta de request. Sem varrer os handlers, esses campos pareciam "não aceitos"
+// e o front era acusado de mandar chave vizinha — item_id era exatamente isso,
+// e é o id da LINHA do romaneio, não código de item.
 for (const file of goFiles(join(BACKEND, 'internal/application/dto/request'))) {
   const src = readFileSync(file, 'utf8');
   for (const m of src.matchAll(TAG)) {
@@ -191,6 +196,19 @@ for (const file of goFiles(join(BACKEND, 'internal/application/dto/request'))) {
  */
 const textoDoFront = frontFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
 const citada = (chave) => new RegExp(`\\b${chave}\\b`).test(textoDoFront);
+
+// Chaves aceitas em QUALQUER lugar, inclusive structs privados declarados dentro
+// do handler (ex.: `conferItemRequest` em shipment_handler.go). Só a checagem C
+// usa este conjunto: sem ele o front era acusado de mandar "chave vizinha" onde
+// o backend aceita a chave exatamente como enviada — item_id era isso, e é o id
+// da LINHA do romaneio, não código de item. A seção B continua olhando apenas os
+// DTOs, senão encheria de campo interno de handler.
+const aceitasEmQualquerLugar = new Set(aceitasNoCorpo.keys());
+for (const file of goFiles(join(BACKEND, 'internal/interfaces/http/handler'))) {
+  for (const m of readFileSync(file, 'utf8').matchAll(/`json:"([^",]+)/g)) {
+    aceitasEmQualquerLugar.add(m[1]);
+  }
+}
 
 const orfaos = [...aceitasNoCorpo.entries()]
   .filter(([k]) => !enviadas.has(k) && !citada(k))
@@ -230,7 +248,7 @@ const parecidas = [];
 for (const [chave, onde] of enviadas) {
   const alternativa = chave.endsWith('_code') ? chave.replace(/_code$/, '_id')
     : chave.endsWith('_id') ? chave.replace(/_id$/, '_code') : null;
-  if (!alternativa || !aceitasNoCorpo.has(alternativa) || aceitasNoCorpo.has(chave)) continue;
+  if (!alternativa || !aceitasNoCorpo.has(alternativa) || aceitasEmQualquerLugar.has(chave)) continue;
   parecidas.push({ chave, alternativa, ocorrencias: [...onde].sort() });
 }
 

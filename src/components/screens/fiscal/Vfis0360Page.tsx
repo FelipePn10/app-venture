@@ -37,7 +37,8 @@ export function Vfis0360Page(): JSX.Element {
 
   const setF = <K extends keyof EntryOperationDTO>(k: K, v: EntryOperationDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
   function novo() { setForm(EMPTY); setEditCode(null); setFeedback(null); }
-  function edit(o: EntryOperationDTO) { setForm({ ...o }); setEditCode(o.code ?? null); setFeedback(null); }
+  // O código pode chegar como número do backend; a tela guarda como texto.
+  function edit(o: EntryOperationDTO) { setForm({ ...o }); setEditCode(o.code == null ? null : String(o.code)); setFeedback(null); }
 
   async function salvar() {
     if (!form.description.trim() || !form.nature_operation.trim()) { setFeedback({ type: "error", message: "Descrição e Natureza de Operação são obrigatórias." }); return; }

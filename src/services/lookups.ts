@@ -333,6 +333,38 @@ export const loadWarehousesByCode = cached(async () => {
   return out.sort((a, b) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }));
 });
 
+/**
+ * Endereços de um almoxarifado. Não é cacheado por sessão como os demais: a
+ * lista depende do almoxarifado escolhido, e endereço é cadastro que muda no
+ * dia a dia do galpão (bloqueio para inventário, endereço novo numa prateleira).
+ *
+ * Existe porque o campo era digitação livre: o endereço é cadastrado
+ * (`manufacturing_warehouse_addresses`), então digitar o código à mão contraria
+ * a regra do sistema e deixa passar endereço inexistente ou com erro de digitação
+ * — que grava saldo num lugar que ninguém encontra depois.
+ */
+export function loadWarehouseAddresses(warehouseId?: number): LookupLoader {
+  return async () => {
+    const params = warehouseId ? { warehouse_id: String(warehouseId) } : undefined;
+    const { data } = await httpClient.get<unknown>('/api/warehouse-addresses', { params });
+    const out: LookupOption[] = [];
+    for (const raw of unwrapArray(data)) {
+      const o = unwrapObject(raw);
+      if (!o) continue;
+      const address = parseStr(o, 'address', 'Address');
+      if (!address) continue;
+      const zona = parseStr(o, 'zone', 'Zone');
+      const seq = parseNum(o, 'pick_sequence', 'PickSequence');
+      const partes = [zona ? `zona ${zona}` : '', seq ? `rota ${seq}` : ''].filter(Boolean);
+      // O endereço é o próprio identificador; repetir código e rótulo exibiria
+      // "ALM-MP-A02 — ALM-MP-A02". O rótulo carrega a zona/rota, que é o que
+      // ajuda o conferente a se localizar no galpão.
+      out.push({ code: address, label: partes.join(' · ') || 'endereço do almoxarifado', sub: zona ? `zona ${zona}` : '' });
+    }
+    return out.sort((a, b) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }));
+  };
+}
+
 export const loadWarehouses = cached(async () => {
   const { data } = await httpClient.get<unknown>('/api/warehouse/list');
   const out: LookupOption[] = [];

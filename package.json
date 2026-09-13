@@ -53,7 +53,8 @@
     "test:cobertura": "node scripts/validate-cobertura-payload.mjs",
     "audit:enums": "PG_ENUMS=${PG_ENUMS:-/tmp/pgenums.txt} node scripts/audit-enums.mjs",
     "audit:tenant": "node scripts/audit-tenant-isolation.mjs",
-    "audit:roundtrip": "node scripts/audit-roundtrip.mjs"
+    "audit:roundtrip": "node scripts/audit-roundtrip.mjs",
+    "sim:telas": "node scripts/ui-sim/varrer.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",

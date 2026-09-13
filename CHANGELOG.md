@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## [v1.1.23] — 2026-09-13
+
+## Estoque e almoxarifado
+- **Saldo por endereço.** O sistema sabia quanto havia de um item no almoxarifado, mas não onde. Agora o endereço entra no saldo e no movimento, e a tela mostra onde o material entrou e saiu — uma transferência aparece como `ALM-MP-A01 → ALM-MP-A02` numa linha só.
+- **Separação FEFO.** O que vence antes sai antes, com a corrida e o certificado do lote na própria linha, para o separador não precisar de uma segunda tela. Lote vencido nunca é sugerido: aparece contado à parte, em vez de fingir que o saldo está disponível.
+- **A lista de separação sai na ordem do galpão.** O FEFO decide qual lote; a sequência de rota decide o caminho, para não cruzar o corredor a cada linha.
+- **Onda de separação.** Várias necessidades numa caminhada só, com reserva por endereço — duas ondas não prometem mais a mesma peça. A onda nasce mesmo faltando saldo, sinalizando o que não coube.
+- **Sugestão de onde guardar o recebimento**, explicando o porquê: endereço fixo do item, consolidação com o que já está lá, endereço vazio da zona ou qualquer um com espaço. Endereço bloqueado nunca é sugerido e a capacidade é respeitada.
+- **Transferência entre endereços**, com o lote acompanhando o material.
+- **Curva ABC calculada pelo valor consumido**, não pela quantidade — mil parafusos baratos não são item A. A classe passa a definir de quanto em quanto tempo o item é contado; antes, item sem intervalo digitado à mão nunca era contado.
+- **Contagem por endereço confiável.** A quantidade esperada passou a considerar o endereço; antes comparava com o saldo do almoxarifado inteiro e acusava divergência em toda contagem.
+- **Validade do lote** no cadastro, que é o que ordena o FEFO. Data inválida agora é recusada com aviso, em vez de ser descartada em silêncio.
+
+## Correções
+- **Consultas por código de item não funcionavam em boa parte do sistema.** Saldo, ATP, movimentos, lotes, ficha técnica e outras telas ou davam erro com códigos como `TP-01001-A`, ou — pior — respondiam saldo zerado sem erro nenhum, o que levava a promessa de entrega errada.
+- **Planejamento e fábrica calculavam a perda da estrutura de formas diferentes.** O MRP comprava uma quantidade e a ordem de produção consumia outra, e o custo saía sobre uma terceira. Agora a conta é a mesma nos quatro lugares.
+- **Movimento de estoque com tipo inválido era aceito e não mexia no saldo.** O registro aparecia no extrato e o estoque não mudava. Agora é recusado com aviso.
+- **Saídas de estoque ficavam com valor zero** nos relatórios de valorização, embora o saldo baixasse pelo custo certo.
+- **Telas que davam "erro interno do servidor"** ao salvar — previsão de venda, contas bancárias, tabela de NCM — agora explicam o que está errado. Digitar mais caracteres do que o campo aceita também deixou de ser erro interno.
+- **Campo de data recusado ao salvar** em cabeçalho de estrutura e classificação fiscal.
+- **Cadastro de máquina: abrir e salvar sem mexer em nada dava erro.**
+- **Ao gravar um cadastro parcial, marcações ligadas voltavam a desligadas** sozinhas (tipo de máquina e característica do configurador).
+- **Alterar característica pela rotina apagava máscara, limites numéricos, fórmula e opções.**
+- **Endereço agora é escolhido em modal**, como os demais códigos do sistema, em vez de digitado à mão.
+- Mensagens que mostravam nome interno de campo (`item_code é obrigatório`) passaram a usar o nome que aparece na tela; mensagens sem acentuação e trechos em inglês foram corrigidos.
+
+## Segurança
+- **Funcionários e centros de custo não eram separados por empresa.** Uma empresa via — e podia alterar ou inativar — o cadastro da outra. Nenhum dado vazou até aqui, porque só há uma empresa em operação.
+- A apuração de custo-padrão registrava como autor quem o cliente informasse; agora usa o usuário autenticado.
+
 ## [v1.1.22] — 2026-09-11
 
 ## Correções

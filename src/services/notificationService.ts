@@ -113,7 +113,12 @@ export async function retryNotificationDelivery(id: string): Promise<void> {
 export interface CycleCount {
   id: string;
   warehouse_id: number;
+  /** Obsoleto: nunca teve tabela-alvo. Use `address`. */
   warehouse_address_id?: number | null;
+  /** Endereço contado; vazio = almoxarifado inteiro. É por ele que a quantidade
+   *  esperada é apurada — sem ele a contagem comparava com o saldo do depósito
+   *  todo e acusava divergência falsa. */
+  address?: string;
   item_code: string;
   origin: 'MANUAL' | 'POLITICA_ITEM';
   policy_days?: number;
