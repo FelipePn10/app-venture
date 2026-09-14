@@ -2,9 +2,8 @@
 
 ## Unreleased
 
-## [v1.1.24] — 2026-09-14
-
 ## Correções
+- **O portão de release passou a conferir as notas da versão que está sendo publicada.** Ele validava a seção da versão anterior, então uma nota fora do padrão só quebrava no final do pipeline — com a tag já publicada e sem instalador gerado.
 - **Buscar pelo código exato abre o item certo.** Digitar `5` no campo de busca trazia `900500` na frente — o `5` está dentro dele —, e o item errado abria. Como cada produto tem a sua estrutura, a tela mostrava uma estrutura vazia e parecia que o cadastro tinha sumido. A busca agora ordena por relevância: código exato primeiro, depois começa-com, depois contém. Vale para todos os campos de seleção do sistema.
 
 ## Melhorias
