@@ -467,6 +467,35 @@ Informe o **plano**, o **número inicial de ordem** (default `10000`) e, opciona
 3. **Alterar** → número e novo valor.
 4. **Reabra e execute um cálculo controlado para validar o efeito.**
 
+### ⭐ O parâmetro que mais muda número: **20 — Fórmula de perdas da estrutura**
+
+A perda cadastrada na estrutura (`VENT0210`) vira quantidade por **uma das três
+fórmulas** abaixo. Qual delas vale é decisão deste parâmetro:
+
+| Valor | Conta | Leitura |
+|:-:|:--|:--|
+| `1` | `base × (1 + p/100)` | *"acrescenta p% ao que eu preciso"* |
+| `2` ⭐ | `base ÷ (1 − p/100)` | *"perde-se p% do que for requisitado"* — **padrão do sistema** |
+| `3` | `base` | Ignora a perda no cálculo |
+
+**A diferença não é acadêmica.** Para 2.250 peças com 5% de perda:
+
+| Fórmula | Quantidade |
+|:-:|--:|
+| `1` — multiplica | 2.362,50 |
+| `2` — divide ⭐ | **2.368,42** |
+
+> ⭐ **Por que a 2 é o padrão.** Para obter 2.250 peças **boas** sabendo que 5%
+> se perde no processo, é preciso requisitar `2250 ÷ 0,95 = 2.368,42` — não
+> 2.362,50. A fórmula 1 acrescenta 5% *sobre a necessidade*; a fórmula 2
+> pergunta *quanto preciso soltar para sobrar 2.250*. Na metalurgia, a segunda
+> é a pergunta certa.
+
+⚠️ **A fórmula vale para o sistema inteiro** — MRP, criação da ordem, apontamento,
+encerramento e custo usam a mesma conta. Se você vir o MRP pedir um número e a
+ordem consumir outro, **não é arredondamento**: é divergência, e deve ser
+reportada.
+
 ⚠️ Valores são armazenados como **texto** — **não inclua símbolos nem formatação incompatível**.
 ⚠️ **Alterar lote, estoque de segurança ou políticas de cálculo pode modificar TODAS as sugestões futuras. Documente a mudança.**
 

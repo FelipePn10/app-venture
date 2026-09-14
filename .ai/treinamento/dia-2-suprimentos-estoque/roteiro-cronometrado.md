@@ -17,7 +17,7 @@
 | 0:00–0:15 | Abertura | Retomada do Dia 1 + a corrente do abastecimento |
 | 0:15–1:45 | **Bloco A** | Fornecedor + Fluxo de Compra (requisição→cotação→PC) |
 | 1:45–2:00 | Intervalo | — |
-| 2:00–3:15 | **Bloco B** | Recebimento + Inspeção + Entrada no Estoque |
+| 2:00–3:15 | **Bloco B** | Recebimento + Inspeção + Entrada no Estoque + **almoxarifado endereçado** |
 | 3:15–3:45 | **Dinâmica** | "Da compra à prateleira" |
 | 3:45–4:00 | Fecho | Dúvidas + checklist de saída + gancho para o Dia 3 |
 
@@ -118,6 +118,24 @@
 ▶ **O que criar:** dar **entrada** do material inspecionado em `VEST0100`, atribuindo **lote/série** e almoxarifado; depois **consultar o saldo** (`VEST0400`) e mostrar o **ATP** (disponível para promessa).
 
 🗣 **Fala (saldo → PCP):** *"Esse saldo que acabou de aparecer aqui é exatamente o número que o MRP vai olhar amanhã pra decidir o que ainda falta comprar. Estoque certo aqui = MRP certo lá."*
+
+### B3.1 O almoxarifado endereçado (10 min) ⭐ *a partir da v1.1.24*
+**Tela:** `VEST0100` — painéis **Separação**, **Onda**, **Guarda** e **Curva ABC**
+
+▶ **O que demonstrar, nesta ordem:** endereço (zona / **rota de separação** / capacidade) → **Sugerir separação** em **FEFO** → **gerar uma onda** com duas necessidades → **Sugerir endereço** para guardar → **Recalcular curva ABC**.
+
+🗣 **Fala (o gancho do bloco):** *"Até agora o estoque respondia **quanto existe**. Agora ele responde também **onde está** — e na ordem em que você deve andar."*
+
+🗣 **Fala (o argumento mais forte, na linha de resumo da separação):** *"Ele não disse só 'faltam 20'. Disse **por quê**: ignorei dois lotes vencidos e um endereço bloqueado. A falta já chega virada em decisão."*
+
+🗣 **Fala (o fecho):** *"A classe ABC não é relatório de arquivar: ela governa a **frequência da contagem cíclica**. É assim que se troca o inventário geral que **para a fábrica** por contagem contínua."*
+
+> ⏱ **De onde tirar os 10 minutos.** O Bloco B já está cheio (15+25+25+10 = 75).
+> Para turma de **almoxarifado/PCP**, este bloco vale mais que dois itens de
+> "apenas mostrar": corte **5 min de B2** (a passagem por `VINS0313`/`VINS0400`,
+> que é consulta) e **5 min de B4** (a demonstração de `VIMP0200`/`VIMP0300`).
+> Para turma de **compras/fiscal**, pule B3.1 inteiro — a apostila (§11.3.1)
+> cobre o assunto para leitura posterior.
 
 ### B4. Consultas, inventário e importação (10 min)
 

@@ -1171,6 +1171,9 @@ Para cada item, marque o **Tipo** correto e diga **o que o MRP vai gerar**:
 | Não consigo inserir componente | O item pai não é **Fabricado**, ou é **Fantasma** | Corrigir a aba Engenharia do `VENT0200` |
 | Aprovei a BOM mas o MRP não a vê | Vigência ainda não começou, ou aprovou outra versão | Conferir data de início de vigência |
 | Alteração de componente recusada | Criaria **ciclo** na estrutura, ou vigência conflitante | Reler a árvore antes de regravar |
+| *"não é possível incluir X dentro de Y: o item X já contém Y na sua estrutura"* | Y já é componente de X — pôr X dentro de Y fecharia um laço | ⭐ **Quase sempre a estrutura existente está invertida.** Abra X, veja a linha que aponta para Y, remova-a e refaça no sentido certo |
+| *"este componente já está na estrutura deste item"* | O componente já existe nessa estrutura | Altere a linha existente em vez de inserir outra |
+| Componente recusado sem mensagem clara | Situação da linha em branco | O sistema assume **`ATIVO`**; se quiser outra, escolha explicitamente |
 | O roteiro não mostra lead time | Faltam as dependências entre operações | Definir predecessor → sucessor em `VENG0600` |
 | Tempo calculado saiu absurdo | Unidade de tempo trocada (min × hora) | Conferir a unidade em `VMAQ0200` |
 | Lead time do roteiro parece baixo demais | Overlap indevido em máquina manual | Conferir **Requer operador** em `VMAQ0101` |
