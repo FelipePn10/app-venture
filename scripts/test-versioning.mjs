@@ -15,9 +15,11 @@ assert.deepEqual(config.plugins.updater.endpoints, ['https://github.com/FelipePn
 assert.ok(!config.plugins.updater.pubkey.includes('PRIVATE'), 'configuração contém material privado');
 
 const changelog = fs.readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
-// Durante `make release`, os manifestos recebem a nova versão antes de o cabeçalho
-// correspondente ser promovido de Unreleased. Valide a seção publicada mais
-// recente para que o teste cubra o extrator sem bloquear essa etapa intermediária.
+// Valide a seção publicada mais recente — no `make release` o cabeçalho da nova
+// versão já foi promovido de Unreleased quando isto roda, então esta é a seção
+// que vai virar as notas do release. A ordem importa: enquanto a validação vinha
+// ANTES da promoção, ela conferia a versão anterior e deixava passar notas
+// inválidas na nova, quebrando o pipeline com a tag já publicada.
 const latestReleasedVersion = changelog.match(/^## \[v?([^\]]+)\]/m)?.[1];
 assert.ok(latestReleasedVersion, 'CHANGELOG não possui nenhuma versão publicada');
 const releaseNotes = extractReleaseNotes(`v${latestReleasedVersion}`, changelog);
