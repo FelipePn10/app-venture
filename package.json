@@ -54,7 +54,8 @@
     "audit:enums": "PG_ENUMS=${PG_ENUMS:-/tmp/pgenums.txt} node scripts/audit-enums.mjs",
     "audit:tenant": "node scripts/audit-tenant-isolation.mjs",
     "audit:roundtrip": "node scripts/audit-roundtrip.mjs",
-    "sim:telas": "node scripts/ui-sim/varrer.mjs"
+    "sim:telas": "node scripts/ui-sim/varrer.mjs",
+    "sim:explorar": "bash scripts/ui-sim/explorar-tudo.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",
