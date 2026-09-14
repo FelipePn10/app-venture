@@ -767,8 +767,9 @@ O IQF reúne 4 dimensões:
 
 **Passo a passo**
 1. Informe um **item** → **Consultar** → o sistema traz **movimentos**, **saldos por depósito**, o painel **ATP** e os **lotes**.
-2. **Lançar movimento:** item, depósito, **tipo**, quantidade, preço e lote.
+2. **Lançar movimento:** item, depósito, **endereço**, **tipo**, quantidade, preço e lote.
    ⭐ *O saldo e o **custo médio ponderado** são atualizados na mesma transação.*
+   ⭐ *O endereço é opcional — depósito não endereçado continua funcionando como antes.*
 3. **Reservas:** crie (reduz o ATP) e depois **Libere** ou **Consuma** por ID.
 4. **Lotes:** registre um lote (corrida/*heat*, certificado) → **Genealogia** mostra o histórico **bidirecional** (OFs que **consumiram** × **produziram** o lote).
 5. **Consumo médio (ROP):** **Recalcular** atualiza a média móvel (padrão **6 meses**) usada no ponto de reposição.
@@ -781,7 +782,47 @@ O IQF reúne 4 dimensões:
 | `OUT` | Saída |
 | `TRANSFER_IN` | Entrada por transferência |
 | `TRANSFER_OUT` | Saída por transferência |
-| `ADJUST` | Ajuste |
+| `ADJUSTMENT` | Ajuste |
+
+#### ⭐⭐ O almoxarifado endereçado (10 min) — *a partir da v1.1.24*
+
+🗣 **Abra assim:**
+> *"Até agora o estoque respondia **quanto existe**. A partir de hoje ele responde também **onde está**. Parece detalhe — é a diferença entre o almoxarife que anda direto e o almoxarife que procura."*
+
+**Demonstre nesta ordem — cada passo depende do anterior:**
+
+**1. Endereço (2 min).** Mostre no `VENT0800` que o endereço tem **zona**, **rota de separação** e **capacidade**. Insista na rota: *é ela que ordena a caminhada*.
+
+**2. Separação FEFO × FIFO (3 min).** Peça 400 de um item com vários lotes, regra **FEFO**, **Sugerir separação**. Aponte a linha de resumo:
+
+```
+Necessário 400 · atendido 380 · faltam 20 · 2 lote(s) vencido(s) ignorado(s) · 1 em endereço bloqueado
+```
+
+🗣 **O ponto pedagógico está aqui:**
+> *"Repare no que o sistema disse. Não foi só 'faltam 20' — ele disse **por quê**: ignorei dois lotes vencidos e um endereço bloqueado. Num sistema que só diz 'faltam 20', quem descobre o motivo é você, na mão, no corredor. Aqui a falta já vem virada em decisão: libero o endereço, descarto o lote ou compro."*
+
+⚠️ **Diga explicitamente que FEFO desconta o reservado** — o número é o disponível de verdade.
+
+**3. Onda de separação (3 min).** Digite duas necessidades (`item;quantidade`, uma por linha), **Gerar onda**. Mostre a lista **única, ordenada pela rota**.
+
+🗣 *"Cinco ordens, sem onda, são cinco caminhadas pelo mesmo corredor. A onda é uma caminhada só."*
+
+⚠️ **Demonstre a concorrência** — é o que vende o recurso: gere uma segunda onda para o mesmo item e mostre que ela **acusa falta**, porque a primeira já reservou. *"Isso é proposital: é o que impede dois operadores de irem buscar a mesma chapa."*
+⚠️ **Avise que onda esquecida é estoque preso.** Se desistir, **cancele** — o reservado volta.
+
+**4. Guarda / *putaway* (1 min).** **Sugerir endereço** e leia em voz alta a coluna **Por quê**. *"Ele não só sugere, ele justifica."*
+
+**5. Curva ABC (1 min).** **Recalcular curva ABC**.
+
+🗣 **O fecho do bloco:**
+> *"A classe ABC não é um relatório para arquivar. Ela **governa a frequência da contagem cíclica**: item A você conta muito, item C você conta pouco. É assim que se troca o inventário geral anual — que **para a fábrica** — por contagem contínua, que não para nada."*
+
+⚠️ **Corrija a confusão clássica antes que ela apareça:** a curva usa **consumo**, não saldo. Item caro e parado é **C**, e está certo.
+
+**Se sobrar tempo:** transferência entre endereços — mostre que ela gera o par `TRANSFER_OUT`/`TRANSFER_IN` e **não muda o saldo do depósito**, só *onde* está.
+
+---
 
 #### ⭐⭐ O conceito de ATP — o mais importante do dia
 

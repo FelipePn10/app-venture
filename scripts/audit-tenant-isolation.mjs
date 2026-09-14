@@ -73,6 +73,16 @@ const GLOBAIS = [
   [/^\/api\/fiscal\/tabelas\/icms-interno/, 'alíquotas de ICMS interno por UF — legislação, não cadastro'],
   [/^\/api\/fiscal\/tabelas\/icms-interestadual/, 'alíquotas interestaduais — legislação'],
   [/^\/api\/cfop/,                         'idem CFOP'],
+  // Tabelas de apoio do SPED/EFD: dispositivos legais, códigos de ajuste de
+  // apuração (tabela 5.1.1), linhas de apuração e motivos de transferência da
+  // DAPI. São publicadas pela SEFAZ/Receita e valem para todo contribuinte —
+  // mesma natureza do NCM e do CFOP acima, não são cadastro de empresa.
+  [/^\/api\/fiscal\/support\/dispositivos-legais/,             'dispositivos legais da legislação'],
+  [/^\/api\/fiscal\/support\/codigos-ajuste-apuracao-icms/,    'tabela 5.1.1 do SPED'],
+  [/^\/api\/fiscal\/support\/codigos-ajuste-icms/,             'tabelas 5.2/5.3/5.6/5.7 do SPED'],
+  [/^\/api\/fiscal\/support\/linhas-apuracao-icms/,            'linhas de apuração da legislação'],
+  [/^\/api\/fiscal\/support\/motivos-transferencia-dapi/,      'motivos de transferência da DAPI (SEFAZ-MG)'],
+  [/^\/api\/fiscal\/support\/cfops/,                           'idem CFOP'],
   [/^\/api\/units/,                        'unidades de medida são domínio fechado do sistema'],
   [/^\/api\/location\/ufs/,                'UFs do Brasil'],
   [/^\/api\/location\/cities/,             'municípios IBGE'],

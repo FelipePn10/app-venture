@@ -416,7 +416,7 @@ Abra `VITM0100`, selecione o item recém-criado e clique em **Prontidão**.
 | **Item-base como modelo** | *"É um atalho opcional: copia estoque, engenharia, planejamento, comercial, contábil e suprimentos. Depois você altera o nome e o nome técnico do novo item."* |
 | **Tipo MRP** | *"São dois valores: `NORMAL_MRP` e `PROJETO`. Quem repõe por ponto de pedido preenche o bloco de reposição (TR/CM/CR/ES) — não é um tipo separado."* |
 | **Ponto de pedido (ROP)** | Fórmula: `(TR × CM / CR) + ES` — *"tempo de reposição × consumo médio, mais o estoque de segurança."* |
-| **Percentual de perda** | *"Na metalurgia é regra, não exceção: sobra de chapa, aparas. O MRP soma a perda na necessidade."* |
+| **Percentual de perda** | *"Na metalurgia é regra, não exceção: sobra de chapa, aparas. O sistema requisita a mais para que sobre o que você precisa."* ⭐ A conta padrão é `base ÷ (1 − perda)`, **não** `base + perda` — 2.250 peças com 5% viram **2.368,42**, não 2.362,50. Quem quiser o detalhe: parâmetro **20** (Dia 3). |
 
 ---
 

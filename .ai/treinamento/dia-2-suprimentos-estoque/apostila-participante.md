@@ -745,8 +745,9 @@ Informe a máscara explicitamente **ou** o contexto (Aplicação, Cliente, Item,
 
 ### Passo a passo
 1. Informe um **item** → **Consultar** → traz **movimentos**, **saldos por depósito**, o painel **ATP** e os **lotes**.
-2. **Lançar movimento:** item, depósito, **tipo**, quantidade, preço e lote.
+2. **Lançar movimento:** item, depósito, **endereço**, **tipo**, quantidade, preço e lote.
    ⭐ *O saldo e o **custo médio ponderado** são atualizados na mesma transação.*
+   ⭐ *O endereço é opcional. Deixe em branco enquanto o depósito não estiver endereçado — o saldo continua correto no nível do depósito.*
 3. **Reservas:** crie uma reserva (**reduz o ATP**) e depois **Libere** ou **Consuma** por ID.
 4. **Lotes:** registre um lote (corrida/*heat*, certificado) → **Genealogia** mostra o histórico **bidirecional** (OFs que **consumiram** × **produziram** o lote).
 5. **Consumo médio (ROP):** **Recalcular** atualiza a média móvel (padrão **6 meses**).
@@ -759,7 +760,7 @@ Informe a máscara explicitamente **ou** o contexto (Aplicação, Cliente, Item,
 | `OUT` | Saída |
 | `TRANSFER_IN` | Entrada por transferência |
 | `TRANSFER_OUT` | Saída por transferência |
-| `ADJUST` | Ajuste |
+| `ADJUSTMENT` | Ajuste |
 
 ## ⭐⭐ ATP — o conceito mais importante do dia
 
@@ -787,6 +788,116 @@ ATP = saldo em mãos − reservas
 | `VEST0200` (Inventário) | **Ajusta** divergências de saldo |
 
 > 💡 **Esse saldo é exatamente o número que o MRP vai olhar amanhã** para decidir o que ainda falta comprar. **Estoque certo aqui = MRP certo lá.**
+
+---
+
+---
+
+## ⭐⭐ 11.3.1 O almoxarifado endereçado — *a partir da v1.1.24*
+
+Até aqui o saldo respondia **"quanto existe"**. Endereçado, ele responde também
+**"onde está"** — e essa é a diferença entre o operador que sabe para onde andar
+e o operador que procura.
+
+### O endereço
+
+O endereço é cadastrado no depósito (`VENT0800`) e tem três atributos que o
+sistema usa sozinho:
+
+| Atributo | Para que serve |
+|:--|:--|
+| **Zona** | Agrupa o galpão (recebimento, porta-pallet, expedição) |
+| **Rota de separação** | A **ordem da caminhada**. É o que ordena a lista de separação |
+| **Capacidade** | Limite do endereço — usado na sugestão de guarda |
+| **Bloqueado** | Endereço em manutenção/quarentena: não entra em sugestão nenhuma |
+
+> ⚠️ **O endereço é opcional por item e por depósito.** Um depósito sem endereços
+> continua funcionando exatamente como antes. Endereçar é uma decisão de cada
+> galpão, não um pré-requisito do sistema.
+
+### Separação — *de onde tirar*
+
+Informe a **quantidade** e a **regra**, e clique em **Sugerir separação**:
+
+| Regra | Critério | Quando usar |
+|:--|:--|:--|
+| **FEFO** | *First Expired, First Out* — **vence antes, sai antes** | Tudo que tem validade: tinta, adesivo, solda, químico |
+| **FIFO** | *First In, First Out* — **entrou antes, sai antes** | Aço, perfil, item sem validade |
+
+O sistema devolve a lista **na ordem da rota**, com endereço, lote, corrida
+(*heat*) e certificado. E devolve também o que ele **recusou**:
+
+```
+Necessário 400 · atendido 380 · faltam 20 · 2 lote(s) vencido(s) ignorado(s) · 1 em endereço bloqueado
+```
+
+> ⭐ **Essa linha é o ponto do exercício.** Um sistema que só diz "faltam 20"
+> obriga o almoxarife a descobrir sozinho por quê. Dizer **"ignorei 2 lotes
+> vencidos e 1 endereço bloqueado"** transforma a falta em uma decisão: liberar
+> o endereço, descartar o lote ou comprar.
+
+⚠️ **FEFO desconta o que já está reservado.** O lote que aparece na sugestão é
+o que está de fato disponível — não o saldo bruto.
+
+### Onda de separação — *várias necessidades numa caminhada*
+
+Separar cinco ordens significa, sem onda, **cinco caminhadas** pelo mesmo
+corredor. A onda junta tudo:
+
+1. **Nº da onda** (o seu número de controle).
+2. **Necessidades**, uma por linha, no formato `item;quantidade`:
+   ```
+   MP-CH-3MM;400
+   MP-PERFIL-U;50
+   ```
+3. **Gerar onda** → o sistema aplica a regra escolhida (FEFO/FIFO), **reserva**
+   cada linha e devolve **uma lista única ordenada pela rota**.
+4. **Confirmar separação** → baixa o estoque e libera as reservas.
+   **Cancelar onda** → o reservado volta a ficar disponível.
+
+> ⚠️ **A onda reserva no momento em que é gerada.** Duas ondas concorrentes não
+> pegam a mesma chapa: a segunda enxerga o que a primeira já reservou e acusa
+> falta. Isso é proposital — é o que impede dois operadores de irem buscar a
+> mesma peça.
+>
+> ⚠️ **Onda gerada e esquecida é estoque preso.** Se desistir, **cancele**.
+
+### Guardar recebimento — *onde colocar*
+
+O espelho da separação. Informe a quantidade e clique em **Sugerir endereço**:
+o sistema propõe onde guardar e **diz por quê** (coluna *Por quê*), considerando
+endereço que já tem o mesmo item, capacidade livre, zona e rota.
+
+> 💡 **Consolidar o mesmo item no mesmo endereço** é o que mantém a separação
+> curta amanhã. A sugestão persegue isso sozinha.
+
+### Curva ABC — *e por que ela governa a contagem*
+
+**Recalcular curva ABC** classifica os itens pelo **valor consumido** na janela
+(padrão 12 meses):
+
+| Classe | Regra | Leitura |
+|:--|:--|:--|
+| **A** | Até o corte A (padrão 80% do valor acumulado) | Poucos itens, quase todo o dinheiro |
+| **B** | Até o corte B (padrão 95%) | Intermediários |
+| **C** | O restante | Muitos itens, pouco dinheiro |
+
+> ⭐ **A classe não é um relatório — ela governa a frequência da contagem
+> cíclica.** Item **A** conta com frequência alta, **C** com frequência baixa.
+> É assim que se troca o inventário geral anual (que para a fábrica) por
+> contagem contínua (que não para).
+
+⚠️ A curva usa **consumo**, não saldo. Item caro e parado não é A — item que
+**gira** valor é A.
+
+### Transferir entre endereços
+
+Origem, destino, quantidade e lote. Gera o par `TRANSFER_OUT` / `TRANSFER_IN` e
+aparece na grade de movimentos como **origem → destino**.
+
+⚠️ **Transferência entre endereços não muda o saldo do depósito** — muda só
+*onde* está. Se o total do depósito mudou, você lançou entrada ou saída, não
+transferência.
 
 ---
 
@@ -988,6 +1099,11 @@ Por quê? ______________________________________________
 | Preço não veio automático | Tabela sem vigência ou sem o item | `VSUP0120` |
 | Quantidade interna zerada | Falta conversão de UM | `VSUP0110` |
 | Solicitação não gera pedido | Sem fornecedor e sem preferencial | `VSUP0130` |
+| Separação sugere menos do que preciso | Lote vencido, endereço bloqueado ou saldo já reservado | A própria linha de resumo diz qual dos três foi |
+| Onda acusa falta que não existe | Outra onda aberta já reservou | Confirme ou **cancele** a onda anterior |
+| Não aparece endereço para escolher | O depósito ainda não tem endereço cadastrado | `VENT0800` — ou deixe em branco, o saldo do depósito continua certo |
+| Curva ABC traz item caro como C | A curva usa **consumo**, não saldo | Item caro e parado é C mesmo — é o resultado correto |
+| Transferência mudou o saldo do depósito | Foi lançada entrada/saída, não transferência | Transferência entre endereços só muda *onde* está |
 | Pedido bloqueado ao aprovar | **Alçada** — comportamento esperado | ADMIN usa **Autorizar alçada** |
 | Recebimento recusa a quantidade | Acima do saldo + tolerância | Conferir `VSUP0630` |
 | Contrato não deixa consumir | Não está `ATIVO` | Mudar status em `VCON0400` |
@@ -1096,18 +1212,25 @@ IQF     = qualidade 40% + entrega 30% + comercial 20% + atendimento 10%
 | **Alçada** | Valor máximo que um perfil pode aprovar sem intervenção superior |
 | **ATP** | *Available to Promise* — `saldo em mãos − reservas` |
 | **Aviso de recebimento (FAVR)** | Registro da chegada, **antes** da entrada fiscal da NF |
+| **Contagem cíclica** | Contagem contínua por classe ABC, no lugar do inventário geral que para a fábrica |
 | **Consumo médio (ROP)** | Média móvel (padrão 6 meses) usada no ponto de reposição |
 | **Cotação** | Comparação de preços de vários fornecedores antes de comprar |
 | **Custo médio ponderado** | Custo do estoque atualizado a cada movimento |
 | **Custo nacionalizado (landed)** | FOB convertido + rateio das despesas ÷ quantidade |
 | **Divergência** | Diferença entre o esperado e o recebido (8 tipos, 5 resoluções) |
+| **Endereço** | Posição dentro do depósito: zona, rota de separação e capacidade |
 | **EDI** | Troca eletrônica de dados com o fornecedor |
+| **FEFO** | *First Expired, First Out* — vence antes, sai antes. Regra de quem tem validade |
+| **FIFO** | *First In, First Out* — entrou antes, sai antes |
 | **Genealogia** | Histórico bidirecional do lote: OFs que consumiram × produziram |
 | **Homologação** | Aprovação formal do fornecedor, com validade e limites |
 | **Incoterm** | Termo internacional de comércio (FOB, CIF…) |
 | **IQF** | Índice de Qualificação de Fornecedores (40/30/20/10) |
 | **Lote / série** | Identificação da corrida (*heat*) que segue a mercadoria |
 | **Netting** | Cálculo do MRP que abate suprimentos **firmes** da necessidade |
+| **Onda de separação** | Várias necessidades resolvidas numa caminhada só, na ordem da rota |
+| **Curva ABC** | Classificação dos itens pelo **valor consumido**: A concentra o dinheiro, C concentra a quantidade |
+| **Guarda (*putaway*)** | Sugestão de onde colocar o que acabou de chegar |
 | **Ordem de inspeção** | Documento que representa a quantidade a inspecionar |
 | **Preferencial (ranking)** | Ordem de escolha do fornecedor por item — `1` é o preferido |
 | **Quarentena** | Almoxarifado de inspeção, onde o material aguarda liberação |

@@ -112,8 +112,27 @@ export function LookupField<T extends string | number = number>({
     // passam pela mesma normalização, que também ignora acento.
     const q = normalizarBusca(query.trim());
     if (!q) return options.slice(0, 200);
+
+    // A ordem importa: com `includes` puro, digitar o código exato "5" trazia
+    // "900500" na frente (o "5" está dentro dele) e o usuário abria o item
+    // errado — numa base onde códigos comerciais numéricos convivem com chaves
+    // internas, isso faz abrir a estrutura de OUTRO produto e concluir que ela
+    // está vazia. Quem digita o código inteiro quer aquele item.
+    const relevancia = (o: LookupOption): number => {
+      const code = normalizarBusca(String(o.code));
+      if (code === q) return 0;                       // código exato
+      if (code.startsWith(q)) return 1;               // código começa com
+      if (code.includes(q)) return 2;                 // código contém
+      if (normalizarBusca(o.label).startsWith(q)) return 3;
+      if (normalizarBusca(o.label).includes(q)) return 4;
+      return 5;                                       // só o complemento casou
+    };
+
     return options
       .filter((o) => normalizarBusca(String(o.code)).includes(q) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.sub ?? "").includes(q))
+      .map((o, i) => ({ o, r: relevancia(o), i }))
+      .sort((a, b) => a.r - b.r || a.i - b.i)   // empate mantém a ordem original
+      .map((x) => x.o)
       .slice(0, 200);
   }, [options, query]);
 
