@@ -27,7 +27,6 @@ if [[ "${DRY_RUN}" == "1" ]]; then
 fi
 
 node scripts/set-release-version.mjs "${VERSION}"
-npm run test:versioning
 
 DATE="$(date -u +%Y-%m-%d)"
 TMP="$(mktemp)"
@@ -35,6 +34,12 @@ trap 'rm -f "${TMP}"' EXIT
 awk -v tag="${TAG}" -v date="${DATE}" '/^## Unreleased$/ && !done { print $0 "\n\n## [" tag "] — " date; done=1; next } { print }' CHANGELOG.md >"${TMP}"
 mv "${TMP}" CHANGELOG.md
 trap - EXIT
+
+# A validação roda DEPOIS de promover o cabeçalho. Rodando antes, ela conferia a
+# seção da versão ANTERIOR — que obviamente já estava correta — e deixava passar
+# notas inválidas na versão nova. O pipeline então quebrava no Windows, com a
+# tag já publicada. Foi o que aconteceu na v1.1.22 e de novo na v1.1.24.
+npm run test:versioning
 git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json CHANGELOG.md
 git commit -m "chore(release): ${TAG}"
 

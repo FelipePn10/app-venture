@@ -4,10 +4,10 @@
 
 ## [v1.1.24] — 2026-09-14
 
-## Cadastro
+## Correções
 - **Buscar pelo código exato abre o item certo.** Digitar `5` no campo de busca trazia `900500` na frente — o `5` está dentro dele —, e o item errado abria. Como cada produto tem a sua estrutura, a tela mostrava uma estrutura vazia e parecia que o cadastro tinha sumido. A busca agora ordena por relevância: código exato primeiro, depois começa-com, depois contém. Vale para todos os campos de seleção do sistema.
 
-## Treinamento
+## Melhorias
 - **Material prático atualizado** (15 PDFs, 334 páginas). O Dia 2 ganhou o almoxarifado endereçado — endereço, FEFO × FIFO, onda de separação, sugestão de guarda, curva ABC e transferência entre endereços —, com o roteiro dizendo de onde tirar os 10 minutos e quando pular o bloco.
 - **A conta da perda está documentada.** O material dizia que o MRP "soma a perda"; a conta padrão é `base ÷ (1 − perda)`. Para 2.250 peças com 5%, são 2.368,42 — não 2.362,50. O Dia 3 passa a documentar o parâmetro 20 e as três fórmulas.
 - **Mensagens de erro da estrutura** (ciclo, componente duplicado, situação em branco) entraram nos erros comuns do Dia 1, com o que fazer em cada caso.
