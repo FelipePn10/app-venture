@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.26] — 2026-09-16
+
 ## Novidades
 - **A tela de máquinas virou nove abas.** Eram sete cadastros empilhados numa rolagem só; agora cada aba responde a uma pergunta, na ordem em que a fábrica cadastra: centros de trabalho, máquinas, turnos, paradas, consumíveis, produtividade, preparação, simulador e agenda.
 - **Cadastro de turnos.** Calendário por regime de trabalho, com as horas de cada turno calculadas na hora. Turno que vira o dia — 22:00 às 06:00 — é aceito e a tela avisa que termina no dia seguinte.
