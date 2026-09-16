@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## Novidades
+- **A tela de máquinas virou nove abas.** Eram sete cadastros empilhados numa rolagem só; agora cada aba responde a uma pergunta, na ordem em que a fábrica cadastra: centros de trabalho, máquinas, turnos, paradas, consumíveis, produtividade, preparação, simulador e agenda.
+- **Cadastro de turnos.** Calendário por regime de trabalho, com as horas de cada turno calculadas na hora. Turno que vira o dia — 22:00 às 06:00 — é aceito e a tela avisa que termina no dia seguinte.
+- **Registro de paradas de máquina.** Quebra, manutenção e parada programada, com hora exata. Antes só dava para escolher um calendário já existente; não havia como criar um nem como registrar uma quebra.
+- **Cadastro de consumíveis** — gás de corte, eletrodo, arame — com a autonomia da carga e o tempo de troca. O consumo por hora fica na produtividade do item, e o simulador mostra quantas trocas a ordem vai exigir e quantos minutos a máquina fica parada nelas.
+- **A produtividade ganhou forma de produção** (contínua ou ciclos fechados) e eficiência do próprio item.
+
+## Melhorias
+- A grade de recursos mostra a **jornada de cada máquina** — o calendário de turnos com o total semanal, ou as horas por dia de quem não usa calendário. É o que governa a capacidade, e antes não aparecia em lugar nenhum.
+- A lista de produtividade mostra o consumo configurado de cada item.
+- As sugestões do MRP mostram **em qual máquina a ordem foi alocada** e quantos minutos vai ocupar, ao lado do término previsto.
+- O simulador informa a eficiência aplicada e de onde ela veio — item ou máquina.
+
 ## [v1.1.25] — 2026-09-14
 
 ## Correções

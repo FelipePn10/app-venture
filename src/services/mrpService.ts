@@ -22,6 +22,10 @@ export const RULE_TYPES: RuleType[] = ['EQUAL', 'DIFFERENT', 'RANGE'];
 
 export interface MrpSuggestion {
   code: number;
+  machine_code?: number;
+  production_time?: number;
+  estimated_end_at?: string;
+  capacity_late?: boolean;
   plan_code?: number;
   item_code: string;
   quantity: number;
@@ -87,6 +91,10 @@ function parseSuggestion(raw: unknown): MrpSuggestion {
   const o = unwrapObject(raw);
   return {
     code: parseNum(o, 'code', 'Code'),
+    machine_code: parseNum(o, 'machine_code') || undefined,
+    production_time: parseNum(o, 'production_time') || undefined,
+    estimated_end_at: parseStr(o, 'estimated_end_at') || undefined,
+    capacity_late: parseBool(o, 'capacity_late'),
     plan_code: parseNum(o, 'plan_code', 'PlanCode') || undefined,
     item_code: parseStr(o, 'item_code', 'ItemCode'),
     quantity: parseNum(o, 'quantity', 'Quantity'),
