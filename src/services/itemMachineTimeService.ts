@@ -9,6 +9,11 @@ export interface ItemMachineTime {
   production_base_qty: number;
   setup_time: number;
   priority: number;
+  efficiency_rate?: number | null;
+  time_basis?: "CYCLE" | "PROPORTIONAL";
+  /** Consumível gasto e a taxa por hora de usinagem. Andam sempre juntos. */
+  consumable_id?: number | null;
+  consumption_per_hour?: number | null;
 }
 
 export interface CreateItemMachineTimeDTO {
@@ -20,6 +25,11 @@ export interface CreateItemMachineTimeDTO {
   production_base_qty: number;
   setup_time: number;
   priority: number;
+  efficiency_rate?: number | null;
+  time_basis?: "CYCLE" | "PROPORTIONAL";
+  /** Consumível gasto e a taxa por hora de usinagem. Andam sempre juntos. */
+  consumable_id?: number | null;
+  consumption_per_hour?: number | null;
 }
 
 export interface CalculateProductionDTO {
@@ -38,6 +48,14 @@ export interface ProductionCalcResult {
   setup_minutes: number;
   cycles: number;
   is_bottleneck: boolean;
+  efficiency_rate: number;
+  efficiency_source: string;
+  time_basis: string;
+  consumable_description: string;
+  consumable_unit: string;
+  consumable_used: number;
+  consumable_refills: number;
+  consumable_minutes: number;
 }
 
 type Obj = Record<string, unknown>;
@@ -56,6 +74,10 @@ function parseTime(raw: unknown): ItemMachineTime | null {
     production_time_unit: String(o.production_time_unit ?? o.ProductionTimeUnit ?? 'MINUTE'),
     production_base_qty:  Number(o.production_base_qty  ?? o.ProductionBaseQty  ?? 1),
     setup_time: Number(o.setup_time ?? o.SetupTime ?? 0),
+    efficiency_rate: o.efficiency_rate == null ? null : Number(o.efficiency_rate),
+    time_basis: o.time_basis === "PROPORTIONAL" ? "PROPORTIONAL" : "CYCLE",
+    consumable_id: o.consumable_id == null ? null : Number(o.consumable_id),
+    consumption_per_hour: o.consumption_per_hour == null ? null : Number(o.consumption_per_hour),
     priority:   Number(o.priority   ?? o.Priority   ?? 1),
   };
 }
@@ -85,12 +107,20 @@ export async function calculateProductionTime(dto: CalculateProductionDTO): Prom
   const res = await httpClient.post<unknown>('/api/machine/time/production/calculate', dto);
   const o = res.data as Obj;
   return {
+    efficiency_rate: Number(o.machine_efficiency_rate ?? 1),
+    efficiency_source: String(o.efficiency_source ?? "MACHINE"),
+    time_basis: String(o.time_basis ?? "CYCLE"),
     total_minutes:      Number(o.total_minutes      ?? o.TotalMinutes      ?? 0),
     total_hours:        Number(o.total_hours         ?? o.TotalHours        ?? 0),
     total_days:         Number(o.total_days          ?? o.TotalDays         ?? 0),
-    production_minutes: Number(o.production_minutes  ?? o.ProductionMinutes ?? 0),
+    production_minutes: Number(o.machining_minutes ?? o.production_minutes  ?? o.ProductionMinutes ?? 0),
     setup_minutes:      Number(o.setup_minutes        ?? o.SetupMinutes      ?? 0),
-    cycles:             Number(o.cycles               ?? o.Cycles            ?? 0),
-    is_bottleneck:      Boolean(o.is_bottleneck        ?? o.IsBottleneck      ?? false),
+    cycles:             Number(o.batch_count ?? o.cycles               ?? o.Cycles            ?? 0),
+    is_bottleneck:      Boolean(o.machine_is_bottleneck ?? o.is_bottleneck        ?? o.IsBottleneck      ?? false),
+    consumable_description: String(o.consumable_description ?? ''),
+    consumable_unit:        String(o.consumable_unit ?? ''),
+    consumable_used:        Number(o.consumable_used ?? 0),
+    consumable_refills:     Number(o.consumable_refills ?? 0),
+    consumable_minutes:     Number(o.consumable_minutes ?? 0),
   };
 }

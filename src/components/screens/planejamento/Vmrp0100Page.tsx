@@ -269,15 +269,17 @@ export function Vmrp0100Page(): JSX.Element {
         {/* Sugestões */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Sugestões de ordens ({suggestions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
           <table className="erp-grid">
-            <thead><tr><th>Código</th><th>Item</th><th>Qtd</th><th>Tipo ordem</th><th>Demanda</th><th>Necessidade</th><th>Início</th><th>LLC</th><th></th></tr></thead>
+            <thead><tr><th>Código</th><th>Item</th><th>Qtd</th><th>Tipo ordem</th><th>Demanda</th><th>Necessidade</th><th>Início previsto</th><th>Término previsto</th><th>Máquina</th><th>Capacidade</th><th>LLC</th><th></th></tr></thead>
             <tbody>
-              {suggestions.length === 0 && <tr><td colSpan={9} className="erp-grid-empty">Nenhuma sugestão. Rode o MRP e clique em Consultar.</td></tr>}
+              {suggestions.length === 0 && <tr><td colSpan={12} className="erp-grid-empty">Nenhuma sugestão. Rode o MRP e clique em Consultar.</td></tr>}
               {suggestions.map((s) => (
                 <tr key={s.code}>
                   <td>{s.code}</td><td>{s.item_code}</td><td>{s.quantity}</td>
                   <td>{s.order_type === "PRODUCTION" ? "Fabricação" : s.order_type === "PURCHASE" ? "Compra" : s.order_type}</td>
                   <td>{s.demand_type === "INDEPENDENT" ? "Independente" : s.demand_type === "DEPENDENT" ? "Dependente" : s.demand_type}</td>
-                  <td>{d10(s.need_date)}</td><td>{d10(s.start_date)}</td><td>{s.llc}</td>
+                  <td>{d10(s.need_date)}</td><td>{d10(s.start_date)}</td><td>{d10(s.estimated_end_at)}</td>
+                  <td>{s.machine_code ? <>{s.machine_code}{s.production_time ? <><br /><small style={{ color: "var(--v-text-muted)" }}>{Math.round(s.production_time)} min</small></> : null}</> : "—"}</td>
+                  <td>{s.estimated_end_at ? (s.capacity_late ? "Após o prazo" : "Dentro do prazo") : "Sem programação"}</td><td>{s.llc}</td>
                   <td><button className="erp-btn erp-btn-primary" onClick={() => firmar(s.code)} disabled={busy}>Firmar</button></td>
                 </tr>
               ))}

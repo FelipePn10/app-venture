@@ -47,6 +47,7 @@ export interface Machine {
   name: string;
   machine_type_code: number;
   cost_center_code?: number | null;
+  available_hours_per_day?: number | null;
   capacity: number;
   capacity_per_unit: string;
   capacity_period: string;
@@ -72,10 +73,12 @@ export interface Machine {
 }
 
 export interface CreateMachineDTO {
+  inherit_work_center_hours?: boolean;
   code: number;
   name: string;
   machine_type_code: number;
   cost_center_code?: number | null;
+  available_hours_per_day?: number | null;
   capacity: number;
   capacity_per_unit: string;
   capacity_period: string;
@@ -115,6 +118,7 @@ function parse(raw: unknown): Machine | null {
     name,
     machine_type_code: Number(o.machine_type_code ?? o.MachineTypeCode ?? 0),
     cost_center_code: o.cost_center_code != null ? Number(o.cost_center_code) : null,
+    available_hours_per_day: o.available_hours_per_day == null ? null : Number(o.available_hours_per_day),
     capacity: Number(o.capacity ?? o.Capacity ?? 0),
     capacity_per_unit: String(o.capacity_per_unit ?? o.CapacityPerUnit ?? o.capacity_unit ?? ''),
     capacity_period: String(o.capacity_period ?? o.CapacityPeriod ?? ''),
@@ -183,4 +187,140 @@ export async function updateMachine(code: number, dto: CreateMachineDTO): Promis
 export async function listMachinesByType(typeCode: number): Promise<Machine[]> {
   const res = await httpClient.get<unknown>(`/api/machine/types/${typeCode}/machines`);
   return unwrap(res.data).map(parse).filter(Boolean) as Machine[];
+}
+
+/** Um turno do calendário. `end` menor que `start` significa que vira o dia. */
+export interface MachineCalendarInterval { weekday: number; start: string; end: string }
+export interface MachineCalendar { id: number; code: number; description: string; intervals: MachineCalendarInterval[] }
+
+export const WEEKDAYS = [
+  { value: 0, label: 'Domingo' }, { value: 1, label: 'Segunda' }, { value: 2, label: 'Terça' },
+  { value: 3, label: 'Quarta' }, { value: 4, label: 'Quinta' }, { value: 5, label: 'Sexta' },
+  { value: 6, label: 'Sábado' },
+] as const;
+
+/** Horas do turno, contando a virada do dia (22:00→06:00 = 8h). */
+export function shiftHours(start: string, end: string): number {
+  const min = (t: string) => { const [h, m] = t.split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+  const d = min(end) - min(start);
+  return (d > 0 ? d : d + 24 * 60) / 60;
+}
+
+function parseCalendar(raw: unknown): MachineCalendar {
+  const row = raw as Obj;
+  const rawIntervals = Array.isArray(row.intervals) ? row.intervals : [];
+  return {
+    id: Number(row.id ?? row.ID),
+    code: Number(row.code ?? row.Code),
+    description: String(row.description ?? row.Description ?? ''),
+    intervals: rawIntervals.map((i) => {
+      const v = i as Obj;
+      return { weekday: Number(v.weekday ?? v.Weekday ?? 0), start: String(v.start ?? v.Start ?? ''), end: String(v.end ?? v.End ?? '') };
+    }).filter((i) => i.start !== '' && i.end !== ''),
+  };
+}
+
+export async function listMachineCalendars(): Promise<MachineCalendar[]> {
+  const { data } = await httpClient.get<unknown>('/api/aps/machine-calendars');
+  return unwrap(data).map(parseCalendar);
+}
+
+export async function upsertMachineCalendar(dto: { code: number; description: string; intervals: MachineCalendarInterval[] }): Promise<MachineCalendar> {
+  const { data } = await httpClient.post<unknown>('/api/aps/machine-calendars', dto);
+  return parseCalendar(data);
+}
+
+export async function deleteMachineCalendar(id: number): Promise<void> {
+  await httpClient.delete(`/api/aps/machine-calendars/${id}`);
+}
+
+export interface MachineDowntime {
+  id: number; machine_id: number; starts_at: string; ends_at: string;
+  downtime_type: string; reason: string;
+}
+/**
+ * Domínio fechado, igual ao CHECK da tabela. Um seletor com opção que o banco
+ * recusa é pior que não ter seletor: o usuário escolhe e leva erro na cara.
+ * Quebra e troca de ferramenta cabem em UNPLANNED; o motivo específico vai na
+ * descrição, que é texto livre.
+ */
+export const DOWNTIME_TYPES = [
+  { value: 'UNPLANNED', label: 'Quebra / parada não programada' },
+  { value: 'MAINTENANCE', label: 'Manutenção' },
+  { value: 'PLANNED', label: 'Parada programada' },
+] as const;
+
+export async function listMachineDowntimes(machineId: number, from: string, to: string): Promise<MachineDowntime[]> {
+  const { data } = await httpClient.get<unknown>('/api/aps/machine-downtimes', { params: { machine_id: machineId, from, to } });
+  return unwrap(data).map((raw) => {
+    const row = raw as Obj;
+    return {
+      id: Number(row.id ?? row.ID),
+      machine_id: Number(row.machine_id ?? row.MachineID ?? 0),
+      starts_at: String(row.starts_at ?? row.StartsAt ?? ''),
+      ends_at: String(row.ends_at ?? row.EndsAt ?? ''),
+      downtime_type: String(row.downtime_type ?? row.DowntimeType ?? ''),
+      reason: String(row.reason ?? row.Reason ?? ''),
+    };
+  });
+}
+
+export async function createMachineDowntime(dto: { machine_id: number; starts_at: string; ends_at: string; downtime_type: string; reason: string }): Promise<void> {
+  await httpClient.post('/api/aps/machine-downtimes', dto, { headers: { 'Idempotency-Key': crypto.randomUUID() } });
+}
+
+export async function deleteMachineDowntime(id: number): Promise<void> {
+  await httpClient.delete(`/api/aps/machine-downtimes/${id}`, { headers: { 'Idempotency-Key': crypto.randomUUID() } });
+}
+
+/**
+ * Consumível da máquina — gás de corte, eletrodo, arame, óleo.
+ *
+ * Guarda a AUTONOMIA (quanto rende uma carga) e o tempo de troca. A taxa de
+ * consumo não mora aqui: ela depende do que está sendo produzido e fica na
+ * produtividade do item (`consumption_per_hour`).
+ */
+export interface MachineConsumable {
+  id: number;
+  machine_code: number;
+  code: string;
+  description: string;
+  unit: string;
+  capacity_per_refill: number;
+  replacement_minutes: number;
+  is_active: boolean;
+}
+
+function parseConsumable(raw: unknown): MachineConsumable {
+  const o = raw as Obj;
+  return {
+    id: Number(o.id ?? o.ID ?? 0),
+    machine_code: Number(o.machine_code ?? o.MachineCode ?? 0),
+    code: String(o.code ?? o.Code ?? ''),
+    description: String(o.description ?? o.Description ?? ''),
+    unit: String(o.unit ?? o.Unit ?? ''),
+    capacity_per_refill: Number(o.capacity_per_refill ?? o.CapacityPerRefill ?? 0),
+    replacement_minutes: Number(o.replacement_minutes ?? o.ReplacementMinutes ?? 0),
+    is_active: o.is_active !== false,
+  };
+}
+
+/** Sem `machineCode`, devolve os consumíveis de todas as máquinas da empresa. */
+export async function listMachineConsumables(machineCode?: number): Promise<MachineConsumable[]> {
+  const { data } = await httpClient.get<unknown>('/api/machine/consumables/', {
+    params: machineCode ? { machine_code: machineCode } : undefined,
+  });
+  return unwrap(data).map(parseConsumable);
+}
+
+export async function upsertMachineConsumable(dto: {
+  machine_code: number; code: string; description: string; unit: string;
+  capacity_per_refill: number; replacement_minutes: number;
+}): Promise<MachineConsumable> {
+  const { data } = await httpClient.post<unknown>('/api/machine/consumables/', dto);
+  return parseConsumable(data);
+}
+
+export async function deleteMachineConsumable(id: number): Promise<void> {
+  await httpClient.delete(`/api/machine/consumables/${id}`);
 }
