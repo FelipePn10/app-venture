@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.27] — 2026-09-17
+
 ## Novidades
 - **Simulação de margem na VCUS0200.** Antes de fechar o pedido, veja o que sobra: preço, quantidade, custo, impostos e comissão devolvem a cascata inteira — e o que o prazo de pagamento custa aparece como linha, não sumido na conta. Informando a margem desejada, a tela devolve o **preço mínimo** que a atinge, com a diferença para o preço simulado. Venda que dá prejuízo é avisada em vermelho.
 - **Unidade de tempo em segundos** na produtividade por item. A ficha traz "85 s por peça" e agora é lançado direto.
