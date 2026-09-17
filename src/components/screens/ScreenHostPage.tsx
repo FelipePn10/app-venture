@@ -117,6 +117,7 @@ import { Vsup0400Page } from "./suprimento/Vsup0400Page";
 import { Vitm0100Page } from "./engenharia/Vitm0100Page";
 import { Vest0200Page } from "./almoxarifado/Vest0200Page";
 import { Vmaq0101Page } from "./engenharia/Vmaq0101Page";
+import { Vpro1200Page } from "./producao/Vpro1200Page";
 import { Vmaq0200Page } from "./engenharia/Vmaq0200Page";
 import { Vexr0100Page } from "./comercial/Vexr0100Page";
 import { Vpct0100Page } from "./suprimento/Vpct0100Page";
@@ -249,6 +250,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VITM0100: <Vitm0100Page />,
   VMAQ0101: <Vmaq0101Page />,
   VMAQ0200: <Vmaq0200Page />,
+  VPRO1200: <Vpro1200Page />,
   VEXR0100: <Vexr0100Page />,
 
   // Cadastros & Plataforma (novas)

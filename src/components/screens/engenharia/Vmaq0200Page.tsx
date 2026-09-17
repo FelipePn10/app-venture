@@ -53,12 +53,14 @@ import { enumLabel } from "@/utils/enumLabels";
 import {
   type SetupTransitionDTO,
   listSetupMatrix, upsertSetupTransition, deleteSetupTransition,
+  listSetupFamilies, assignSetupFamily, type SetupFamily,
+  machineStopStatus, openMachineStop, closeMachineStop, type MachineStop,
 } from "@/services/apsService";
 import { errMessage } from "@/services/fiscalShared";
 import { useAuthStore } from "@/store/authStore";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadWorkCenters, loadMaintenanceResponsibles } from "@/services/lookups";
+import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadWorkCenters, loadMaintenanceResponsibles, resetLookups } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -73,7 +75,7 @@ function resolveUserId(id: string | undefined, token: string | null): string {
   } catch { return ""; }
 }
 
-const TIME_UNITS = CAPACITY_PERIODS; // produção usa o mesmo enum de período (MINUTO/HORA/DIA)
+const TIME_UNITS = CAPACITY_PERIODS; // produção usa o mesmo enum de período (SEGUNDO/MINUTO/HORA/DIA)
 
 /**
  * Cadastro completo do recurso. A tela pedia sete campos; a tabela guarda vinte.
@@ -170,6 +172,10 @@ export function Vmaq0200Page(): JSX.Element {
   const [paradas, setParadas] = useState<MachineDowntime[]>([]);
   const [paradaFiltro, setParadaFiltro] = useState({ machine_id: 0, from: HOJE(), to: HOJE() });
   const [paradaForm, setParadaForm] = useState({ machine_id: 0, starts_at: "", ends_at: "", downtime_type: "UNPLANNED", reason: "" });
+  const [familias, setFamilias] = useState<SetupFamily[]>([]);
+  const [famForm, setFamForm] = useState<{ family: string; itens: number[] }>({ family: "", itens: [] });
+  /** Parada em curso da máquina escolhida na aba Paradas; null = ainda não consultada. */
+  const [paradaAberta, setParadaAberta] = useState<MachineStop | null>(null);
   const [consumiveis, setConsumiveis] = useState<MachineConsumable[]>([]);
   const [consForm, setConsForm] = useState({ machine_code: 0, code: "", description: "", unit: "m³", capacity_per_refill: 0, replacement_minutes: 0 });
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -180,10 +186,17 @@ export function Vmaq0200Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
+  // Os modais de seleção memoizam a lista por toda a vida da página. Sem
+  // invalidar, a máquina recém-criada não aparecia na aba Paradas nem na de
+  // Consumíveis — o usuário cadastrava e o modal continuava vazio.
   const loadAll = useCallback(() => run(async () => {
-    const [ms, ts, cs, cons] = await Promise.all([listMachines(), listMachineTypes(), listMachineCalendars(), listMachineConsumables()]);
+    resetLookups();
+    const [ms, ts, cs, cons, fam] = await Promise.all([
+      listMachines(), listMachineTypes(), listMachineCalendars(), listMachineConsumables(), listSetupFamilies(),
+    ]);
     setCalendars(cs);
     setConsumiveis(cons);
+    setFamilias(fam);
     setMachines(ms); setTypes(ts);
   }), [run]);
 
@@ -225,6 +238,42 @@ export function Vmaq0200Page(): JSX.Element {
     setFeedback({ type: "success", message: `Calendário ${c.code} excluído.` });
   });
 
+  // ── Famílias de preparação ────────────────────────────────────────────────
+  const salvarFamilia = () => run(async () => {
+    if (!famForm.family.trim()) throw new Error("Informe o nome da família — por exemplo CHAPA-3MM.");
+    if (famForm.itens.length === 0) throw new Error("Escolha ao menos um item para a família.");
+    const n = await assignSetupFamily(famForm.family, famForm.itens);
+    setFamilias(await listSetupFamilies());
+    setFamForm({ family: "", itens: [] });
+    setFeedback({ type: "success", message: `${n} item(ns) agrupados em "${famForm.family.trim().toUpperCase()}".` });
+  });
+
+  // ── Cronômetro de parada ──────────────────────────────────────────────────
+  const verParada = (machineCode: number) => run(async () => {
+    const id = idDaMaquina(machineCode);
+    if (!id) throw new Error("Escolha a máquina.");
+    setParadaAberta(await machineStopStatus(id));
+  });
+
+  const pararAgora = () => run(async () => {
+    const id = idDaMaquina(paradaForm.machine_id);
+    if (!id) throw new Error("Escolha a máquina.");
+    const r = await openMachineStop(id, paradaForm.downtime_type, paradaForm.reason.trim());
+    setParadaAberta(r);
+    setFeedback({ type: "success", message: "Parada aberta. A máquina deixa de contar como disponível a partir de agora." });
+  });
+
+  const voltouAProduzir = () => run(async () => {
+    const id = idDaMaquina(paradaForm.machine_id);
+    if (!id) throw new Error("Escolha a máquina.");
+    const r = await closeMachineStop(id);
+    setParadaAberta({ ...r, open: false });
+    setFeedback({ type: "success", message: `Parada encerrada: ${r.minutes.toFixed(1)} min.` });
+    if (paradaFiltro.machine_id === paradaForm.machine_id) {
+      setParadas(await listMachineDowntimes(id, `${paradaFiltro.from}T00:00:00Z`, `${paradaFiltro.to}T23:59:59Z`));
+    }
+  });
+
   // ── Consumíveis ───────────────────────────────────────────────────────────
   const salvarConsumivel = () => run(async () => {
     if (!consForm.machine_code) throw new Error("Escolha a máquina.");
@@ -235,6 +284,7 @@ export function Vmaq0200Page(): JSX.Element {
       throw new Error("Informe quanto rende uma carga completa — sem isso o sistema não sabe quando a troca acontece.");
     }
     await upsertMachineConsumable({ ...consForm, code: consForm.code.trim(), description: consForm.description.trim(), unit: consForm.unit.trim() });
+    resetLookups();
     setConsumiveis(await listMachineConsumables());
     setConsForm((p) => ({ ...p, code: "", description: "", capacity_per_refill: 0, replacement_minutes: 0 }));
     setFeedback({ type: "success", message: "Consumível gravado." });
@@ -325,6 +375,7 @@ export function Vmaq0200Page(): JSX.Element {
       setFeedback({ type: "success", message: `Máquina "${mForm.name.trim()}" criada.` });
     }
     novaMaquina();
+    resetLookups();
     setMachines(await listMachines());
   });
 
@@ -396,6 +447,7 @@ export function Vmaq0200Page(): JSX.Element {
       setFeedback({ type: "success", message: `Tipo "${corpo.name}" cadastrado.` });
     }
     novoTipo();
+    resetLookups();
     setTypes(await listMachineTypes());
   });
 
@@ -883,13 +935,58 @@ export function Vmaq0200Page(): JSX.Element {
 
         {aba === "paradas" && (<>
         <div className="erp-fieldset">
-          <div className="erp-fieldset-head">Registrar parada de máquina</div>
+          <div className="erp-fieldset-head">A máquina parou agora</div>
           <div className="erp-fieldset-body">
             <div className="erp-field erp-c12">
               <p className="erp-note">
-                Quebra, manutenção corretiva, troca de ferramenta ou de consumível. O período registrado
-                <strong> deixa de existir como capacidade</strong>: o MRP não agenda dentro dele, o CRP não
-                conta as horas e o APS desvia o sequenciamento. É assim que a parada sai do papel e entra na conta.
+                Para parada curta — troca de bico, ajuste, emperrou — não digite horário.
+                Abra a parada quando acontecer e encerre quando a máquina voltar; o sistema
+                cronometra. <strong>Parada que ninguém registra deixa o planejamento achando que
+                a máquina produziu o turno inteiro.</strong>
+              </p>
+            </div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Máquina</label>
+              <LookupField value={paradaForm.machine_id || undefined} loader={loadMachines} entityLabel="máquina"
+                onChange={(c) => { const code = Number(c ?? 0); setParadaForm((p) => ({ ...p, machine_id: code })); setParadaAberta(null); if (code) verParada(code); }} /></div>
+
+            {paradaAberta?.open ? (
+              <>
+                <div className="erp-field erp-c4">
+                  <div className="erp-status-item" style={{ fontSize: 15 }}>
+                    ⏸ <strong>Parada há {paradaAberta.minutes < 1 ? "menos de 1 min" : `${paradaAberta.minutes.toFixed(0)} min`}</strong>
+                    {paradaAberta.reason ? <> · {paradaAberta.reason}</> : null}
+                  </div>
+                </div>
+                <div className="erp-field erp-c3" style={{ alignSelf: "end" }}>
+                  <button className="erp-btn erp-btn-primary" onClick={voltouAProduzir} disabled={busy}>Voltou a produzir</button></div>
+              </>
+            ) : (
+              <>
+                <div className="erp-field erp-c3"><label className="erp-label">Tipo da parada</label>
+                  <select className="erp-input" value={paradaForm.downtime_type}
+                    onChange={(e) => setParadaForm((p) => ({ ...p, downtime_type: e.target.value }))}>
+                    {DOWNTIME_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select></div>
+                <div className="erp-field erp-c3"><label className="erp-label">O que houve</label>
+                  <input className="erp-input" value={paradaForm.reason} placeholder="Troca de bico"
+                    onChange={(e) => setParadaForm((p) => ({ ...p, reason: e.target.value }))} /></div>
+                <div className="erp-field erp-c3" style={{ alignSelf: "end" }}>
+                  <button className="erp-btn erp-btn-primary" onClick={pararAgora} disabled={busy || !paradaForm.machine_id}>Máquina parou</button></div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="erp-fieldset">
+          <div className="erp-fieldset-head">Lançar parada que já aconteceu</div>
+          <div className="erp-fieldset-body">
+            <div className="erp-field erp-c12">
+              <p className="erp-note">
+                Para parada <strong>passada</strong> — a que ninguém registrou na hora, ou a que já está
+                programada para a semana que vem. Aqui o horário é digitado.
+                <br />
+                O período registrado <strong>deixa de existir como capacidade</strong>: o MRP não agenda
+                dentro dele, o CRP não conta as horas e o APS desvia o sequenciamento.
               </p>
             </div>
             <div className="erp-field erp-c3"><label className="erp-label erp-req">Máquina</label>
@@ -1033,7 +1130,7 @@ export function Vmaq0200Page(): JSX.Element {
           <div className="erp-field erp-c12"><p className="erp-hint">Informe a produção real esperada: 120 peças por hora = tempo 1, unidade hora, quantidade 120 e eficiência de 100%. Use a unidade do item. Para chapas/hora, converta pelo número de peças obtidas por chapa. A máscara distingue configurações como material e espessura.</p></div>
           <div className="erp-field erp-c3"><label className="erp-label">Forma de produção</label><select className="erp-input" value={tForm.time_basis ?? "CYCLE"} onChange={(e) => setTForm((p) => ({ ...p, time_basis: e.target.value as "CYCLE" | "PROPORTIONAL" }))}><option value="PROPORTIONAL">Contínua — proporcional à quantidade</option><option value="CYCLE">Ciclos fechados — ocupa o ciclo inteiro</option></select></div>
           <div className="erp-field erp-c3"><label className="erp-label">Eficiência deste item (%)</label><input className="erp-input num" type="number" min="0.1" max="100" step="0.1" value={tForm.efficiency_rate == null ? "" : tForm.efficiency_rate * 100} onChange={(e) => setTForm((p) => ({ ...p, efficiency_rate: e.target.value === "" ? null : Number(e.target.value) / 100 }))} /><span className="erp-hint">Vazio herda a máquina. Não é aplicada duas vezes.</span></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Tempo de produção</label><input className="erp-input num" type="number" step="any" min="0.000001" value={tForm.production_time || ""} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req">Tempo de produção</label><input className="erp-input num" type="number" step="any" min="0.000001" value={tForm.production_time || ""} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /><span className="erp-hint">A ficha traz em segundos? Lance direto — não converta.</span></div>
           <div className="erp-field erp-c2"><label className="erp-label">Unidade tempo</label>
             <select className="erp-input" value={tForm.production_time_unit} onChange={(e) => setTForm((p) => ({ ...p, production_time_unit: e.target.value }))}>
               {TIME_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
@@ -1076,6 +1173,59 @@ export function Vmaq0200Page(): JSX.Element {
         </>)}
 
         {aba === "preparacao" && (<>
+        <div className="erp-fieldset">
+          <div className="erp-fieldset-head">Famílias de preparação</div>
+          <div className="erp-fieldset-body">
+            <div className="erp-field erp-c12">
+              <p className="erp-note">
+                Agrupe aqui os itens que <strong>custam o mesmo para trocar</strong> na máquina —
+                numa máquina de corte, normalmente por espessura e material. Depois escreva a regra
+                entre as famílias, em vez de uma linha para cada par de itens.
+                <br />
+                Isto é <strong>família de processo</strong>, não a classificação comercial do item:
+                o que agrupa aqui é o tempo de troca, não o mercado.
+              </p>
+            </div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Nome da família</label>
+              <input className="erp-input" value={famForm.family} placeholder="CHAPA-3MM"
+                onChange={(e) => setFamForm((p) => ({ ...p, family: e.target.value }))} />
+              <span className="erp-hint">Gravada em maiúsculas — "chapa 3mm" e "CHAPA 3MM" seriam duas famílias.</span></div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Acrescentar item</label>
+              <LookupField value={undefined} loader={loadItems} entityLabel="item" placeholder="Escolher item"
+                onChange={(c) => { const code = Number(c ?? 0); if (code && !famForm.itens.includes(code)) setFamForm((p) => ({ ...p, itens: [...p.itens, code] })); }} /></div>
+            <div className="erp-field erp-c4">
+              <label className="erp-label">Itens escolhidos ({famForm.itens.length})</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, minHeight: 30 }}>
+                {famForm.itens.length === 0 && <span className="erp-hint">Nenhum item escolhido.</span>}
+                {famForm.itens.map((c) => (
+                  <span key={c} className="erp-tag" style={{ cursor: "pointer" }}
+                    onClick={() => setFamForm((p) => ({ ...p, itens: p.itens.filter((x) => x !== c) }))}>{c} ✕</span>
+                ))}
+              </div></div>
+            <div className="erp-field erp-c2" style={{ alignSelf: "end" }}>
+              <button className="erp-btn erp-btn-primary" onClick={salvarFamilia} disabled={busy}>Agrupar</button></div>
+
+            {familias.length > 0 && (
+              <div className="erp-field erp-c12">
+                <table className="erp-grid">
+                  <thead><tr><th>Família</th><th className="num">Itens</th><th>Quantos pares ela dispensa</th></tr></thead>
+                  <tbody>
+                    {familias.map((f) => (
+                      <tr key={f.family}>
+                        <td><strong>{f.family}</strong></td>
+                        <td className="num">{f.items}</td>
+                        <td>{f.items > 1
+                          ? `uma regra aqui substitui até ${f.items * f.items} linhas item a item`
+                          : "acrescente mais itens para a família render"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── Matriz de preparação ───────────────────────────────────────── */}
         <div className="erp-fieldset">
           <div className="erp-fieldset-head">Matriz de tempo de preparação (setup por transição)</div>
@@ -1087,6 +1237,16 @@ export function Vmaq0200Page(): JSX.Element {
                 importam e o sequenciamento passa a <strong>agrupar itens parecidos</strong> para
                 economizar preparação — é o principal ganho de um sequenciador de verdade.
                 Sem nenhuma linha, vale o setup fixo da operação.
+                <br /><br />
+                ⭐ <strong>Use família, não par de itens.</strong> Quarenta chapas dariam mil e
+                seiscentas combinações — e não é preciso nenhuma delas. Agrupe as chapas em
+                famílias de preparação (por espessura, por material) e escreva a regra entre as
+                famílias. <strong>Deixar um dos lados em branco vale como coringa</strong>: a regra
+                passa a valer saindo de qualquer coisa, ou entrando em qualquer coisa.
+                <br />
+                Quando várias regras servem, <strong>vence a mais específica</strong> — o par de
+                itens ganha da família, que ganha do coringa. Assim a exceção convive com a regra
+                geral sem precisar reescrever nada.
               </p>
             </div>
             <div className="erp-field erp-c4">

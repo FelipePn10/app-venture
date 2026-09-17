@@ -17,9 +17,10 @@ export const CAPACITY_UNITS = [
 
 // Valores reais do enum `machine_capacity_period_enum` (backend, em PT).
 export const CAPACITY_PERIODS = [
-  { value: 'MINUTO', label: 'Por Minuto' },
-  { value: 'HORA',   label: 'Por Hora' },
-  { value: 'DIA',    label: 'Por Dia' },
+  { value: 'SEGUNDO', label: 'Por Segundo' },
+  { value: 'MINUTO',  label: 'Por Minuto' },
+  { value: 'HORA',    label: 'Por Hora' },
+  { value: 'DIA',     label: 'Por Dia' },
 ] as const;
 
 /**
