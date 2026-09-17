@@ -430,3 +430,134 @@
 .fsc-page-btn:hover:not(:disabled) { background: var(--v-green-soft); border-color: var(--v-green-border); }
 .fsc-page-btn.active { background: var(--v-ink); border-color: var(--v-ink); color: var(--v-text-on-ink); }
 .fsc-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── TERMINAL DE CHÃO DE FÁBRICA ───────────────────────────────────────────── */
+/*
+   Para telas que ficam abertas ao lado da máquina o turno inteiro e são lidas
+   de pé, a dois metros de distância. Diferente do resto do sistema: não é um
+   formulário que se preenche, é um painel que se olha e um botão que se toca.
+
+   O ESTADO MANDA NA COR. Máquina produzindo e máquina parada não podem ter a
+   mesma aparência — de longe ninguém lê rótulo, lê cor. Parada usa o âmbar de
+   alerta (--v-warn), não o vermelho de erro: parar é operação normal, não falha.
+*/
+.fsc-term {
+  display: flex; flex-direction: column; gap: 14px;
+  min-height: calc(100vh - 150px);
+}
+
+/* Barra do posto: escolhida uma vez por turno, some do caminho depois. */
+.fsc-term-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 16px; border-radius: var(--v-r-md, 8px);
+  background: var(--v-surface); border: 1px solid var(--v-border);
+  box-shadow: var(--v-shadow-sm);
+}
+.fsc-term-bar label {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--v-text-muted); white-space: nowrap;
+}
+.fsc-term-bar select {
+  flex: 1 1 260px; min-width: 0; max-width: 460px; height: 48px; padding: 0 14px;
+  font-family: var(--v-font); font-size: 17px; font-weight: 600; color: var(--v-text);
+  background: var(--v-surface); border: 1px solid var(--v-border-strong);
+  border-radius: var(--v-r-sm); cursor: pointer;
+}
+.fsc-term-bar select:focus-visible { outline: none; box-shadow: var(--v-focus); border-color: var(--v-green); }
+
+/* Pastilha de estado, com ponto que pulsa só quando a máquina está parada. */
+.fsc-term-state {
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  padding: 8px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  background: var(--v-ok-bg); color: var(--v-ok); border: 1px solid var(--v-ok-bd);
+}
+.fsc-term-state::before {
+  content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor;
+}
+.fsc-term-state.parada {
+  background: var(--v-warn-bg); color: var(--v-warn); border-color: var(--v-warn-bd);
+}
+.fsc-term-state.parada::before { animation: fsc-term-pulso 1.1s ease-in-out infinite; }
+@keyframes fsc-term-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* Palco: ocupa o que sobra da tela, porque é o que o operador olha. */
+.fsc-term-stage {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  padding: 28px 22px; border-radius: var(--v-r-md, 8px);
+  background: var(--v-surface); border: 1px solid var(--v-border);
+  box-shadow: var(--v-shadow-md);
+}
+.fsc-term-stage.parada {
+  background: var(--v-warn-bg); border-color: var(--v-warn-bd);
+  box-shadow: inset 0 0 0 3px var(--v-warn-bd), var(--v-shadow-md);
+}
+
+.fsc-term-machine {
+  text-align: center; font-size: clamp(17px, 2.2vw, 22px); font-weight: 700;
+  color: var(--v-text-2); margin: 0 0 4px;
+}
+.fsc-term-hint { text-align: center; color: var(--v-text-3); font-size: 15px; margin: 0 0 22px; }
+
+/* Relógio: tabular para não dançar a cada segundo. */
+.fsc-term-clock {
+  text-align: center; margin: 6px 0 2px;
+  font-size: clamp(62px, 13vw, 132px); font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  color: var(--v-warn);
+}
+.fsc-term-reason {
+  text-align: center; font-size: clamp(17px, 2.4vw, 24px); font-weight: 600;
+  color: var(--v-text); margin: 10px 0 26px;
+}
+
+/* Motivos como ladrilhos: alvo grande, três por linha, sem esticar. */
+.fsc-term-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px; max-width: 780px; width: 100%; margin: 0 auto;
+}
+.fsc-term-tile {
+  min-height: 118px; padding: 18px 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--v-font); font-size: 16px; font-weight: 600; text-align: center;
+  color: var(--v-text); background: var(--v-surface-2);
+  border: 1px solid var(--v-border); border-radius: var(--v-r-md, 8px);
+  cursor: pointer; transition: background .12s, border-color .12s, transform .06s;
+}
+.fsc-term-tile:hover:not(:disabled) { background: var(--v-green-soft); border-color: var(--v-green-border); }
+.fsc-term-tile:active:not(:disabled) { transform: translateY(1px); }
+.fsc-term-tile:focus-visible { outline: none; box-shadow: var(--v-focus); border-color: var(--v-green); }
+.fsc-term-tile:disabled { opacity: .45; cursor: not-allowed; }
+.fsc-term-tile-ico { font-size: 26px; line-height: 1; }
+
+/* O botão de voltar é o único alvo quando a máquina está parada. */
+.fsc-term-back {
+  display: block; margin: 0 auto; min-width: min(420px, 100%);
+  padding: 20px 34px; font-family: var(--v-font);
+  font-size: clamp(18px, 2.4vw, 22px); font-weight: 700;
+  color: #fff; background: var(--v-green); border: 1px solid var(--v-green);
+  border-radius: var(--v-r-md, 8px); cursor: pointer;
+  transition: background .12s, transform .06s;
+}
+.fsc-term-back:hover:not(:disabled) { background: var(--v-green-hover); }
+.fsc-term-back:active:not(:disabled) { transform: translateY(1px); }
+.fsc-term-back:focus-visible { outline: none; box-shadow: var(--v-focus); }
+.fsc-term-back:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Estado vazio: sem máquina escolhida não há o que operar. */
+.fsc-term-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; color: var(--v-text-3);
+}
+.fsc-term-empty-ico { font-size: 44px; opacity: .5; }
+
+@media (max-width: 640px) { .fsc-term-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) {
+  .fsc-term-grid { grid-template-columns: minmax(0, 1fr); }
+  .fsc-term-bar select { max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fsc-term-state.parada::before { animation: none; }
+  .fsc-term-tile, .fsc-term-back { transition: none; }
+}

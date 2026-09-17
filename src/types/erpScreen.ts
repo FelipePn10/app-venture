@@ -1062,6 +1062,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VMAQ0300", title: "Tempos e Programação de Máquina", description: "Tempos produtivos e agenda da máquina.", module: "engenharia" },
   { code: "VCAL0200", title: "Dias Úteis Prometidos por Item", description: "Calendário mensal efetivo da promessa do item.", module: "planejamento" },
   { code: "VPRO1100", title: "Estoque da Manufatura", description: "Parâmetros de lotes, baixas e endereçamento produtivo.", module: "producao" },
+  { code: "VPRO1200", title: "Parada de Máquina", description: "Terminal de chão de fábrica: registrar que a máquina parou e que voltou, sem digitar horário.", module: "producao" },
   { code: "VVND0600", title: "Workflow do Pedido de Venda", description: "Análise, atendimento, conferência e atrasos.", module: "comercial" },
   { code: "VVND0610", title: "Reajuste de Venda Recorrente", description: "Recalcular e justificar o reajuste de um contrato recorrente.", module: "comercial" },
   { code: "VSUP0660", title: "Parâmetros e Contatos do Fornecedor", description: "Configurar regras do fornecedor e complementar contatos persistidos.", module: "suprimento" },

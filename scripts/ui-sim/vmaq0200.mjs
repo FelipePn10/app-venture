@@ -144,27 +144,29 @@ await passo('consulta de paradas exige máquina', async () => {
 });
 
 await passo('registrar quebra de máquina', async () => {
+  const bloco = page.locator('.erp-fieldset').filter({ hasText: 'Lançar parada que já aconteceu' });
   // Só as três opções que o banco aceita podem estar no seletor: uma opção que
   // o CHECK recusa é pior que nenhuma, porque o usuário escolhe e leva erro.
   const opcoes = await page.locator('.erp-field', { hasText: 'Motivo' }).locator('select option').allTextContents();
   if (opcoes.length !== 3) throw new Error(`seletor com ${opcoes.length} opções: ${opcoes.join(' | ')}`);
 
-  await page.locator('button.erp-lookup-control').first().click();
+  await bloco.locator('button.erp-lookup-control').click();
   await page.waitForTimeout(500);
   await page.locator('.erp-lookup-panel input').fill(String(MAQ));
   await page.waitForTimeout(600);
   await page.locator('.erp-lookup-item').first().click();
   await page.waitForTimeout(300);
-  await page.locator('.erp-field', { hasText: 'Início' }).locator('input').fill('2026-09-21T08:00');
-  await page.locator('.erp-field', { hasText: 'Fim' }).locator('input').fill('2026-09-21T10:30');
-  await page.locator('.erp-field', { hasText: 'Descrição' }).locator('input').fill('Quebra do servo do eixo Y');
+  await bloco.locator('.erp-field', { hasText: 'Início' }).locator('input').fill('2026-09-21T08:00');
+  await bloco.locator('.erp-field', { hasText: 'Fim' }).locator('input').fill('2026-09-21T10:30');
+  await bloco.locator('.erp-field', { hasText: 'Descrição' }).locator('input').fill('Quebra do servo do eixo Y');
   await page.getByRole('button', { name: 'Registrar parada' }).click();
 });
 
 await passo('parada sem descrição é recusada antes de ir ao servidor', async () => {
-  await page.locator('.erp-field', { hasText: 'Descrição' }).locator('input').fill('');
-  await page.locator('.erp-field', { hasText: 'Início' }).locator('input').fill('2026-09-22T08:00');
-  await page.locator('.erp-field', { hasText: 'Fim' }).locator('input').fill('2026-09-22T09:00');
+  const bloco = page.locator('.erp-fieldset').filter({ hasText: 'Lançar parada que já aconteceu' });
+  await bloco.locator('.erp-field', { hasText: 'Descrição' }).locator('input').fill('');
+  await bloco.locator('.erp-field', { hasText: 'Início' }).locator('input').fill('2026-09-22T08:00');
+  await bloco.locator('.erp-field', { hasText: 'Fim' }).locator('input').fill('2026-09-22T09:00');
   await page.getByRole('button', { name: 'Registrar parada' }).click();
 });
 
@@ -176,6 +178,28 @@ await passo('a parada aparece na consulta', async () => {
   const linhas = await page.locator('.erp-grid tbody tr').allTextContents();
   if (!linhas.some((l) => /servo do eixo Y/.test(l))) throw new Error(`a parada gravada não apareceu: ${linhas.join(' // ')}`);
   if (!linhas.some((l) => /2\.50|2,50/.test(l))) throw new Error(`horas da parada não conferem (esperado 2.50): ${linhas.join(' // ')}`);
+});
+
+await passo('cronômetro: máquina parou e voltou', async () => {
+  // O LookupField do cronômetro é o primeiro da aba.
+  await page.locator('button.erp-lookup-control').first().click();
+  await page.waitForTimeout(500);
+  await page.locator('.erp-lookup-panel input').fill(String(MAQ));
+  await page.waitForTimeout(600);
+  await page.locator('.erp-lookup-item').first().click();
+  await page.waitForTimeout(900);
+
+  await page.locator('.erp-field', { hasText: 'O que houve' }).locator('input').fill('Troca de bico');
+  await page.getByRole('button', { name: 'Máquina parou' }).click();
+  await page.waitForTimeout(900);
+
+  const emCurso = await page.locator('.erp-status-item').first().textContent();
+  if (!/Parada h/i.test(emCurso ?? '')) throw new Error(`não entrou em parada: "${emCurso}"`);
+
+  await page.getByRole('button', { name: 'Voltou a produzir' }).click();
+  await page.waitForTimeout(900);
+  const fim = await page.locator('.erp-feedback').last().textContent();
+  if (!/encerrada/i.test(fim ?? '')) throw new Error(`não encerrou: "${fim}"`);
 });
 
 // ── 6. Consumível: autonomia da carga e tempo de troca ──────────────────────
@@ -228,9 +252,27 @@ await passo('simulador exige campos', async () => {
 });
 
 // ── 9. Demais abas abrem sem erro ───────────────────────────────────────────
-for (const a of ['Preparação', 'Agenda']) {
-  await passo(`aba ${a} abre`, async () => { await abrirAba(a); });
-}
+await abrirAba('Preparação');
+await passo('agrupar itens em família de preparação', async () => {
+  await page.locator('.erp-field', { hasText: 'Nome da família' }).locator('input').fill(`CHAPA-${SUF}`);
+  await page.locator('.erp-field', { hasText: 'Acrescentar item' }).locator('button.erp-lookup-control').click();
+  await page.waitForTimeout(500);
+  await page.locator('.erp-lookup-item').first().click();
+  await page.waitForTimeout(400);
+  const escolhidos = await page.locator('.erp-field', { hasText: 'Itens escolhidos' }).textContent();
+  if (!/\(1\)/.test(escolhidos ?? '')) throw new Error(`o item não entrou na lista: "${escolhidos}"`);
+  await page.getByRole('button', { name: 'Agrupar' }).click();
+});
+
+await passo('a tela mostra quantos pares a família dispensa', async () => {
+  await page.waitForTimeout(700);
+  const linhas = await page.locator('.erp-grid tbody tr').allTextContents();
+  if (!linhas.some((l) => new RegExp(`CHAPA-${SUF}`).test(l))) {
+    throw new Error(`a família não apareceu: ${linhas.slice(0, 3).join(' // ')}`);
+  }
+});
+
+await passo('aba Agenda abre', async () => { await abrirAba('Agenda'); });
 
 await page.screenshot({ path: join(SHOTS, 'vmaq0200-abas.png'), fullPage: true });
 writeFileSync(join(SHOTS, 'vmaq0200.json'), JSON.stringify({ passos, erros }, null, 2));

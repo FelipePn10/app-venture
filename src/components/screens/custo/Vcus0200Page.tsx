@@ -3,6 +3,7 @@ import {
   type MarginParameters, type MarginLine, type MarginSummary,
   COST_BASES, getMarginParameters, saveMarginParameters,
   generateMargin, getMarginReport,
+  simulateMargin, type MarginSimulation, type MarginSimulationInput,
 } from "@/services/marginService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -21,7 +22,7 @@ import { loadItems, loadCustomers } from "@/services/lookups";
  * aparece como ruim.
  */
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type Aba = "parametros" | "apuracao";
+type Aba = "parametros" | "apuracao" | "simulacao";
 
 const hoje = new Date();
 const primeiroDiaDoMes = () => `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
@@ -47,6 +48,13 @@ function corDaMargem(pct: number): string {
 
 export function Vcus0200Page(): JSX.Element {
   const [aba, setAba] = useState<Aba>("apuracao");
+  const [sim, setSim] = useState<MarginSimulationInput>({
+    quantidade: 1, preco_unitario: 0,
+    custo_unitario: 0, custo_transformacao_unitario: 0,
+    ipi_pct: 0, icms_pct: 0, pis_cofins_pct: 0,
+    comissao_pct: 0, outros_valor: 0, margem_desejada_pct: 0,
+  });
+  const [simResult, setSimResult] = useState<MarginSimulation | null>(null);
   const [params, setParams] = useState<MarginParameters>({ ...PARAMS_VAZIOS });
   const [de, setDe] = useState(primeiroDiaDoMes());
   const [ate, setAte] = useState(hojeISO());
@@ -95,6 +103,13 @@ export function Vcus0200Page(): JSX.Element {
     setLinhas(await getMarginReport(de, ate, ordem, { item_code: itemFiltro, customer_code: clienteFiltro }));
   });
 
+  const simular = () => run(async () => {
+    if (!(sim.quantidade > 0)) throw new Error("Informe a quantidade.");
+    if (!(sim.preco_unitario > 0)) throw new Error("Informe o preço unitário de venda.");
+    const r = await simulateMargin({ ...sim, ano: params.ano, mes: params.mes });
+    setSimResult(r);
+  });
+
   const cicloNegativo = params.avg_sales_term_days - params.avg_purchase_term_days + params.production_cycle_days < 0;
 
   return (
@@ -136,6 +151,7 @@ export function Vcus0200Page(): JSX.Element {
         <section className="erp-detail-panel">
           <div className="erp-tabs">
             <button className={`erp-tab ${aba === "apuracao" ? "active" : ""}`} onClick={() => setAba("apuracao")}>Apuração</button>
+            <button className={`erp-tab ${aba === "simulacao" ? "active" : ""}`} onClick={() => setAba("simulacao")}>Simulação</button>
             <button className={`erp-tab ${aba === "parametros" ? "active" : ""}`} onClick={() => setAba("parametros")}>Parâmetros do mês</button>
           </div>
           <div className="erp-detail-body">
@@ -204,6 +220,147 @@ export function Vcus0200Page(): JSX.Element {
                   </div>
                 </div>
               </div>
+            )}
+
+            {aba === "simulacao" && (
+              <>
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">A venda que você quer simular</div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c12">
+                      <p className="erp-note">
+                        A <strong>Apuração</strong> olha para trás — o que já foi vendido. Aqui é o contrário:
+                        antes de fechar o pedido, veja o que sobra. A conta é a <strong>mesma</strong> do
+                        fechamento do mês, então o número que aparece aqui é o que vai aparecer lá.
+                        <br />
+                        Os percentuais mudam por operação (ICMS dentro e fora do estado, comissão por
+                        vendedor). O resto — incidência administrativa, frete médio, taxa financeira e o
+                        ciclo de caixa — vem dos <strong>Parâmetros de {String(params.mes).padStart(2, "0")}/{params.ano}</strong>.
+                      </p>
+                    </div>
+
+                    <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label>
+                      <input className="erp-input num" type="number" step="any" min="0" value={sim.quantidade || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, quantidade: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço unitário</label>
+                      <input className="erp-input num" type="number" step="any" min="0" value={sim.preco_unitario || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, preco_unitario: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Custo unitário</label>
+                      <input className="erp-input num" type="number" step="any" min="0" value={sim.custo_unitario || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, custo_unitario: Number(e.target.value) }))} />
+                      <span className="erp-hint">Matéria-prima.</span></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Transformação unit.</label>
+                      <input className="erp-input num" type="number" step="any" min="0" value={sim.custo_transformacao_unitario || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, custo_transformacao_unitario: Number(e.target.value) }))} />
+                      <span className="erp-hint">Mão de obra e gastos gerais.</span></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Margem desejada (%)</label>
+                      <input className="erp-input num" type="number" step="any" min="0" max="100" value={sim.margem_desejada_pct || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, margem_desejada_pct: Number(e.target.value) }))} />
+                      <span className="erp-hint">Devolve o preço mínimo.</span></div>
+
+                    <div className="erp-field erp-c12"><div className="erp-sec">Impostos e comissão desta operação</div></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">IPI (%)</label>
+                      <input className="erp-input num" type="number" step="any" min="0" max="100" value={sim.ipi_pct || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, ipi_pct: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">ICMS (%)</label>
+                      <input className="erp-input num" type="number" step="any" min="0" max="100" value={sim.icms_pct || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, icms_pct: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">PIS/COFINS (%)</label>
+                      <input className="erp-input num" type="number" step="any" min="0" max="100" value={sim.pis_cofins_pct || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, pis_cofins_pct: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Comissão (%)</label>
+                      <input className="erp-input num" type="number" step="any" min="0" max="100" value={sim.comissao_pct || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, comissao_pct: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Outros (R$)</label>
+                      <input className="erp-input num" type="number" step="any" min="0" value={sim.outros_valor || ""}
+                        onChange={(e) => setSim((p) => ({ ...p, outros_valor: Number(e.target.value) }))} /></div>
+                    <div className="erp-field erp-c2" style={{ alignSelf: "end" }}>
+                      <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={simular} disabled={busy}>Simular</button></div>
+                  </div>
+                </div>
+
+                {simResult && (
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">
+                      Cascata da margem — {sim.quantidade.toLocaleString("pt-BR")} × R$ {dinheiro(simResult.preco_unitario)}
+                    </div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c6">
+                        <table className="erp-grid">
+                          <tbody>
+                            {([
+                              ["Faturamento bruto", simResult.faturamento_bruto, false],
+                              ["(−) IPI", -simResult.ipi, true],
+                              ["Faturamento da mercadoria", simResult.faturamento_mercadoria, false],
+                              ["(−) ICMS", -simResult.icms, true],
+                              ["(−) PIS/COFINS", -simResult.pis_cofins, true],
+                              ["(−) Matéria-prima", -simResult.custo_materia_prima, true],
+                              ["(−) Transformação", -simResult.custo_transformacao, true],
+                              ["Lucro bruto", simResult.lucro_bruto, false],
+                              ["(−) Administrativa", -simResult.despesa_administrativa, true],
+                              ["(−) Comissão", -simResult.comissao, true],
+                              ["(−) Frete", -simResult.frete, true],
+                              ["(−) Outros", -simResult.outros, true],
+                              ["(−) Financeira do prazo", -simResult.despesa_financeira, true],
+                              ["(−) Provisão de IR/CSLL", -simResult.provisao_ir, true],
+                            ] as [string, number, boolean][]).map(([rotulo, valor, deducao]) => (
+                              <tr key={rotulo}>
+                                <td style={{ color: deducao ? "var(--v-text-2)" : "inherit", fontWeight: deducao ? 400 : 600 }}>{rotulo}</td>
+                                <td className="num" style={{ color: deducao ? "var(--v-text-2)" : "inherit", fontWeight: deducao ? 400 : 600 }}>
+                                  {dinheiro(valor)}
+                                </td>
+                              </tr>
+                            ))}
+                            <tr style={{ borderTop: "2px solid var(--v-border-strong)" }}>
+                              <td style={{ fontWeight: 700 }}>Margem de contribuição</td>
+                              <td className="num" style={{ fontWeight: 700, color: corDaMargem(simResult.margem_pct) }}>
+                                {dinheiro(simResult.margem)} ({pct(simResult.margem_pct, 2)}%)
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="erp-field erp-c6">
+                        <div className="erp-field erp-c12"><label className="erp-label">Margem por peça</label>
+                          <input className="erp-input num" readOnly style={{ color: corDaMargem(simResult.margem_pct), fontWeight: 600 }}
+                            value={`R$ ${dinheiro(sim.quantidade > 0 ? simResult.margem / sim.quantidade : 0)}`} /></div>
+                        <div className="erp-field erp-c12"><label className="erp-label">Custo de financiar o prazo</label>
+                          <input className="erp-input" readOnly
+                            value={`${simResult.ciclo_caixa_dias} dias · ${pct(simResult.taxa_financeira_real_pct, 4)}% no período`} />
+                          <span className="erp-hint">É o que o prazo de pagamento custa, já dentro da margem acima.</span></div>
+
+                        {simResult.margem_desejada_pct > 0 && (
+                          <div className="erp-field erp-c12">
+                            <label className="erp-label">Preço mínimo para {pct(simResult.margem_desejada_pct, 1)}% de margem</label>
+                            {simResult.preco_minimo != null ? (
+                              <>
+                                <input className="erp-input num" readOnly style={{ fontWeight: 700, fontSize: 16 }}
+                                  value={`R$ ${dinheiro(simResult.preco_minimo)}`} />
+                                <span className="erp-hint">
+                                  {simResult.preco_minimo > simResult.preco_unitario
+                                    ? `R$ ${dinheiro(simResult.preco_minimo - simResult.preco_unitario)} acima do preço simulado — abaixo disso a margem não fecha.`
+                                    : `O preço simulado já está R$ ${dinheiro(simResult.preco_unitario - simResult.preco_minimo)} acima do mínimo.`}
+                                </span>
+                              </>
+                            ) : (
+                              <input className="erp-input" readOnly value={simResult.preco_minimo_nota || "não há preço que atinja essa margem"} />
+                            )}
+                          </div>
+                        )}
+
+                        {simResult.margem < 0 && (
+                          <div className="erp-field erp-c12">
+                            <div className="erp-feedback error" style={{ margin: 0 }}>
+                              Esta venda dá prejuízo: consome R$ {dinheiro(Math.abs(simResult.margem))} a mais do que traz.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {aba === "apuracao" && (

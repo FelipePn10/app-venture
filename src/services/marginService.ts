@@ -34,8 +34,8 @@ export interface MarginParameters {
 
 /** Base de custo usada na apuração; muda o número e fica gravada com ele. */
 export const COST_BASES = [
-  { value: 'PADRAO', label: 'Custo padrão — o que o produto deveria custar' },
-  { value: 'MEDIO', label: 'Custo médio — o que a mercadoria custou de fato' },
+  { value: 'PADRAO', label: 'Custo padrão' },
+  { value: 'MEDIO', label: 'Custo médio' },
 ] as const;
 
 export interface MarginLine {
@@ -138,4 +138,58 @@ export async function getMarginReport(
       provisao_ir: n('provisao_ir'), margem: n('margem'), margem_pct: n('margem_pct'),
     };
   });
+}
+
+/**
+ * Simulação de margem — "e se eu vender assim?".
+ *
+ * Usa a MESMA cascata da apuração no backend, então o número que o vendedor vê
+ * aqui é o que o fechamento do mês vai mostrar depois.
+ */
+export interface MarginSimulationInput {
+  ano?: number; mes?: number;
+  quantidade: number;
+  preco_unitario: number;
+  custo_unitario: number;
+  custo_transformacao_unitario: number;
+  ipi_pct: number; icms_pct: number; pis_cofins_pct: number;
+  comissao_pct: number; outros_valor: number;
+  margem_desejada_pct: number;
+}
+
+export interface MarginSimulation {
+  faturamento_bruto: number; ipi: number; faturamento_mercadoria: number;
+  icms: number; pis_cofins: number;
+  custo_materia_prima: number; custo_transformacao: number; lucro_bruto: number;
+  despesa_administrativa: number; comissao: number; frete: number; outros: number;
+  despesa_financeira: number; provisao_ir: number;
+  margem: number; margem_pct: number;
+  preco_unitario: number;
+  ciclo_caixa_dias: number; taxa_financeira_real_pct: number;
+  margem_desejada_pct: number;
+  preco_minimo?: number | null;
+  preco_minimo_nota?: string;
+}
+
+export async function simulateMargin(input: MarginSimulationInput): Promise<MarginSimulation> {
+  const { data } = await httpClient.post<unknown>(`${BASE}/simulate`, input);
+  const o = (data ?? {}) as Record<string, unknown>;
+  const n = (k: string) => Number(o[k] ?? 0);
+  return {
+    faturamento_bruto: n('faturamento_bruto'), ipi: n('ipi'),
+    faturamento_mercadoria: n('faturamento_mercadoria'),
+    icms: n('icms'), pis_cofins: n('pis_cofins'),
+    custo_materia_prima: n('custo_materia_prima'), custo_transformacao: n('custo_transformacao'),
+    lucro_bruto: n('lucro_bruto'),
+    despesa_administrativa: n('despesa_administrativa'), comissao: n('comissao'),
+    frete: n('frete'), outros: n('outros'),
+    despesa_financeira: n('despesa_financeira'), provisao_ir: n('provisao_ir'),
+    margem: n('margem'), margem_pct: n('margem_pct'),
+    preco_unitario: n('preco_unitario'),
+    ciclo_caixa_dias: n('ciclo_caixa_dias'),
+    taxa_financeira_real_pct: n('taxa_financeira_real_pct'),
+    margem_desejada_pct: n('margem_desejada_pct'),
+    preco_minimo: o.preco_minimo == null ? null : Number(o.preco_minimo),
+    preco_minimo_nota: String(o.preco_minimo_nota ?? ''),
+  };
 }

@@ -229,3 +229,77 @@ export async function exportGanttBoard(from: string, to: string | undefined, for
   const { data } = await httpClient.get(`${BASE}/gantt/board/export`, { params, responseType: 'blob' });
   return data as Blob;
 }
+
+/**
+ * Famílias de preparação.
+ *
+ * A matriz aceita regra por família com um dos lados em branco como coringa, e
+ * é isso que evita a explosão combinatória: quarenta chapas não precisam de mil
+ * e seiscentas linhas, precisam de três regras entre famílias.
+ *
+ * A família é de PROCESSO — numa máquina de corte, espessura e material. Não se
+ * confunde com a classificação comercial do item.
+ */
+export interface SetupFamily { family: string; items: number }
+
+export async function listSetupFamilies(): Promise<SetupFamily[]> {
+  const { data } = await httpClient.get<unknown>(`${BASE}/setup-families`);
+  const linhas = Array.isArray(data) ? data : [];
+  return linhas.map((raw) => {
+    const o = raw as Record<string, unknown>;
+    return { family: String(o.family ?? ''), items: Number(o.items ?? 0) };
+  }).filter((f) => f.family);
+}
+
+export async function listSetupFamilyItems(family: string): Promise<string[]> {
+  const { data } = await httpClient.get<unknown>(`${BASE}/setup-families/${encodeURIComponent(family)}/items`);
+  return Array.isArray(data) ? data.map(String) : [];
+}
+
+/** Família em branco desfaz o agrupamento dos itens informados. */
+export async function assignSetupFamily(family: string, itemCodes: number[]): Promise<number> {
+  const { data } = await httpClient.put<unknown>(`${BASE}/setup-families`, { family, item_codes: itemCodes });
+  return Number((data as Record<string, unknown>)?.updated ?? 0);
+}
+
+/**
+ * Cronômetro de parada do chão de fábrica.
+ *
+ * Parada de máquina dura minutos e acontece várias vezes por turno. Exigir que
+ * o operador digite início e fim garante que ele não registre — e o que não é
+ * registrado deixa o planejamento achando que a máquina produziu o turno todo.
+ */
+export interface MachineStop {
+  id: number; machine_id: number; downtime_type: string;
+  reason: string; minutes: number; open: boolean;
+}
+
+function parseStop(raw: unknown): MachineStop {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(o.id ?? 0),
+    machine_id: Number(o.machine_id ?? 0),
+    downtime_type: String(o.downtime_type ?? ''),
+    reason: String(o.reason ?? ''),
+    minutes: Number(o.minutes ?? 0),
+    open: Boolean(o.open),
+  };
+}
+
+export async function machineStopStatus(machineId: number): Promise<MachineStop> {
+  const { data } = await httpClient.get<unknown>(`${BASE}/machine-stops/${machineId}`);
+  return parseStop(data);
+}
+
+/** Idempotente por máquina: tocar duas vezes devolve a parada já aberta. */
+export async function openMachineStop(machineId: number, downtimeType: string, reason: string): Promise<MachineStop> {
+  const { data } = await httpClient.post<unknown>(`${BASE}/machine-stops/open`, {
+    machine_id: machineId, downtime_type: downtimeType, reason,
+  });
+  return parseStop(data);
+}
+
+export async function closeMachineStop(machineId: number): Promise<MachineStop> {
+  const { data } = await httpClient.post<unknown>(`${BASE}/machine-stops/${machineId}/close`, {});
+  return parseStop(data);
+}

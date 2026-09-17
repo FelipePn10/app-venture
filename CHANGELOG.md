@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## Novidades
+- **Simulação de margem na VCUS0200.** Antes de fechar o pedido, veja o que sobra: preço, quantidade, custo, impostos e comissão devolvem a cascata inteira — e o que o prazo de pagamento custa aparece como linha, não sumido na conta. Informando a margem desejada, a tela devolve o **preço mínimo** que a atinge, com a diferença para o preço simulado. Venda que dá prejuízo é avisada em vermelho.
+- **Unidade de tempo em segundos** na produtividade por item. A ficha traz "85 s por peça" e agora é lançado direto.
+- **Famílias de preparação.** Agrupe os itens que custam o mesmo para trocar na máquina e escreva a regra entre famílias — quarenta chapas pedem três regras, não mil e seiscentos pares. A tela mostra quantos pares cada família dispensa.
+
+## Melhorias
+- **O terminal de parada de máquina (VPRO1200) foi redesenhado.** A cor passa a carregar o estado: máquina parada tinge a tela de âmbar e o cronômetro fica grande o bastante para ler do outro lado do corredor. Os motivos viraram seis alvos grandes em vez de uma lista de linhas finas.
+- A aba Paradas separa **"a máquina parou agora"** de **"lançar parada que já aconteceu"** — antes os dois tinham um campo "Motivo" e não dava para saber qual usar.
+- O seletor de base de custo da VCUS0200 cortava o texto no meio da frase.
+
 ## [v1.1.26] — 2026-09-16
 
 ## Novidades
