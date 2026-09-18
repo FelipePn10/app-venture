@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.28] — 2026-09-18
+
 ## Novidades
 - **O roteiro de fabricação virou seis abas.** Eram sete blocos empilhados numa rolagem só; agora cada aba responde a uma pergunta, na ordem em que se desenha um processo: biblioteca de operações, roteiros do item, etapas do roteiro, recursos e ferramentas, rede de dependências, e tempo e custo do lote.
 - **Refugo por operação — a conta de quantas peças soltar.** Se o corte refuga 3% e a solda 1%, entregar 100 boas exige soltar mais na primeira etapa. A tela mostra a cascata etapa a etapa para o lote que você digitar, e o número entra no prazo, na capacidade reservada na máquina e na ordem de produção. Antes a ordem saía curta e as peças faltavam na expedição.
