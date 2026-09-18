@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## Novidades
+- **O roteiro de fabricação virou seis abas.** Eram sete blocos empilhados numa rolagem só; agora cada aba responde a uma pergunta, na ordem em que se desenha um processo: biblioteca de operações, roteiros do item, etapas do roteiro, recursos e ferramentas, rede de dependências, e tempo e custo do lote.
+- **Refugo por operação — a conta de quantas peças soltar.** Se o corte refuga 3% e a solda 1%, entregar 100 boas exige soltar mais na primeira etapa. A tela mostra a cascata etapa a etapa para o lote que você digitar, e o número entra no prazo, na capacidade reservada na máquina e na ordem de produção. Antes a ordem saía curta e as peças faltavam na expedição.
+- **Terceirização agora se cadastra na etapa do roteiro.** Uma bucha torneada aqui, cementada num terceiro e retificada aqui é cadastrada como três etapas — a do meio com fornecedor, custo por peça e prazo. A etapa que sai da fábrica aparece destacada na grade, e o MRP gera a ordem de serviço sozinho.
+- **Ponto de inspeção no roteiro.** Marque que depois de uma etapa a peça para para ser conferida, descreva o que medir, a amostra e o nível de aceitação. A ordem de produção abre o registro de inspeção ao chegar naquela etapa.
+- **Documento de processo por operação.** Desenho, instrução de trabalho, ficha e norma, com a revisão vigente. A instrução genérica fica na operação e vale em todo roteiro; o desenho fica na etapa, porque é do item. O operador vê os dois juntos.
+- **A tela de serviços de terceiros (VTPS0100) virou quatro abas** e passou a mostrar o que já existia sem aparecer: preço com frete, imposto e vigência, reajuste e troca de terceirizado em lote, ordens com o que foi enviado, o que voltou e o que ainda está lá, e o registro de remessa e retorno com nota e lote.
+
+## Melhorias
+- **A estrutura agora exige conversão quando a unidade difere.** Dava para cadastrar uma chapa em quilo no item e escrever "2 m²" na estrutura — e o sistema passava a reservar 2 kg. Agora a diferença só é aceita com a conversão cadastrada, e a tela mostra "2 m² = 31,4 kg" ao lado do campo. É esse valor que o MRP reserva, a ordem consome e o custo rateia.
+- **O prazo do terceiro aparece separado das horas.** São dois relógios: horas de trabalho nosso (8 h por dia útil) e dias corridos no fornecedor. Somar os dois num número só dava uma conta que não batia com nenhum deles.
+- **Confirmação de desativar passou a ser uma janela do sistema**, em português, dizendo qual registro será afetado e o que acontece depois — não a caixa do navegador.
+- A resposta de gravar uma etapa passou a trazer a linha completa (nome da operação, centro, tempos). Antes a linha aparecia em branco até alguém recarregar a tela, e parecia que não tinha gravado.
+
+## Correções
+- **Criar roteiro com data no formato da tela falhava.** A data "17/09/2026" voltava um erro técnico sobre formato de hora. Agora a tela e a API falam a mesma língua.
+- **Roteiro duplicado devolvia o erro cru do banco.** Agora explica que já existe um roteiro com aquela alternativa e o que fazer.
+- **O MRP travava o plano depois de terminar com ressalvas.** O cálculo rodava inteiro, gravava as sugestões e falhava exatamente ao registrar o próprio término — e como é esse registro que libera a trava, toda tentativa seguinte de planejar respondia "já existe um cálculo em andamento", sem saída pela tela. Bastava uma ressalva (um item sem produtividade cadastrada) para o plano travar de vez.
+- **Cálculo interrompido não bloqueia mais o plano.** Se o serviço reinicia no meio de um MRP, o registro ficava "rodando" para sempre. Agora ele é encerrado automaticamente e o planejamento segue.
+- O refugo cadastrado na operação voltava zerado ao reabrir o cadastro. Gravava certo, mas a tela mostrava 0 — e quem "corrigisse" apagava o valor certo.
+
 ## [v1.1.27] — 2026-09-17
 
 ## Novidades

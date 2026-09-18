@@ -54,6 +54,16 @@ export interface StructureComponent {
   quantity: number;
   effectiveQuantity: number;
   unitOfMeasurement: UnitOfMeasurement;
+  /**
+   * A engenharia escreve na unidade do desenho (m² de chapa); estoque, ordem e
+   * custo trabalham na unidade em que o item é guardado (kg). Estes três campos
+   * deixam a tela mostrar "2 m² = 31,4 kg" em vez de um número sem unidade —
+   * antes a divergência passava em silêncio e só aparecia no estoque, meses
+   * depois, como diferença sem explicação.
+   */
+  quantityStockUom: number;
+  stockUnitOfMeasurement: UnitOfMeasurement | null;
+  conversionFactor: number;
   health: Health;
   lossPercentage: number;
   position: number;
@@ -148,6 +158,9 @@ interface RawComponent {
   quantity: number;
   effective_quantity: number;
   unit_of_measurement: string;
+  quantity_stock_uom?: number;
+  stock_unit_of_measurement?: string;
+  conversion_factor?: number;
   health: string;
   loss_percentage: number;
   // A API chama a posição de "sequence"; "position" é o nome antigo.
@@ -229,6 +242,9 @@ function mapComponent(r: RawComponent, level: number, hasChildren: boolean): Str
     quantity:          r.quantity,
     effectiveQuantity: r.effective_quantity,
     unitOfMeasurement: r.unit_of_measurement as UnitOfMeasurement,
+    quantityStockUom:  Number(r.quantity_stock_uom ?? r.quantity ?? 0),
+    stockUnitOfMeasurement: (r.stock_unit_of_measurement as UnitOfMeasurement) ?? null,
+    conversionFactor:  Number(r.conversion_factor ?? 1) || 1,
     health:            r.health as Health,
     lossPercentage:    r.loss_percentage,
     // A API chama a posição de "sequence"; "position" é o nome antigo.

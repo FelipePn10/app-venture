@@ -48,6 +48,32 @@ function uid(): string {
   return `new_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+/**
+ * Mostra o que o resto do sistema realmente vai usar quando a unidade da
+ * estrutura difere da unidade em que o item é estocado.
+ *
+ * Sem isso o usuário escreve "2 M2" numa chapa estocada em quilo e não tem como
+ * saber que o planejamento passou a trabalhar com 31,4 kg — nem que, se a
+ * conversão não estivesse cadastrada, a gravação teria sido recusada. O número
+ * convertido aqui é o mesmo que o servidor gravou, não uma conta da tela.
+ */
+function ConversaoDeUnidade({ row }: { row: LocalRow }): JSX.Element | null {
+  const daEstrutura = row.unitOfMeasurement;
+  const doEstoque = row.stockUnitOfMeasurement;
+  if (!doEstoque || doEstoque === daEstrutura) return null;
+
+  const convertido = row.quantity * (row.conversionFactor || 1);
+  return (
+    <span className="fe-d-hint" style={{ color: 'var(--v-info)' }}>
+      Estocado em {enumLabel(doEstoque)}: {row.quantity.toLocaleString('pt-BR')} {enumLabel(daEstrutura)}
+      {' = '}
+      <strong>{convertido.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {enumLabel(doEstoque)}</strong>
+      {' '}(1 {enumLabel(daEstrutura)} = {row.conversionFactor.toLocaleString('pt-BR', { maximumFractionDigits: 6 })} {enumLabel(doEstoque)}).
+      É este valor que o MRP reserva, a ordem consome e o custo rateia.
+    </span>
+  );
+}
+
 function nextPosition(rows: LocalRow[]): number {
   if (rows.length === 0) return 1;
   return Math.max(...rows.map((r) => r.position)) + 1;
@@ -66,6 +92,11 @@ function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
     quantity: 1,
     effectiveQuantity: 0,
     unitOfMeasurement: 'UN',
+    // Linha nova ainda não passou pelo servidor: sem conversão conhecida, o
+    // fator é 1 e a quantidade de estoque é a própria.
+    quantityStockUom: 1,
+    stockUnitOfMeasurement: null,
+    conversionFactor: 1,
     health: 'ATIVO',
     lossPercentage: 0,
     position: nextPosition(rows),
@@ -362,6 +393,7 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
             onChange={(e) => onUpdate({ unitOfMeasurement: e.target.value as UnitOfMeasurement })}>
             {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
           </select>
+          <ConversaoDeUnidade row={row} />
         </div>
       </div>
 

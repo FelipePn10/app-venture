@@ -1,0 +1,334 @@
+================================================================================
+ROTEIRO DE FABRICAÇÃO — O QUE ELE FAZ NO VENTURERP
+Atualizado em 18/09/2026
+================================================================================
+
+O roteiro responde a UMA pergunta: por quais processos este item passa para
+ficar pronto. A estrutura de produto diz DO QUE ele é feito; o roteiro diz COMO
+ele é feito. São coisas diferentes e o sistema as mantém separadas de propósito.
+
+A cadeia entre itens ("a balança precisa da bucha") é da ESTRUTURA. O caminho da
+bucha ("tornear aqui, cementar num terceiro, retificar aqui") é do ROTEIRO DELA.
+Quem junta as duas é o MRP: ele explode a estrutura, descobre que precisa da
+bucha antes da balança, lê o roteiro de cada uma e ordena tudo no tempo.
+
+Telas: VENT0202 (roteiro efetivo do item) e VENT0115 (roteiros padrão).
+São a mesma tela com dois títulos. Seis abas, na ordem em que se desenha um
+processo.
+
+
+--------------------------------------------------------------------------------
+1. OPERAÇÃO / BIBLIOTECA
+--------------------------------------------------------------------------------
+O vocabulário da fábrica. "Cortar a laser", "Soldar MIG", "Cementar em terceiro"
+são cadastrados uma vez e reaproveitados em todos os roteiros.
+
+Cada operação guarda:
+
+  ORIGEM         INTERNA gera ordem de fabricação; EXTERNA e TERCEIROS geram
+                 ordem de serviço para o fornecedor.
+
+  MODELO DE TEMPO (padrão SAP/TOTVS — sem ele, um lote de 1 peça e um de 500
+  sairiam com o mesmo tempo):
+    Preparação   por lote, uma vez, independente da quantidade
+    Máquina      por ciclo de N peças ("peças por ciclo")
+    Mão de obra  por ciclo; zero significa "o operador fica na máquina o
+                 tempo todo"
+    Operadores   quantos atendem a máquina ao mesmo tempo
+    Fila,        fixos por lote. Entram no PRAZO mas não ocupam a máquina —
+    espera,      é o tempo em que a peça espera, não em que é trabalhada
+    movimentação
+    Unidade      minutos, horas ou dias
+
+  REFUGO PADRÃO  quanto do que entra não sai bom, em %. Ver seção 7.
+
+  TERCEIRIZAÇÃO (aparece só em operação externa):
+    Fornecedor, item de serviço, custo por peça, prazo em dias corridos e
+    o que remeter (itens da demanda, item da ordem, genérico ou nada).
+
+  DOCUMENTOS     desenho, instrução de trabalho, ficha de processo, norma,
+                 foto. Vinculados à operação valem em TODO roteiro que a usa.
+                 O sistema guarda a referência e a REVISÃO — o problema real
+                 não é achar o desenho, é o operador abrir a revisão vencida.
+
+
+--------------------------------------------------------------------------------
+2. ROTEIROS DO ITEM
+--------------------------------------------------------------------------------
+Um item pode ter mais de um roteiro:
+
+  ALTERNATIVA    outro jeito de fazer a mesma peça (fundida × usinada).
+  MÁSCARA        a variação configurada do item (cor, medida, acabamento).
+  VIGÊNCIA       início e fim. Fora dela o MRP não usa o roteiro — é o que
+                 permite trocar o processo numa data futura sem manter dois
+                 cadastros.
+  PADRÃO         o roteiro que o MRP e o CRP usam quando ninguém escolhe.
+
+Só pode existir um roteiro por (item + máscara + alternativa). Tentar repetir
+devolve uma mensagem que diz o que fazer, não o erro do banco.
+
+COPIAR ROTEIRO leva as etapas com tempos, refugo e terceirização, e a rede de
+dependências. É o que faz o roteiro padrão valer a pena: em vez de redigitar
+quinze etapas para cada peça parecida, copia-se o modelo e ajusta-se a diferença.
+
+
+--------------------------------------------------------------------------------
+3. ETAPAS DO ROTEIRO
+--------------------------------------------------------------------------------
+As operações na ordem em que acontecem. Cada etapa pode sobrepor qualquer campo
+da operação de biblioteca; em branco, herda. Preenche-se só o que é diferente
+NESTE roteiro.
+
+  Sequência, operação, centro de trabalho, tempos, refugo desta etapa,
+  ponto de inspeção, observação, e — quando a operação é externa — fornecedor,
+  custo por peça, prazo e o que remeter.
+
+A etapa que sai da fábrica aparece destacada na grade, com o fornecedor e o
+prazo. Não é erro: é uma etapa que corre em outro relógio e em outro CNPJ, e o
+planejador precisa enxergar isso sem abrir nada.
+
+A grade mostra, por etapa, QUANTO ENTRA nela. Com refugo esse número cresce para
+trás — a primeira operação processa mais peças que a última. Ver seção 7.
+
+
+--------------------------------------------------------------------------------
+4. RECURSOS E FERRAMENTAS (detalhe de uma etapa)
+--------------------------------------------------------------------------------
+Com o que a etapa é feita.
+
+  CENTROS ALTERNATIVOS  onde mais a etapa pode rodar quando o principal está
+                        cheio. Cada um com prioridade e FATOR DE TEMPO (1,2 =
+                        20% mais lento ali). O APS e o CRP escolhem entre eles.
+                        Um é o principal: é o que custo, CRP e lead time usam.
+
+  FERRAMENTAS           quais e quantas. A vida útil é consumida quando a etapa
+                        é concluída, e o sistema avisa quando a ferramenta chega
+                        ao limite de troca. Quando há número de série amarrado,
+                        o desgaste vai também para a peça física.
+
+  DOCUMENTOS DA ETAPA   o desenho é do ITEM, então mora aqui. A lista mostra
+                        junto os documentos herdados da operação de biblioteca,
+                        marcados como tal — é o que o operador vê no posto.
+
+  INSPEÇÃO              o que conferir, tamanho da amostra e nível de aceitação.
+                        Ver seção 8.
+
+
+--------------------------------------------------------------------------------
+5. REDE DE DEPENDÊNCIAS
+--------------------------------------------------------------------------------
+O que depende de quê. Sem nenhuma dependência cadastrada, as etapas seguem a
+ordem das sequências (10 → 20 → 30).
+
+Com a rede dá para dizer que duas etapas correm em PARALELO, ou que uma começa
+antes da outra terminar (SOBREPOSIÇÃO em %) — quando a peça vai saindo da
+máquina e já pode seguir.
+
+A sobreposição só vale em centro automático. Onde o operador fica na máquina até
+o fim, o cálculo a ignora: ele não larga a peça no meio.
+
+Ciclo na rede (A→B→A) é recusado com os números das etapas envolvidas. Antes o
+lead time voltava 0 h em silêncio e o MRP planejava como se o roteiro fosse
+instantâneo.
+
+
+--------------------------------------------------------------------------------
+6. TEMPO E CUSTO DO LOTE
+--------------------------------------------------------------------------------
+Quanto demora e quanto custa, para o tamanho de lote que se quiser simular.
+Nada é gravado.
+
+  CAMINHO CRÍTICO (CPM/PERT) — a sequência de etapas que define o prazo.
+  Mexer numa etapa fora dele não adianta nada.
+
+  DOIS RELÓGIOS, NUNCA SOMADOS:
+    horas de trabalho nosso  →  8 h por dia útil
+    dias no terceiro         →  dias CORRIDOS, fim de semana incluído
+  Somar os dois num número só daria uma conta que não bate com nenhum deles.
+
+  CUSTO POR ETAPA: hora-máquina × tempo de máquina + hora-homem × mão de obra ×
+  operadores + custo do terceiro. Fecha em custo do lote e custo por peça.
+  Etapa sem tarifa cadastrada entra com zero e a tela avisa.
+
+
+--------------------------------------------------------------------------------
+7. REFUGO POR OPERAÇÃO — quanto soltar para o pedido fechar
+--------------------------------------------------------------------------------
+A pergunta que o planejador faz todo dia: se o corte refuga 3% e a solda 1%,
+quantas peças preciso SOLTAR para entregar 100 boas?
+
+A conta vai de trás para frente:
+
+    entra = sai / (1 − refugo/100)
+
+  Exemplo real (bucha temperada, lote de 100):
+    30 Retificar  refugo 2,0%   entram 102,04
+    20 Cementar   refugo 1,5%   entram 103,59
+    10 Tornear    refugo 3,0%   entram 106,80   ← quantidade a soltar
+
+Sem isso a ordem sai curta: o planejador solta 100, o corte entrega 97, a solda
+96, e faltam peças descobertas só na expedição — quando não há mais tempo.
+
+Onde esse número é usado:
+  • a tela mostra a cascata etapa a etapa, para o lote que se digitar;
+  • o lead time usa a quantidade de CADA etapa (a primeira demora mais);
+  • a capacidade reservada na máquina usa a quantidade de cada etapa;
+  • a ordem de produção grava, por etapa, quanto ela precisa processar.
+
+É a MESMA fórmula da perda de estrutura. Duas contas de perda no mesmo sistema
+já produziram uma divergência silenciosa entre o que o MRP comprava e o que a
+ordem consumia; aqui existe uma só.
+
+Refugo da ESTRUTURA × refugo da OPERAÇÃO:
+  estrutura → material consumido que se perde (sobra de chapa)
+  operação  → a peça sendo feita que se perde (a peça inteira vai para o lixo)
+Os dois existem, são diferentes, e ambos entram na conta.
+
+
+--------------------------------------------------------------------------------
+8. PONTO DE INSPEÇÃO
+--------------------------------------------------------------------------------
+Marcar que depois de uma etapa a peça para para ser conferida.
+
+  Onde (processo, recebimento, expedição), o que inspecionar, tamanho da
+  amostra e nível de aceitação.
+
+Quando a ordem de produção é criada a partir do roteiro, cada etapa marcada com
+plano ativo abre automaticamente um REGISTRO DE INSPEÇÃO pendente, ligado à
+ordem. O inspetor preenche na tela de qualidade.
+
+Etapa marcada sem plano não gera registro — não há o que conferir. A tela avisa.
+
+
+--------------------------------------------------------------------------------
+9. TERCEIRIZAÇÃO — o caso da bucha
+--------------------------------------------------------------------------------
+Cenário: uma balança precisa de buchas; a bucha é torneada aqui, cementada num
+terceiro e retificada aqui.
+
+Como se cadastra:
+  1. Estrutura da balança: 4 buchas por balança.
+  2. Roteiro DA BUCHA:
+       10  Tornear    INTERNA    centro de torno
+       20  Cementar   TERCEIROS  fornecedor X, R$ 5,20/peça, 9 dias
+       30  Retificar  INTERNA    centro de retífica
+  3. Roteiro da balança: montar.
+
+O que o sistema faz com isso:
+  • enquanto a peça está no terceiro NENHUMA máquina nossa fica ocupada — o
+    planejamento só atrasa a etapa seguinte pelo prazo;
+  • o MRP gera uma ordem de FABRICAÇÃO para a bucha e uma ordem de SERVIÇO para
+    a cementação, e ordena a bucha antes da balança;
+  • o prazo do terceiro entra no lead time como dias corridos, separado das
+    horas internas;
+  • o custo por peça do terceiro entra no custo da bucha;
+  • a ordem de serviço aparece na VTPS0100, onde se registra o que foi remetido
+    e o que voltou, com nota fiscal e lote. O saldo "em poder de terceiros" sai
+    daí.
+
+
+--------------------------------------------------------------------------------
+10. COM QUEM O ROTEIRO CONVERSA
+--------------------------------------------------------------------------------
+MRP                Lê o roteiro padrão vigente do item. Usa o lead time para
+                   saber quando começar, gera ordem de fabricação para etapas
+                   internas e ordem de serviço para as externas, e reserva
+                   capacidade nas máquinas etapa a etapa.
+
+CRP / capacidade   Soma o tempo de todas as etapas por centro de trabalho e
+                   compara com a capacidade disponível do calendário.
+
+APS / sequenciamento  Ordena a fila de cada máquina. Respeita as precedências da
+                   rede, as paradas cadastradas e a matriz de preparação.
+                   Quando uma parada é encerrada, a fila daquela máquina é
+                   reprogramada sozinha.
+
+Ordem de produção  Nasce do roteiro: cada etapa vira uma operação da ordem, com
+                   centro de trabalho, horas planejadas e a quantidade que
+                   aquela etapa precisa processar. Ferramentas e inspeções vêm
+                   junto.
+
+Apontamento        Avança etapa a etapa. Ao concluir, consome a vida útil das
+                   ferramentas daquela etapa.
+
+Custo padrão       O roll-up soma material (estrutura) + transformação
+                   (roteiro), nível a nível.
+
+Qualidade          Recebe os registros de inspeção gerados pelas etapas
+                   marcadas.
+
+Serviços de        Recebe as ordens de serviço das operações externas e
+terceiros          controla remessa, retorno e o que está em poder do terceiro.
+
+Ativação de item   Um item não é ativado sem roteiro quando a política exige.
+
+
+--------------------------------------------------------------------------------
+11. COMPARAÇÃO COM OS GRANDES ERPs
+--------------------------------------------------------------------------------
+                                    SAP    Oracle  Focco   VentureERP
+Operação de biblioteca reusável      sim    sim     sim     sim
+Modelo de tempo separado             sim    sim     sim     sim
+  (preparação/máquina/mão de obra/
+   fila/espera/movimentação)
+Peças por ciclo e tamanho de equipe  sim    sim     sim     sim
+Roteiro alternativo                  sim    sim     sim     sim
+Vigência por data                    sim    sim     sim     sim
+Máscara / item configurado           sim    sim     sim     sim
+Rede de precedências com             sim    sim     parcial sim
+  sobreposição
+Centro de trabalho alternativo       sim    sim     sim     sim
+  com fator de tempo
+Ferramentas com vida útil            sim    parcial sim     sim
+Refugo por operação                  sim    sim     sim     sim
+Ponto de inspeção no roteiro         sim    sim     sim     sim
+Terceirização por operação           sim    sim     sim     sim
+Documento/instrução por operação     sim    sim     sim     sim
+Custo do lote na própria tela        não    não     parcial sim
+Cascata de refugo visível na tela    não    não     não     sim
+Dois relógios separados (horas       não    não     não     sim
+  internas × dias no terceiro)
+Copiar roteiro com rede junto        sim    sim     sim     sim
+
+Onde o VentureERP vai além: os três últimos. Nos outros sistemas a quantidade a
+soltar e o custo do lote existem, mas em relatório ou transação separada; aqui
+estão na mesma tela em que o processo é desenhado, atualizando ao digitar o
+tamanho do lote. E o prazo do terceiro não é diluído em "horas" — aparece como
+os dias corridos que de fato são.
+
+O que NÃO temos e eles têm (decisão consciente, não esquecimento):
+  • roteiro por linha de montagem com balanceamento automático (takt time) —
+    faz sentido em linha seriada, não em metalúrgica sob encomenda;
+  • versionamento com aprovação formal por engenharia (ECO/ECR) — a vigência
+    por data cobre o caso prático de trocar o processo numa data;
+  • simulação de capacidade infinita × finita lado a lado na tela do roteiro —
+    isso vive no CRP, que é onde o planejador olha.
+
+
+--------------------------------------------------------------------------------
+12. ONDE O CÓDIGO MORA
+--------------------------------------------------------------------------------
+Frontend
+  src/components/screens/engenharia/RoteiroFabricacaoPage.tsx   as seis abas
+  src/components/screens/engenharia/roteiro/RoteiroCustoPanel.tsx  tempo e custo
+  src/services/manufacturingRoutingService.ts                   chamadas à API
+
+Backend (panossoerp)
+  internal/domain/routing/entity/         operação, roteiro, etapa, rede
+    critical_path.go                      CPM/PERT
+    operation_time.go                     modelo de tempo → horas
+    refugo.go                             cascata de refugo
+  internal/application/usecase/routing_uc/
+  internal/infrastructure/repository/routing/
+  internal/interfaces/http/handler/routing_handler.go
+  internal/domain/mrp_calculation/service/machine_route.go   roteiro → máquina
+
+API: /api/routing/{operations, routes, route-operations, documents}
+
+Banco: operations, manufacturing_routes, route_operations,
+       route_operation_network, route_operation_resources, route_operation_tools,
+       operation_documents, inspection_plans.route_operation_id
+
+Migrações: 353 (refugo, inspeção, documentos), 354 (unidade de estoque na
+estrutura), 355 (status do cálculo MRP)
+================================================================================
