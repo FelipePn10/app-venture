@@ -23,7 +23,13 @@ import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 type Props = {
   operacoes: RouteOperationDTO[];
   nomeDaOperacao: (id: number) => string;
-  onClose: () => void;
+  /**
+   * Embutido = o painel é o conteúdo de uma aba, não uma janela por cima da
+   * tela. Sem moldura, sem fundo escurecido e sem botão de fechar: não há nada
+   * atrás para voltar.
+   */
+  embutido?: boolean;
+  onClose?: () => void;
 };
 
 type Linha = {
@@ -41,8 +47,8 @@ type Linha = {
 const brl = (v: number): string => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const horas = (v: number): string => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} h`;
 
-export function RoteiroCustoPanel({ operacoes, nomeDaOperacao, onClose }: Props): JSX.Element {
-  useEscapeToClose(onClose);
+export function RoteiroCustoPanel({ operacoes, nomeDaOperacao, embutido = false, onClose }: Props): JSX.Element {
+  useEscapeToClose(() => onClose?.());
   const [lote, setLote] = useState("1");
   const [tarifas, setTarifas] = useState<WorkCenterCost[]>([]);
   const [erro, setErro] = useState("");
@@ -106,17 +112,7 @@ export function RoteiroCustoPanel({ operacoes, nomeDaOperacao, onClose }: Props)
 
   const semTarifa = linhas.some((l) => l.custoMaquina === 0 && l.custoMaoDeObra === 0 && l.custoTerceiro === 0);
 
-  return (
-    <div className="rot-backdrop" role="dialog" aria-modal="true" aria-label="Tempo e custo do roteiro">
-      <div className="rot-modal">
-        <header className="rot-head">
-          <div>
-            <div className="rot-head-title">Tempo e custo do roteiro</div>
-            <div className="rot-head-sub">Simulação por tamanho de lote — nada é gravado</div>
-          </div>
-          <button className="erp-btn erp-btn-sm" onClick={onClose}>Fechar</button>
-        </header>
-
+  const conteudo = (
         <div className="rot-body">
           <div className="rot-lote">
             <label className="erp-label">Tamanho do lote</label>
@@ -176,8 +172,24 @@ export function RoteiroCustoPanel({ operacoes, nomeDaOperacao, onClose }: Props)
             </div>
           )}
         </div>
-      </div>
+  );
 
+  if (embutido) {
+    return <>{conteudo}<style>{ROT_STYLES}</style></>;
+  }
+
+  return (
+    <div className="rot-backdrop" role="dialog" aria-modal="true" aria-label="Tempo e custo do roteiro">
+      <div className="rot-modal">
+        <header className="rot-head">
+          <div>
+            <div className="rot-head-title">Tempo e custo do roteiro</div>
+            <div className="rot-head-sub">Simulação por tamanho de lote — nada é gravado</div>
+          </div>
+          <button className="erp-btn erp-btn-sm" onClick={() => onClose?.()}>Fechar</button>
+        </header>
+        {conteudo}
+      </div>
       <style>{ROT_STYLES}</style>
     </div>
   );

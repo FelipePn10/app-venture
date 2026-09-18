@@ -223,8 +223,11 @@ check('tela do roteiro usa lookup de centro, ferramenta e fornecedor',
   /loadWorkCenters/.test(roteiro) && /loadTools/.test(roteiro) && /loadSuppliers/.test(roteiro)
   && !/Ferramenta \(ID\)/.test(roteiro) && !/Centro \(ID\)/.test(roteiro));
 check('tela do roteiro tem vigência', /Início da vigência/.test(roteiro));
+// A asserção cobra o COMPORTAMENTO, não a forma da declaração: a cópia tem de
+// recriar as etapas, guardar a equivalência de ids e recriar a rede sobre eles.
+// Cobrar `async function` quebrava o teste só por trocar para arrow function.
 check('roteiro copia para outro item com rede de dependências',
-  /async function copiarRoteiro/.test(roteiro) && /equivalencia/.test(roteiro) && /createEdge\(novo\.id/.test(roteiro));
+  /copiarRoteiro/.test(roteiro) && /equivalencia/.test(roteiro) && /createEdge\(novo\.id/.test(roteiro));
 check('custo do roteiro simula por tamanho de lote',
   /RoteiroCustoPanel/.test(roteiro) && /Tamanho do lote/.test(custoPanel));
 check('custo do roteiro separa máquina de mão de obra',

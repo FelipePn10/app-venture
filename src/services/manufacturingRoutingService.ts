@@ -54,6 +54,14 @@ export interface OperationDTO {
   lead_time_days?: number;
   third_party_remittance?: string;
 
+  /**
+   * Refugo padrão da operação, em %: quanto do que entra não sai bom.
+   * Diferente da perda da estrutura, que é de material consumido — este é do
+   * item que está sendo feito, e é o que diz quanto soltar para entregar o
+   * pedido inteiro.
+   */
+  scrap_pct?: number;
+
   is_active?: boolean;
 }
 
@@ -113,8 +121,63 @@ export interface RouteOperationDTO {
   cost_per_unit?: number;
   lead_time_days?: number;
   third_party_remittance?: string;
+  /** Refugo desta etapa; vazio herda o da operação de biblioteca. */
+  scrap_pct?: number;
+  /** Refugo que vale de fato, já resolvido pelo backend. */
+  effective_scrap_pct?: number;
+  /**
+   * Quanto precisa ENTRAR nesta etapa para o roteiro entregar uma peça boa.
+   * Multiplique pelo tamanho do lote para ler em peças.
+   */
+  input_qty?: number;
+  /** Etapa é ponto de inspeção: a ordem abre o registro de inspeção nela. */
+  inspection_required?: boolean;
   situation?: string;
   notes?: string;
+}
+
+/** Desenho, instrução de trabalho ou ficha de processo da operação. */
+export type DocumentKind = 'DESENHO' | 'INSTRUCAO' | 'FICHA' | 'NORMA' | 'FOTO' | 'OUTRO';
+export const DOCUMENT_KINDS: { value: DocumentKind; label: string }[] = [
+  { value: 'DESENHO', label: 'Desenho' },
+  { value: 'INSTRUCAO', label: 'Instrução de trabalho' },
+  { value: 'FICHA', label: 'Ficha de processo' },
+  { value: 'NORMA', label: 'Norma' },
+  { value: 'FOTO', label: 'Foto' },
+  { value: 'OUTRO', label: 'Outro' },
+];
+
+export interface OperationDocumentDTO {
+  id?: number;
+  /** Um dos dois, nunca os dois: biblioteca (vale em todo roteiro) ou etapa. */
+  operation_id?: number;
+  route_operation_id?: number;
+  kind: DocumentKind;
+  title: string;
+  reference?: string;
+  revision?: string;
+  instructions?: string;
+  /** true = documento desta etapa; false = herdado da operação de biblioteca. */
+  is_step_level?: boolean;
+}
+
+export type InspectionPoint = 'RECEBIMENTO' | 'PROCESSO' | 'EXPEDICAO';
+export const INSPECTION_POINTS: { value: InspectionPoint; label: string }[] = [
+  { value: 'PROCESSO', label: 'No processo' },
+  { value: 'RECEBIMENTO', label: 'No recebimento' },
+  { value: 'EXPEDICAO', label: 'Na expedição' },
+];
+
+export interface RouteInspectionDTO {
+  id?: number;
+  route_operation_id: number;
+  step_sequence?: number;
+  point_type: InspectionPoint;
+  description: string;
+  sample_size: number;
+  acceptance_level: number;
+  instructions?: string;
+  characteristic_count?: number;
 }
 
 export interface EdgeDTO {
@@ -128,11 +191,25 @@ export interface RouteDetail {
   route: RouteDTO;
   operations: RouteOperationDTO[];
   edges: EdgeDTO[];
+  documents: OperationDocumentDTO[];
+  inspections: RouteInspectionDTO[];
+  /** Quantidade de referência usada na cascata de refugo (normalmente 1). */
+  reference_qty: number;
+  /** Quanto soltar para entregar `reference_qty` peças boas. */
+  release_qty: number;
 }
 
 export interface LeadTimeResult {
   lead_time_hours: number;
+  /**
+   * Prazo dos terceiros no caminho crítico, em dias CORRIDOS. Vem separado das
+   * horas porque são relógios diferentes: as horas são de trabalho nosso, os
+   * dias correm no calendário do fornecedor.
+   */
+  subcontract_days: number;
   critical_path: number[];
+  input_qty_by_operation?: Record<string, number>;
+  release_qty: number;
 }
 
 function parseOperation(raw: unknown): OperationDTO {
@@ -160,6 +237,7 @@ function parseOperation(raw: unknown): OperationDTO {
     cost_per_unit: parseNum(o, 'cost_per_unit', 'CostPerUnit') || undefined,
     lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
     third_party_remittance: parseStr(o, 'third_party_remittance', 'ThirdPartyRemittance') || undefined,
+    scrap_pct: parseNum(o, 'scrap_pct', 'ScrapPct'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };
 }
@@ -207,6 +285,10 @@ function parseRouteOp(raw: unknown): RouteOperationDTO {
     cost_per_unit: parseNum(o, 'cost_per_unit', 'CostPerUnit') || undefined,
     lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
     third_party_remittance: parseStr(o, 'third_party_remittance', 'ThirdPartyRemittance') || undefined,
+    scrap_pct: parseNum(o, 'scrap_pct', 'ScrapPct') || undefined,
+    effective_scrap_pct: parseNum(o, 'effective_scrap_pct', 'EffectiveScrap'),
+    input_qty: parseNum(o, 'input_qty', 'InputQty'),
+    inspection_required: parseBool(o, 'inspection_required', 'InspectionRequired'),
     situation: parseStr(o, 'situation', 'Situation') || undefined,
     notes: parseStr(o, 'notes', 'Notes') || undefined,
   };
@@ -226,6 +308,36 @@ function parseBreakdown(raw: unknown): OperationTimeBreakdown | undefined {
     crew_size: parseNum(o, 'crew_size', 'CrewSize') || 1,
   };
 }
+function parseDocument(raw: unknown): OperationDocumentDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: parseNum(o, 'id', 'ID'),
+    operation_id: parseNum(o, 'operation_id', 'OperationID') || undefined,
+    route_operation_id: parseNum(o, 'route_operation_id', 'RouteOperationID') || undefined,
+    kind: (parseStr(o, 'kind', 'Kind') || 'OUTRO') as DocumentKind,
+    title: parseStr(o, 'title', 'Title'),
+    reference: parseStr(o, 'reference', 'Reference') || undefined,
+    revision: parseStr(o, 'revision', 'Revision') || undefined,
+    instructions: parseStr(o, 'instructions', 'Instructions') || undefined,
+    is_step_level: parseBool(o, 'is_step_level', 'IsStepLevel'),
+  };
+}
+
+function parseInspection(raw: unknown): RouteInspectionDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: parseNum(o, 'id', 'ID'),
+    route_operation_id: parseNum(o, 'route_operation_id', 'RouteOperationID'),
+    step_sequence: parseNum(o, 'step_sequence', 'StepSequence') || undefined,
+    point_type: (parseStr(o, 'point_type', 'PointType') || 'PROCESSO') as InspectionPoint,
+    description: parseStr(o, 'description', 'Description'),
+    sample_size: parseNum(o, 'sample_size', 'SampleSize'),
+    acceptance_level: parseNum(o, 'acceptance_level', 'AcceptanceLevel'),
+    instructions: parseStr(o, 'instructions', 'Instructions') || undefined,
+    characteristic_count: parseNum(o, 'characteristic_count', 'CharacteristicCount'),
+  };
+}
+
 function parseEdge(raw: unknown): EdgeDTO {
   const o = unwrapObject(raw);
   return {
@@ -280,7 +392,42 @@ export async function getRouteDetail(id: number): Promise<RouteDetail> {
     route: parseRoute(o['route'] ?? o['Route'] ?? o),
     operations: unwrapArray(o['operations'] ?? o['Operations']).map(parseRouteOp),
     edges: unwrapArray(o['network'] ?? o['Network'] ?? o['edges'] ?? o['Edges']).map(parseEdge),
+    documents: unwrapArray(o['documents'] ?? o['Documents']).map(parseDocument),
+    inspections: unwrapArray(o['inspections'] ?? o['Inspections']).map(parseInspection),
+    reference_qty: parseNum(o, 'reference_qty', 'ReferenceQty') || 1,
+    release_qty: parseNum(o, 'release_qty', 'ReleaseQty') || 1,
   };
+}
+
+// ── Documentos de processo ──
+export async function addOperationDocument(dto: OperationDocumentDTO): Promise<OperationDocumentDTO> {
+  const { data } = await httpClient.post(`${BASE}/documents`, dto);
+  return parseDocument(data);
+}
+export async function updateOperationDocument(id: number, dto: OperationDocumentDTO): Promise<OperationDocumentDTO> {
+  const { data } = await httpClient.put(`${BASE}/documents/${id}`, { ...dto, id });
+  return parseDocument(data);
+}
+export async function removeOperationDocument(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/documents/${id}`);
+}
+export async function listOperationDocuments(operationId: number): Promise<OperationDocumentDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/operations/${operationId}/documents`);
+  return unwrapArray(data).map(parseDocument);
+}
+/** O que o operador vê na etapa: os documentos dela mais os da biblioteca. */
+export async function listStepDocuments(routeId: number, routeOpId: number): Promise<OperationDocumentDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/route-operations/${routeId}/${routeOpId}/documents`);
+  return unwrapArray(data).map(parseDocument);
+}
+
+// ── Pontos de inspeção ──
+export async function addRouteInspection(routeId: number, routeOpId: number, dto: Omit<RouteInspectionDTO, 'route_operation_id'>): Promise<RouteInspectionDTO> {
+  const { data } = await httpClient.post(`${BASE}/route-operations/${routeId}/${routeOpId}/inspections`, dto);
+  return parseInspection(data);
+}
+export async function removeRouteInspection(routeId: number, routeOpId: number, inspectionId: number): Promise<void> {
+  await httpClient.delete(`${BASE}/route-operations/${routeId}/${routeOpId}/inspections/${inspectionId}`);
 }
 
 // ── Operações do roteiro ──
@@ -301,6 +448,7 @@ export interface RouteOpResourceDTO {
   id?: number;
   route_operation_id?: number;
   work_center_id: number;
+  work_center_name?: string;
   priority: number;
   /** Escala o tempo da operação (1.0 = base). */
   time_factor?: number;
@@ -312,6 +460,7 @@ function parseResource(raw: unknown): RouteOpResourceDTO {
     id: parseNum(o, 'id', 'ID'),
     route_operation_id: parseNum(o, 'route_operation_id', 'RouteOperationID') || undefined,
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID'),
+    work_center_name: parseStr(o, 'work_center_name', 'WorkCenterName') || undefined,
     priority: parseNum(o, 'priority', 'Priority'),
     time_factor: parseNum(o, 'time_factor', 'TimeFactor'),
     is_primary: parseBool(o, 'is_primary', 'IsPrimary'),
@@ -370,12 +519,16 @@ export async function deleteEdge(routeId: number, edge: { predecessor_id: number
 }
 
 // ── Lead time (CPM) ──
-export async function getLeadTime(routeId: number): Promise<LeadTimeResult> {
-  const { data } = await httpClient.get(`${BASE}/routes/${routeId}/lead-time`);
+export async function getLeadTime(routeId: number, qty = 1): Promise<LeadTimeResult> {
+  const { data } = await httpClient.get(`${BASE}/routes/${routeId}/lead-time`, { params: { qty } });
   const o = unwrapObject(data);
   const cp = o['critical_path'] ?? o['CriticalPath'];
+  const porOp = o['input_qty_by_operation'] ?? o['InputQtyByOperation'];
   return {
     lead_time_hours: parseNum(o, 'lead_time_hours', 'total_hours', 'TotalHours', 'LeadTimeHours'),
+    subcontract_days: parseNum(o, 'subcontract_days', 'SubcontractDays'),
     critical_path: Array.isArray(cp) ? (cp as number[]) : [],
+    input_qty_by_operation: (porOp && typeof porOp === 'object' ? porOp : undefined) as Record<string, number> | undefined,
+    release_qty: parseNum(o, 'release_qty', 'ReleaseQty') || qty,
   };
 }

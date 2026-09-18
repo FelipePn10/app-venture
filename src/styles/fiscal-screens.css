@@ -561,3 +561,100 @@
   .fsc-term-state.parada::before { animation: none; }
   .fsc-term-tile, .fsc-term-back { transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONFIRMAÇÃO EM TELA
+   Substitui window.confirm(). O diálogo do navegador não diz o nome do sistema,
+   não cabe texto que explique a consequência e, num app Tauri, aparece com a
+   cara do sistema operacional — o usuário não reconhece de onde veio.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.fsc-confirm-backdrop {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(20, 38, 28, 0.42);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+
+.fsc-confirm {
+  background: var(--v-surface);
+  border: 1px solid var(--v-border-strong);
+  border-radius: 8px;
+  box-shadow: var(--v-shadow-lg);
+  width: 100%; max-width: 440px;
+  overflow: hidden;
+}
+
+.fsc-confirm-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px;
+  background: var(--v-surface-2);
+  border-bottom: 1px solid var(--v-border);
+  font-weight: 700; font-size: 13.5px; color: var(--v-text);
+}
+
+.fsc-confirm-ico { font-size: 18px; line-height: 1; }
+
+.fsc-confirm-body {
+  padding: 16px 18px;
+  font-size: 13px; line-height: 1.55; color: var(--v-text-2);
+}
+
+/* O que vai ser afetado, destacado para o usuário conferir antes de confirmar. */
+.fsc-confirm-subject {
+  display: block; margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--v-surface-3);
+  border-left: 3px solid var(--v-green);
+  border-radius: 3px;
+  font-weight: 600; color: var(--v-text);
+}
+
+.fsc-confirm-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px;
+  background: var(--v-surface-2);
+  border-top: 1px solid var(--v-border);
+}
+
+/* Desativar não é apagar: o registro continua existindo e as ordens antigas
+   seguem apontando para ele. Âmbar (atenção), não vermelho (erro). */
+.fsc-confirm.aviso .fsc-confirm-head { background: var(--v-warn-bg); border-bottom-color: var(--v-warn-bd); color: var(--v-warn); }
+.fsc-confirm.aviso .fsc-confirm-subject { border-left-color: var(--v-warn); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ROTEIRO DE FABRICAÇÃO
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Cabeçalho de sub-bloco dentro de uma aba. */
+.fsc-rot-sec {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--v-green);
+  border-bottom: 1px solid var(--v-green-border);
+  padding-bottom: 4px; margin-top: 4px;
+}
+
+/* Faixa de resumo da cascata de refugo: o número que o planejador procura. */
+.fsc-rot-cascata {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 18px;
+  padding: 10px 14px; margin-bottom: 10px;
+  background: var(--v-green-soft);
+  border: 1px solid var(--v-green-border);
+  border-radius: 6px;
+  font-size: 12.5px; color: var(--v-text-2);
+}
+.fsc-rot-cascata strong { color: var(--v-text); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+/* Etapa que sai da fábrica. Âmbar: não é erro, é uma etapa que corre em outro
+   relógio e em outro CNPJ — o planejador precisa enxergar isso na grade. */
+.fsc-rot-terceiro { background: var(--v-warn-bg) !important; }
+.fsc-rot-terceiro td:first-child { box-shadow: inset 3px 0 0 var(--v-warn); }
+
+.fsc-rot-flag {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .3px;
+  background: var(--v-warn-bg); color: var(--v-warn); border: 1px solid var(--v-warn-bd);
+}
+.fsc-rot-flag.insp { background: var(--v-info-bg); color: var(--v-info); border-color: var(--v-info-bd); }
+
+.erp-grid .num { text-align: right; font-variant-numeric: tabular-nums; }
