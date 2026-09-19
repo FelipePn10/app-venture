@@ -62,14 +62,23 @@ function ConversaoDeUnidade({ row }: { row: LocalRow }): JSX.Element | null {
   const doEstoque = row.stockUnitOfMeasurement;
   if (!doEstoque || doEstoque === daEstrutura) return null;
 
-  const convertido = row.quantity * (row.conversionFactor || 1);
+  const fator = row.conversionFactor || 1;
+  const convertido = row.quantityStockUom || row.quantity * fator;
+
+  // A equivalência é mostrada no sentido legível. Para um tubo de 6 metros o
+  // fator armazenado é 1/6000 = 0,000166667 — um número que ninguém reconhece.
+  // Invertido vira "1 UN = 6.000 MM", que é o que está escrito na nota do
+  // fornecedor e o que a pessoa confere de cabeça.
+  const equivalencia = fator < 1
+    ? `1 ${enumLabel(doEstoque)} = ${(1 / fator).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${enumLabel(daEstrutura)}`
+    : `1 ${enumLabel(daEstrutura)} = ${fator.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${enumLabel(doEstoque)}`;
+
   return (
     <span className="fe-d-hint" style={{ color: 'var(--v-info)' }}>
       Estocado em {enumLabel(doEstoque)}: {row.quantity.toLocaleString('pt-BR')} {enumLabel(daEstrutura)}
       {' = '}
       <strong>{convertido.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {enumLabel(doEstoque)}</strong>
-      {' '}(1 {enumLabel(daEstrutura)} = {row.conversionFactor.toLocaleString('pt-BR', { maximumFractionDigits: 6 })} {enumLabel(doEstoque)}).
-      É este valor que o MRP reserva, a ordem consome e o custo rateia.
+      {' '}({equivalencia}). É este valor que o MRP reserva, a ordem consome e o custo rateia.
     </span>
   );
 }

@@ -7,8 +7,10 @@ export type OpOrigin = 'INTERNA' | 'EXTERNA' | 'TERCEIROS';
 export const OP_ORIGINS: OpOrigin[] = ['INTERNA', 'EXTERNA', 'TERCEIROS'];
 
 /** Unidade em que os tempos da operação foram cadastrados. */
-export type TimeUnit = 'MIN' | 'HORA' | 'DIA';
+export type TimeUnit = 'SEGUNDO' | 'MIN' | 'HORA' | 'DIA';
 export const TIME_UNITS: { value: TimeUnit; label: string }[] = [
+  // Segundos primeiro: é a unidade da ficha de fábrica ("85 s por peça").
+  { value: 'SEGUNDO', label: 'Segundos' },
   { value: 'MIN', label: 'Minutos' },
   { value: 'HORA', label: 'Horas' },
   { value: 'DIA', label: 'Dias' },
