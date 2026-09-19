@@ -29,7 +29,8 @@ Cada operação guarda:
                  ordem de serviço para o fornecedor.
 
   MODELO DE TEMPO (padrão SAP/TOTVS — sem ele, um lote de 1 peça e um de 500
-  sairiam com o mesmo tempo):
+  sairiam com o mesmo tempo). A unidade aceita SEGUNDO, que é como a ficha de
+  fábrica vem ("85 s por peça") — sem converter nada à mão:
     Preparação   por lote, uma vez, independente da quantidade
     Máquina      por ciclo de N peças ("peças por ciclo")
     Mão de obra  por ciclo; zero significa "o operador fica na máquina o
@@ -38,7 +39,7 @@ Cada operação guarda:
     Fila,        fixos por lote. Entram no PRAZO mas não ocupam a máquina —
     espera,      é o tempo em que a peça espera, não em que é trabalhada
     movimentação
-    Unidade      minutos, horas ou dias
+    Unidade      segundos, minutos, horas ou dias
 
   REFUGO PADRÃO  quanto do que entra não sai bom, em %. Ver seção 7.
 
@@ -330,5 +331,30 @@ Banco: operations, manufacturing_routes, route_operations,
        operation_documents, inspection_plans.route_operation_id
 
 Migrações: 353 (refugo, inspeção, documentos), 354 (unidade de estoque na
-estrutura), 355 (status do cálculo MRP)
+estrutura), 355 (status do cálculo MRP), 356 (precisão do fator de conversão),
+357 (segundos no roteiro)
+
+--------------------------------------------------------------------------------
+13. A UNIDADE DO MATERIAL — POR QUE SÃO TRÊS CAMADAS
+--------------------------------------------------------------------------------
+A engenharia mede o consumo na unidade do desenho: 104 mm de tubo, 7,42 kg de
+chapa. O almoxarifado conta na unidade da prateleira: barras e chapas. Compras
+compra na unidade da nota: 1 barra, 1 chapa. As três estão certas.
+
+  items.warehouse_unit_of_measurement   como o almoxarifado conta
+  item_structures.unit_of_measurement   como a engenharia mede
+  item_unit_conversions                 quanto uma vale na outra
+
+Sem a terceira, o planejamento lê o número da engenharia como se fosse da
+prateleira. Uma barra tem 6000 mm: 104 mm lidos como 104 unidades pedem 104
+BARRAS por peça — seis mil vezes o necessário. Por isso a gravação é recusada
+quando as unidades diferem e não há conversão: adivinhar seria pior.
+
+O fator fica CONGELADO na linha da estrutura. Corrigir a conversão amanhã não
+reescreve o consumo de uma ordem em aberto; para adotar o fator novo, regrava-se
+a linha — a decisão é de quem desenha o produto.
+
+A conversão pode ser cadastrada em qualquer direção; o sistema usa a inversa.
+Cadastre no sentido que você sabe de cor ("1 barra = 6000 mm"), não no inverso
+("1 mm = 0,000166667 barra"), que é o mesmo número e ninguém confere.
 ================================================================================

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## Novidades
+- **Os tempos do roteiro entram em segundos.** A ficha de fábrica diz "setup 300 s, 15 s por peça" — agora é isso que se digita. Antes era preciso dividir por 3600 à mão e lançar 0,0833 e 0,0042, e era ali que o arredondamento entrava, virando minutos perdidos num lote de 500.
+- **Tutorial de roteiro em PDF** (`docs/treinamento-pratico/tutorial-roteiro.pdf`): 26 páginas montando os nove roteiros do RN 01001 do zero, com a cadeia da bucha que sai para cementação em terceiro.
+
+## Melhorias
+- **A conversão de unidade se cadastra no sentido que você sabe.** "1 barra = 6.000 mm" é o que está na nota do fornecedor; "1 mm = 0,000166667 barra" é o mesmo número e ninguém confere. A tela e a mensagem de erro passaram a mostrar o sentido legível, e o cadastro aceita qualquer um dos dois — o sistema usa a inversa.
+
+## Correções
+- **A conversão de unidade perdia precisão e dava dois números diferentes para a mesma linha.** Para 104 mm de uma barra de 6 metros, a quantidade gravada era 0,017333 e o recálculo pelo fator dava 0,017368 — meio por cento a mais, sempre para o mesmo lado, reaparecendo no consumo da ordem, no custo e no saldo do estoque.
+
 ## [v1.1.28] — 2026-09-18
 
 ## Novidades
