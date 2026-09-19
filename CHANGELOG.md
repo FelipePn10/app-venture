@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.29] — 2026-09-19
+
 ## Novidades
 - **Os tempos do roteiro entram em segundos.** A ficha de fábrica diz "setup 300 s, 15 s por peça" — agora é isso que se digita. Antes era preciso dividir por 3600 à mão e lançar 0,0833 e 0,0042, e era ali que o arredondamento entrava, virando minutos perdidos num lote de 500.
 - **Tutorial de roteiro em PDF** (`docs/treinamento-pratico/tutorial-roteiro.pdf`): 26 páginas montando os nove roteiros do RN 01001 do zero, com a cadeia da bucha que sai para cementação em terceiro.
