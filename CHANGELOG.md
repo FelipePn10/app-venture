@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.1.30] — 2026-09-22
+
 ## Novidades
 - Acompanhe início, pausa, interrupção, retomada e conclusão de cada etapa, com histórico de quem realizou a ação e quando.
 
