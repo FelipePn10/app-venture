@@ -23,9 +23,11 @@ import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadWorkCenters } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
+const COST_TABS = ["Custo padrão", "Centros de trabalho", "Custos de compra", "Bases de alocação", "Rateios"] as const;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
 export function Vcus0100Page(): JSX.Element {
+  const [activeTab, setActiveTab] = useState(0);
   const [wccs, setWccs] = useState<WorkCenterCost[]>([]);
   const [bases, setBases] = useState<AllocationBase[]>([]);
   const [ovhs, setOvhs] = useState<OverheadAllocation[]>([]);
@@ -113,9 +115,12 @@ export function Vcus0100Page(): JSX.Element {
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Custos</button></div>
+          <div className="erp-tabs" role="tablist" aria-label="Áreas de custos">
+            {COST_TABS.map((label, index) => <button key={label} id={`cost-tab-${index}`} role="tab" aria-selected={activeTab === index} aria-controls={`cost-panel-${index}`} className={`erp-tab${activeTab === index ? " active" : ""}`} onClick={() => { setActiveTab(index); setFeedback(null); }}>{label}</button>)}
+          </div>
           <div className="erp-detail-body">
 
+            {activeTab === 0 && (<div role="tabpanel" id="cost-panel-0" aria-labelledby="cost-tab-0">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Composição do custo padrão</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={rollupItem} loader={loadItems} entityLabel="item" onChange={(code) => setRollupItem(String(code ?? ""))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Lote de referência</label>
@@ -129,9 +134,11 @@ export function Vcus0100Page(): JSX.Element {
                 <div className="erp-field erp-c2"><label className="erp-label">Total</label><input className="erp-input num" value={money(rollup.total_cost)} readOnly /></div>
               </>}
             </div></div>
+            </div>)}
 
+            {activeTab === 1 && (<div role="tabpanel" id="cost-panel-1" aria-labelledby="cost-tab-1">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Custo/hora por centro de trabalho</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro de trabalho</label><LookupField value={wccForm.work_center_id || undefined} loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Selecionar ou informar o código…" onChange={(code) => setWccForm((p) => ({ ...p, work_center_id: Number(code ?? 0) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro de trabalho</label><LookupField value={wccForm.work_center_id || undefined} loader={loadWorkCenters} allowManualCode={false} entityLabel="centro de trabalho" placeholder="Selecionar centro de trabalho…" onChange={(code) => setWccForm((p) => ({ ...p, work_center_id: Number(code ?? 0) }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Custo/hora</label><input className="erp-input num" type="number" step="0.01" value={wccForm.cost_per_hour || ""} onChange={(e) => setWccForm((p) => ({ ...p, cost_per_hour: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarWcc} disabled={busy}>Salvar custo/hora</button></div>
               <div className="erp-field erp-c12"><table className="erp-grid">
@@ -142,7 +149,9 @@ export function Vcus0100Page(): JSX.Element {
                 </tbody>
               </table></div>
             </div></div>
+            </div>)}
 
+            {activeTab === 2 && (<div role="tabpanel" id="cost-panel-2" aria-labelledby="cost-tab-2">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Custo de compra por item</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={pcForm.item_code} loader={loadItems} entityLabel="item" onChange={(code) => setPcForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Custo</label><input className="erp-input num" type="number" step="0.01" value={pcForm.cost || ""} onChange={(e) => setPcForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
@@ -152,7 +161,9 @@ export function Vcus0100Page(): JSX.Element {
                 {pcResult && <span className="erp-tgroup-label">Item {pcResult.item_code}: {money(pcResult.cost)} {pcResult.currency ?? ""}</span>}
               </div>
             </div></div>
+            </div>)}
 
+            {activeTab === 3 && (<div role="tabpanel" id="cost-panel-3" aria-labelledby="cost-tab-3">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Base de alocação (critério de rateio)</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={baseForm.code || ""} onChange={(e) => setBaseForm((p) => ({ ...p, code: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={baseForm.description} onChange={(e) => setBaseForm((p) => ({ ...p, description: e.target.value }))} /></div>
@@ -166,7 +177,9 @@ export function Vcus0100Page(): JSX.Element {
                 </tbody>
               </table></div>
             </div></div>
+            </div>)}
 
+            {activeTab === 4 && (<div role="tabpanel" id="cost-panel-4" aria-labelledby="cost-tab-4">
             <div className="erp-fieldset"><div className="erp-fieldset-head">Rateio de custos indiretos</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Centro de custo</label><input className="erp-input num" type="number" value={ovhForm.cost_center_code || ""} onChange={(e) => setOvhForm((p) => ({ ...p, cost_center_code: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Início</label><input className="erp-input" type="date" value={ovhForm.period_start} onChange={(e) => setOvhForm((p) => ({ ...p, period_start: e.target.value }))} /></div>
@@ -202,6 +215,7 @@ export function Vcus0100Page(): JSX.Element {
                 </tbody>
               </table></div>
             </div></div>
+            </div>)}
 
           </div>
         </section>

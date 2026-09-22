@@ -18,6 +18,11 @@ import axios from 'axios';
 
 /** Nomes amigáveis (pt-BR) para tokens que aparecem em colunas/constraints. */
 const FIELD_LEXICON: Array<[RegExp, string]> = [
+  [/predecessor/i, 'etapa predecessora do roteiro'],
+  [/successor/i, 'etapa sucessora do roteiro'],
+  [/work[_-]?center|machine[_-]?type/i, 'centro de trabalho'],
+  [/created[_-]?by|actor[_-]?id/i, 'usuário responsável'],
+  [/route[_-]?operation/i, 'etapa do roteiro'],
   [/payment[_-]?term/i, 'condição de pagamento'],
   [/price[_-]?table|sales[_-]?table|tabela[_-]?venda/i, 'tabela de preço'],
   [/customer|cliente/i, 'cliente'],

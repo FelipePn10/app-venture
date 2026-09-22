@@ -524,7 +524,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                     <div className="erp-field erp-c2"><label className="erp-label">Centro padrão</label>
                       <LookupField value={opForm.default_work_center_id ?? undefined}
                         onChange={(c) => setOpF("default_work_center_id", c ? Number(c) : undefined)}
-                        loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Opcional" clearable /></div>
+                        loader={loadWorkCenters} allowManualCode={false} entityLabel="centro de trabalho" placeholder="Opcional" clearable /></div>
 
                     <div className="erp-field erp-c12"><div className="fsc-rot-sec">Modelo de tempo</div></div>
                     <div className="erp-field erp-c2"><label htmlFor="rot-op-setup" className="erp-label">Preparação (por lote)</label>
@@ -798,7 +798,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                       <div className="erp-field erp-c3"><label className="erp-label">Centro de trabalho</label>
                         <LookupField value={roForm.work_center_id ?? undefined}
                           onChange={(c) => setRoF("work_center_id", c ? Number(c) : undefined)}
-                          loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Herda da operação" clearable /></div>
+                          loader={loadWorkCenters} allowManualCode={false} entityLabel="centro de trabalho" placeholder="Herda da operação" clearable /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Máquina</label>
                         <input className="erp-input num" type="number" step="0.001" value={roForm.standard_time ?? ""} placeholder="herda"
                           onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
@@ -936,7 +936,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                       <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro</label>
                         <LookupField value={Number(resForm.work_center_id) || undefined}
                           onChange={(c) => setResForm((r) => ({ ...r, work_center_id: c ? String(c) : "" }))}
-                          loader={loadWorkCenters} entityLabel="centro de trabalho" placeholder="Escolher centro…" clearable /></div>
+                          loader={loadWorkCenters} allowManualCode={false} entityLabel="centro de trabalho" placeholder="Escolher centro…" clearable /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Prioridade</label>
                         <input className="erp-input num" type="number" min={1} value={resForm.priority}
                           onChange={(e) => setResForm((r) => ({ ...r, priority: e.target.value }))} />

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## Novidades
+- Acompanhe início, pausa, interrupção, retomada e conclusão de cada etapa, com histórico de quem realizou a ação e quando.
+
+## Melhorias
+- Organizamos a consulta de custos em abas que preservam os campos preenchidos.
+- Facilitamos a conversão de unidades com seleção das unidades disponíveis.
+- Preservamos a sequência de fabricação das ordens abertas quando o roteiro é alterado.
+
+## Correções
+- Corrigimos a seleção de centros de trabalho que podia rejeitar referências já cadastradas.
+- Evitamos ordens duplicadas em liberações simultâneas e entregas repetidas no estoque.
+- Bloqueamos a entrega final enquanto houver etapas, inspeções ou serviços pendentes.
+
 ## [v1.1.29] — 2026-09-19
 
 ## Novidades

@@ -73,6 +73,12 @@ export interface ConsumptionDTO {
 }
 
 export interface OperationDTO {
+  execution_history?: { id: number; status: string; actor: string; occurred_at: string }[];
+  can_start?: boolean;
+  started_at?: string;
+  completed_at?: string;
+  actual_hours?: number;
+  notes?: string;
   id?: number;
   production_order_id?: number;
   sequence?: number;
@@ -168,11 +174,20 @@ function parseConsumption(raw: unknown): ConsumptionDTO {
 function parseOperation(raw: unknown): OperationDTO {
   const o = unwrapObject(raw);
   return {
+    execution_history: unwrapArray(o.execution_history).map((rawEvent) => {
+      const event = unwrapObject(rawEvent);
+      return { id: parseNum(event, 'id'), status: parseStr(event, 'status'), actor: parseStr(event, 'actor'), occurred_at: parseStr(event, 'occurred_at') };
+    }),
     id: parseNum(o, 'id', 'ID'),
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID'),
     sequence: parseNum(o, 'sequence', 'Sequence'),
     operation_code: parseNum(o, 'operation_code', 'OperationCode'),
-    description: parseStr(o, 'description', 'Description'),
+    description: parseStr(o, 'operation_name', 'OperationName', 'description', 'Description'),
+    can_start: parseBool(o, 'can_start', 'CanStart'),
+    started_at: parseStr(o, 'started_at', 'StartedAt'),
+    completed_at: parseStr(o, 'completed_at', 'CompletedAt'),
+    actual_hours: parseNum(o, 'actual_hours', 'ActualHours'),
+    notes: parseStr(o, 'notes', 'Notes'),
     status: parseStr(o, 'status', 'Status'),
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
   };
@@ -258,7 +273,7 @@ export async function listConsumptions(id: number): Promise<ConsumptionDTO[]> {
 // ─── Operações da OF (§2) ────────────────────────────────────────────────────
 
 export async function explodeOperations(id: number): Promise<OperationDTO[]> {
-  const { data } = await httpClient.post(`${BASE}/operations/explode`, { production_order_id: id });
+  const { data } = await httpClient.post(`${BASE}/operations/explode`, { order_id: id });
   return unwrapArray(data).map(parseOperation);
 }
 export async function listOperations(id: number): Promise<OperationDTO[]> {
@@ -267,11 +282,11 @@ export async function listOperations(id: number): Promise<OperationDTO[]> {
 }
 /**
  * Avança uma operação da OF. Corpo: `{operation_id, status, actual_hours}`.
- * `status` ∈ PENDING · IN_PROGRESS · DONE · SKIPPED (IN_PROGRESS carimba started_at;
- * DONE/SKIPPED carimbam completed_at).
+ * Pausa e interrupção exigem motivo. Retomar preserva o início original.
+ * Conclusão libera as sucessoras; a entrega de produção atualiza o estoque.
  */
-export async function advanceOperation(operationId: number, status = 'IN_PROGRESS', actualHours = 0): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/operations/advance`, { operation_id: operationId, status, actual_hours: actualHours });
+export async function advanceOperation(operationId: number, status = 'IN_PROGRESS', actualHours = 0, reason = ''): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/operations/advance`, { operation_id: operationId, status, actual_hours: actualHours, reason });
   return unwrapObject(data);
 }
 
@@ -449,6 +464,8 @@ export interface ProductionScanDTO {
   complete_operation?: boolean;
 }
 export interface ProductionScanResult {
+  next_action?: string;
+  message?: string;
   production_order_id: number;
   operation_id?: number;
   order_number?: string;

@@ -6,6 +6,7 @@
  * inglês para o usuário.
  */
 export const FIELD_LABELS: Record<string, string> = {
+  num_min: "Valor mínimo", num_max: "Valor máximo", num_multiple: "Múltiplo permitido",
   id: "Código", item_code: "Item", supplier_code: "Fornecedor", purchase_order_code: "Pedido de compra",
   purchase_order_item_code: "Linha do pedido", enterprise_code: "Empresa", warehouse_id: "Almoxarifado",
   description: "Descrição", notes: "Observações", status: "Situação", mask: "Máscara", quantity: "Quantidade",
