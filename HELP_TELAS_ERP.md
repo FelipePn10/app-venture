@@ -10802,3 +10802,10 @@ persistido.
 - VCLI0500 mantém a aba aberta após salvar endereço ou contato, atualiza a lista e oferece uma única área de exportação.
 - VCLI0117 diferencia listagem, criação, avaliação e alteração de restrições.
 - VCLI0202 apresenta os componentes da política comercial em português e com seletores para entidades cadastradas.
+
+
+### VPRO1200 — Parada de Máquina
+
+Terminal para registrar a parada e o retorno da máquina do posto. Selecione a máquina, consulte sua situação e escolha o motivo da parada. Ao retomar, encerre a parada pelo botão de retorno; o servidor registra os horários e calcula a duração.
+
+Use a VMAQ0200, aba Paradas, para consultar períodos e cadastrar ou corrigir paradas retroativas. A parada da máquina e a pausa de uma etapa da ordem são registros distintos; confira ambos ao retomar a produção.

@@ -386,9 +386,19 @@ export const loadTools = cached(() =>
   loadEndpoint('/api/routing/tools', ['name', 'Name', 'description', 'Description'], ['code', 'Code', 'description', 'Description']),
 );
 
-export const loadWorkCenters = cached(() =>
-  loadEndpoint('/api/standard-cost/work-centers?limit=500', ['name', 'Name', 'description', 'Description'], ['description', 'Description']),
-);
+// Os vínculos de roteiro e custo usam a chave interna, não o código do centro.
+export const loadWorkCenters = cached(async () => {
+  const { data } = await httpClient.get('/api/standard-cost/work-centers?limit=500');
+  return unwrapArray(data).flatMap((raw) => {
+    const row = unwrapObject(raw);
+    if (!row) return [];
+    const id = parseNum(row, 'id', 'ID');
+    if (!id) return [];
+    const code = parseStr(row, 'code', 'Code');
+    const name = parseStr(row, 'name', 'Name', 'description', 'Description');
+    return [{ code: id, label: [code, name].filter(Boolean).join(' · ') || `Centro ${id}` }];
+  });
+});
 
 export const loadSuppliers = cached(async () =>
   (await listSuppliers()).map((s) => ({

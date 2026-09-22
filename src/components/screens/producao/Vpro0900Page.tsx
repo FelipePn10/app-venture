@@ -17,6 +17,7 @@ import {
   listConsumptions,
   explodeOperations,
   listOperations,
+  advanceOperation,
   settleCost,
   getCost,
   scrapReturn,
@@ -43,6 +44,7 @@ const STATUS_LABEL: Record<string, string> = {
   OPEN: "Aberta", IN_PROGRESS: "Em produção", COMPLETED: "Concluída", CLOSED: "Encerrada", CANCELLED: "Cancelada",
 };
 const statusLabel = (s?: string) => (s ? STATUS_LABEL[s] ?? s : "—");
+const OPERATION_LABEL: Record<string, string> = { PENDING: "Pendente", IN_PROGRESS: "Em andamento", PAUSED: "Pausada", INTERRUPTED: "Interrompida", DONE: "Concluída", SKIPPED: "Dispensada" };
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
 const EMPTY_OF: ProductionOrderDTO = { item_code: "", planned_qty: 1, priority: "NORMAL" };
@@ -84,6 +86,7 @@ export function Vpro0900Page(): JSX.Element {
   const [selected, setSelected] = useState<ProductionOrderDTO | null>(null);
   const [appointments, setAppointments] = useState<AppointmentDTO[]>([]);
   const [consumptions, setConsumptions] = useState<ConsumptionDTO[]>([]);
+  const [operationReason, setOperationReason] = useState("");
   const [operations, setOperations] = useState<OperationDTO[]>([]);
   const [cost, setCost] = useState<CostDTO | null>(null);
   const [materials, setMaterials] = useState<MaterialDTO[]>([]);
@@ -112,6 +115,17 @@ export function Vpro0900Page(): JSX.Element {
     try { setCost(await getCost(id)); } catch { setCost(null); }
     try { setMaterials(await listMaterials(id)); } catch { setMaterials([]); }
   }, []);
+
+  const alterarEtapa = (id: number, status: string) => run(async () => {
+    if ((status === "PAUSED" || status === "INTERRUPTED") && !operationReason.trim()) {
+      setFeedback({ type: "error", message: "Informe o motivo da pausa ou interrupção." }); return;
+    }
+    const result = await advanceOperation(id, status, 0, operationReason.trim());
+    setOperationReason("");
+    if (selected?.id) await loadDetails(selected.id);
+    const alerts = Array.isArray(result.tool_alerts) ? result.tool_alerts.join(" · ") : "";
+    setFeedback({ type: "success", message: `Etapa ${OPERATION_LABEL[status]?.toLowerCase() ?? status}.${alerts ? ` ${alerts}` : ""}` });
+  });
 
   const listar = () => run(async () => { setOrders(await listProductionOrders()); });
   const abrir = (id?: number) => { if (id) void run(async () => { await loadDetails(id); }); };
@@ -200,7 +214,7 @@ export function Vpro0900Page(): JSX.Element {
       complete_operation: scanner.complete_operation,
     });
     if (result.production_order_id) await loadDetails(result.production_order_id);
-    setFeedback({ type: "success", message: result.replayed ? "Leitura já processada anteriormente." : "Leitura registrada com sucesso." });
+    setFeedback({ type: "success", message: result.message || (result.replayed ? "Leitura já processada anteriormente." : "Leitura registrada com sucesso.") });
   });
 
   const st = selected?.status;
@@ -318,7 +332,7 @@ export function Vpro0900Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">Conclusão (entrada do acabado + lote)</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c3"><label className="erp-label">Depósito acabado</label><input className="erp-input num" type="number" value={completeWh} onChange={(e) => setCompleteWh(e.target.value)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Lote (rastreabilidade)</label><input className="erp-input" value={completeLot} onChange={(e) => setCompleteLot(e.target.value)} /></div>
-              <div className="erp-field erp-c6" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={concluir} disabled={busy || st !== "IN_PROGRESS"}>Concluir (→ Concluída)</button></div>
+              <div className="erp-field erp-c6" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={concluir} disabled={busy || st !== "IN_PROGRESS" || operations.some((op) => op.status !== "DONE" && op.status !== "SKIPPED")}>Concluir (→ Concluída)</button></div>
             </div></div>
 
             {/* Valorização da ordem — real × padrão, com o desvio por componente */}
@@ -381,13 +395,37 @@ export function Vpro0900Page(): JSX.Element {
               </div>
             )}
 
+            {operations.length > 0 && <div className="erp-fieldset"><div className="erp-fieldset-body">
+              <div className="erp-field erp-c12"><label className="erp-label" htmlFor="operation-reason">Motivo da pausa ou interrupção</label>
+                <input id="operation-reason" className="erp-input" value={operationReason} disabled={busy} onChange={(e) => setOperationReason(e.target.value)} />
+                <span className="erp-hint">Concluir uma etapa libera suas sucessoras. Depois da última, registre a entrega de produção para entrada no estoque.</span>
+                {operations.every((op) => op.status === "DONE" || op.status === "SKIPPED") && <p>Roteiro concluído. Próximo passo: entrega de produção.</p>}
+              </div></div></div>}
             {/* Operações / Apontamentos / Consumos */}
             <div className="erp-fieldset"><div className="erp-fieldset-head">Operações ({operations.length}) · Apontamentos ({appointments.length}) · Consumos ({consumptions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Seq</th><th>Operação</th><th>Status</th><th>Ação</th></tr></thead>
                 <tbody>
                   {operations.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Sem operações (explodir roteiro).</td></tr>}
-                  {operations.map((op) => <tr key={op.id}><td>{op.sequence}</td><td>{op.description || op.operation_code || "—"}</td><td>{op.status || "—"}</td><td><button className="erp-btn erp-btn-sm" onClick={() => gerarCodigoBarras(op.id)} disabled={busy || !op.id}>Gerar código de barras</button></td></tr>)}
+                  {operations.map((op) => <tr key={op.id}>
+                    <td>{op.sequence}</td><td>{op.description || op.operation_code || "—"}
+                      {op.started_at && <div className="erp-hint">Início: {new Date(op.started_at).toLocaleString("pt-BR")}</div>}
+                      {op.completed_at && <div className="erp-hint">Fim: {new Date(op.completed_at).toLocaleString("pt-BR")}</div>}
+                      {op.notes && <div className="erp-hint" style={{ whiteSpace: "pre-line" }}>{op.notes}</div>}
+                      {!!op.execution_history?.length && <details><summary>Histórico da execução</summary>
+                        <ul>{op.execution_history.map((event) => <li key={event.id}>
+                          {new Date(event.occurred_at).toLocaleString("pt-BR")} · {OPERATION_LABEL[event.status] ?? event.status} · {event.actor}
+                        </li>)}</ul>
+                      </details>}
+                    </td><td>{OPERATION_LABEL[op.status ?? ""] ?? op.status ?? "—"}</td><td>
+                      {op.can_start && <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "IN_PROGRESS")}>{op.status === "PENDING" ? "Iniciar etapa" : "Retomar"}</button>}
+                      {op.status === "IN_PROGRESS" && <>
+                        <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "PAUSED")}>Pausar</button>
+                        <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "INTERRUPTED")}>Interromper</button>
+                        <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "DONE")}>Concluir etapa</button>
+                      </>}
+                      <button className="erp-btn erp-btn-sm" onClick={() => gerarCodigoBarras(op.id)} disabled={busy || !op.id}>Gerar código de barras</button>
+                    </td></tr>)}
                 </tbody>
               </table>
             </div></div>

@@ -21,6 +21,8 @@ interface LookupFieldProps<T extends string | number> {
   disabled?: boolean;
   /** Permite limpar a seleção. */
   clearable?: boolean;
+  /** Desative quando o vínculo exige o ID interno de um registro da lista. */
+  allowManualCode?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ interface LookupFieldProps<T extends string | number> {
  * um popover com busca e resolve o rótulo do código atual automaticamente.
  */
 export function LookupField<T extends string | number = number>({
-  value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true,
+  value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true, allowManualCode = true,
 }: LookupFieldProps<T>): JSX.Element {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -137,7 +139,7 @@ export function LookupField<T extends string | number = number>({
   }, [options, query]);
 
   const manualCode = query.trim();
-  const canUseManualCode = manualCode.length > 0
+  const canUseManualCode = allowManualCode && manualCode.length > 0
     && (typeof options[0]?.code !== "number" || /^\d+$/.test(manualCode))
     && !options.some((option) => String(option.code) === manualCode);
 
