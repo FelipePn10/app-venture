@@ -168,7 +168,7 @@ export function Vpro0400Page(): JSX.Element {
                 </div>
               </div>
               <div className="erp-toolbar" style={{ borderRadius: 0 }}>
-                <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div style={{ minWidth: 200 }}><LookupField value={planItem} loader={loadItems} entityLabel="item" onChange={setPlanItem} /></div><button className="erp-btn erp-btn-primary" onClick={buscarPlanos} disabled={busy}>Buscar planos</button></div>
+                <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div className="erp-tlookup"><LookupField value={planItem} loader={loadItems} entityLabel="item" onChange={setPlanItem} /></div><button className="erp-btn erp-btn-primary" onClick={buscarPlanos} disabled={busy}>Buscar planos</button></div>
               </div>
               <div className="erp-grid-wrap">
                 <table className="erp-grid">

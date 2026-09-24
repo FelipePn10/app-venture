@@ -4,7 +4,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCharacteristics } from "@/services/lookups";
+import { loadCharacteristics, loadItems } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const OPERATORS = ["EQUAL", "DIFFERENT", "GREATER", "LESS", "IN", "NOT_IN"];
@@ -56,7 +56,7 @@ export function Vite0118Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Item</span>
-          <input className="erp-tinput" style={{ width: 110 }} value={item} onChange={(e) => setItem(e.target.value)} />
+          <div className="erp-tlookup"><LookupField value={item || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setItem(String(code ?? ""))} /></div>
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button>
           <button className="erp-btn" onClick={novo} disabled={busy}>Nova regra</button>
         </div>

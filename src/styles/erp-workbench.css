@@ -190,6 +190,12 @@
 /* Fieldset card */
 .erp-fieldset { background: var(--v-surface); border: 1px solid var(--v-border-strong); border-radius: var(--v-r-md); box-shadow: var(--v-shadow-sm); overflow: hidden; }
 .erp-fieldset-head {
+/*
+ * Cabeçalho vazio some. Um `erp-fieldset-head` sem texto desenha uma barra
+ * verde em branco no meio da tela e parece defeito — e nunca é intencional:
+ * ou a seção tem nome, ou não tem cabeçalho.
+ */
+.erp-fieldset-head:empty { display: none; }
   padding: 8px 14px; border-bottom: 1px solid var(--v-border); background: var(--v-surface-2);
   font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--v-text-2);
   display: flex; align-items: center; gap: 7px;
@@ -350,6 +356,15 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 
 /* ── LOOKUP FIELD (searchable picker) ─────────────────────────────────────── */
 .erp-lookup { position: relative; width: 100%; }
+/*
+ * Campo de seleção da BARRA DE FERRAMENTAS. A barra é onde a tela diz "sobre
+ * qual registro você está trabalhando", e 260px cortavam a descrição no meio
+ * ("RN-01001 — CHAPA GALVANIZ…"), justamente o pedaço que diferencia dois
+ * códigos vizinhos. Cresce com a janela até caber a descrição inteira e
+ * encolhe sem espremer os botões ao lado.
+ */
+.erp-tlookup { width: clamp(280px, 38vw, 720px); flex: 0 1 auto; }
+.erp-tlookup .erp-lookup-control { height: 36px; font-size: 13.5px; font-weight: 600; }
 .erp-lookup-control {
   display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px;
   border: 1px solid var(--v-border-strong); border-radius: var(--v-r-sm); background: var(--v-surface);
@@ -394,7 +409,28 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-lookup-item-main { display: flex; flex-direction: column; min-width: 0; }
 .erp-lookup-item-label { font-size: 12.5px; color: var(--v-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .erp-lookup-item-sub { font-size: 11px; color: var(--v-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Inativo só aparece na tela que mantém o cadastro; lá ele precisa se anunciar. */
+.erp-lookup-item-off {
+  margin-left: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--v-err); background: var(--v-err-bg); border-radius: 3px; padding: 1px 5px; vertical-align: 1px;
+}
 .erp-lookup-foot { padding: 6px 11px; border-top: 1px solid var(--v-border); background: var(--v-surface-2); font-size: 10.5px; color: var(--v-text-muted); }
+
+/*
+ * Roteiro × produtividade lado a lado. Os dois números convivem de propósito;
+ * a cor só muda quando a diferença passa do que se explica por medição.
+ */
+.maq-comparativo {
+  display: flex; flex-direction: column; gap: 5px; padding: 9px 12px;
+  border-radius: var(--v-r-sm); font-size: 12.5px; line-height: 1.5;
+  background: var(--v-surface-2); color: var(--v-text-2); border: 1px solid var(--v-border);
+}
+.maq-comparativo.divergente { background: #fdf4e7; color: #7a4b12; border-color: #efd7ae; }
+
+/* Vida útil de ferramenta: a cor diz se dá para passar a semana. */
+.fer-ok      { color: var(--v-green); font-weight: 600; }
+.fer-atencao { color: #a96a12; font-weight: 700; }
+.fer-vencida { color: var(--v-err); font-weight: 700; }
 
 /* ── SPINNER ──────────────────────────────────────────────────────────────── */
 .erp-spin { width: 13px; height: 13px; border: 2px solid rgba(47,125,71,.25); border-top-color: var(--v-green); border-radius: 50%; animation: erpspin .6s linear infinite; display: inline-block; }
@@ -524,3 +560,83 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 }
 .erp-tag-warn { color: #9a6a12; border-color: #e2c489; background: #fdf6e6; }
 .erp-tag-off  { color: var(--v-text-muted); border-color: var(--v-border); background: transparent; }
+
+/* ── CRP · CARGA POR CENTRO ─────────────────────────────────────────────────
+   A grade responde "quanto"; o gráfico responde "quando aperta". A altura da
+   barra é a codificação principal — a cor é reforço, e o dia que estoura ainda
+   se distingue pela hachura e pelo número escrito nele. */
+.crp-carga { display: flex; flex-direction: column; gap: 14px; }
+.crp-legenda { display: flex; flex-wrap: wrap; gap: 16px; font-size: 11.5px; color: var(--v-text-3); }
+.crp-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.crp-legenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.crp-legenda i.hachurada {
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 2px, transparent 2px 6px);
+}
+.crp-legenda i.linha { width: 16px; height: 0; border-top: 2px dashed var(--v-text-muted); border-radius: 0; }
+
+.crp-centro { margin: 0; border: 1px solid var(--v-border); border-radius: var(--v-r-sm); background: var(--v-surface); position: relative; }
+.crp-centro figcaption {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 11px; border-bottom: 1px solid var(--v-border-soft);
+  background: var(--v-surface-2); font-size: 12.5px; color: var(--v-text-2);
+}
+.crp-centro figcaption strong { color: var(--v-text); }
+.crp-pico { font-variant-numeric: tabular-nums; color: var(--v-text-3); }
+.crp-rolagem { overflow-x: auto; padding: 4px 8px 0; }
+.crp-grade { stroke: var(--v-border); stroke-width: 1; }
+.crp-capacidade { stroke: var(--v-text-muted); stroke-width: 2; stroke-dasharray: 5 4; }
+.crp-marca { font-size: 8.5px; fill: var(--v-text-muted); letter-spacing: .3px; text-transform: uppercase; }
+.crp-dia { font-size: 8.5px; fill: var(--v-text-3); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.crp-valor { font-size: 9px; font-weight: 700; fill: var(--v-text); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.crp-leitor {
+  margin-left: auto; font-size: 11.5px; color: var(--v-text-3);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── APS · QUADRO EM LINHA DO TEMPO ─────────────────────────────────────────
+   Posição horizontal = data, linha = recurso. A colisão entre duas ordens no
+   mesmo centro aparece sem ninguém procurar — que era o motivo de existir o
+   quadro e o que a grade de barras não entregava. */
+.aps-gantt { display: flex; flex-direction: column; gap: 8px; }
+.aps-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; font-size: 11.5px; color: var(--v-text-3); }
+.aps-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.aps-legenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.aps-legenda i.hachurada {
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 2px, transparent 2px 6px);
+}
+.aps-legenda i.folga { background: var(--v-surface-3); border: 1px solid var(--v-border); }
+.aps-legenda i.hoje { width: 0; height: 14px; border-left: 2px solid var(--v-green); border-radius: 0; }
+.aps-leitor {
+  margin-left: auto; font-variant-numeric: tabular-nums; color: var(--v-text-2);
+  max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.aps-rolagem { overflow-x: auto; border: 1px solid var(--v-border); border-radius: var(--v-r-sm); background: var(--v-surface); }
+.aps-folga { fill: var(--v-surface-3); opacity: .9; }
+.aps-barra-rotulo { paint-order: stroke; stroke: rgba(0,0,0,.28); stroke-width: 2.5px; }
+.aps-hoje { stroke: var(--v-green); stroke-width: 2; }
+.aps-separador { stroke: var(--v-border-soft); stroke-width: 1; }
+.aps-dia { font-size: 9px; fill: var(--v-text-3); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.aps-rotulo { font-size: 11.5px; fill: var(--v-text); font-weight: 600; }
+.aps-barra-rotulo { font-size: 10px; fill: #ffffff; font-weight: 600; pointer-events: none; }
+.aps-feito { fill: #ffffff; opacity: .85; }
+
+/* A rotina chega por import() — este é o intervalo entre abrir e desenhar. */
+.screen-host-carregando {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  height: 100vh; color: var(--v-text-muted); font-size: 13px; background: var(--v-bg, var(--v-surface-2));
+}
+
+/* VPRO1000 · Cadastro de Ferramentas — o catálogo é o assunto, a série é o detalhe. */
+.vpro-tools-main { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); }
+.vpro-tools-main > .erp-list-panel { border-right: 1px solid var(--v-border-strong); }
+/* "a partir de [80] % da vida" lê como uma frase e não quebra no meio. */
+.fer-limiar { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.fer-limiar label, .fer-limiar span {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--v-text-muted);
+}
+.fer-limiar input { width: 62px; height: 32px; }
+@media (max-width: 1100px) {
+  .vpro-tools-main { grid-template-columns: minmax(0, 1fr); }
+  .vpro-tools-main > .erp-list-panel { border-right: 0; border-bottom: 1px solid var(--v-border-strong); }
+}

@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { type StandardCost, calculateStandardCost, getStandardCost, listStandardCosts } from "@/services/standardCostService";
 import { errMessage } from "@/services/fiscalShared";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -46,7 +48,7 @@ export function Vpro0300Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
-          <input className="erp-input" style={{ width: 110, height: 32 }}  value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
+          <div className="erp-tlookup"><LookupField value={itemCode || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setItemCode(String(code ?? ""))} /></div>
           <button className="erp-btn" onClick={() => void consultar()} disabled={busy}>Consultar</button>
           <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Calcular"}</button></div>
         <div className="erp-tgroup">

@@ -51,7 +51,7 @@ export function Vbom0100Page(): JSX.Element {
       </header>
 
       <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div style={{ width: 320 }}><LookupField value={item.trim() || undefined} onChange={(code) => { setItem(code ? String(code) : ""); setForm((f) => ({ ...f, mask: "" })); }} loader={loadItems} entityLabel="item" placeholder="Pesquisar item…" /></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span><div className="erp-tlookup"><LookupField value={item.trim() || undefined} onChange={(code) => { setItem(code ? String(code) : ""); setForm((f) => ({ ...f, mask: "" })); }} loader={loadItems} entityLabel="item" placeholder="Pesquisar item…" /></div>
           <button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VBOM0100 — Cabeçalhos de Estrutura" filename="vbom0100" /></div>
       </div>
