@@ -23,6 +23,14 @@ interface LookupFieldProps<T extends string | number> {
   clearable?: boolean;
   /** Desative quando o vínculo exige o ID interno de um registro da lista. */
   allowManualCode?: boolean;
+  /**
+   * Mostra também os registros inativos na lista. Só a tela que **mantém** o
+   * cadastro deve ligar isto — é lá que o usuário reativa o registro. Em
+   * qualquer outra tela, oferecer um item inativo é oferecer um erro: ele não
+   * pode ser comprado, vendido nem planejado, e o operador só descobre quando
+   * a gravação é recusada.
+   */
+  includeInactive?: boolean;
 }
 
 /**
@@ -32,6 +40,7 @@ interface LookupFieldProps<T extends string | number> {
  */
 export function LookupField<T extends string | number = number>({
   value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true, allowManualCode = true,
+  includeInactive = false,
 }: LookupFieldProps<T>): JSX.Element {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +115,18 @@ export function LookupField<T extends string | number = number>({
 
   const selected = useMemo(() => options.find((o) => o.code === value), [options, value]);
 
+  /**
+   * O que a lista oferece. O registro inativo continua **carregado** — é assim
+   * que o campo resolve o rótulo de um vínculo antigo e que o `EntityName` de
+   * uma grade histórica continua mostrando a descrição em vez de "#código" —,
+   * mas ele sai da lista de escolha. A exceção é o que já está selecionado:
+   * esconder o próprio valor faria o campo parecer vazio.
+   */
+  const disponiveis = useMemo(
+    () => (includeInactive ? options : options.filter((o) => !o.inactive || o.code === value)),
+    [options, includeInactive, value],
+  );
+
   const filtered = useMemo(() => {
     // A busca normalizava só o texto digitado: o código ficava em maiúsculas e
     // "RT-666791" virava "rt-666791", que nunca casava. Todo código com letra —
@@ -113,7 +134,7 @@ export function LookupField<T extends string | number = number>({
     // modais, e o usuário acabava digitando o código à mão. Os dois lados
     // passam pela mesma normalização, que também ignora acento.
     const q = normalizarBusca(query.trim());
-    if (!q) return options.slice(0, 200);
+    if (!q) return disponiveis.slice(0, 200);
 
     // A ordem importa: com `includes` puro, digitar o código exato "5" trazia
     // "900500" na frente (o "5" está dentro dele) e o usuário abria o item
@@ -130,13 +151,13 @@ export function LookupField<T extends string | number = number>({
       return 5;                                       // só o complemento casou
     };
 
-    return options
+    return disponiveis
       .filter((o) => normalizarBusca(String(o.code)).includes(q) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.sub ?? "").includes(q))
       .map((o, i) => ({ o, r: relevancia(o), i }))
       .sort((a, b) => a.r - b.r || a.i - b.i)   // empate mantém a ordem original
       .map((x) => x.o)
       .slice(0, 200);
-  }, [options, query]);
+  }, [disponiveis, query]);
 
   const manualCode = query.trim();
   const canUseManualCode = allowManualCode && manualCode.length > 0
@@ -187,13 +208,13 @@ export function LookupField<T extends string | number = number>({
               </div>
             )}
             {!loading && !error && filtered.length === 0 && (
-              <div className="erp-lookup-msg">{options.length === 0 ? `Nenhum ${entityLabel} cadastrado.` : "Nenhum resultado."}</div>
+              <div className="erp-lookup-msg">{disponiveis.length === 0 ? (options.length === 0 ? `Nenhum ${entityLabel} cadastrado.` : `Nenhum ${entityLabel} ativo.`) : "Nenhum resultado."}</div>
             )}
             {filtered.map((o) => (
               <button type="button" key={o.code} className={`erp-lookup-item${o.code === value ? " sel" : ""}`} onClick={() => choose(o)}>
                 <span className="erp-lookup-item-code">{o.code}</span>
                 <span className="erp-lookup-item-main">
-                  <span className="erp-lookup-item-label">{o.label}</span>
+                  <span className="erp-lookup-item-label">{o.label}{o.inactive && <span className="erp-lookup-item-off">inativo</span>}</span>
                   {o.sub && <span className="erp-lookup-item-sub">{o.sub}</span>}
                 </span>
               </button>
@@ -208,7 +229,7 @@ export function LookupField<T extends string | number = number>({
               </button>
             )}
           </div>
-          {options.length > 0 && <div className="erp-lookup-foot">{filtered.length} de {options.length} {entityLabel}(s)</div>}
+          {disponiveis.length > 0 && <div className="erp-lookup-foot">{filtered.length} de {disponiveis.length} {entityLabel}(s){!includeInactive && options.length > disponiveis.length ? ` · ${options.length - disponiveis.length} inativo(s) fora da lista` : ""}</div>}
         </div>, document.body
       )}
     </div>

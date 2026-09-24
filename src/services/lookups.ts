@@ -28,6 +28,14 @@ export interface LookupOption {
   label: string;
   /** Linha secundária opcional (documento, UM, cidade…). */
   sub?: string;
+  /**
+   * Registro desativado no cadastro. Continua vindo na lista para o campo
+   * conseguir **resolver o rótulo** de um vínculo antigo, mas o
+   * {@link LookupField} não o oferece para escolha — exceto quando a tela pede
+   * `includeInactive` (a tela de manutenção do próprio cadastro, onde reativar
+   * é o objetivo).
+   */
+  inactive?: boolean;
 }
 
 export type LookupLoader = () => Promise<LookupOption[]>;
@@ -82,11 +90,18 @@ async function loadEndpoint(
   return out.sort((a, b) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }));
 }
 
+/**
+ * Clientes. O bloqueado é o que não pode receber pedido novo — inadimplência,
+ * cadastro irregular, decisão comercial. Oferecê-lo na busca convida a montar
+ * um pedido inteiro que o sistema recusa no fim; ele sai da escolha e continua
+ * identificando os pedidos que já existem.
+ */
 export const loadCustomers = cached(async () =>
   (await listCustomers()).map((c) => ({
     code: c.code ?? 0,
     label: c.name || c.trade_name || `Cliente ${c.code}`,
     sub: c.document_number || c.trade_name || undefined,
+    inactive: c.blocked === true,
   })).filter((o) => o.code),
 );
 
@@ -150,11 +165,22 @@ export const loadConsumerServiceCalls = cached(async () =>
   })).filter((option) => option.code),
 );
 
+/**
+ * Itens do cadastro. Os **inativos** vêm marcados, não removidos: sem eles a
+ * grade de um movimento antigo voltaria a mostrar "#900500" no lugar da
+ * descrição, e o campo de uma ordem já gravada pareceria vazio. Quem decide se
+ * eles aparecem na lista é o {@link LookupField} — e a resposta é não, exceto
+ * na tela de cadastro de item (VENT0200), que precisa abri-los para reativar.
+ *
+ * `FANTASMA` não é inativo: é um item de planejamento que a estrutura atravessa,
+ * e ele precisa continuar selecionável.
+ */
 export const loadItems = cached(async () =>
   (await listItems()).map((i) => ({
     code: i.code ?? '',
     label: i.description || `Item ${i.code}`,
     sub: i.uom || undefined,
+    inactive: i.health === 'INATIVO',
   })).filter((o) => o.code),
 );
 
@@ -208,11 +234,18 @@ export const loadCharacteristics = cached(async () => {
 });
 
 
+/**
+ * Máquinas do parque. A inativa é a que saiu de operação — vendida, sucateada,
+ * parada para sempre. Ela continua vindo marcada para o vínculo antigo não
+ * perder o nome, mas não é oferecida: planejar carga numa máquina que não existe
+ * mais produz uma agenda que ninguém consegue cumprir.
+ */
 export const loadMachines = cached(async () =>
   (await listMachines()).map((m) => ({
     code: m.code,
     label: m.name || `Máquina ${m.code}`,
     sub: m.is_active ? 'Ativa' : 'Inativa',
+    inactive: !m.is_active,
   })).filter((o) => o.code),
 );
 
@@ -299,12 +332,13 @@ export const loadBaseItems = cached(async () => {
       code: i.code ?? '',
       label: i.description || `Item ${i.code}`,
       sub: i.uom || undefined,
+      inactive: i.health === 'INATIVO',
       base: Boolean(i.is_base) || i.nature === 2,
     }))
     .filter((o) => o.code);
   const marcados = todos.filter((o) => o.base);
   const escolhidos = marcados.length > 0 ? marcados : todos;
-  return escolhidos.map(({ code, label, sub }) => ({ code, label, sub }));
+  return escolhidos.map(({ code, label, sub, inactive }) => ({ code, label, sub, inactive }));
 });
 
 // A rota de listagem é `/api/warehouse/list`; `/api/warehouse` (sem sufixo) é
@@ -400,11 +434,17 @@ export const loadWorkCenters = cached(async () => {
   });
 });
 
+/**
+ * Fornecedores. O inativo é o que a empresa deixou de comprar — por qualidade,
+ * por preço ou porque fechou. Continua na lista de dados (o pedido antigo
+ * precisa mostrar de quem foi) e fora da lista de escolha.
+ */
 export const loadSuppliers = cached(async () =>
   (await listSuppliers()).map((s) => ({
     code: s.code ?? 0,
     label: s.name || s.trade_name || `Fornecedor ${s.code}`,
     sub: s.document_number || s.trade_name || undefined,
+    inactive: s.is_active === false,
   })).filter((o) => o.code),
 );
 

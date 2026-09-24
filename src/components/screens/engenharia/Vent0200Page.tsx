@@ -4,6 +4,7 @@ import { listFiscalClassifications, type FiscalClassification } from "@/services
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadWarehousesByCode, loadItems, loadItemClassifications, loadFiscalClassifications } from "@/services/lookups";
+import { listWhereUsed, type WhereUsedRow } from "@/services/ItemStructureService";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
 //
@@ -430,6 +431,17 @@ export function Vent0200Page(): JSX.Element {
   // Código do item aberto para alteração. Vazio = a tela está criando um item
   // novo; preenchido = está mantendo um já cadastrado.
   const [itemEmEdicao, setItemEmEdicao] = useState("");
+  /**
+   * Impacto de inativar: as montagens que consomem este item.
+   *
+   * Inativar é uma decisão de cadastro com consequência em produção. Sem esta
+   * lista, o estrago só aparece no MRP da semana seguinte — como falta de
+   * componente numa ordem que ninguém relaciona com a decisão tomada aqui.
+   * `null` = ainda não consultado; `[]` = consultado e não é usado em lugar
+   * nenhum, que é uma resposta tão útil quanto a lista cheia.
+   */
+  const [ondeUsado, setOndeUsado] = useState<WhereUsedRow[] | null>(null);
+  const [conferindoUso, setConferindoUso] = useState(false);
   const [carregandoItem, setCarregandoItem] = useState(false);
   const [classificacoesFiscais, setClassificacoesFiscais] = useState<FiscalClassification[]>([]);
 
@@ -452,6 +464,22 @@ export function Vent0200Page(): JSX.Element {
     },
     [],
   );
+
+  /**
+   * Consulta onde o item é usado assim que alguém marca Inativo num item já
+   * gravado. Item novo não tem histórico, então não há o que conferir; falha de
+   * consulta não trava o cadastro — o aviso é uma ajuda, não uma trava.
+   */
+  useEffect(() => {
+    let vivo = true;
+    if (form.health !== "INATIVO" || !itemEmEdicao) { setOndeUsado(null); return; }
+    setConferindoUso(true);
+    void listWhereUsed(itemEmEdicao)
+      .then((linhas) => { if (vivo) setOndeUsado(linhas); })
+      .catch(() => { if (vivo) setOndeUsado(null); })
+      .finally(() => { if (vivo) setConferindoUso(false); });
+    return () => { vivo = false; };
+  }, [form.health, itemEmEdicao]);
 
   /** Campos obrigatórios, com o rótulo e a aba onde cada um mora. */
   function coletarErros(): Partial<Record<keyof FormItem, string>> {
@@ -1053,6 +1081,16 @@ export function Vent0200Page(): JSX.Element {
         .it-sit-ativo   { background: #e8f5ea; color: #1a6630; border: 1px solid #b4dec0; }
         .it-sit-inativo { background: #fdecea; color: #991c1c; border: 1px solid #f0c8c8; }
 
+        /* Impacto de inativar: quem consome o item hoje. */
+        .it-impacto {
+          display: flex; flex-direction: column; gap: 6px; margin-top: 4px;
+          padding: 10px 12px; border-radius: 6px; font-size: 12.5px; line-height: 1.5;
+          background: #f2f6f3; color: #2f4438; border: 1px solid #d6e2da;
+        }
+        .it-impacto-alerta { background: #fdf4e7; color: #7a4b12; border-color: #efd7ae; }
+        .it-impacto-lista { margin: 2px 0 0; padding-left: 18px; }
+        .it-impacto-lista li { margin: 2px 0; }
+
         /* Feedback */
         .it-feedback { display: flex; align-items: center; gap: 9px; padding: 11px 15px; border-radius: 9px; font-size: 13px; animation: itFade 0.2s ease; }
         .it-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
@@ -1175,11 +1213,14 @@ export function Vent0200Page(): JSX.Element {
           <div className="it-action-group">
             <span className="it-action-label">Manutenção</span>
             <div className="it-open-item">
+              {/* Única lista do sistema que mostra item inativo: é aqui que se
+                  reativa um item, então escondê-lo trancaria a porta por dentro. */}
               <LookupField
                 value={itemEmEdicao || undefined}
                 onChange={(code) => void abrirItem(code ? String(code) : undefined)}
                 loader={loadItems}
                 entityLabel="item"
+                includeInactive
                 placeholder={carregandoItem ? "Abrindo…" : "Abrir item para alterar…"}
               />
             </div>
@@ -1487,6 +1528,42 @@ export function Vent0200Page(): JSX.Element {
                       <option value="FANTASMA">Fantasma</option>
                     </select>
                   </div>
+
+                  {form.health === "INATIVO" && itemEmEdicao && (
+                    <div className="it-field it-col-12">
+                      <div className={`it-impacto${ondeUsado && ondeUsado.length ? " it-impacto-alerta" : ""}`}>
+                        {conferindoUso && <span>Conferindo onde este item é usado…</span>}
+                        {!conferindoUso && ondeUsado === null && (
+                          <span>Não foi possível conferir onde este item é usado. Confira a estrutura antes de gravar.</span>
+                        )}
+                        {!conferindoUso && ondeUsado?.length === 0 && (
+                          <span>Este item <strong>não é componente de nenhuma estrutura</strong>. Inativar não deixa montagem sem material.</span>
+                        )}
+                        {!conferindoUso && !!ondeUsado?.length && (
+                          <>
+                            <strong>Atenção: {ondeUsado.length} montagem(ns) usam este item.</strong>
+                            <span>
+                              Inativar não apaga essas estruturas — elas continuam pedindo o item, e o planejamento
+                              vai gerar necessidade de um item que ninguém pode mais comprar nem fabricar. Troque o
+                              componente nas montagens abaixo antes de gravar, ou use <em>Fantasma</em> se a intenção
+                              é que o planejamento atravesse o item sem gerar ordem para ele.
+                            </span>
+                            <ul className="it-impacto-lista">
+                              {ondeUsado.slice(0, 12).map((linha) => (
+                                <li key={`${linha.parent_code}-${linha.level}-${linha.parent_mask ?? ""}`}>
+                                  <strong>{linha.parent_code}</strong> — {linha.parent_description || "sem descrição"}
+                                  {linha.parent_mask ? ` (máscara ${linha.parent_mask})` : ""}
+                                  {linha.quantity ? ` · consome ${linha.quantity}` : ""}
+                                  {linha.level > 1 ? ` · nível ${linha.level}` : ""}
+                                </li>
+                              ))}
+                              {ondeUsado.length > 12 && <li>…e mais {ondeUsado.length - 12}.</li>}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="it-field it-col-4">
                     <label className="it-label">Natureza</label>
