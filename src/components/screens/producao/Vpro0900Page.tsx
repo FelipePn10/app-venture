@@ -87,6 +87,13 @@ export function Vpro0900Page(): JSX.Element {
   const [appointments, setAppointments] = useState<AppointmentDTO[]>([]);
   const [consumptions, setConsumptions] = useState<ConsumptionDTO[]>([]);
   const [operationReason, setOperationReason] = useState("");
+  /**
+   * Horas e peças da etapa que está sendo concluída. Não é enfeite: é o que
+   * gasta a vida útil da ferramenta no backend. Enquanto a tela mandava zero
+   * nos dois, nenhuma ferramenta chegava ao limite de troca.
+   */
+  const [operationHours, setOperationHours] = useState("");
+  const [operationQty, setOperationQty] = useState("");
   const [operations, setOperations] = useState<OperationDTO[]>([]);
   const [cost, setCost] = useState<CostDTO | null>(null);
   const [materials, setMaterials] = useState<MaterialDTO[]>([]);
@@ -120,11 +127,23 @@ export function Vpro0900Page(): JSX.Element {
     if ((status === "PAUSED" || status === "INTERRUPTED") && !operationReason.trim()) {
       setFeedback({ type: "error", message: "Informe o motivo da pausa ou interrupção." }); return;
     }
-    const result = await advanceOperation(id, status, 0, operationReason.trim());
-    setOperationReason("");
+    const horas = Number(operationHours) || 0;
+    const pecas = Number(operationQty) || 0;
+    if (status === "DONE" && horas <= 0 && pecas <= 0) {
+      setFeedback({ type: "error", message: "Informe as horas trabalhadas ou as peças produzidas para concluir a etapa — é o que desconta a vida útil da ferramenta." });
+      return;
+    }
+    const result = await advanceOperation(id, status, horas, operationReason.trim(), pecas);
+    setOperationReason(""); setOperationHours(""); setOperationQty("");
     if (selected?.id) await loadDetails(selected.id);
+    // Ferramenta no limite não é notícia boa: sai como aviso, não como sucesso
+    // verde — senão o operador fecha a mensagem sem ler e a peça sai fora de
+    // medida. Ao INICIAR a etapa o alerta ainda dá tempo de trocar.
     const alerts = Array.isArray(result.tool_alerts) ? result.tool_alerts.join(" · ") : "";
-    setFeedback({ type: "success", message: `Etapa ${OPERATION_LABEL[status]?.toLowerCase() ?? status}.${alerts ? ` ${alerts}` : ""}` });
+    setFeedback({
+      type: alerts ? "error" : "success",
+      message: `Etapa ${OPERATION_LABEL[status]?.toLowerCase() ?? status}.${alerts ? ` Atenção: ${alerts}` : ""}`,
+    });
   });
 
   const listar = () => run(async () => { setOrders(await listProductionOrders()); });
@@ -395,10 +414,19 @@ export function Vpro0900Page(): JSX.Element {
               </div>
             )}
 
-            {operations.length > 0 && <div className="erp-fieldset"><div className="erp-fieldset-body">
-              <div className="erp-field erp-c12"><label className="erp-label" htmlFor="operation-reason">Motivo da pausa ou interrupção</label>
-                <input id="operation-reason" className="erp-input" value={operationReason} disabled={busy} onChange={(e) => setOperationReason(e.target.value)} />
-                <span className="erp-hint">Concluir uma etapa libera suas sucessoras. Depois da última, registre a entrega de produção para entrada no estoque.</span>
+            {operations.length > 0 && <div className="erp-fieldset">
+              <div className="erp-fieldset-head">Apontamento da etapa</div>
+              <div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label" htmlFor="operation-hours">Horas trabalhadas</label>
+                <input id="operation-hours" className="erp-input num" type="number" min="0" step="0.01" value={operationHours} disabled={busy} onChange={(e) => setOperationHours(e.target.value)} />
+                <span className="erp-hint">Desconta a vida de ferramenta medida em horas.</span></div>
+              <div className="erp-field erp-c3"><label className="erp-label" htmlFor="operation-qty">Peças produzidas</label>
+                <input id="operation-qty" className="erp-input num" type="number" min="0" step="1" value={operationQty} disabled={busy} onChange={(e) => setOperationQty(e.target.value)} />
+                <span className="erp-hint">Desconta a vida de ferramenta medida em golpes ou peças.</span></div>
+              <div className="erp-field erp-c6"><label className="erp-label" htmlFor="operation-reason">Motivo da pausa ou interrupção</label>
+                <input id="operation-reason" className="erp-input" value={operationReason} disabled={busy} onChange={(e) => setOperationReason(e.target.value)} /></div>
+              <div className="erp-field erp-c12">
+                <span className="erp-hint">Preencha horas e peças <strong>antes</strong> de concluir a etapa: é esse apontamento que gasta a vida útil da ferramenta e avisa quando ela precisa ser trocada. Concluir uma etapa libera suas sucessoras; depois da última, registre a entrega de produção para entrada no estoque.</span>
                 {operations.every((op) => op.status === "DONE" || op.status === "SKIPPED") && <p>Roteiro concluído. Próximo passo: entrega de produção.</p>}
               </div></div></div>}
             {/* Operações / Apontamentos / Consumos */}
@@ -412,6 +440,12 @@ export function Vpro0900Page(): JSX.Element {
                       {op.started_at && <div className="erp-hint">Início: {new Date(op.started_at).toLocaleString("pt-BR")}</div>}
                       {op.completed_at && <div className="erp-hint">Fim: {new Date(op.completed_at).toLocaleString("pt-BR")}</div>}
                       {op.notes && <div className="erp-hint" style={{ whiteSpace: "pre-line" }}>{op.notes}</div>}
+                      {/* Inspeção marcada sem plano ativo: a ordem existe, a
+                          conferência de qualidade não abre até alguém cadastrar
+                          o plano. Não é erro da ordem — é pendência dela. */}
+                      {op.warnings?.map((aviso) => (
+                        <div key={aviso} className="erp-badge warn" style={{ marginTop: 4, whiteSpace: "normal", display: "block" }}>{aviso}</div>
+                      ))}
                       {!!op.execution_history?.length && <details><summary>Histórico da execução</summary>
                         <ul>{op.execution_history.map((event) => <li key={event.id}>
                           {new Date(event.occurred_at).toLocaleString("pt-BR")} · {OPERATION_LABEL[event.status] ?? event.status} · {event.actor}
@@ -444,7 +478,7 @@ export function Vpro0900Page(): JSX.Element {
               <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void lerCodigoBarras()} disabled={busy}>Processar leitura</button></div>
               {scanToken && <div className="erp-field erp-c12"><Code128Barcode value={scanToken.barcode_value} /><small>Use exatamente este código; os IDs da ordem e da operação não substituem o token.</small></div>}
             </div></div>
-            <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Consumos lançados</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Consumo</th><th>Item</th><th>Qtd</th><th>Depósito</th></tr></thead>
                 <tbody>
@@ -471,7 +505,7 @@ export function Vpro0900Page(): JSX.Element {
                 </div>
               
             </div></div>
-            <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Materiais lançados na ordem</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>ID</th><th>Item</th><th>Qtd</th><th>Alocado</th><th>Depósito</th><th style={{ width: 220 }}>Ações</th></tr></thead>
                 <tbody>

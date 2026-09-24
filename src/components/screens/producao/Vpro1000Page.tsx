@@ -36,6 +36,12 @@ export function Vpro1000Page(): JSX.Element {
   // ── ferramentas ──
   const [toolForm, setToolForm] = useState<ToolDTO>(EMPTY_TOOL);
   const [onlyReplacement, setOnlyReplacement] = useState(false);
+  /**
+   * A partir de quanto da vida útil a ferramenta entra na lista de troca.
+   * 100 % é o comportamento antigo — avisar depois de estourar, quando a peça
+   * já saiu fora de medida. 80 % dá tempo de pedir a afiação antes.
+   */
+  const [limiarTroca, setLimiarTroca] = useState("80");
   const [selTool, setSelTool] = useState<ToolDTO | null>(null);
   const [serials, setSerials] = useState<ToolSerialDTO[]>([]);
   const [serialForm, setSerialForm] = useState<ToolSerialDTO>({ serial_number: "", status: "ATIVA", location: "" });
@@ -89,7 +95,7 @@ export function Vpro1000Page(): JSX.Element {
 
   // ── ferramentas handlers ──
   const listarTools = () => run(async () => {
-    setTools(onlyReplacement ? await listToolsNeedingReplacement() : await listTools());
+    setTools(onlyReplacement ? await listToolsNeedingReplacement((Number(limiarTroca) || 80) / 100) : await listTools());
   });
   const gravarTool = () => run(async () => {
     if (!toolForm.name.trim()) { setFeedback({ type: "error", message: "Informe o nome da ferramenta." }); return; }
@@ -236,7 +242,11 @@ export function Vpro1000Page(): JSX.Element {
         )}
 
         {view === "tools" && (
-          <div className="erp-main">
+          // O padrão master-detail reserva 380px para a lista — certo quando a
+          // lista é de códigos. Aqui ela é um catálogo de seis colunas, e nessa
+          // largura o nome da ferramenta quebrava em quatro linhas e a coluna de
+          // vida consumida ficava fora da tela. Nesta aba o catálogo manda.
+          <div className="erp-main vpro-tools-main">
             <div className="erp-list-panel">
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Nova ferramenta (código gerado automaticamente)</div>
@@ -255,18 +265,34 @@ export function Vpro1000Page(): JSX.Element {
                 <div className="erp-tgroup" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <input id="onlyrep" className="erp-check" type="checkbox" checked={onlyReplacement} onChange={(e) => setOnlyReplacement(e.target.checked)} />
                   <label htmlFor="onlyrep" className="erp-tgroup-label">Só as que precisam de troca</label>
+                  {onlyReplacement && (
+                    <span className="fer-limiar">
+                      <label htmlFor="limiar-troca">a partir de</label>
+                      <input id="limiar-troca" className="erp-input num" type="number" min={1} max={100} step={5}
+                        value={limiarTroca} onChange={(e) => setLimiarTroca(e.target.value)} />
+                      <span>% da vida</span>
+                    </span>
+                  )}
                   <button className="erp-btn" onClick={listarTools} disabled={busy}>Atualizar</button>
                 </div>
               </div>
               <div className="erp-grid-wrap">
                 <table className="erp-grid">
-                  <thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th className="num">Vida (uso/limite)</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th className="num">Vida (uso/limite)</th><th className="num">Consumida</th><th>Status</th></tr></thead>
                   <tbody>
-                    {tools.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma ferramenta.</td></tr>}
+                    {tools.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">{onlyReplacement ? `Nenhuma ferramenta passou de ${limiarTroca}% da vida útil.` : "Nenhuma ferramenta."}</td></tr>}
                     {tools.map((t) => (
                       <tr key={t.id} onClick={() => selecionarTool(t)} className={selTool?.id === t.id ? "erp-row-sel" : ""} style={{ cursor: "pointer" }}>
                         <td>{t.code ?? t.id}</td><td>{t.name}</td><td>{t.tool_type || "—"}</td>
-                        <td className="num">{(t.life_used ?? 0)} / {t.life_limit ?? "—"} {t.life_type ?? ""}</td><td>{statusBadge(t.status)}</td>
+                        <td className="num">{(t.life_used ?? 0)} / {t.life_limit ?? "—"} {t.life_type ?? ""}</td>
+                        <td className="num">{(() => {
+                          const limite = t.life_limit ?? 0;
+                          if (limite <= 0) return <span className="erp-hint">sem controle</span>;
+                          const pct = ((t.life_used ?? 0) / limite) * 100;
+                          const cls = pct >= 100 ? "fer-vencida" : pct >= 80 ? "fer-atencao" : "fer-ok";
+                          return <span className={cls}>{pct.toFixed(0)}%{pct >= 100 ? " · trocar" : ""}</span>;
+                        })()}</td>
+                        <td>{statusBadge(t.status)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -310,7 +336,11 @@ export function Vpro1000Page(): JSX.Element {
                   </div>
                 </>
               ) : (
-                <div className="erp-fieldset"><div className="erp-fieldset-body"><p style={{ padding: 12, color: "var(--v-text-3)" }}>Selecione uma ferramenta para gerenciar as séries.</p></div></div>
+                <div className="erp-fieldset"><div className="erp-fieldset-body">
+                  <div className="erp-field erp-c12">
+                    <p className="erp-note">Selecione uma ferramenta na lista ao lado para ver e cadastrar as séries físicas dela.</p>
+                  </div>
+                </div></div>
               )}
             </div>
           </div>
