@@ -26,6 +26,12 @@ export function machineTypeLabel(value: string): string {
 }
 
 export interface MachineType {
+  /**
+   * Chave interna do tipo. É ela que o roteiro guarda como **centro de
+   * trabalho** (`route_operations.work_center_id`) — não o `code`. Sem ela não
+   * dá para dizer que etapa roda em qual máquina.
+   */
+  id?: number;
   code: number;
   name: string;
   description?: string | null;
@@ -54,6 +60,7 @@ function parse(raw: unknown): MachineType | null {
   const name = String(o.name ?? o.Name ?? '');
   if (!code || !name) return null;
   return {
+    id: Number(o.id ?? o.ID) || undefined,
     code,
     name,
     description: (o.description ?? o.Description ?? null) as string | null,

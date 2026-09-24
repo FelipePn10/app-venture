@@ -13,6 +13,7 @@ import {
   listRouteOpTools, addRouteOpTool, removeRouteOpTool,
   addOperationDocument, removeOperationDocument, listOperationDocuments,
   addRouteInspection, removeRouteInspection,
+  getRouteReadiness, type RouteReadiness,
 } from "@/services/manufacturingRoutingService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -111,6 +112,16 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
   const [edgeForm, setEdgeForm] = useState<EdgeDTO>(EMPTY_EDGE);
   /** Tamanho do lote usado para ler a cascata de refugo em peças. */
   const [lote, setLote] = useState("100");
+  /**
+   * Conferência de prontidão do roteiro aberto.
+   *
+   * O planejamento exige coisas que não estão nesta tela — máquina apta no
+   * centro (VMAQ0200) e tarifa por hora (VCUS0100). Sem esta conferência, a
+   * recusa aparecia no meio do cálculo do MRP, citando código interno de item e
+   * de centro, longe de onde se conserta. `null` = ainda não conferido.
+   */
+  const [prontidao, setProntidao] = useState<RouteReadiness | null>(null);
+  const [conferindo, setConferindo] = useState(false);
 
   // Detalhe da etapa selecionada: recursos, ferramentas, documentos, inspeção
   const [selOpId, setSelOpId] = useState<number | null>(null);
@@ -222,9 +233,28 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
   async function abrirRoteiro(r: RouteDTO) {
     if (!r.id) return;
     setRoForm(EMPTY_RO); setEdgeForm(EMPTY_EDGE); setLeadTime(null); setFeedback(null); setSelOpId(null);
+    setProntidao(null);
     await reloadDetail(r.id);
     setAba("etapas");
   }
+
+  /**
+   * Confere o roteiro contra o que o planejamento vai exigir. Roda sozinha
+   * sempre que as etapas mudam: a pendência aparece enquanto a pessoa ainda
+   * está montando, e não semanas depois, numa recusa do MRP.
+   */
+  const conferirProntidao = useCallback(async (routeId: number) => {
+    setConferindo(true);
+    try { setProntidao(await getRouteReadiness(routeId)); }
+    catch { setProntidao(null); }
+    finally { setConferindo(false); }
+  }, []);
+
+  useEffect(() => {
+    const id = detail?.route?.id;
+    if (!id) { setProntidao(null); return; }
+    void conferirProntidao(id);
+  }, [detail?.route?.id, detail?.operations?.length, conferirProntidao]);
 
   // ── Etapas do roteiro ──────────────────────────────────────────────────────
   const setRoF = <K extends keyof RouteOperationDTO>(k: K, v: RouteOperationDTO[K]) => setRoForm((p) => ({ ...p, [k]: v }));
@@ -464,7 +494,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Item</span>
-          <div style={{ width: 230 }}>
+          <div className="erp-tlookup">
             <LookupField
               value={itemCode || undefined}
               onChange={(c) => { setItemCode(String(c ?? "")); if (c) void carregarRoteiros(String(c)); }}
@@ -526,18 +556,23 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                         onChange={(c) => setOpF("default_work_center_id", c ? Number(c) : undefined)}
                         loader={loadWorkCenters} allowManualCode={false} entityLabel="centro de trabalho" placeholder="Opcional" clearable /></div>
 
-                    <div className="erp-field erp-c12"><div className="fsc-rot-sec">Modelo de tempo</div></div>
+                    <div className="erp-field erp-c12"><div className="fsc-rot-sec">Modelo de tempo</div>
+                      <span className="erp-field-hint">
+                        Todos os campos desta seção são <strong>tempos</strong>, expressos na unidade escolhida acima.
+                        O equipamento não é escolhido aqui: a etapa aponta para um <strong>centro de trabalho</strong>, e
+                        qual máquina daquele centro vai rodar sai da produtividade por item da VMAQ0200.
+                      </span></div>
                     <div className="erp-field erp-c2"><label htmlFor="rot-op-setup" className="erp-label">Preparação (por lote)</label>
                       <input id="rot-op-setup" className="erp-input num" type="number" step="0.001" value={opForm.setup_time ?? 0}
                         onChange={(e) => setOpF("setup_time", Number(e.target.value))} /></div>
-                    <div className="erp-field erp-c2"><label htmlFor="rot-op-maquina" className="erp-label">Máquina</label>
+                    <div className="erp-field erp-c2"><label htmlFor="rot-op-maquina" className="erp-label">Tempo de máquina</label>
                       <input id="rot-op-maquina" className="erp-input num" type="number" step="0.001" value={opForm.run_time ?? 0}
                         onChange={(e) => setOpF("run_time", Number(e.target.value))} />
-                      <span className="erp-field-hint">Por lote-base.</span></div>
-                    <div className="erp-field erp-c2"><label className="erp-label">Mão de obra</label>
+                      <span className="erp-field-hint">Ocupação do equipamento por ciclo.</span></div>
+                    <div className="erp-field erp-c2"><label className="erp-label">Tempo de mão de obra</label>
                       <input className="erp-input num" type="number" step="0.001" value={opForm.labor_time ?? 0}
                         onChange={(e) => setOpF("labor_time", Number(e.target.value))} />
-                      <span className="erp-field-hint">Zero = igual à máquina.</span></div>
+                      <span className="erp-field-hint">Zero = igual ao tempo de máquina.</span></div>
                     <div className="erp-field erp-c2"><label className="erp-label">Peças por ciclo</label>
                       <input className="erp-input num" type="number" min={1} step="1" value={opForm.run_base_qty ?? 1}
                         onChange={(e) => setOpF("run_base_qty", Number(e.target.value) || 1)} />
@@ -548,7 +583,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                     <div className="erp-field erp-c2"><label className="erp-label">Tempo padrão (legado)</label>
                       <input className="erp-input num" type="number" step="0.001" value={opForm.standard_time}
                         onChange={(e) => setOpF("standard_time", Number(e.target.value))} />
-                      <span className="erp-field-hint">Usado só quando máquina é zero.</span></div>
+                      <span className="erp-field-hint">Usado só quando o tempo de máquina é zero.</span></div>
 
                     <div className="erp-field erp-c2"><label className="erp-label">Fila</label>
                       <input className="erp-input num" type="number" step="0.001" value={opForm.queue_time ?? 0}
@@ -564,7 +599,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                         onChange={(e) => setOpF("scrap_pct", Number(e.target.value))} />
                       <span className="erp-field-hint">Quanto do que entra não sai bom.</span></div>
                     <div className="erp-field erp-c4"><span className="erp-field-hint">
-                      Fila, espera e movimentação são fixos por lote: entram no prazo mas não ocupam a máquina.
+                      Fila, espera e movimentação são fixos por lote: entram no prazo mas não ocupam o equipamento.
                       O refugo é diferente da perda da estrutura — aqui é a peça que está sendo feita que se perde,
                       e é ele que diz quanto soltar para o pedido fechar.
                     </span></div>
@@ -646,7 +681,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                     <table className="erp-grid">
                       <thead><tr>
                         <th style={{ width: 60 }}>#</th><th>Nome</th><th>Origem</th>
-                        <th className="num">Prep.</th><th className="num">Máquina</th><th className="num">Peças/ciclo</th>
+                        <th className="num">Prep.</th><th className="num">T. máquina</th><th className="num">Peças/ciclo</th>
                         <th className="num">Equipe</th><th className="num">Refugo</th><th>Un.</th><th style={{ width: 150 }}>Ações</th>
                       </tr></thead>
                       <tbody>
@@ -782,6 +817,43 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                     )}
                   </div>
 
+                  {/* Prontidão: o que falta para este roteiro ser planejável. */}
+                  {(conferindo || prontidao) && (
+                    <div className={`fsc-rot-prontidao${prontidao && !prontidao.ready ? " falha" : ""}${prontidao?.ready && prontidao.warnings.length ? " atencao" : ""}`}>
+                      {conferindo && <span>Conferindo se este roteiro consegue ser planejado…</span>}
+                      {!conferindo && prontidao && (
+                        <>
+                          <strong>
+                            {prontidao.ready
+                              ? prontidao.warnings.length
+                                ? "O roteiro pode ser planejado, com ressalvas"
+                                : "Roteiro pronto para o planejamento"
+                              : `Este roteiro ainda não pode ser planejado — ${prontidao.issues.length} pendência(s)`}
+                          </strong>
+                          {prontidao.issues.length > 0 && (
+                            <ul>{prontidao.issues.map((texto) => <li key={texto}>{texto}</li>)}</ul>
+                          )}
+                          {prontidao.warnings.length > 0 && (
+                            <ul className="aviso">{prontidao.warnings.map((texto) => <li key={texto}>{texto}</li>)}</ul>
+                          )}
+                          {prontidao.work_centers.length > 0 && (
+                            <div className="fsc-rot-centros">
+                              {prontidao.work_centers.map((c) => (
+                                <span key={c.work_center_id} className={c.has_machine && c.has_rate ? "ok" : "pendente"}>
+                                  {c.work_center_name || `Centro ${c.work_center_id}`}
+                                  {" · "}
+                                  {c.has_machine ? "máquina apta" : "sem máquina apta"}
+                                  {" · "}
+                                  {c.has_rate ? `${c.hourly_rate.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/h` : "sem tarifa"}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Incluir etapa</div>
                     <div className="erp-fieldset-body">
@@ -799,9 +871,10 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                         <LookupField value={roForm.work_center_id ?? undefined}
                           onChange={(c) => setRoF("work_center_id", c ? Number(c) : undefined)}
                           loader={loadWorkCenters} allowManualCode={false} entityLabel="centro de trabalho" placeholder="Herda da operação" clearable /></div>
-                      <div className="erp-field erp-c2"><label className="erp-label">Máquina</label>
+                      <div className="erp-field erp-c2"><label className="erp-label">Tempo de máquina</label>
                         <input className="erp-input num" type="number" step="0.001" value={roForm.standard_time ?? ""} placeholder="herda"
-                          onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                          onChange={(e) => setRoF("standard_time", e.target.value ? Number(e.target.value) : undefined)} />
+                        <span className="erp-field-hint">Em branco herda a biblioteca.</span></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Preparação</label>
                         <input className="erp-input num" type="number" step="0.001" value={roForm.setup_time ?? ""} placeholder="herda"
                           onChange={(e) => setRoF("setup_time", e.target.value ? Number(e.target.value) : undefined)} /></div>
@@ -870,7 +943,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                       <table className="erp-grid">
                         <thead><tr>
                           <th style={{ width: 50 }}>Seq</th><th>Operação</th><th>Centro / Fornecedor</th>
-                          <th className="num">Preparação</th><th className="num">Máquina</th>
+                          <th className="num">Preparação</th><th className="num">T. máquina</th>
                           <th className="num">Refugo</th><th className="num">Entra</th>
                           <th style={{ width: 90 }}>Marcas</th><th style={{ width: 170 }}>Ações</th>
                         </tr></thead>

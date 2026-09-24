@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type Machine,
   CAPACITY_UNITS,
@@ -49,6 +49,7 @@ import {
   updateMachineScheduleTimes,
   deleteMachineSchedule,
 } from "@/services/machineScheduleService";
+import { listRoutes, getRouteDetail, type RouteDTO } from "@/services/manufacturingRoutingService";
 import { enumLabel } from "@/utils/enumLabels";
 import {
   type SetupTransitionDTO,
@@ -92,6 +93,15 @@ const EMPTY_MACHINE = {
   preparation_time: 0, preparation_time_unit: "MINUTE",
   cost_center_code: 0, supplier_code: 0, maintenance_responsible_employee_id: 0,
 };
+/** 0,0042 h vira "15 s"; 95 s vira "1 min 35 s". O chão de fábrica lê segundos. */
+function segundos(total: number): string {
+  if (!Number.isFinite(total) || total <= 0) return "—";
+  if (total < 90) return `${total.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s`;
+  const min = Math.floor(total / 60);
+  const resto = Math.round(total - min * 60);
+  return resto ? `${min} min ${resto} s` : `${min} min`;
+}
+
 const EMPTY_TIME: CreateItemMachineTimeDTO = { item_code: "", mask: "", machine_code: 0, production_time: 1, production_time_unit: "HORA", production_base_qty: 1, setup_time: 0, priority: 1, efficiency_rate: 1, time_basis: "PROPORTIONAL" };
 
 /** Situações do slot na fila (`machine_schedules.status`). */
@@ -160,6 +170,81 @@ export function Vmaq0200Page(): JSX.Element {
     if (tForm.item_code) void listItemMachineTimes(tForm.item_code).then((rows) => { if (current) setItemTimes(rows); }).catch((error) => { if (current) setFeedback({ type: "error", message: errMessage(error) }); });
     return () => { current = false; };
   }, [tForm.item_code]);
+
+  /**
+   * Roteiro do item, quando existe. Serve só para a tela dizer **quem manda no
+   * tempo**: sem isso, o usuário preenche "Tempo de produção" aqui e o mesmo
+   * tempo na etapa do roteiro, os dois números divergem e nada na tela denuncia
+   * qual entrou no plano. Falha silenciosa: a tela segue sem o aviso.
+   */
+  const [roteiroDoItem, setRoteiroDoItem] = useState<{
+    route: RouteDTO;
+    etapasComTempo: number;
+    etapas: number;
+    /** Horas de máquina por peça, somadas por centro de trabalho. */
+    horasPorCentro: Map<number, number>;
+  } | null>(null);
+  useEffect(() => {
+    let current = true;
+    setRoteiroDoItem(null);
+    const code = tForm.item_code;
+    if (!code) return;
+    void (async () => {
+      try {
+        const routes = await listRoutes(code);
+        const padrao = routes.find((r) => r.is_standard) ?? routes[0];
+        if (!padrao?.id) return;
+        const detail = await getRouteDetail(padrao.id);
+        const comTempo = detail.operations.filter((op) => (op.run_time ?? 0) > 0 || (op.standard_time ?? 0) > 0 || (op.eff_time?.run_hours ?? 0) > 0).length;
+        // Horas de máquina por PEÇA, por centro: a preparação é por lote e não
+        // entra; o ciclo é dividido pelas peças que saem nele.
+        const horasPorCentro = new Map<number, number>();
+        for (const op of detail.operations) {
+          const centro = op.effective_work_center_id ?? op.work_center_id;
+          const base = op.eff_time?.run_base_qty || 1;
+          const porPeca = (op.eff_time?.run_hours ?? 0) / base;
+          if (!centro || porPeca <= 0) continue;
+          horasPorCentro.set(centro, (horasPorCentro.get(centro) ?? 0) + porPeca);
+        }
+        if (current) setRoteiroDoItem({ route: padrao, etapas: detail.operations.length, etapasComTempo: comTempo, horasPorCentro });
+      } catch { /* sem roteiro legível, a tela continua igual */ }
+    })();
+    return () => { current = false; };
+  }, [tForm.item_code]);
+  /**
+   * Comparação entre o tempo que o ROTEIRO prevê para o centro desta máquina e
+   * o tempo cadastrado AQUI, ambos por peça e em segundos.
+   *
+   * Os dois números convivem de propósito (o do roteiro manda; este é a medida
+   * da máquina e o que vale sem roteiro), mas divergir muito é sinal de que um
+   * dos dois está errado — e ninguém percebia, porque nenhuma tela mostrava os
+   * dois juntos. `null` quando falta informação para comparar honestamente.
+   */
+  const comparativoDeTempo = useMemo(() => {
+    if (!roteiroDoItem || !tForm.machine_code || !tForm.production_time || !tForm.production_base_qty) return null;
+    const maquina = machines.find((m) => m.code === tForm.machine_code);
+    const tipo = types.find((t) => t.code === maquina?.machine_type_code);
+    if (!tipo?.id) return null;
+    const horasRoteiro = roteiroDoItem.horasPorCentro.get(tipo.id);
+    if (!horasRoteiro) return null;
+
+    const porUnidade: Record<string, number> = { SEGUNDO: 1, MINUTO: 60, HORA: 3600, DIA: 3600 * 8 };
+    const fator = porUnidade[tForm.production_time_unit] ?? 3600;
+    const segundosCadastro = (tForm.production_time * fator) / tForm.production_base_qty;
+    const segundosRoteiro = horasRoteiro * 3600;
+    const maior = Math.max(segundosCadastro, segundosRoteiro);
+    const divergencia = maior > 0 ? Math.abs(segundosCadastro - segundosRoteiro) / maior : 0;
+    return {
+      centro: tipo.name || `centro ${tipo.id}`,
+      segundosRoteiro,
+      segundosCadastro,
+      divergencia,
+      // 20 % é a folga que separa "medida diferente do mesmo processo" de
+      // "alguém digitou em outra unidade ou esqueceu as peças por ciclo".
+      alerta: divergencia >= 0.2,
+    };
+  }, [roteiroDoItem, tForm.machine_code, tForm.production_time, tForm.production_time_unit, tForm.production_base_qty, machines, types]);
+
   const [calc, setCalc] = useState({ item_code: "", mask: "", machine_code: 0, demand_qty: 0 });
   const [calcResult, setCalcResult] = useState<ProductionCalcResult | null>(null);
   const [sched, setSched] = useState({ machine_code: 0, schedule_date: "", planned_qty: 0, sequence: 0 });
@@ -1128,14 +1213,57 @@ export function Vmaq0200Page(): JSX.Element {
             <LookupField value={tForm.machine_code || undefined} loader={loadMachines} entityLabel="máquina" onChange={(code) => setTForm((p) => ({ ...p, machine_code: code ?? 0 }))} />
           </div>
           <div className="erp-field erp-c12"><p className="erp-hint">Informe a produção real esperada: 120 peças por hora = tempo 1, unidade hora, quantidade 120 e eficiência de 100%. Use a unidade do item. Para chapas/hora, converta pelo número de peças obtidas por chapa. A máscara distingue configurações como material e espessura.</p></div>
+          {/* Quem manda no tempo. Sem este aviso, o mesmo tempo é digitado aqui e
+              na etapa do roteiro, os números divergem e a tela não diz qual valeu. */}
+          {tForm.item_code && (
+            <div className="erp-field erp-c12">
+              {roteiroDoItem && roteiroDoItem.etapasComTempo > 0 ? (
+                <p className="erp-note">
+                  <strong>Este item tem roteiro</strong> ({roteiroDoItem.route.description || `roteiro ${roteiroDoItem.route.code ?? roteiroDoItem.route.id}`} ·{" "}
+                  {roteiroDoItem.etapasComTempo} de {roteiroDoItem.etapas} etapa(s) com tempo próprio). Quem define
+                  <strong> quanto tempo cada etapa leva</strong> é o roteiro — não o campo <em>Tempo de produção</em> abaixo.
+                  Desta tela o planejamento usa <strong>quais máquinas do centro podem fazer o item</strong>, a
+                  <strong> prioridade</strong>, a <strong>eficiência</strong> e as <strong>paradas de consumível</strong>,
+                  que incidem sobre o tempo do roteiro. O <em>Tempo de produção</em> continua obrigatório: é ele que
+                  vale quando a etapa não informa tempo e é a medida de capacidade da máquina.
+                </p>
+              ) : (
+                <p className="erp-note">
+                  Este item <strong>ainda não tem roteiro com tempo por etapa</strong>. Enquanto for assim, é o
+                  <em> Tempo de produção</em> abaixo que dimensiona a ordem inteira. Ao criar o roteiro (VENT0202), o
+                  tempo de cada etapa passa a mandar e este cadastro responde pela máquina, pela eficiência e pelas paradas.
+                </p>
+              )}
+            </div>
+          )}
+          {comparativoDeTempo && (
+            <div className="erp-field erp-c12">
+              <div className={`maq-comparativo${comparativoDeTempo.alerta ? " divergente" : ""}`}>
+                <span>
+                  <strong>{comparativoDeTempo.centro}</strong> · tempo por peça —
+                  {" "}roteiro: <strong>{segundos(comparativoDeTempo.segundosRoteiro)}</strong>
+                  {" · "}esta produtividade: <strong>{segundos(comparativoDeTempo.segundosCadastro)}</strong>
+                  {" · "}diferença: <strong>{(comparativoDeTempo.divergencia * 100).toFixed(0)}%</strong>
+                </span>
+                {comparativoDeTempo.alerta && (
+                  <span>
+                    Diferença grande demais para ser variação de medição. Confira a <em>unidade de tempo</em> e a
+                    <em> quantidade nesse tempo</em> aqui, e o <em>tempo de máquina</em> e as <em>peças por ciclo</em> na
+                    etapa do roteiro — errar as peças por ciclo multiplica ou divide o tempo pelo mesmo número.
+                    O planejamento vai usar o do roteiro.
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div className="erp-field erp-c3"><label className="erp-label">Forma de produção</label><select className="erp-input" value={tForm.time_basis ?? "CYCLE"} onChange={(e) => setTForm((p) => ({ ...p, time_basis: e.target.value as "CYCLE" | "PROPORTIONAL" }))}><option value="PROPORTIONAL">Contínua — proporcional à quantidade</option><option value="CYCLE">Ciclos fechados — ocupa o ciclo inteiro</option></select></div>
-          <div className="erp-field erp-c3"><label className="erp-label">Eficiência deste item (%)</label><input className="erp-input num" type="number" min="0.1" max="100" step="0.1" value={tForm.efficiency_rate == null ? "" : tForm.efficiency_rate * 100} onChange={(e) => setTForm((p) => ({ ...p, efficiency_rate: e.target.value === "" ? null : Number(e.target.value) / 100 }))} /><span className="erp-hint">Vazio herda a máquina. Não é aplicada duas vezes.</span></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Tempo de produção</label><input className="erp-input num" type="number" step="any" min="0.000001" value={tForm.production_time || ""} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /><span className="erp-hint">A ficha traz em segundos? Lance direto — não converta.</span></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Unidade tempo</label>
-            <select className="erp-input" value={tForm.production_time_unit} onChange={(e) => setTForm((p) => ({ ...p, production_time_unit: e.target.value }))}>
+          <div className="erp-field erp-c3"><label className="erp-label">Eficiência deste item (%)</label><input className="erp-input num" type="number" min="0.1" max="100" step="0.1" value={tForm.efficiency_rate == null ? "" : tForm.efficiency_rate * 100} onChange={(e) => setTForm((p) => ({ ...p, efficiency_rate: e.target.value === "" ? null : Number(e.target.value) / 100 }))} /><span className="erp-hint">Vazio herda a máquina. Não é aplicada duas vezes. Vale também sobre o tempo do roteiro.</span></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req" htmlFor="maq-tempo-producao">Tempo de produção</label><input id="maq-tempo-producao" className="erp-input num" type="number" step="any" min="0.000001" value={tForm.production_time || ""} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /><span className="erp-hint">A ficha traz em segundos? Lance direto — não converta.{roteiroDoItem && roteiroDoItem.etapasComTempo > 0 ? " Com roteiro, o tempo da etapa prevalece." : ""}</span></div>
+          <div className="erp-field erp-c2"><label className="erp-label" htmlFor="maq-unidade-tempo">Unidade tempo</label>
+            <select id="maq-unidade-tempo" className="erp-input" value={tForm.production_time_unit} onChange={(e) => setTForm((p) => ({ ...p, production_time_unit: e.target.value }))}>
               {TIME_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
             </select></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade nesse tempo</label><input className="erp-input num" type="number" step="1" min="1" value={tForm.production_base_qty || ""} onChange={(e) => setTForm((p) => ({ ...p, production_base_qty: Number(e.target.value) }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label erp-req" htmlFor="maq-qtd-no-tempo">Quantidade nesse tempo</label><input id="maq-qtd-no-tempo" className="erp-input num" type="number" step="1" min="1" value={tForm.production_base_qty || ""} onChange={(e) => setTForm((p) => ({ ...p, production_base_qty: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Preparação por ordem (min)</label><input className="erp-input num" type="number" step="any" min="0" value={tForm.setup_time || ""} onChange={(e) => setTForm((p) => ({ ...p, setup_time: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Prioridade (1=preferida)</label><input className="erp-input num" type="number" value={tForm.priority || ""} onChange={(e) => setTForm((p) => ({ ...p, priority: Number(e.target.value) }))} /></div>
 
