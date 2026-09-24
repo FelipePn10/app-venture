@@ -5,6 +5,7 @@ import {
   ganttMonth, rescheduleGantt, exportGanttMonth,
 } from "@/services/apsService";
 import { downloadBlob } from "@/services/fileDownload";
+import { ApsGanttBoard } from "./crp/ApsGanttBoard";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -187,6 +188,21 @@ export function Vpro0210Page(): JSX.Element {
               </div></div>
             )}
 
+            {/* Linha do tempo primeiro; a grade continua embaixo, porque é dela
+                que sai a leitura exata e a exportação. */}
+            {board && (
+              <div className="erp-fieldset">
+                <div className="erp-fieldset-head">
+                  Quadro — <span style={{ fontWeight: 400, opacity: 0.65 }}>
+                    {board.rows.length} recurso(s) · {board.days.length} dia(s)
+                    {board.late_bars > 0 ? ` · ${board.late_bars} barra(s) atrasada(s)` : ""}
+                  </span>
+                </div>
+                <div className="erp-fieldset-body"><div className="erp-field erp-c12">
+                  <ApsGanttBoard board={board} />
+                </div></div>
+              </div>
+            )}
             <div className="erp-fieldset"><div className="erp-fieldset-head">Barras do quadro — <span style={{fontWeight:400,opacity:0.65}}>{boardBars.length} barra(s)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Linha</th><th>Rótulo</th><th>Seq.</th><th>Centro</th><th>Início</th><th>Fim</th><th>% concl.</th><th>Atrasada</th></tr></thead>
