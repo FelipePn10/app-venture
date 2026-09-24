@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.2.0] — 2026-09-24
+
 ## Novidades
 - **Veja em que dia a capacidade estoura.** O planejamento de capacidade ganhou um gráfico por centro de trabalho: a barra é a carga do dia, a linha tracejada é a capacidade, e o dia que passa dela salta à vista — sem comparar números linha a linha.
 - **O quadro de sequenciamento virou uma linha do tempo.** Cada ordem aparece na data em que vai rodar, empilhada por recurso. Duas ordens disputando o mesmo centro no mesmo dia ficam evidentes, e o dia sem expediente e o "hoje" ficam marcados.
