@@ -80,6 +80,30 @@ export interface ErpScreen {
   module: ErpModule;
 }
 
+/**
+ * Rotinas que o perfil **OPERATOR** — o posto de trabalho — pode abrir.
+ *
+ * O backend já recusa o resto (o perfil só tem leitura e `production:report`),
+ * mas oferecer 209 rotinas a quem pode usar cinco é oferecer 204 becos sem
+ * saída: o operador clica em Financeiro e recebe "usuário não autorizado", sem
+ * entender se errou ou se o sistema quebrou. O menu mostra o que ele faz.
+ *
+ * Esta lista acompanha o escopo do perfil no backend
+ * (`internal/interfaces/middleware/permissions.go`): apontar produção, ver a
+ * ordem em que vai apontar e registrar parada de máquina.
+ */
+export const SHOP_FLOOR_SCREENS: readonly string[] = [
+  'VPRO0900', // Ordem de Fabricação — apontamento de etapa, produção e consumo
+  'VPRO1200', // Parada de Máquina — o operador registra a parada do próprio posto
+  'VPRO1000', // Ficha de Ferramenta — conferir a ferramenta antes de produzir
+];
+
+/** As rotinas que o perfil enxerga. Perfis de escritório enxergam tudo. */
+export function screensForRole(screens: ErpScreen[], role?: string): ErpScreen[] {
+  if ((role ?? '').toUpperCase() !== 'OPERATOR') return screens;
+  return screens.filter((screen) => SHOP_FLOOR_SCREENS.includes(screen.code));
+}
+
 export const ERP_SCREENS: ErpScreen[] = [
   // ── Módulos de plataforma / novos (backend recém-exposto)
   {
