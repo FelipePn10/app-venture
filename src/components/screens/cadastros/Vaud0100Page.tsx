@@ -48,19 +48,72 @@ function normalize(value: unknown): string {
   return text(value).trim().toUpperCase().replace(/[ .-]+/g, "_");
 }
 
+/**
+ * A ação sai do VERBO HTTP do registro.
+ *
+ * A tela procurava as chaves `action`/`event`/`operation` — nenhuma delas existe
+ * no log, que é de requisição (método, rota, caminho, situação). O resultado era
+ * "Registrou uma ação" em toda linha: a coluna existia e não dizia nada.
+ */
+const METHOD_LABELS: Record<string, string> = {
+  POST: "Cadastrou", PUT: "Alterou", PATCH: "Alterou", DELETE: "Excluiu", GET: "Consultou",
+};
 function friendlyAction(row: Obj): string {
   const raw = pick(row, "action", "Action", "event", "Event", "operation", "Operation");
-  const key = normalize(raw);
-  return ACTION_LABELS[key] ?? (raw ? text(raw).replace(/_/g, " ").toLocaleLowerCase("pt-BR") : "Registrou uma ação");
+  if (raw) {
+    const key = normalize(raw);
+    return ACTION_LABELS[key] ?? text(raw).replace(/_/g, " ").toLocaleLowerCase("pt-BR");
+  }
+  const metodo = normalize(pick(row, "method", "Method"));
+  return METHOD_LABELS[metodo] ?? "Registrou uma ação";
 }
 
+/** Sucesso, recusa ou falha — a pergunta mais comum da auditoria. */
+function friendlyResult(row: Obj): { label: string; classe: string } {
+  const status = Number(pick(row, "status", "Status") ?? 0);
+  if (!status) return { label: "—", classe: "" };
+  if (status >= 500) return { label: `Falhou (${status})`, classe: "err" };
+  if (status >= 400) return { label: `Recusado (${status})`, classe: "warn" };
+  return { label: `Concluído (${status})`, classe: "ok" };
+}
+
+/**
+ * O "onde" sai da ROTA (`/api/items/create` → "Item"). Mesmo motivo do
+ * `friendlyAction`: `entity` não vem no registro, e a coluna dizia "Sistema"
+ * em tudo.
+ */
+const ROUTE_LABELS: Array<[RegExp, string]> = [
+  [/^\/api\/items\/structure/, "Estrutura de produto"],
+  [/^\/api\/items/, "Item"],
+  [/^\/api\/routing/, "Roteiro de fabricação"],
+  [/^\/api\/production-order/, "Ordem de produção"],
+  [/^\/api\/planned-order/, "Ordem planejada"],
+  [/^\/api\/sales-quotation/, "Orçamento de venda"],
+  [/^\/api\/sales-order/, "Pedido de venda"],
+  [/^\/api\/purchase-order/, "Pedido de compra"],
+  [/^\/api\/purchase-requisition/, "Requisição de compra"],
+  [/^\/api\/customers/, "Cliente"],
+  [/^\/api\/suppliers/, "Fornecedor"],
+  [/^\/api\/financial\/contas-pagar/, "Conta a pagar"],
+  [/^\/api\/financial\/contas-receber/, "Conta a receber"],
+  [/^\/api\/financial/, "Financeiro"],
+  [/^\/api\/fiscal/, "Fiscal"],
+  [/^\/api\/stock|^\/api\/inventory|^\/api\/warehouse/, "Estoque"],
+  [/^\/api\/machine/, "Máquina"],
+  [/^\/api\/crp|^\/api\/aps|^\/api\/mrp/, "Planejamento"],
+  [/^\/users/, "Usuário"],
+];
 function friendlyEntity(row: Obj): string {
   const raw = pick(row, "entity", "Entity", "entity_type", "EntityType", "resource", "Resource", "table", "Table");
-  const key = normalize(raw);
-  if (ENTITY_LABELS[key]) return ENTITY_LABELS[key];
-  if (!raw) return "Sistema";
-  const value = text(raw).replace(/_/g, " ").toLocaleLowerCase("pt-BR");
-  return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);
+  if (raw) {
+    const key = normalize(raw);
+    if (ENTITY_LABELS[key]) return ENTITY_LABELS[key];
+    const value = text(raw).replace(/_/g, " ").toLocaleLowerCase("pt-BR");
+    return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);
+  }
+  const rota = text(pick(row, "route", "Route", "path", "Path"));
+  for (const [padrao, rotulo] of ROUTE_LABELS) if (padrao.test(rota)) return rotulo;
+  return rota === "—" ? "Sistema" : rota;
 }
 
 function friendlyDate(row: Obj): string {
@@ -97,7 +150,12 @@ function details(row: Obj): Array<{ label: string; value: string }> {
 export function Vaud0100Page(): JSX.Element {
   const [rows, setRows] = useState<Obj[]>([]);
   const [selected, setSelected] = useState<Obj | null>(null);
-  const [filtros, setFiltros] = useState({ entity: "", action: "", user: "" });
+  /**
+   * Só entram filtros que o backend lê. Os antigos (`entity`, `action`, `user`)
+   * eram descartados no servidor: a tela parecia filtrar e devolvia a lista
+   * inteira, o que é pior que não ter filtro.
+   */
+  const [filtros, setFiltros] = useState({ search: "", method: "", from: "", to: "", soFalhas: false });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -105,9 +163,12 @@ export function Vaud0100Page(): JSX.Element {
     setBusy(true); setFeedback(null); setSelected(null);
     try {
       const params: Obj = {};
-      if (filtros.entity.trim()) params.entity = filtros.entity.trim();
-      if (filtros.action.trim()) params.action = filtros.action.trim();
-      if (filtros.user.trim()) params.user = filtros.user.trim();
+      if (filtros.search.trim()) params.search = filtros.search.trim();
+      if (filtros.method) params.method = filtros.method;
+      // O campo de data é só o dia; o backend espera instante completo.
+      if (filtros.from) params.from = `${filtros.from}T00:00:00Z`;
+      if (filtros.to) params.to = `${filtros.to}T23:59:59Z`;
+      if (filtros.soFalhas) params.min_status = 400;
       setRows(await listAuditLog(params));
     } catch (e) { setFeedback({ type: "error", message: errMessage(e, "Não foi possível consultar o histórico de alterações.") }); }
     finally { setBusy(false); }
@@ -115,8 +176,8 @@ export function Vaud0100Page(): JSX.Element {
 
   const selectedDetails = useMemo(() => selected ? details(selected) : [], [selected]);
   const exportTable = () => ({
-    columns: ["Quando", "Quem", "O que aconteceu", "Onde", "Referência"],
-    rows: rows.map((row) => [friendlyDate(row), friendlyUser(row), summary(row), friendlyEntity(row), friendlyReference(row)]),
+    columns: ["Quando", "Quem", "O que aconteceu", "Onde", "Resultado", "Referência"],
+    rows: rows.map((row) => [friendlyDate(row), friendlyUser(row), summary(row), friendlyEntity(row), friendlyResult(row).label, friendlyReference(row)]),
   });
 
   return (
@@ -132,9 +193,21 @@ export function Vaud0100Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
-          <span className="erp-tgroup-label">Onde</span><input aria-label="Filtrar pelo cadastro ou processo" className="erp-tinput" placeholder="Ex.: Item" value={filtros.entity} onChange={(e) => setFiltros((f) => ({ ...f, entity: e.target.value }))} />
-          <span className="erp-tgroup-label">Ação</span><input aria-label="Filtrar pela ação realizada" className="erp-tinput" placeholder="Ex.: Alterou" value={filtros.action} onChange={(e) => setFiltros((f) => ({ ...f, action: e.target.value }))} />
-          <span className="erp-tgroup-label">Usuário</span><input aria-label="Filtrar pelo usuário" className="erp-tinput" placeholder="Nome ou e-mail" value={filtros.user} onChange={(e) => setFiltros((f) => ({ ...f, user: e.target.value }))} />
+          <span className="erp-tgroup-label">De</span><input aria-label="Data inicial" className="erp-tinput" type="date" value={filtros.from} onChange={(e) => setFiltros((f) => ({ ...f, from: e.target.value }))} />
+          <span className="erp-tgroup-label">Até</span><input aria-label="Data final" className="erp-tinput" type="date" value={filtros.to} onChange={(e) => setFiltros((f) => ({ ...f, to: e.target.value }))} />
+          <span className="erp-tgroup-label">Ação</span>
+          <select aria-label="Filtrar pela ação realizada" className="erp-tinput" value={filtros.method} onChange={(e) => setFiltros((f) => ({ ...f, method: e.target.value }))}>
+            <option value="">Todas</option>
+            <option value="POST">Cadastrou</option>
+            <option value="PUT">Alterou</option>
+            <option value="DELETE">Excluiu</option>
+            <option value="GET">Consultou</option>
+          </select>
+          <span className="erp-tgroup-label">Onde</span><input aria-label="Filtrar por trecho do caminho" className="erp-tinput" placeholder="Ex.: items" value={filtros.search} onChange={(e) => setFiltros((f) => ({ ...f, search: e.target.value }))} />
+          <label className="erp-tgroup-label" style={{ display: "inline-flex", alignItems: "center", gap: 5, textTransform: "none" }}>
+            <input type="checkbox" checked={filtros.soFalhas} onChange={(e) => setFiltros((f) => ({ ...f, soFalhas: e.target.checked }))} />
+            só o que foi recusado ou falhou
+          </label>
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Consultar</button>
         </div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="Histórico de Alterações" filename="historico-alteracoes" build={exportTable} /></div>
@@ -147,12 +220,14 @@ export function Vaud0100Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">Atividades registradas</button></div>
           <div className="erp-detail-body">
             <div className="erp-grid-wrap"><table className="erp-grid">
-              <thead><tr><th>Quando</th><th>Quem</th><th>O que aconteceu</th><th>Onde</th><th>Referência</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Quando</th><th>Quem</th><th>O que aconteceu</th><th>Onde</th><th>Resultado</th><th>Referência</th><th>Ações</th></tr></thead>
               <tbody>
-                {rows.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma atividade carregada. Ajuste os filtros, se necessário, e clique em Consultar.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma atividade carregada. Ajuste os filtros, se necessário, e clique em Consultar.</td></tr>}
                 {rows.map((row, index) => <tr key={text(pick(row, "id", "ID")) + index}>
                   <td style={{ whiteSpace: "nowrap" }}>{friendlyDate(row)}</td><td>{friendlyUser(row)}</td>
-                  <td><strong>{summary(row)}</strong></td><td>{friendlyEntity(row)}</td><td>{friendlyReference(row)}</td>
+                  <td><strong>{summary(row)}</strong></td><td>{friendlyEntity(row)}</td>
+                  <td>{(() => { const r = friendlyResult(row); return r.classe ? <span className={`erp-badge ${r.classe}`}>{r.label}</span> : r.label; })()}</td>
+                  <td>{friendlyReference(row)}</td>
                   <td><button className="erp-btn erp-btn-sm" onClick={() => setSelected(row)}>Ver detalhes</button></td>
                 </tr>)}
               </tbody>
@@ -169,6 +244,7 @@ export function Vaud0100Page(): JSX.Element {
               <div><dt>Quando</dt><dd>{friendlyDate(selected)}</dd></div><div><dt>Quem</dt><dd>{friendlyUser(selected)}</dd></div>
               <div><dt>Acontecimento</dt><dd>{summary(selected)}</dd></div><div><dt>Cadastro ou processo</dt><dd>{friendlyEntity(selected)}</dd></div>
               <div><dt>Referência</dt><dd>{friendlyReference(selected)}</dd></div>
+              <div><dt>Resultado</dt><dd>{friendlyResult(selected).label}</dd></div>
               {selectedDetails.map((item, index) => <div key={`${item.label}-${index}`}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}
             </dl>
             {selectedDetails.length === 0 && <div className="erp-note">Este registro não possui informações adicionais para exibição.</div>}
