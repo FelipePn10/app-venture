@@ -101,6 +101,8 @@ export interface RouteOperationDTO {
   operation_id: number;
   operation_name?: string;
   work_center_id?: number;
+  /** Centro onde a etapa realmente roda (sobreposição ∘ centro padrão da operação). */
+  effective_work_center_id?: number;
   work_center_name?: string;
   standard_time?: number;
   setup_time?: number;
@@ -267,6 +269,7 @@ function parseRouteOp(raw: unknown): RouteOperationDTO {
     sequence: parseNum(o, 'sequence', 'Sequence'),
     operation_id: parseNum(o, 'operation_id', 'OperationID'),
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
+    effective_work_center_id: parseNum(o, 'effective_work_center_id', 'EffectiveWorkCenterID') || parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
     operation_name: parseStr(o, 'operation_name', 'OperationName') || undefined,
     work_center_name: parseStr(o, 'work_center_name', 'WorkCenterName') || undefined,
     standard_time: parseNum(o, 'standard_time', 'StandardTime') || undefined,
@@ -532,5 +535,65 @@ export async function getLeadTime(routeId: number, qty = 1): Promise<LeadTimeRes
     critical_path: Array.isArray(cp) ? (cp as number[]) : [],
     input_qty_by_operation: (porOp && typeof porOp === 'object' ? porOp : undefined) as Record<string, number> | undefined,
     release_qty: parseNum(o, 'release_qty', 'ReleaseQty') || qty,
+  };
+}
+
+/** O que um centro de trabalho usado pelo roteiro tem — e o que falta nele. */
+export interface WorkCenterCheck {
+  work_center_id: number;
+  work_center_name: string;
+  steps: number[];
+  has_machine: boolean;
+  has_rate: boolean;
+  hourly_rate: number;
+}
+
+/**
+ * Veredito de "este roteiro consegue ser planejado?".
+ *
+ * `issues` trava o planejamento; `warnings` deixa passar mas distorce o
+ * resultado (o caso clássico é o centro sem tarifa, que entra no custo valendo
+ * zero e devolve uma margem maior do que a real).
+ */
+export interface RouteReadiness {
+  route_id: number;
+  item_code: string;
+  description: string;
+  ready: boolean;
+  steps: number;
+  issues: string[];
+  warnings: string[];
+  work_centers: WorkCenterCheck[];
+}
+
+/**
+ * `GET /api/routing/routes/{id}/readiness` — confere o roteiro contra o que o
+ * planejamento vai exigir dele, antes de rodar o MRP. Sem isso a recusa chega
+ * no meio do cálculo, citando códigos internos, longe da tela onde se conserta.
+ */
+export async function getRouteReadiness(routeId: number): Promise<RouteReadiness> {
+  const { data } = await httpClient.get(`${BASE}/routes/${routeId}/readiness`);
+  const o = unwrapObject(data);
+  const textos = (valor: unknown): string[] =>
+    unwrapArray(valor).map((item) => (typeof item === 'string' ? item : String(item))).filter(Boolean);
+  return {
+    route_id: parseNum(o, 'route_id', 'RouteID') || routeId,
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
+    description: parseStr(o, 'description', 'Description'),
+    ready: parseBool(o, 'ready', 'Ready'),
+    steps: parseNum(o, 'steps', 'Steps') || 0,
+    issues: textos(o['issues'] ?? o['Issues']),
+    warnings: textos(o['warnings'] ?? o['Warnings']),
+    work_centers: unwrapArray(o['work_centers'] ?? o['WorkCenters']).map((raw) => {
+      const c = unwrapObject(raw);
+      return {
+        work_center_id: parseNum(c, 'work_center_id', 'WorkCenterID') || 0,
+        work_center_name: parseStr(c, 'work_center_name', 'WorkCenterName'),
+        steps: unwrapArray(c['steps'] ?? c['Steps']).map((s) => Number(s) || 0),
+        has_machine: parseBool(c, 'has_machine', 'HasMachine'),
+        has_rate: parseBool(c, 'has_rate', 'HasRate'),
+        hourly_rate: parseNum(c, 'hourly_rate', 'HourlyRate') || 0,
+      };
+    }),
   };
 }

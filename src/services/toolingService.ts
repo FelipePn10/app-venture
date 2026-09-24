@@ -131,8 +131,16 @@ export async function listTools(): Promise<ToolDTO[]> {
   const { data } = await httpClient.get(TOOLS);
   return unwrapArray(data).map(parseTool);
 }
-export async function listToolsNeedingReplacement(): Promise<ToolDTO[]> {
-  const { data } = await httpClient.get(`${TOOLS}/replacement`);
+/**
+ * Ferramentas que precisam de troca. `limiar` é a fração do limite de vida a
+ * partir da qual a ferramenta entra na lista: 0,8 avisa com folga para pedir a
+ * afiação; 1 devolve só as que já estouraram.
+ *
+ * Avisar só depois de estourar chega tarde — a peça já saiu fora de medida e a
+ * parada vira urgência no meio do turno.
+ */
+export async function listToolsNeedingReplacement(limiar = 0.8): Promise<ToolDTO[]> {
+  const { data } = await httpClient.get(`${TOOLS}/replacement`, { params: { threshold: String(limiar) } });
   return unwrapArray(data).map(parseTool);
 }
 export async function getTool(id: number): Promise<ToolDTO> {

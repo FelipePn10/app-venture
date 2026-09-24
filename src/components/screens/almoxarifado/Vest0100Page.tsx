@@ -199,7 +199,7 @@ export function Vest0100Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
-          <input className="erp-input num" style={{ width: 110, height: 32 }}  value={itemCode} placeholder="código" onChange={(e) => setItemCode(e.target.value)} />
+          <div className="erp-tlookup"><LookupField value={itemCode || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setItemCode(String(code ?? ""))} /></div>
           <button className="erp-btn" onClick={consultarItem} disabled={busy}>Consultar</button>
           <button className="erp-btn" onClick={listarTodos} disabled={busy}>Últimos movimentos</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>

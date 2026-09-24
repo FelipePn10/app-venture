@@ -74,6 +74,12 @@ export interface ConsumptionDTO {
 
 export interface OperationDTO {
   execution_history?: { id: number; status: string; actor: string; occurred_at: string }[];
+  /**
+   * Pendências que não impedem a ordem de existir — hoje, etapa marcada como
+   * ponto de inspeção sem plano ativo. A ordem é criada assim mesmo; recusá-la
+   * pararia a fábrica por uma lacuna de cadastro do módulo de qualidade.
+   */
+  warnings?: string[];
   can_start?: boolean;
   started_at?: string;
   completed_at?: string;
@@ -174,6 +180,7 @@ function parseConsumption(raw: unknown): ConsumptionDTO {
 function parseOperation(raw: unknown): OperationDTO {
   const o = unwrapObject(raw);
   return {
+    warnings: unwrapArray(o.warnings).map((aviso) => String(aviso)).filter(Boolean),
     execution_history: unwrapArray(o.execution_history).map((rawEvent) => {
       const event = unwrapObject(rawEvent);
       return { id: parseNum(event, 'id'), status: parseStr(event, 'status'), actor: parseStr(event, 'actor'), occurred_at: parseStr(event, 'occurred_at') };
@@ -281,12 +288,21 @@ export async function listOperations(id: number): Promise<OperationDTO[]> {
   return unwrapArray(data).map(parseOperation);
 }
 /**
- * Avança uma operação da OF. Corpo: `{operation_id, status, actual_hours}`.
+ * Avança uma operação da OF. Corpo:
+ * `{operation_id, status, actual_hours, produced_qty, reason}`.
  * Pausa e interrupção exigem motivo. Retomar preserva o início original.
  * Conclusão libera as sucessoras; a entrega de produção atualiza o estoque.
+ *
+ * `actual_hours` e `produced_qty` são o que **gasta a vida útil da ferramenta**
+ * ao concluir a etapa: ferramenta medida em horas consome as horas apontadas;
+ * medida em golpes/peças consome as peças produzidas. Enviar zero nos dois — o
+ * que a tela fazia — faz o backend pular o consumo inteiro (`amount <= 0`), e a
+ * ferramenta nunca chega ao limite de troca.
  */
-export async function advanceOperation(operationId: number, status = 'IN_PROGRESS', actualHours = 0, reason = ''): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/operations/advance`, { operation_id: operationId, status, actual_hours: actualHours, reason });
+export async function advanceOperation(operationId: number, status = 'IN_PROGRESS', actualHours = 0, reason = '', producedQty = 0): Promise<Obj> {
+  const { data } = await httpClient.post(`${BASE}/operations/advance`, {
+    operation_id: operationId, status, actual_hours: actualHours, produced_qty: producedQty, reason,
+  });
   return unwrapObject(data);
 }
 

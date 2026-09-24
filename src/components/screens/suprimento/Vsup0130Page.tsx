@@ -49,7 +49,7 @@ export function Vsup0130Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Item</span>
-          <div style={{ width: 260 }}><LookupField value={item} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setItem(c)} /></div>
+          <div className="erp-tlookup"><LookupField value={item} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setItem(c)} /></div>
           <button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button>
         </div>
         <div className="erp-tspacer" />

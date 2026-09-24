@@ -1,140 +1,155 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, lazy, Suspense } from "react";
 import { useParams } from "react-router-dom";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Vent0800Page } from "./almoxarifado/Vent0800Page";
 
-import { Vent0200Page } from "./engenharia/Vent0200Page";
-import { Vent0210Page } from "./engenharia/Vent0210Page";
-import { Vent0108Page } from "./engenharia/Vent0108Page";
-import { Vpme0102Page } from "./engenharia/Vpme0102Page";
-import { Vpme0102ItePage } from "./engenharia/Vpme0102ItePage";
-import { Vite0114Page } from "./engenharia/Vite0114Page";
-import { Vite0115Page } from "./engenharia/Vite0115Page";
-import { Vite0116Page } from "./engenharia/Vite0116Page";
-import { Vctb0102Page } from "./contabilidade/Vctb0102Page";
-import { Vutl0555Page } from "./contabilidade/Vutl0555Page";
-import { Vpla0102Page } from "./planejamento/Vpla0102Page";
-import { Vpre0101Page } from "./previsao/Vpre0101Page";
-import { Vpre0102Page } from "./previsao/Vpre0102Page";
-import { Vpre0201Page } from "./previsao/Vpre0201Page";
-import { Vpre0251Page } from "./previsao/Vpre0251Page";
-import { Vpre0301Page } from "./previsao/Vpre0301Page";
-import { Vatc0280Page } from "./assistencia/Vatc0280Page";
-import { Vatc0480Page } from "./assistencia/Vatc0480Page";
-import { Vatc0380Page } from "./assistencia/Vatc0380Page";
-import { Vsac0200Page } from "./assistencia/Vsac0200Page";
-import { Vcli0500Page } from "./cliente/Vcli0500Page";
-import { Vcli0510Page } from "./cliente/Vcli0510Page";
-import { Vcli0520Page } from "./cliente/Vcli0520Page";
-import { Vcli0530Page } from "./cliente/Vcli0530Page";
-import { Vcst0202Page } from "./custo/Vcst0202Page";
-import { Vpdv0108Page } from "./pdv/Vpdv0108Page";
-import { Vpdv0111Page } from "./pdv/Vpdv0111Page";
-import { Vvre0200Page } from "./pdv/Vvre0200Page";
-import { Vre0203Page } from "./pdv/Vre0203Page";
-import { Vcon0200Page } from "./suprimento/Vcon0200Page";
-import { Vcon0400Page } from "./suprimento/Vcon0400Page";
-import { Vcon0202Page } from "./suprimento/Vcon0202Page";
-import { Vavr0200Page } from "./suprimento/Vavr0200Page";
-import { Vins0106Page } from "./inspecao/Vins0106Page";
-import { Vins0200Page } from "./inspecao/Vins0200Page";
-import { Vins0201Page } from "./inspecao/Vins0201Page";
-import { Vins0313Page } from "./inspecao/Vins0313Page";
-import { Vins0400Page } from "./inspecao/Vins0400Page";
-import { Vavf0101Page } from "./inspecao/Vavf0101Page";
-import { Vavf0204Page } from "./inspecao/Vavf0204Page";
-import { Vimp0101Page } from "./importacao/Vimp0101Page";
-import { Vimp0200Page } from "./importacao/Vimp0200Page";
-import { Vfin0100Page } from "./financeiro/Vfin0100Page";
-import { Vfin0110Page } from "./financeiro/Vfin0110Page";
-import { Vfin0120Page } from "./financeiro/Vfin0120Page";
-import { Vfin0130Page } from "./financeiro/Vfin0130Page";
-import { Vfin0200Page } from "./financeiro/Vfin0200Page";
-import { Vfin0210Page } from "./financeiro/Vfin0210Page";
-import { Vfin0300Page } from "./financeiro/Vfin0300Page";
-import { Vfin0400Page } from "./financeiro/Vfin0400Page";
-import { Vfin0500Page } from "./financeiro/Vfin0500Page";
-import { Vfis0100Page } from "./fiscal/Vfis0100Page";
-import { Vfis0110Page } from "./fiscal/Vfis0110Page";
-import { Vfis0200Page } from "./fiscal/Vfis0200Page";
-import { Vfis0210Page } from "./fiscal/Vfis0210Page";
-import { Vfis0220Page } from "./fiscal/Vfis0220Page";
-import { Vfis0300Page } from "./fiscal/Vfis0300Page";
-import { Vfis0310Page } from "./fiscal/Vfis0310Page";
-import { Vfis0320Page } from "./fiscal/Vfis0320Page";
-import { Vfis0330Page } from "./fiscal/Vfis0330Page";
-import { Vfis0340Page } from "./fiscal/Vfis0340Page";
-import { Vfis0350Page } from "./fiscal/Vfis0350Page";
-import { Vfis0360Page } from "./fiscal/Vfis0360Page";
-import { Vfis0500Page } from "./fiscal/Vfis0500Page";
-import { Vfis0510Page } from "./fiscal/Vfis0510Page";
-import { Vfis0520Page } from "./fiscal/Vfis0520Page";
-import { Vfis0530Page } from "./fiscal/Vfis0530Page";
-import { Vfis0540Page } from "./fiscal/Vfis0540Page";
-import { Vfis0550Page } from "./fiscal/Vfis0550Page";
-import { Vfis0560Page } from "./fiscal/Vfis0560Page";
-import { Vemp0100Page } from "./cadastros/Vemp0100Page";
-import { Vfun0100Page } from "./cadastros/Vfun0100Page";
-import { Vloc0100Page } from "./cadastros/Vloc0100Page";
-import { Vcla0100Page } from "./cadastros/Vcla0100Page";
-import { Vcal0100Page } from "./cadastros/Vcal0100Page";
-import { Vpri0100Page } from "./cadastros/Vpri0100Page";
-import { Vctb0200Page } from "./contabilidade/Vctb0200Page";
-import { Vnfs0100Page } from "./fiscal/Vnfs0100Page";
-import { Vexp0100Page } from "./almoxarifado/Vexp0100Page";
-import { Vvnd0100Page } from "./comercial/Vvnd0100Page";
-import { Vvnd0200Page } from "./comercial/Vvnd0200Page";
-import { Vvnd0300Page } from "./comercial/Vvnd0300Page";
-import { Vvnd0310Page } from "./comercial/Vvnd0310Page";
-import { Vvnd0400Page } from "./comercial/Vvnd0400Page";
-import { Vvnd0500Page } from "./comercial/Vvnd0500Page";
-import { Vsac0100Page } from "./comercial/Vsac0100Page";
-import { Vdpr0100Page } from "./comercial/Vdpr0100Page";
-import { Vpro0900Page } from "./producao/Vpro0900Page";
-import { Vpro1000Page } from "./producao/Vpro1000Page";
-import { RoteiroFabricacaoPage } from "./engenharia/RoteiroFabricacaoPage";
-import { Vpro0200Page } from "./producao/Vpro0200Page";
-import { Vpro0210Page } from "./producao/Vpro0210Page";
-import { Vpro0300Page } from "./producao/Vpro0300Page";
-import { Vpro0400Page } from "./producao/Vpro0400Page";
-import { Vpro0500Page } from "./producao/Vpro0500Page";
-import { Vpro0600Page } from "./producao/Vpro0600Page";
-import { Vpro0700Page } from "./producao/Vpro0700Page";
-import { Vpro0800Page } from "./producao/Vpro0800Page";
-import { Vcus0100Page } from "./custo/Vcus0100Page";
+/*
+ * Cada tela é um `import()` próprio, não um import estático.
+ *
+ * Com 131 telas empacotadas juntas, abrir QUALQUER uma baixava e interpretava
+ * as 131 — 2,8 MB de JavaScript antes do primeiro pixel, e o instalador do
+ * desktop levava o pacote inteiro a cada atualização, mesmo quando só uma tela
+ * mudou. Agora cada rotina vira um arquivo; abrir o cadastro de item não carrega
+ * o fiscal, e a atualização baixa só o que mudou.
+ *
+ * O `SCREEN_REGISTRY` continua montando os elementos na carga do módulo: criar
+ * `<Tela />` não dispara o import — quem dispara é renderizar, dentro do
+ * `Suspense` lá embaixo.
+ */
+const Vent0800Page = lazy(() => import("./almoxarifado/Vent0800Page").then((m) => ({ default: m.Vent0800Page })));
+
+const Vent0200Page = lazy(() => import("./engenharia/Vent0200Page").then((m) => ({ default: m.Vent0200Page })));
+const Vent0210Page = lazy(() => import("./engenharia/Vent0210Page").then((m) => ({ default: m.Vent0210Page })));
+const Vent0108Page = lazy(() => import("./engenharia/Vent0108Page").then((m) => ({ default: m.Vent0108Page })));
+const Vpme0102Page = lazy(() => import("./engenharia/Vpme0102Page").then((m) => ({ default: m.Vpme0102Page })));
+const Vpme0102ItePage = lazy(() => import("./engenharia/Vpme0102ItePage").then((m) => ({ default: m.Vpme0102ItePage })));
+const Vite0114Page = lazy(() => import("./engenharia/Vite0114Page").then((m) => ({ default: m.Vite0114Page })));
+const Vite0115Page = lazy(() => import("./engenharia/Vite0115Page").then((m) => ({ default: m.Vite0115Page })));
+const Vite0116Page = lazy(() => import("./engenharia/Vite0116Page").then((m) => ({ default: m.Vite0116Page })));
+const Vctb0102Page = lazy(() => import("./contabilidade/Vctb0102Page").then((m) => ({ default: m.Vctb0102Page })));
+const Vutl0555Page = lazy(() => import("./contabilidade/Vutl0555Page").then((m) => ({ default: m.Vutl0555Page })));
+const Vpla0102Page = lazy(() => import("./planejamento/Vpla0102Page").then((m) => ({ default: m.Vpla0102Page })));
+const Vpre0101Page = lazy(() => import("./previsao/Vpre0101Page").then((m) => ({ default: m.Vpre0101Page })));
+const Vpre0102Page = lazy(() => import("./previsao/Vpre0102Page").then((m) => ({ default: m.Vpre0102Page })));
+const Vpre0201Page = lazy(() => import("./previsao/Vpre0201Page").then((m) => ({ default: m.Vpre0201Page })));
+const Vpre0251Page = lazy(() => import("./previsao/Vpre0251Page").then((m) => ({ default: m.Vpre0251Page })));
+const Vpre0301Page = lazy(() => import("./previsao/Vpre0301Page").then((m) => ({ default: m.Vpre0301Page })));
+const Vatc0280Page = lazy(() => import("./assistencia/Vatc0280Page").then((m) => ({ default: m.Vatc0280Page })));
+const Vatc0480Page = lazy(() => import("./assistencia/Vatc0480Page").then((m) => ({ default: m.Vatc0480Page })));
+const Vatc0380Page = lazy(() => import("./assistencia/Vatc0380Page").then((m) => ({ default: m.Vatc0380Page })));
+const Vsac0200Page = lazy(() => import("./assistencia/Vsac0200Page").then((m) => ({ default: m.Vsac0200Page })));
+const Vcli0500Page = lazy(() => import("./cliente/Vcli0500Page").then((m) => ({ default: m.Vcli0500Page })));
+const Vcli0510Page = lazy(() => import("./cliente/Vcli0510Page").then((m) => ({ default: m.Vcli0510Page })));
+const Vcli0520Page = lazy(() => import("./cliente/Vcli0520Page").then((m) => ({ default: m.Vcli0520Page })));
+const Vcli0530Page = lazy(() => import("./cliente/Vcli0530Page").then((m) => ({ default: m.Vcli0530Page })));
+const Vcst0202Page = lazy(() => import("./custo/Vcst0202Page").then((m) => ({ default: m.Vcst0202Page })));
+const Vpdv0108Page = lazy(() => import("./pdv/Vpdv0108Page").then((m) => ({ default: m.Vpdv0108Page })));
+const Vpdv0111Page = lazy(() => import("./pdv/Vpdv0111Page").then((m) => ({ default: m.Vpdv0111Page })));
+const Vvre0200Page = lazy(() => import("./pdv/Vvre0200Page").then((m) => ({ default: m.Vvre0200Page })));
+const Vre0203Page = lazy(() => import("./pdv/Vre0203Page").then((m) => ({ default: m.Vre0203Page })));
+const Vcon0200Page = lazy(() => import("./suprimento/Vcon0200Page").then((m) => ({ default: m.Vcon0200Page })));
+const Vcon0400Page = lazy(() => import("./suprimento/Vcon0400Page").then((m) => ({ default: m.Vcon0400Page })));
+const Vcon0202Page = lazy(() => import("./suprimento/Vcon0202Page").then((m) => ({ default: m.Vcon0202Page })));
+const Vavr0200Page = lazy(() => import("./suprimento/Vavr0200Page").then((m) => ({ default: m.Vavr0200Page })));
+const Vins0106Page = lazy(() => import("./inspecao/Vins0106Page").then((m) => ({ default: m.Vins0106Page })));
+const Vins0200Page = lazy(() => import("./inspecao/Vins0200Page").then((m) => ({ default: m.Vins0200Page })));
+const Vins0201Page = lazy(() => import("./inspecao/Vins0201Page").then((m) => ({ default: m.Vins0201Page })));
+const Vins0313Page = lazy(() => import("./inspecao/Vins0313Page").then((m) => ({ default: m.Vins0313Page })));
+const Vins0400Page = lazy(() => import("./inspecao/Vins0400Page").then((m) => ({ default: m.Vins0400Page })));
+const Vavf0101Page = lazy(() => import("./inspecao/Vavf0101Page").then((m) => ({ default: m.Vavf0101Page })));
+const Vavf0204Page = lazy(() => import("./inspecao/Vavf0204Page").then((m) => ({ default: m.Vavf0204Page })));
+const Vimp0101Page = lazy(() => import("./importacao/Vimp0101Page").then((m) => ({ default: m.Vimp0101Page })));
+const Vimp0200Page = lazy(() => import("./importacao/Vimp0200Page").then((m) => ({ default: m.Vimp0200Page })));
+const Vfin0100Page = lazy(() => import("./financeiro/Vfin0100Page").then((m) => ({ default: m.Vfin0100Page })));
+const Vfin0110Page = lazy(() => import("./financeiro/Vfin0110Page").then((m) => ({ default: m.Vfin0110Page })));
+const Vfin0120Page = lazy(() => import("./financeiro/Vfin0120Page").then((m) => ({ default: m.Vfin0120Page })));
+const Vfin0130Page = lazy(() => import("./financeiro/Vfin0130Page").then((m) => ({ default: m.Vfin0130Page })));
+const Vfin0200Page = lazy(() => import("./financeiro/Vfin0200Page").then((m) => ({ default: m.Vfin0200Page })));
+const Vfin0210Page = lazy(() => import("./financeiro/Vfin0210Page").then((m) => ({ default: m.Vfin0210Page })));
+const Vfin0300Page = lazy(() => import("./financeiro/Vfin0300Page").then((m) => ({ default: m.Vfin0300Page })));
+const Vfin0400Page = lazy(() => import("./financeiro/Vfin0400Page").then((m) => ({ default: m.Vfin0400Page })));
+const Vfin0500Page = lazy(() => import("./financeiro/Vfin0500Page").then((m) => ({ default: m.Vfin0500Page })));
+const Vfis0100Page = lazy(() => import("./fiscal/Vfis0100Page").then((m) => ({ default: m.Vfis0100Page })));
+const Vfis0110Page = lazy(() => import("./fiscal/Vfis0110Page").then((m) => ({ default: m.Vfis0110Page })));
+const Vfis0200Page = lazy(() => import("./fiscal/Vfis0200Page").then((m) => ({ default: m.Vfis0200Page })));
+const Vfis0210Page = lazy(() => import("./fiscal/Vfis0210Page").then((m) => ({ default: m.Vfis0210Page })));
+const Vfis0220Page = lazy(() => import("./fiscal/Vfis0220Page").then((m) => ({ default: m.Vfis0220Page })));
+const Vfis0300Page = lazy(() => import("./fiscal/Vfis0300Page").then((m) => ({ default: m.Vfis0300Page })));
+const Vfis0310Page = lazy(() => import("./fiscal/Vfis0310Page").then((m) => ({ default: m.Vfis0310Page })));
+const Vfis0320Page = lazy(() => import("./fiscal/Vfis0320Page").then((m) => ({ default: m.Vfis0320Page })));
+const Vfis0330Page = lazy(() => import("./fiscal/Vfis0330Page").then((m) => ({ default: m.Vfis0330Page })));
+const Vfis0340Page = lazy(() => import("./fiscal/Vfis0340Page").then((m) => ({ default: m.Vfis0340Page })));
+const Vfis0350Page = lazy(() => import("./fiscal/Vfis0350Page").then((m) => ({ default: m.Vfis0350Page })));
+const Vfis0360Page = lazy(() => import("./fiscal/Vfis0360Page").then((m) => ({ default: m.Vfis0360Page })));
+const Vfis0500Page = lazy(() => import("./fiscal/Vfis0500Page").then((m) => ({ default: m.Vfis0500Page })));
+const Vfis0510Page = lazy(() => import("./fiscal/Vfis0510Page").then((m) => ({ default: m.Vfis0510Page })));
+const Vfis0520Page = lazy(() => import("./fiscal/Vfis0520Page").then((m) => ({ default: m.Vfis0520Page })));
+const Vfis0530Page = lazy(() => import("./fiscal/Vfis0530Page").then((m) => ({ default: m.Vfis0530Page })));
+const Vfis0540Page = lazy(() => import("./fiscal/Vfis0540Page").then((m) => ({ default: m.Vfis0540Page })));
+const Vfis0550Page = lazy(() => import("./fiscal/Vfis0550Page").then((m) => ({ default: m.Vfis0550Page })));
+const Vfis0560Page = lazy(() => import("./fiscal/Vfis0560Page").then((m) => ({ default: m.Vfis0560Page })));
+const Vemp0100Page = lazy(() => import("./cadastros/Vemp0100Page").then((m) => ({ default: m.Vemp0100Page })));
+const Vfun0100Page = lazy(() => import("./cadastros/Vfun0100Page").then((m) => ({ default: m.Vfun0100Page })));
+const Vloc0100Page = lazy(() => import("./cadastros/Vloc0100Page").then((m) => ({ default: m.Vloc0100Page })));
+const Vcla0100Page = lazy(() => import("./cadastros/Vcla0100Page").then((m) => ({ default: m.Vcla0100Page })));
+const Vcal0100Page = lazy(() => import("./cadastros/Vcal0100Page").then((m) => ({ default: m.Vcal0100Page })));
+const Vpri0100Page = lazy(() => import("./cadastros/Vpri0100Page").then((m) => ({ default: m.Vpri0100Page })));
+const Vctb0200Page = lazy(() => import("./contabilidade/Vctb0200Page").then((m) => ({ default: m.Vctb0200Page })));
+const Vnfs0100Page = lazy(() => import("./fiscal/Vnfs0100Page").then((m) => ({ default: m.Vnfs0100Page })));
+const Vexp0100Page = lazy(() => import("./almoxarifado/Vexp0100Page").then((m) => ({ default: m.Vexp0100Page })));
+const Vvnd0100Page = lazy(() => import("./comercial/Vvnd0100Page").then((m) => ({ default: m.Vvnd0100Page })));
+const Vvnd0200Page = lazy(() => import("./comercial/Vvnd0200Page").then((m) => ({ default: m.Vvnd0200Page })));
+const Vvnd0300Page = lazy(() => import("./comercial/Vvnd0300Page").then((m) => ({ default: m.Vvnd0300Page })));
+const Vvnd0310Page = lazy(() => import("./comercial/Vvnd0310Page").then((m) => ({ default: m.Vvnd0310Page })));
+const Vvnd0400Page = lazy(() => import("./comercial/Vvnd0400Page").then((m) => ({ default: m.Vvnd0400Page })));
+const Vvnd0500Page = lazy(() => import("./comercial/Vvnd0500Page").then((m) => ({ default: m.Vvnd0500Page })));
+const Vsac0100Page = lazy(() => import("./comercial/Vsac0100Page").then((m) => ({ default: m.Vsac0100Page })));
+const Vdpr0100Page = lazy(() => import("./comercial/Vdpr0100Page").then((m) => ({ default: m.Vdpr0100Page })));
+const Vpro0900Page = lazy(() => import("./producao/Vpro0900Page").then((m) => ({ default: m.Vpro0900Page })));
+const Vpro1000Page = lazy(() => import("./producao/Vpro1000Page").then((m) => ({ default: m.Vpro1000Page })));
+const RoteiroFabricacaoPage = lazy(() => import("./engenharia/RoteiroFabricacaoPage").then((m) => ({ default: m.RoteiroFabricacaoPage })));
+const Vpro0200Page = lazy(() => import("./producao/Vpro0200Page").then((m) => ({ default: m.Vpro0200Page })));
+const Vpro0210Page = lazy(() => import("./producao/Vpro0210Page").then((m) => ({ default: m.Vpro0210Page })));
+const Vpro0300Page = lazy(() => import("./producao/Vpro0300Page").then((m) => ({ default: m.Vpro0300Page })));
+const Vpro0400Page = lazy(() => import("./producao/Vpro0400Page").then((m) => ({ default: m.Vpro0400Page })));
+const Vpro0500Page = lazy(() => import("./producao/Vpro0500Page").then((m) => ({ default: m.Vpro0500Page })));
+const Vpro0600Page = lazy(() => import("./producao/Vpro0600Page").then((m) => ({ default: m.Vpro0600Page })));
+const Vpro0700Page = lazy(() => import("./producao/Vpro0700Page").then((m) => ({ default: m.Vpro0700Page })));
+const Vpro0800Page = lazy(() => import("./producao/Vpro0800Page").then((m) => ({ default: m.Vpro0800Page })));
+const Vcus0100Page = lazy(() => import("./custo/Vcus0100Page").then((m) => ({ default: m.Vcus0100Page })));
 import { Vcus0200Page } from "@/components/screens/custo/Vcus0200Page";
-import { Vest0100Page } from "./almoxarifado/Vest0100Page";
-import { Vcut0100Page } from "./producao/Vcut0100Page";
-import { Vmrp0100Page } from "./planejamento/Vmrp0100Page";
-import { Vsup0500Page } from "./suprimento/Vsup0500Page";
-import { Vpdc0200Page } from "./suprimento/Vpdc0200Page";
-import { Vsup0110Page } from "./suprimento/Vsup0110Page";
-import { Vsup0120Page } from "./suprimento/Vsup0120Page";
-import { Vsup0130Page } from "./suprimento/Vsup0130Page";
-import { Vsup0200Page } from "./suprimento/Vsup0200Page";
-import { Vsup0300Page } from "./suprimento/Vsup0300Page";
-import { Vsup0400Page } from "./suprimento/Vsup0400Page";
-import { Vitm0100Page } from "./engenharia/Vitm0100Page";
-import { Vest0200Page } from "./almoxarifado/Vest0200Page";
-import { Vmaq0101Page } from "./engenharia/Vmaq0101Page";
-import { Vpro1200Page } from "./producao/Vpro1200Page";
-import { Vmaq0200Page } from "./engenharia/Vmaq0200Page";
-import { Vexr0100Page } from "./comercial/Vexr0100Page";
-import { Vpct0100Page } from "./suprimento/Vpct0100Page";
-import { Vdes0100Page } from "./engenharia/Vdes0100Page";
-import { Vtps0100Page } from "./suprimento/Vtps0100Page";
-import { Vcfg0100Page } from "./engenharia/Vcfg0100Page";
-import { Vpln0100Page } from "./planejamento/Vpln0100Page";
-import { Vres0100Page } from "./producao/Vres0100Page";
-import { Vbom0100Page } from "./engenharia/Vbom0100Page";
-import { Vlot0100Page } from "./almoxarifado/Vlot0100Page";
-import { Vaud0100Page } from "./cadastros/Vaud0100Page";
-import { Vusr0100Page } from "./cadastros/Vusr0100Page";
-import { Vnot0100Page } from "./cadastros/Vnot0100Page";
-import { Vest0500Page } from "./almoxarifado/Vest0500Page";
+const Vest0100Page = lazy(() => import("./almoxarifado/Vest0100Page").then((m) => ({ default: m.Vest0100Page })));
+const Vcut0100Page = lazy(() => import("./producao/Vcut0100Page").then((m) => ({ default: m.Vcut0100Page })));
+const Vmrp0100Page = lazy(() => import("./planejamento/Vmrp0100Page").then((m) => ({ default: m.Vmrp0100Page })));
+const Vsup0500Page = lazy(() => import("./suprimento/Vsup0500Page").then((m) => ({ default: m.Vsup0500Page })));
+const Vpdc0200Page = lazy(() => import("./suprimento/Vpdc0200Page").then((m) => ({ default: m.Vpdc0200Page })));
+const Vsup0110Page = lazy(() => import("./suprimento/Vsup0110Page").then((m) => ({ default: m.Vsup0110Page })));
+const Vsup0120Page = lazy(() => import("./suprimento/Vsup0120Page").then((m) => ({ default: m.Vsup0120Page })));
+const Vsup0130Page = lazy(() => import("./suprimento/Vsup0130Page").then((m) => ({ default: m.Vsup0130Page })));
+const Vsup0200Page = lazy(() => import("./suprimento/Vsup0200Page").then((m) => ({ default: m.Vsup0200Page })));
+const Vsup0300Page = lazy(() => import("./suprimento/Vsup0300Page").then((m) => ({ default: m.Vsup0300Page })));
+const Vsup0400Page = lazy(() => import("./suprimento/Vsup0400Page").then((m) => ({ default: m.Vsup0400Page })));
+const Vitm0100Page = lazy(() => import("./engenharia/Vitm0100Page").then((m) => ({ default: m.Vitm0100Page })));
+const Vest0200Page = lazy(() => import("./almoxarifado/Vest0200Page").then((m) => ({ default: m.Vest0200Page })));
+const Vmaq0101Page = lazy(() => import("./engenharia/Vmaq0101Page").then((m) => ({ default: m.Vmaq0101Page })));
+const Vpro1200Page = lazy(() => import("./producao/Vpro1200Page").then((m) => ({ default: m.Vpro1200Page })));
+const Vmaq0200Page = lazy(() => import("./engenharia/Vmaq0200Page").then((m) => ({ default: m.Vmaq0200Page })));
+const Vexr0100Page = lazy(() => import("./comercial/Vexr0100Page").then((m) => ({ default: m.Vexr0100Page })));
+const Vpct0100Page = lazy(() => import("./suprimento/Vpct0100Page").then((m) => ({ default: m.Vpct0100Page })));
+const Vdes0100Page = lazy(() => import("./engenharia/Vdes0100Page").then((m) => ({ default: m.Vdes0100Page })));
+const Vtps0100Page = lazy(() => import("./suprimento/Vtps0100Page").then((m) => ({ default: m.Vtps0100Page })));
+const Vcfg0100Page = lazy(() => import("./engenharia/Vcfg0100Page").then((m) => ({ default: m.Vcfg0100Page })));
+const Vpln0100Page = lazy(() => import("./planejamento/Vpln0100Page").then((m) => ({ default: m.Vpln0100Page })));
+const Vres0100Page = lazy(() => import("./producao/Vres0100Page").then((m) => ({ default: m.Vres0100Page })));
+const Vbom0100Page = lazy(() => import("./engenharia/Vbom0100Page").then((m) => ({ default: m.Vbom0100Page })));
+const Vlot0100Page = lazy(() => import("./almoxarifado/Vlot0100Page").then((m) => ({ default: m.Vlot0100Page })));
+const Vaud0100Page = lazy(() => import("./cadastros/Vaud0100Page").then((m) => ({ default: m.Vaud0100Page })));
+const Vusr0100Page = lazy(() => import("./cadastros/Vusr0100Page").then((m) => ({ default: m.Vusr0100Page })));
+const Vnot0100Page = lazy(() => import("./cadastros/Vnot0100Page").then((m) => ({ default: m.Vnot0100Page })));
+const Vest0500Page = lazy(() => import("./almoxarifado/Vest0500Page").then((m) => ({ default: m.Vest0500Page })));
 import { WindowControls } from "@/components/window/WindowControls";
-import { OperationalRoutinePage } from "./OperationalRoutinePage";
+const OperationalRoutinePage = lazy(() => import("./OperationalRoutinePage").then((m) => ({ default: m.OperationalRoutinePage })));
 import { EntityLookupAssist } from "@/components/ui/EntityLookupAssist";
+// Catálogo de dados, não componente: continua import estático.
 import { OPERATIONAL_ROUTINES } from "./operationalRoutines";
 
 /**
@@ -397,7 +412,17 @@ export function ScreenHostPage(): JSX.Element {
 
   return (
     <div className="screen-host" style={{ position: "relative" }}>
-      {screen}
+      {/* A tela chega por `import()`: o intervalo entre abrir a janela e o
+          arquivo carregar precisa dizer que está carregando, senão a janela
+          pisca vazia e parece que a rotina não existe. */}
+      <Suspense fallback={
+        <div className="screen-host-carregando">
+          <span className="erp-spin" />
+          <span>Abrindo {code ?? "a rotina"}…</span>
+        </div>
+      }>
+        {screen}
+      </Suspense>
       <EntityLookupAssist />
 
       <span className="screen-host-routine-code" aria-label={`Rotina ${code ?? "desconhecida"}`}>

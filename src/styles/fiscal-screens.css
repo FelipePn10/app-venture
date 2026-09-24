@@ -645,6 +645,28 @@
 }
 .fsc-rot-cascata strong { color: var(--v-text); font-size: 14px; font-variant-numeric: tabular-nums; }
 
+/*
+ * Prontidão do roteiro. Verde é informação; âmbar é "planeja, mas o número sai
+ * torto"; vermelho é "o MRP vai recusar". A cor precisa dizer isso antes de a
+ * pessoa ler a lista.
+ */
+.fsc-rot-prontidao {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;
+  padding: 10px 13px; border-radius: var(--v-r-sm); font-size: 12.5px; line-height: 1.5;
+  background: var(--v-green-soft); color: #23492f; border: 1px solid #c4dccd;
+}
+.fsc-rot-prontidao.atencao { background: #fdf4e7; color: #7a4b12; border-color: #efd7ae; }
+.fsc-rot-prontidao.falha   { background: #fdecea; color: #8d2020; border-color: #f0c8c8; }
+.fsc-rot-prontidao ul { margin: 0; padding-left: 18px; }
+.fsc-rot-prontidao ul.aviso { opacity: .85; }
+.fsc-rot-prontidao li { margin: 2px 0; }
+.fsc-rot-centros { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.fsc-rot-centros span {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid currentColor; opacity: .9;
+}
+.fsc-rot-centros span.ok { color: #2f7d47; }
+.fsc-rot-centros span.pendente { color: #8d2020; font-weight: 600; }
+
 /* Etapa que sai da fábrica. Âmbar: não é erro, é uma etapa que corre em outro
    relógio e em outro CNPJ — o planejador precisa enxergar isso na grade. */
 .fsc-rot-terceiro { background: var(--v-warn-bg) !important; }

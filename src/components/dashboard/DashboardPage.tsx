@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WindowControls } from "@/components/window/WindowControls";
 import {
   ERP_SCREENS,
+  screensForRole,
   MODULE_META,
   PARENT_CATEGORIES,
   PARENT_ORDER,
@@ -64,18 +65,33 @@ export function DashboardPage(): JSX.Element {
   const userRoleLabel = useMemo(() => user?.role ?? "Operador do sistema", [user]);
   const initials = useMemo(() => { const parts = (userName ?? "U").trim().split(" "); return parts.length >= 2 ? `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase() : parts[0][0].toUpperCase(); }, [userName]);
 
+  /**
+   * O que este perfil enxerga. O posto de trabalho vê as rotinas que pode usar;
+   * os demais perfis veem o catálogo inteiro. Sem isso, o operador recebia 209
+   * rotinas e "usuário não autorizado" em 206 delas.
+   */
+  const visibleScreens = useMemo(() => screensForRole(ERP_SCREENS, user?.role), [user?.role]);
+  /** Áreas e módulos que sobram depois do recorte do perfil. */
+  const visibleModules = useMemo(() => new Set(visibleScreens.map((s) => s.module)), [visibleScreens]);
+  const visibleAreas = useMemo(
+    () => PARENT_ORDER.filter((area) => PARENT_CATEGORIES[area].modules.some((mod) => visibleModules.has(mod))),
+    [visibleModules],
+  );
+  /** "1 área" e "3 áreas" — plural escrito, não "área(s)". */
+  const plural = (n: number, um: string, muitos: string) => `${n} ${n === 1 ? um : muitos}`;
+
   const groupedScreens = useMemo((): Record<ErpModule, ErpScreen[]> => {
     const g = {} as Record<ErpModule, ErpScreen[]>;
     for (const mod of PARENT_CATEGORIES.comercial_vendas.modules) g[mod] = [];
     for (const mod of PARENT_CATEGORIES.industrial_producao.modules) g[mod] = [];
     for (const mod of PARENT_CATEGORIES.administrativo_financeiro.modules) g[mod] = [];
-    for (const s of ERP_SCREENS) g[s.module].push(s);
+    for (const s of visibleScreens) g[s.module].push(s);
     return g;
-  }, []);
+  }, [visibleScreens]);
 
   const filteredScreens = useMemo((): ErpScreen[] => {
-    return searchErpScreens(ERP_SCREENS, searchQuery);
-  }, [searchQuery]);
+    return searchErpScreens(visibleScreens, searchQuery);
+  }, [visibleScreens, searchQuery]);
 
   function getNameByCode(code: string): string { return ERP_SCREENS.find(s => s.code === code)?.title ?? code; }
 
@@ -341,8 +357,8 @@ export function DashboardPage(): JSX.Element {
           <div className="met ac">
             <div className="metic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/><rect x="9.5" y="1" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/><rect x="1" y="9.5" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/></svg></div>
             <div className="metl">Rotinas disponíveis</div>
-            <div className="metv">{ERP_SCREENS.length}</div>
-            <div className="metsu">{PARENT_ORDER.length} áreas | {Object.keys(MODULE_META).length} módulos</div>
+            <div className="metv">{visibleScreens.length}</div>
+            <div className="metsu">{plural(visibleAreas.length, "área", "áreas")} | {plural(visibleModules.size, "módulo", "módulos")}</div>
           </div>
           <div className="met">
             <div className="metic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12l3-3 3 2.5 2.5-4L14 4" stroke="#3e9654" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
@@ -359,8 +375,8 @@ export function DashboardPage(): JSX.Element {
           <div className="met">
             <div className="metic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4.5l6-3 6 3v7l-6 3-6-3v-7z" stroke="#2f7d47" strokeWidth="1.3" strokeLinejoin="round"/><path d="M2 4.5l6 3 6-3M8 7.5v7" stroke="#2f7d47" strokeWidth="1.3" strokeLinejoin="round"/></svg></div>
             <div className="metl">Módulos operacionais</div>
-            <div className="metv">{Object.keys(MODULE_META).length}</div>
-            <div className="metsu">em {PARENT_ORDER.length} áreas de negócio</div>
+            <div className="metv">{visibleModules.size}</div>
+            <div className="metsu">em {plural(visibleAreas.length, "área", "áreas")} de negócio</div>
           </div>
         </div>
 

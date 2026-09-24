@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## [v1.2.0] — 2026-09-24
+
+## Novidades
+- **Veja em que dia a capacidade estoura.** O planejamento de capacidade ganhou um gráfico por centro de trabalho: a barra é a carga do dia, a linha tracejada é a capacidade, e o dia que passa dela salta à vista — sem comparar números linha a linha.
+- **O quadro de sequenciamento virou uma linha do tempo.** Cada ordem aparece na data em que vai rodar, empilhada por recurso. Duas ordens disputando o mesmo centro no mesmo dia ficam evidentes, e o dia sem expediente e o "hoje" ficam marcados.
+- **O roteiro avisa o que falta antes de você rodar o planejamento.** Ao montar as etapas, o sistema confere se cada centro tem máquina apta, tarifa por hora e prazo de terceiro — e lista o que impede o planejamento, em vez de recusar no meio do cálculo.
+- **A ficha de ferramenta antecipa a troca.** Liste as ferramentas a partir de 80% da vida útil e veja quanto de cada uma já foi consumido. Iniciar uma etapa com ferramenta vencida passa a avisar.
+- **Antes de inativar um item, o cadastro mostra onde ele é usado.** Você vê as montagens que consomem aquele item e decide com a informação na frente.
+- **Novo perfil de acesso: Operador.** Aponta produção no chão de fábrica e enxerga só as rotinas que usa. Antes, apontar exigia a permissão de criar ordem planejada, que abre o planejamento inteiro.
+
+## Melhorias
+- **O sistema abre mais rápido.** Cada tela passou a ser carregada quando você a abre: o pacote inicial ficou quatro vezes menor e a atualização baixa só o que mudou.
+- A busca de item deixou de oferecer itens inativos — e a mesma regra vale para fornecedor inativo, cliente bloqueado e máquina inativa. Eles continuam aparecendo no próprio cadastro, que é onde se reativa, e continuam identificados pela descrição nos lançamentos que já existem.
+- O campo Item da barra de ferramentas ficou bem maior e acompanha o tamanho da janela: a descrição inteira do item selecionado cabe na tela, sem cortar no meio.
+- Quatro telas que pediam o código do item digitado passaram a ter busca por lista: Estoque, Custo Padrão, Previsão de Demanda e Regras de Item.
+- No Roteiro de Fabricação, o campo antes chamado "Máquina" passou a se chamar "Tempo de máquina". Ele sempre foi um tempo; o nome sugeria a escolha do equipamento, que é feita pelo centro de trabalho.
+- A Produtividade por Máquina explica o que cada cadastro decide e mostra os dois tempos lado a lado, avisando quando eles divergem demais — o roteiro define quanto a etapa leva, a produtividade define em qual máquina, com que rendimento e com quantas paradas.
+- O Histórico de Alterações passou a filtrar por período e por ação, com a opção de ver só o que foi recusado ou falhou.
+
+## Correções
+- **A lista de contas a pagar e a receber voltava "erro interno" quando havia um título sem pagamento lançado** — ou seja, no caso mais comum de todos, o de um título recém-criado.
+- **O Histórico de Alterações dizia "Registrou uma ação" em todas as linhas.** Agora diz o que foi feito, em qual cadastro e se deu certo. Os filtros também não filtravam nada: a tela pedia e o sistema devolvia a lista inteira.
+- A eficiência e as paradas para troca de consumível cadastradas por máquina voltaram a influenciar o planejamento dos itens que têm roteiro. Antes bastava a etapa informar tempo para esses dois dados serem ignorados, e uma peça que rende 85% numa máquina era planejada como se rendesse 100%.
+- Concluir uma etapa da ordem de fabricação agora pede as horas trabalhadas e as peças produzidas. Sem esse apontamento, a vida útil das ferramentas nunca era descontada e o aviso de troca não chegava.
+- Criar uma ordem de fabricação deixou de ser recusada quando uma etapa de inspeção está sem plano cadastrado. A ordem é criada e a etapa aparece marcada com a pendência.
+- Item inativo deixou de ser aceito em pedido de venda, orçamento, ordem de fabricação e estrutura de produto — inclusive quando lançado por integração ou importação, que não passam pelas telas.
+- Cada empresa passa a ver somente o seu financeiro: contas bancárias, plano de contas, centros de custo, títulos a pagar e a receber, movimento de caixa e apuração de impostos.
+
 ## [v1.1.30] — 2026-09-22
 
 ## Novidades

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { type HistoryPoint, type ForecastResult, statisticalForecast } from "@/services/forecastService";
 import { errMessage } from "@/services/fiscalShared";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -12,7 +14,7 @@ const SEED: HistoryPoint[] = [
 ];
 
 export function Vpro0600Page(): JSX.Element {
-  const [itemCode, setItemCode] = useState("1001");
+  const [itemCode, setItemCode] = useState("");
   const [periodsAhead, setPeriodsAhead] = useState("3");
   const [history, setHistory] = useState<HistoryPoint[]>(SEED);
   const [result, setResult] = useState<ForecastResult | null>(null);
@@ -45,7 +47,7 @@ export function Vpro0600Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
-          <input className="erp-input" style={{ width: 90, height: 32 }}  value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
+          <div className="erp-tlookup"><LookupField value={itemCode || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setItemCode(String(code ?? ""))} /></div>
           <span className="erp-tgroup-label">Períodos à frente</span>
           <input className="erp-input" style={{ width: 60, height: 32 }} type="number" value={periodsAhead} onChange={(e) => setPeriodsAhead(e.target.value)} />
           <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Prever"}</button></div>

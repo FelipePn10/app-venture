@@ -1,4 +1,5 @@
 import { httpClient } from '@/services/httpClient';
+import { unwrapArray, unwrapObject, parseNum, parseStr } from '@/services/fiscalShared';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -482,4 +483,39 @@ export async function verificarConfiguracao(
     requiresMask: r['requires_mask'] === true,
     missingCharacteristics: (r['missing_characteristics'] as string[] | undefined) ?? [],
   }));
+}
+
+/** Uma montagem que consome o item. */
+export interface WhereUsedRow {
+  level: number;
+  parent_code: string;
+  parent_description: string;
+  quantity: number;
+  parent_mask?: string;
+}
+
+/**
+ * Onde o item é usado: as montagens que o consomem, nível a nível.
+ *
+ * `GET /api/items/structure/where-used/{itemCode}?levels=N`. É a pergunta que
+ * antecede inativar um item — sem ela, a inativação é feita às cegas e o
+ * estrago só aparece no MRP da semana seguinte, como falta de componente numa
+ * ordem que ninguém relaciona com a decisão de cadastro.
+ */
+export async function listWhereUsed(itemCode: string, levels = 3): Promise<WhereUsedRow[]> {
+  const { data } = await httpClient.get<unknown>(
+    `/api/items/structure/where-used/${encodeURIComponent(itemCode)}`,
+    { params: { levels: String(levels) } },
+  );
+  const raiz = unwrapObject(data);
+  return unwrapArray(raiz['rows'] ?? raiz['Rows'] ?? data).map((bruto) => {
+    const linha = unwrapObject(bruto);
+    return {
+      level: parseNum(linha, 'level', 'Level') || 1,
+      parent_code: parseStr(linha, 'parent_code', 'ParentCode'),
+      parent_description: parseStr(linha, 'parent_description', 'ParentDescription'),
+      quantity: parseNum(linha, 'quantity', 'Quantity') || 0,
+      parent_mask: parseStr(linha, 'parent_mask', 'ParentMask') || undefined,
+    };
+  }).filter((linha) => linha.parent_code);
 }

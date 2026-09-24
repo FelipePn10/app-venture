@@ -8165,6 +8165,13 @@ registra a **agenda** da máquina (consumida pelo CRP/APS).
 3. Em **Tempo por item × máquina**, informe Item, Máquina, **Tempo de ciclo**, unidade
    de tempo, **Quantidade base**, **Setup** e **Prioridade** (1 = máquina preferida).
    Esse cadastro é o **coração do cálculo**.
+   **Quando o item tem roteiro, quem define o tempo da etapa é o roteiro (VENT0202),
+   não o Tempo de ciclo daqui.** Este cadastro responde por: quais máquinas do centro
+   podem fazer o item, a ordem de preferência, a **eficiência** do item naquela máquina
+   e as **paradas para troca de consumível** — os dois últimos incidem sobre o tempo do
+   roteiro. O Tempo de ciclo continua obrigatório: é a medida de capacidade da máquina
+   e é o que dimensiona a ordem de um item sem roteiro detalhado. A tela avisa qual dos
+   dois casos vale assim que o item é escolhido.
 4. Em **Cálculo de tempo de produção**, informe Item, Máquina e Quantidade e clique em
    **Calcular tempo**. O sistema retorna: **ciclos** (arredondados para cima), tempo de
    setup, tempo de produção, total em minutos/horas e se a máquina está em **gargalo**.

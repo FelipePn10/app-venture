@@ -4,14 +4,16 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadCrpPlans, loadWorkCenters } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
+import { CrpCargaChart } from "./crp/CrpCargaChart";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Tab = "todos" | "overload" | "centro";
+type Tab = "carga" | "todos" | "overload" | "centro";
 const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
 export function Vpro0200Page(): JSX.Element {
   const [planCode, setPlanCode] = useState("");
-  const [tab, setTab] = useState<Tab>("todos");
+  const [tab, setTab] = useState<Tab>("carga");
   const [summary, setSummary] = useState<CrpSummary | null>(null);
   const [rows, setRows] = useState<CrpEntry[]>([]);
   const [wcId, setWcId] = useState("");
@@ -27,16 +29,16 @@ export function Vpro0200Page(): JSX.Element {
     try {
       const s = await calculateCrp(p); setSummary(s);
       setFeedback({ type: "success", message: `CRP calculado: ${s.total_entries} registros, ${s.overload_count} sobrecarga(s).` });
-      setTab("todos");
+      setTab("carga");
       try { setRows(await listCrpPlan(p)); } catch { setRows([]); }
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function ver(t: Tab) {
     const p = Number(planCode);
-    if ((t === "todos" || t === "overload") && !p) { setFeedback({ type: "error", message: "Informe o plano." }); return; }
+    if ((t === "todos" || t === "overload" || t === "carga") && !p) { setFeedback({ type: "error", message: "Informe o plano." }); return; }
     setBusy(true); setFeedback(null); setTab(t);
     try {
-      if (t === "todos") setRows(await listCrpPlan(p));
+      if (t === "todos" || t === "carga") setRows(await listCrpPlan(p));
       else if (t === "overload") setRows(await listCrpOverload(p));
       else {
         if (!p || !wcId) { setFeedback({ type: "error", message: "Informe o plano e o centro." }); setBusy(false); return; }
@@ -83,6 +85,7 @@ export function Vpro0200Page(): JSX.Element {
         )}
         <div className="erp-fieldset">
           <div className="erp-tabs">
+            <button className={`erp-tab ${tab === "carga" ? "active" : ""}`} onClick={() => void ver("carga")}>Carga por centro</button>
             <button className={`erp-tab ${tab === "todos" ? "active" : ""}`} onClick={() => void ver("todos")}>Todos</button>
             <button className={`erp-tab ${tab === "overload" ? "active" : ""}`} onClick={() => void ver("overload")}>Sobrecarga</button>
             <button className={`erp-tab ${tab === "centro" ? "active" : ""}`} onClick={() => setTab("centro")}>Por centro</button>
@@ -97,6 +100,9 @@ export function Vpro0200Page(): JSX.Element {
               
             </div>
           )}
+          {/* O gráfico mostra quando aperta; a grade continua abaixo porque é
+              dela que sai a leitura exata, a exportação e a acessibilidade. */}
+          {tab === "carga" && <div className="erp-fieldset-body"><div className="erp-field erp-c12"><CrpCargaChart rows={rows} /></div></div>}
           <div className="erp-fieldset-body">
             <table className="erp-grid">
               <thead><tr><th>Centro</th><th>Data</th><th>Necessário (h)</th><th>Disponível (h)</th><th>Carga %</th><th>Status</th></tr></thead>
@@ -104,7 +110,7 @@ export function Vpro0200Page(): JSX.Element {
                 {rows.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum registro. Calcule um plano.</td></tr>}
                 {rows.map((r, i) => (
                   <tr key={i}>
-                    <td style={{ fontWeight: 600 }}>{r.work_center_id}</td><td>{r.req_date?.slice(0, 10)}</td>
+                    <td style={{ fontWeight: 600 }}><EntityName code={r.work_center_id} loader={loadWorkCenters} prefix="Centro" showCode={false} /></td><td>{r.req_date?.slice(0, 10)}</td>
                     <td>{num(r.required_hours)}</td><td>{num(r.available_hours)}</td>
                     <td style={{ fontWeight: 600, color: r.is_overloaded ? "#b91c1c" : "#1e6030" }}>{num(r.load_pct)}</td>
                     <td>{r.is_overloaded ? <span className="erp-badge err">Sobrecarga</span> : <span className="erp-badge ok">Ativo</span>}</td>

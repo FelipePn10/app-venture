@@ -9,6 +9,12 @@ const errors=[];page.on('pageerror',e=>errors.push(String(e)));
 const writes=[];
 const routeDTO={id:42,code:4,item_code:'BU-050',description:'Roteiro da bucha',alternative:1,is_standard:true};
 const routeOps=[{id:1001,operation_id:7,sequence:10,operation_name:'Cortar'},{id:1002,operation_id:8,sequence:20,operation_name:'Montar'}];
+// Prontidão: uma pendência que trava o MRP e uma ressalva que só distorce o custo.
+const prontidao={route_id:42,item_code:'BU-050',description:'Roteiro da bucha',ready:false,steps:2,
+ issues:['nenhuma máquina de SOLDAGEM MIG tem a produtividade deste item cadastrada (etapas [20]): sem isso o planejamento não tem onde rodar a ordem'],
+ warnings:['SOLDAGEM MIG está sem tarifa por hora (VCUS0100): as etapas [20] entram no custo valendo zero'],
+ work_centers:[{work_center_id:8,work_center_name:'LASER',steps:[10],has_machine:true,has_rate:true,hourly_rate:37.09},
+               {work_center_id:9,work_center_name:'SOLDAGEM MIG',steps:[20],has_machine:false,has_rate:false,hourly_rate:0}]};
 const order={id:11,item_code:'BU-050',planned_qty:10,status:'IN_PROGRESS'};
 const orderOps=[{id:21,sequence:10,operation_name:'Cortar',status:'PENDING',can_start:true},{id:22,sequence:20,operation_name:'Montar',status:'PENDING',can_start:false}];
 await page.addInitScript(()=>localStorage.setItem('erp-auth-storage',JSON.stringify({state:{token:'isolated-ui-test',userName:'Teste',user:{name:'Teste',role:'ADMIN'},expiresAt:null},version:0})));
@@ -18,6 +24,7 @@ await page.route('**/*',async route=>{
  let body=[];
  if(route.request().method()==='POST'){writes.push({p,body:route.request().postDataJSON()});body=route.request().postDataJSON();}
  else if(p==='/api/routing/routes/42')body={route:routeDTO,operations:routeOps,network:[]};
+ else if(p==='/api/routing/routes/42/readiness')body=prontidao;
  else if(p==='/api/routing/routes')body=[routeDTO];
  else if(p==='/api/production-order/list')body=[order];
  else if(p==='/api/production-order/11')body=order;
@@ -64,6 +71,15 @@ try {
  await page.locator('.erp-lookup-item').filter({hasText:'Bucha'}).click();
  await page.getByRole('button',{name:'+ Criar roteiro',exact:true}).click();
  await page.getByRole('button',{name:'Abrir',exact:true}).click();
+ // A pendência precisa aparecer ENQUANTO se monta o roteiro, não na recusa do MRP.
+ const aviso=page.locator('.fsc-rot-prontidao.falha');
+ await aviso.waitFor();
+ const textoProntidao=await aviso.textContent();
+ assert.match(textoProntidao,/1 pendência\(s\)/,`painel não contou as pendências: ${textoProntidao}`);
+ assert.ok(textoProntidao.includes('SOLDAGEM MIG'),'a pendência precisa nomear o centro');
+ assert.ok(textoProntidao.includes('sem tarifa'),'a ressalva de custo precisa aparecer junto');
+ assert.equal(await page.locator('.fsc-rot-centros span.pendente').count(),1,'só o centro incompleto é marcado como pendente');
+ assert.equal(await page.locator('.fsc-rot-centros span.ok').count(),1);
  await page.getByRole('button',{name:'Rede de dependências',exact:true}).click();
  const selects=page.locator('.erp-detail-body select');
  await selects.nth(0).selectOption('1001');await selects.nth(1).selectOption('1002');
@@ -84,10 +100,21 @@ try {
  await page.locator('#operation-reason').fill('Manutenção');
  await page.getByRole('button',{name:'Interromper',exact:true}).click();
  await page.getByRole('button',{name:'Retomar',exact:true}).click();
+ // Concluir sem apontar nada não pode passar: horas e peças são o que gasta a
+ // vida útil da ferramenta, e o backend ignora o consumo quando os dois são zero.
+ await page.getByRole('button',{name:'Concluir etapa',exact:true}).click();
+ await page.getByText(/desconta a vida útil da ferramenta/).waitFor();
+ assert.equal(orderOps[0].status,'IN_PROGRESS','etapa foi concluída sem apontamento');
+ await page.locator('#operation-qty').fill('120');
+ await page.locator('#operation-hours').fill('1.5');
  await page.getByRole('button',{name:'Concluir etapa',exact:true}).click();
  await page.getByRole('button',{name:'Iniciar etapa',exact:true}).waitFor();
  assert.equal(orderOps[0].status,'DONE');assert.equal(orderOps[1].status,'PENDING');
- assert.deepEqual(writes.filter(w=>w.p.endsWith('/operations/advance')).map(w=>w.body.status),['IN_PROGRESS','PAUSED','IN_PROGRESS','INTERRUPTED','IN_PROGRESS','DONE']);
+ const avancos=writes.filter(w=>w.p.endsWith('/operations/advance'));
+ assert.deepEqual(avancos.map(w=>w.body.status),['IN_PROGRESS','PAUSED','IN_PROGRESS','INTERRUPTED','IN_PROGRESS','DONE']);
+ const conclusao=avancos.at(-1).body;
+ assert.equal(conclusao.produced_qty,120,'a conclusão precisa levar as peças produzidas');
+ assert.equal(conclusao.actual_hours,1.5,'a conclusão precisa levar as horas apontadas');
  await page.getByText('Histórico da execução',{exact:true}).click();
  assert.equal(await page.locator('details li').filter({hasText:'Operador da simulação'}).count(),6);
  assert.deepEqual(errors,[]);
