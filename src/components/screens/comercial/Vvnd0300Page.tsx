@@ -41,7 +41,18 @@ import {
   listCancellationReasons,
   findReasonByDescription,
   isDuplicateSequenceError,
+  getSalesQuotationPaymentSchedule,
+  type PlanoDePagamentoDTO,
 } from "@/services/salesQuotationService";
+import {
+  getQuotationCommissionSplit,
+  saveQuotationCommissionSplit,
+  COMMISSION_ROLES,
+  COMMISSION_BASES,
+  MAX_COMMISSION_REPRESENTATIVES,
+  type RateioComissaoDTO,
+  type RateioComissaoLinhaDTO,
+} from "@/services/salesCommissionService";
 import { errMessage, parseNum } from "@/services/fiscalShared";
 import { findSalesTablesForItem } from "@/services/salesPricingService";
 import { getCustomer } from "@/services/customerService";
@@ -57,7 +68,21 @@ import {
 } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type DetailTab = "dados" | "itens" | "anexos" | "historico";
+type DetailTab = "dados" | "itens" | "pagamento" | "comissao" | "anexos" | "historico";
+
+/**
+ * Como o orçamento é lido. O mesmo orçamento vale três números diferentes: o
+ * produto, o imposto e a soma — e cada área pergunta um deles (o comprador
+ * negocia produto, o fiscal confere IPI, o financeiro fatura a soma). Mostrar só
+ * um obrigava a conta de cabeça.
+ */
+type ModoDeValor = "produto" | "ipi" | "produto_ipi";
+
+const MODOS_DE_VALOR: { value: ModoDeValor; label: string; hint: string }[] = [
+  { value: "produto", label: "Produto", hint: "Valor dos produtos com desconto, sem imposto" },
+  { value: "ipi", label: "IPI", hint: "Somente o IPI" },
+  { value: "produto_ipi", label: "Produto + IPI", hint: "Produto com desconto mais o IPI" },
+];
 /** Ações que exigem motivo/complemento antes de executar. */
 type PendingAction =
   | { kind: "cancel" }
@@ -124,6 +149,11 @@ export function Vvnd0300Page(): JSX.Element {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<DetailTab>("dados");
+  const [modoValor, setModoValor] = useState<ModoDeValor>("produto");
+  const [plano, setPlano] = useState<PlanoDePagamentoDTO | null>(null);
+  const [planoErro, setPlanoErro] = useState("");
+  const [rateio, setRateio] = useState<RateioComissaoDTO | null>(null);
+  const [rateioLinhas, setRateioLinhas] = useState<RateioComissaoLinhaDTO[]>([]);
   const [creating, setCreating] = useState(true);
   const [pending, setPending] = useState<PendingAction>(null);
   const [reasonCode, setReasonCode] = useState(0);
@@ -213,11 +243,23 @@ export function Vvnd0300Page(): JSX.Element {
   const loadDetail = useCallback(async (code: number) => {
     const q = await getSalesQuotation(code);
     setSelected(q); setForm({ ...q });
-    const [ev, at] = await Promise.all([
+    const [ev, at, rt] = await Promise.all([
       listSalesQuotationEvents(code).catch(() => [] as QuotationEventDTO[]),
       listSalesQuotationAttachments(code).catch(() => [] as QuotationAttachmentDTO[]),
+      getQuotationCommissionSplit(code).catch(() => null),
     ]);
     setEvents(ev); setAttachments(at);
+    setRateio(rt);
+    setRateioLinhas(rt?.representatives.map((l) => ({ ...l })) ?? []);
+    // O plano de pagamento é calculado: recusa quando a condição não fecha 100%
+    // ou o orçamento não tem condição, e isso é informação para a tela, não erro.
+    try {
+      setPlano(await getSalesQuotationPaymentSchedule(code));
+      setPlanoErro("");
+    } catch (e) {
+      setPlano(null);
+      setPlanoErro(errMessage(e));
+    }
   }, []);
 
   /** Filtros da barra, sem paginação (o relatório consolida a carteira inteira). */
@@ -378,6 +420,42 @@ export function Vvnd0300Page(): JSX.Element {
     setFeedback({ type: "success", message: `Item ${it.code} atualizado.` });
   }); };
 
+  // ─── Rateio de comissão ────────────────────────────────────────────────────
+  const addRepresentante = () => {
+    setRateioLinhas((atual) => {
+      if (atual.length >= MAX_COMMISSION_REPRESENTATIVES) return atual;
+      // O primeiro do rateio é o principal; os demais entram como parceiros.
+      const temPrincipal = atual.some((l) => l.role === "PRINCIPAL");
+      return [...atual, {
+        representative_code: 0,
+        role: temPrincipal ? "PARCEIRO" : "PRINCIPAL",
+        commission_pct: 0,
+        commission_base: "TOTAL_PRODUTOS",
+      }];
+    });
+  };
+  const alterarRepresentante = (idx: number, campo: keyof RateioComissaoLinhaDTO, valor: string | number) => {
+    setRateioLinhas((atual) => atual.map((l, i) => {
+      if (i !== idx) return l;
+      if (campo === "role" && valor === "PRINCIPAL") {
+        // Só pode haver um principal: marcar outro rebaixa o anterior aqui mesmo,
+        // em vez de deixar o backend recusar a gravação.
+        return { ...l, role: "PRINCIPAL" };
+      }
+      return { ...l, [campo]: valor } as RateioComissaoLinhaDTO;
+    }).map((l, i) => (campo === "role" && valor === "PRINCIPAL" && i !== idx && l.role === "PRINCIPAL"
+      ? { ...l, role: "PARCEIRO" } : l)));
+  };
+  const removerRepresentante = (idx: number) => setRateioLinhas((atual) => atual.filter((_, i) => i !== idx));
+  const salvarRateio = () => { const code = selected?.code; if (!code) return; void run(async () => {
+    const limpo = rateioLinhas.filter((l) => l.representative_code > 0);
+    const atualizado = await saveQuotationCommissionSplit(code, limpo);
+    setRateio(atualizado);
+    setRateioLinhas(atualizado.representatives.map((l) => ({ ...l })));
+    await loadDetail(code);
+    setFeedback({ type: "success", message: `Rateio gravado: ${atualizado.representatives.length} representante(s), R$ ${money(atualizado.total_valor)} de comissão.` });
+  }); };
+
   // ─── Anexos ────────────────────────────────────────────────────────────────
   const enviarAnexo = (file?: File | null) => { const code = selected?.code; if (!code || !file) return; void run(async () => {
     if (file.size > MAX_ATTACHMENT_BYTES) { setFeedback({ type: "error", message: "O anexo não pode passar de 10 MB." }); return; }
@@ -400,6 +478,22 @@ export function Vvnd0300Page(): JSX.Element {
   const items = useMemo(() => selected?.items ?? [], [selected?.items]);
   const nextSequence = useMemo(() => items.reduce((max, it) => Math.max(max, it.sequence ?? 0), 0) + 1, [items]);
   const itemsTotal = useMemo(() => items.reduce((s, it) => s + (it.total_net ?? 0), 0), [items]);
+  const itemsIPI = useMemo(() => items.reduce((s, it) => s + (it.total_ipi ?? 0), 0), [items]);
+  const itemsST = useMemo(() => items.reduce((s, it) => s + (it.total_st ?? 0), 0), [items]);
+  const itemsComIPI = useMemo(() => items.reduce((s, it) => s + (it.total_net_with_ipi ?? 0), 0), [items]);
+
+  /** O valor do item na leitura escolhida — é a coluna em destaque da grade. */
+  const valorDoItem = useCallback((it: SalesQuotationItemDTO) => {
+    if (modoValor === "ipi") return it.total_ipi ?? 0;
+    if (modoValor === "produto_ipi") return it.total_net_with_ipi ?? 0;
+    return it.total_net ?? 0;
+  }, [modoValor]);
+  const totalDaLeitura = modoValor === "ipi" ? itemsIPI : modoValor === "produto_ipi" ? itemsComIPI : itemsTotal;
+  const totalDaCapaNaLeitura = modoValor === "ipi"
+    ? (selected?.total_ipi ?? 0)
+    : modoValor === "produto_ipi" ? (selected?.total_with_ipi ?? 0) : (selected?.total_net ?? 0);
+
+  const somaRateioPct = useMemo(() => rateioLinhas.reduce((acc, l) => acc + (Number(l.commission_pct) || 0), 0), [rateioLinhas]);
   const openBalance = useMemo(() => items.filter((it) => it.status !== "CANCELLED").reduce((s, it) => s + (it.balance ?? 0), 0), [items]);
 
   const isCancelled = selected?.status === "CANCELLED";
@@ -569,6 +663,8 @@ export function Vvnd0300Page(): JSX.Element {
                   {creating ? "Novo orçamento" : "Dados gerais"}
                 </button>
                 {!creating && <button className={`erp-tab${tab === "itens" ? " active" : ""}`} onClick={() => setTab("itens")}>Itens ({items.length})</button>}
+                {!creating && <button className={`erp-tab${tab === "pagamento" ? " active" : ""}`} onClick={() => setTab("pagamento")}>Pagamento{plano ? ` (${plano.parcelas.length})` : ""}</button>}
+                {!creating && <button className={`erp-tab${tab === "comissao" ? " active" : ""}`} onClick={() => setTab("comissao")}>Comissão ({rateioLinhas.length})</button>}
                 {!creating && <button className={`erp-tab${tab === "anexos" ? " active" : ""}`} onClick={() => setTab("anexos")}>Anexos ({attachments.length})</button>}
                 {!creating && <button className={`erp-tab${tab === "historico" ? " active" : ""}`} onClick={() => setTab("historico")}>Histórico ({events.length})</button>}
               </div>
@@ -648,10 +744,27 @@ export function Vvnd0300Page(): JSX.Element {
                           {isConverted && <span className="erp-badge ok">→ Pedido {selected.converted_sales_order_code}</span>}
                         </div>
                         <div className="erp-fieldset-body">
-                          <div className="erp-field erp-c3"><label className="erp-label">Total bruto</label><input className="erp-input num" value={money(selected.total_gross)} readOnly /></div>
-                          <div className="erp-field erp-c3"><label className="erp-label">Total líquido</label><input className="erp-input strong num" value={money(selected.total_net)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Total bruto (antes do desconto)</label><input className="erp-input num" value={money(selected.total_gross)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Produtos (líquido)</label><input className={`erp-input num${modoValor === "produto" ? " strong" : ""}`} value={money(selected.total_net)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">IPI</label><input className={`erp-input num${modoValor === "ipi" ? " strong" : ""}`} value={money(selected.total_ipi)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Produto + IPI</label><input className={`erp-input num${modoValor === "produto_ipi" ? " strong" : ""}`} value={money(selected.total_with_ipi)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">ST (por fora)</label><input className="erp-input num" value={money(selected.total_st)} readOnly /></div>
                           <div className="erp-field erp-c3"><label className="erp-label">Retenções</label><input className="erp-input num" value={money(selected.retained_tax_value)} readOnly /></div>
                           <div className="erp-field erp-c3"><label className="erp-label">Saldo aberto (itens)</label><input className="erp-input num" value={qty(openBalance)} readOnly /></div>
+                          <div className="erp-field erp-c12">
+                            <label className="erp-label">Como mostrar os valores</label>
+                            <div className="erp-chips">
+                              {MODOS_DE_VALOR.map((m) => (
+                                <button key={m.value} type="button" title={m.hint}
+                                  className={`erp-chip${modoValor === m.value ? " active" : ""}`}
+                                  onClick={() => setModoValor(m.value)}>{m.label}</button>
+                              ))}
+                            </div>
+                            <small className="erp-hint">
+                              {MODOS_DE_VALOR.find((m) => m.value === modoValor)?.hint} — vale para a coluna em destaque da grade de itens.
+                              O ST aparece sempre em coluna própria: ele é cobrado por fora e não entra em &quot;produto + IPI&quot;.
+                            </small>
+                          </div>
                           {selected.commercial_block_reason && (
                             <div className="erp-field erp-c12"><label className="erp-label">Motivo do bloqueio</label><input className="erp-input" value={selected.commercial_block_reason} readOnly /></div>
                           )}
@@ -847,12 +960,14 @@ export function Vvnd0300Page(): JSX.Element {
                             <th className="num">Seq</th><th className="num">Item</th><th className="num">Qtd</th><th className="num">Atend.</th>
                             <th className="num">Canc.</th><th className="num">Saldo</th><th>UM</th><th className="num">Preço unit.</th>
                             <th className="num">Desc. %</th><th className="num">IPI %</th><th className="num">ST %</th>
-                            <th className="num">Total líq.</th><th className="num">Líq. c/ IPI</th><th>Status</th><th style={{ width: 140 }}></th>
+                            <th className="num">Produtos</th><th className="num">IPI R$</th><th className="num">ST R$</th>
+                            <th className="num">{MODOS_DE_VALOR.find((m) => m.value === modoValor)?.label}</th>
+                            <th>Status</th><th style={{ width: 140 }}></th>
                           </tr>
                         </thead>
                         <tbody>
                           {items.length === 0 && (
-                            <tr><td colSpan={15} className="erp-grid-empty">Nenhum item neste orçamento{locked ? "" : " — use a barra acima para adicionar"}.</td></tr>
+                            <tr><td colSpan={17} className="erp-grid-empty">Nenhum item neste orçamento{locked ? "" : " — use a barra acima para adicionar"}.</td></tr>
                           )}
                           {items.map((it) => (
                             <tr key={it.code}>
@@ -868,7 +983,9 @@ export function Vvnd0300Page(): JSX.Element {
                               <td className="num">{it.ipi_pct ?? 0}</td>
                               <td className="num">{it.st_pct ?? 0}</td>
                               <td className="num">{money(it.total_net)}</td>
-                              <td className="num">{money(it.total_net_with_ipi)}</td>
+                              <td className="num">{money(it.total_ipi)}</td>
+                              <td className="num">{money(it.total_st)}</td>
+                              <td className="num"><strong>{money(valorDoItem(it))}</strong></td>
                               <td>{ITEM_STATUS_LABEL[it.status ?? ""] ?? it.status ?? "—"}</td>
                               <td>
                                 {!locked && it.status !== "CANCELLED" && (
@@ -883,12 +1000,196 @@ export function Vvnd0300Page(): JSX.Element {
                         </tbody>
                         {items.length > 0 && (
                           <tfoot>
-                            <tr><td colSpan={11} className="num">Total líquido dos itens</td><td className="num">{money(itemsTotal)}</td><td colSpan={3}></td></tr>
+                            <tr>
+                              <td colSpan={11} className="num">Totais dos itens</td>
+                              <td className="num">{money(itemsTotal)}</td>
+                              <td className="num">{money(itemsIPI)}</td>
+                              <td className="num">{money(itemsST)}</td>
+                              <td className="num"><strong>{money(totalDaLeitura)}</strong></td>
+                              <td colSpan={2}></td>
+                            </tr>
                           </tfoot>
                         )}
                       </table>
                     </div>
                   </>
+                )}
+
+                {tab === "pagamento" && !creating && (
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">
+                      Plano de pagamento
+                      {plano && <span className="erp-badge info">{plano.condicao_descricao}</span>}
+                    </div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c12">
+                        <small className="erp-hint">
+                          Responde a pergunta que o cliente faz antes de aprovar: quanto ele paga e quando.
+                          O plano é calculado sobre o total líquido e a data de entrega do orçamento — não fica
+                          gravado, e vira título de verdade no faturamento.
+                        </small>
+                      </div>
+                      {planoErro && <div className="erp-field erp-c12"><div className="erp-feedback warn">{planoErro}</div></div>}
+                      {plano?.aviso && <div className="erp-field erp-c12"><div className="erp-feedback warn">{plano.aviso}</div></div>}
+                      {plano && (
+                        <div className="erp-field erp-c12">
+                          <div className="erp-grid-wrap">
+                            <table className="erp-grid">
+                              <thead>
+                                <tr>
+                                  <th className="num" style={{ width: 70 }}>Parcela</th>
+                                  <th className="num" style={{ width: 100 }}>%</th>
+                                  <th className="num" style={{ width: 150 }}>Valor</th>
+                                  <th style={{ width: 140 }}>Vencimento</th>
+                                  <th>Como foi contado</th>
+                                  <th style={{ width: 130 }}>Documento</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {plano.parcelas.length === 0 && (
+                                  <tr><td colSpan={6} className="erp-grid-empty">A condição não tem parcelas cadastradas — o pagamento é à vista.</td></tr>
+                                )}
+                                {plano.parcelas.map((p) => (
+                                  <tr key={p.numero}>
+                                    <td className="num">{p.numero}</td>
+                                    <td className="num">{p.percentual.toLocaleString("pt-BR")}%</td>
+                                    <td className="num"><strong>{money(p.valor)}</strong></td>
+                                    <td>
+                                      {p.vencimento.split("-").reverse().join("/")}
+                                      {p.estimado && <span className="erp-badge warn" style={{ marginLeft: 6 }}>estimado</span>}
+                                    </td>
+                                    <td>{p.descricao}</td>
+                                    <td>{p.document_type ?? "—"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              {plano.parcelas.length > 0 && (
+                                <tfoot>
+                                  <tr>
+                                    <td colSpan={2}>Total</td>
+                                    <td className="num"><strong>{money(plano.total)}</strong></td>
+                                    <td colSpan={3}>Condição {plano.condicao_code} — {plano.condicao_descricao}</td>
+                                  </tr>
+                                </tfoot>
+                              )}
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {tab === "comissao" && !creating && (
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">
+                      Rateio de comissão
+                      {rateio && <span className="erp-badge info">{somaRateioPct.toLocaleString("pt-BR")}% · R$ {money(rateio.total_valor)}</span>}
+                    </div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c12">
+                        <small className="erp-hint">
+                          Mais de um representante pode receber comissão no mesmo documento — o da região e o
+                          parceiro que trouxe o cliente — e o percentual muda de proposta para proposta.
+                          O representante <strong>principal</strong> é o que fica espelhado na capa.
+                          A base escolhida em cada linha é o que define o valor: o total líquido carrega frete e
+                          acréscimos da capa; o total dos produtos, não.
+                        </small>
+                      </div>
+                      {rateio && (
+                        <>
+                          <div className="erp-field erp-c3"><label className="erp-label">Base: total dos produtos</label><input className="erp-input num" value={money(rateio.total_produtos)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Base: total líquido</label><input className="erp-input num" value={money(rateio.total_liquido)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Comissão total</label><input className="erp-input strong num" value={money(rateio.total_valor)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Soma dos percentuais</label><input className="erp-input num" value={`${somaRateioPct.toLocaleString("pt-BR")}%`} readOnly /></div>
+                        </>
+                      )}
+                      <div className="erp-field erp-c12">
+                        <div className="erp-grid-wrap">
+                          <table className="erp-grid">
+                            <thead>
+                              <tr>
+                                <th style={{ width: 240 }}>Representante</th>
+                                <th style={{ width: 170 }}>Papel</th>
+                                <th className="num" style={{ width: 110 }}>Comissão %</th>
+                                <th style={{ width: 210 }}>Base de cálculo</th>
+                                <th className="num" style={{ width: 130 }}>Valor</th>
+                                <th>Observação</th>
+                                <th style={{ width: 90 }} />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rateioLinhas.length === 0 && (
+                                <tr><td colSpan={7} className="erp-grid-empty">Nenhum representante no rateio{locked ? "" : " — use \u201c+ Representante\u201d para incluir"}.</td></tr>
+                              )}
+                              {rateioLinhas.map((l, idx) => (
+                                <tr key={l.id ?? `novo-${idx}`}>
+                                  <td>
+                                    {locked ? (
+                                      <EntityName code={l.representative_code} loader={loadRepresentatives} prefix="Repr." />
+                                    ) : (
+                                      <LookupField
+                                        value={l.representative_code || undefined}
+                                        onChange={(v) => alterarRepresentante(idx, "representative_code", Number(v) || 0)}
+                                        loader={loadRepresentatives}
+                                        placeholder="Representante"
+                                      />
+                                    )}
+                                  </td>
+                                  <td>
+                                    <select className="erp-cell-input" value={l.role} disabled={locked}
+                                      onChange={(e) => alterarRepresentante(idx, "role", e.target.value)}>
+                                      {COMMISSION_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <input className="erp-cell-input num" type="number" step="0.01" min="0" max="100" disabled={locked}
+                                      value={l.commission_pct} onChange={(e) => alterarRepresentante(idx, "commission_pct", Number(e.target.value))} />
+                                  </td>
+                                  <td>
+                                    <select className="erp-cell-input" value={l.commission_base} disabled={locked}
+                                      onChange={(e) => alterarRepresentante(idx, "commission_base", e.target.value)}>
+                                      {COMMISSION_BASES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+                                    </select>
+                                  </td>
+                                  <td className="num">{money(l.commission_value)}</td>
+                                  <td>
+                                    <input className="erp-cell-input" disabled={locked} value={l.notes ?? ""}
+                                      placeholder="por que este representante entra"
+                                      onChange={(e) => alterarRepresentante(idx, "notes", e.target.value)} />
+                                  </td>
+                                  <td>
+                                    {!locked && <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removerRepresentante(idx)} disabled={busy}>Remover</button>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      {!locked && (
+                        <>
+                          <div className="erp-field erp-c3">
+                            <button className="erp-btn" onClick={addRepresentante}
+                              disabled={busy || rateioLinhas.length >= MAX_COMMISSION_REPRESENTATIVES}>+ Representante</button>
+                          </div>
+                          <div className="erp-field erp-c3">
+                            <button className="erp-btn erp-btn-primary" onClick={salvarRateio}
+                              disabled={busy || rateioLinhas.some((l) => !l.representative_code) || somaRateioPct > 100}>Gravar rateio</button>
+                          </div>
+                          <div className="erp-field erp-c6">
+                            <small className="erp-hint">
+                              {rateioLinhas.length >= MAX_COMMISSION_REPRESENTATIVES
+                                ? `Limite de ${MAX_COMMISSION_REPRESENTATIVES} representantes por documento.`
+                                : somaRateioPct > 100
+                                  ? "A soma das comissões passa de 100% — acerte os percentuais antes de gravar."
+                                  : "Gravar substitui o rateio inteiro do orçamento e espelha o principal na capa."}
+                            </small>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {tab === "anexos" && !creating && (
@@ -975,6 +1276,13 @@ export function Vvnd0300Page(): JSX.Element {
           </div>
         )}
         {selected && <div className="erp-status-item">Selecionado: <strong>#{selected.quotation_number || selected.code}</strong> ({sm.label} · {rm.label})</div>}
+        {selected && (
+          <div className="erp-status-item">
+            {MODOS_DE_VALOR.find((m) => m.value === modoValor)?.label}: R$ <strong>{money(totalDaCapaNaLeitura)}</strong>
+            {rateio && rateio.total_valor > 0 && <> · comissão R$ <strong>{money(rateio.total_valor)}</strong></>}
+            {plano && plano.parcelas.length > 0 && <> · {plano.parcelas.length} parcela(s)</>}
+          </div>
+        )}
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>

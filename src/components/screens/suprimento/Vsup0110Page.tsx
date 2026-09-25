@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type ItemConversionDTO, type ConversionResult, CONVERSION_TOLERANCE_TYPES, listItemConversions, upsertItemConversion, deleteItemConversion, convertItem } from "@/services/purchasingMasterService";
 import { enumLabel } from "@/utils/enumLabels";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
+import { getItem, type ItemDTO } from "@/services/itemService";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 // Valores aceitos por TypeUnitOfMeasurementItem no backend.
@@ -19,6 +21,18 @@ const EMPTY: ItemConversionDTO = {
 
 const numero = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 6 });
 
+/**
+ * A mesma conversão lida nos dois sentidos.
+ *
+ * "1 BARRA = 6000 MM" é o número que está na nota do fornecedor; "1 MM =
+ * 0,000166667 BARRA" é o mesmo fato e ninguém confere de cabeça. A tela
+ * mostrava só um lado, e era por isso que se cadastrava invertido.
+ */
+function ambosOsSentidos(de: string, para: string, fator: number): string {
+  if (!de || !para || !Number.isFinite(fator) || fator <= 0) return "";
+  return `1 ${de} = ${numero(fator)} ${para}  ·  1 ${para} = ${numero(1 / fator)} ${de}`;
+}
+
 export function Vsup0110Page(): JSX.Element {
   const [item, setItem] = useState<string | undefined>(undefined);
   const [list, setList] = useState<ItemConversionDTO[]>([]);
@@ -27,6 +41,30 @@ export function Vsup0110Page(): JSX.Element {
   const [convResult, setConvResult] = useState<ConversionResult | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  /** Linha em edição; nulo = cadastrando uma nova. O POST é upsert por item+UMs. */
+  const [editando, setEditando] = useState<number | null>(null);
+  const [confirmacao, setConfirmacao] = useState<{ id: number; rotulo: string } | null>(null);
+  /**
+   * As unidades do próprio item. Sem elas a tela aceita qualquer par de UMs, e
+   * conversão entre duas unidades que o item nunca usa é dado morto — ninguém
+   * descobre até o MRP pedir a conversão que falta.
+   */
+  const [dadosDoItem, setDadosDoItem] = useState<ItemDTO | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    setDadosDoItem(null);
+    if (!item) return;
+    void getItem(String(item)).then((d) => { if (vivo) setDadosDoItem(d); }).catch(() => { /* a tela funciona sem isso */ });
+    return () => { vivo = false; };
+  }, [item]);
+
+  /** Avisa quando o par cadastrado não toca nenhuma unidade do item. */
+  const alertaDeUnidade = useMemo(() => {
+    const usadas = [dadosDoItem?.uom, dadosDoItem?.purchase_uom].filter(Boolean) as string[];
+    if (!usadas.length || !form.from_uom || !form.to_uom) return "";
+    if (usadas.includes(form.from_uom) || usadas.includes(form.to_uom)) return "";
+    return `Este item usa ${usadas.join(" e ")}. Uma conversão entre ${form.from_uom} e ${form.to_uom} não será aplicada em compra nem em estoque — confira se é isso mesmo.`;
+  }, [dadosDoItem, form.from_uom, form.to_uom]);
 
   async function carregar() {
     if (!item) { setFeedback({ type: "error", message: "Selecione o item." }); return; }
@@ -37,12 +75,29 @@ export function Vsup0110Page(): JSX.Element {
   async function salvar() {
     if (!item || !form.from_uom.trim() || !form.to_uom.trim() || !Number.isFinite(form.factor) || form.factor <= 0) { setFeedback({ type: "error", message: "Item, UMs e fator são obrigatórios." }); return; }
     setBusy(true); setFeedback(null);
-    try { await upsertItemConversion({ ...form, item_code: item }); setForm(EMPTY); setFeedback({ type: "success", message: "Conversão salva." }); await carregar(); }
+    try {
+      await upsertItemConversion({ ...form, item_code: item });
+      setForm(EMPTY); setEditando(null);
+      setFeedback({ type: "success", message: `Conversão salva: ${ambosOsSentidos(form.from_uom, form.to_uom, form.factor)}` });
+      await carregar();
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function remover(id: number) {
     setBusy(true); setFeedback(null);
-    try { await deleteItemConversion(id); await carregar(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+    try {
+      await deleteItemConversion(id);
+      if (editando === id) { setEditando(null); setForm(EMPTY); }
+      setFeedback({ type: "success", message: "Conversão excluída." });
+      await carregar();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  /** Traz a linha para o formulário: o POST é upsert pela chave item + UMs. */
+  function editar(c: ItemConversionDTO) {
+    setForm({ ...c, item_code: String(item ?? "") });
+    setEditando(c.id ?? null);
+    setFeedback(null);
   }
   async function converter() {
     if (!item || !conv.from || !conv.to) { setFeedback({ type: "error", message: "Informe item, de e para." }); return; }
@@ -86,11 +141,13 @@ export function Vsup0110Page(): JSX.Element {
             <div className="erp-list">
               {list.length === 0 && <div className="erp-list-empty">Selecione um item e clique em <strong>Carregar</strong>.</div>}
               {list.map((c) => (
-                <div key={c.id} className="erp-list-row" style={{ cursor: "default" }}>
+                <div key={c.id} className={`erp-list-row${editando === c.id ? " sel" : ""}`} style={{ cursor: "default" }}>
                   <span className="erp-list-code">{c.from_uom}→{c.to_uom}</span>
-                  <span className="erp-list-sub">fator {c.factor}{c.rounding_percent ? ` · arred. ${c.rounding_percent}%` : ""}</span>
-                  <div className="erp-list-meta">
-                    <button className="erp-btn erp-btn-danger erp-btn-sm" style={{ marginLeft: "auto" }} onClick={() => c.id && void remover(c.id)} disabled={busy}>Excluir</button>
+                  <span className="erp-list-sub">{ambosOsSentidos(c.from_uom, c.to_uom, c.factor)}{c.rounding_percent ? ` · arred. ${c.rounding_percent}%` : ""}</span>
+                  <div className="erp-list-meta" style={{ gap: 6 }}>
+                    <button className="erp-btn erp-btn-sm" style={{ marginLeft: "auto" }} onClick={() => editar(c)} disabled={busy}>Editar</button>
+                    <button className="erp-btn erp-btn-danger erp-btn-sm"
+                      onClick={() => c.id && setConfirmacao({ id: c.id, rotulo: `${c.from_uom} → ${c.to_uom}` })} disabled={busy}>Excluir</button>
                   </div>
                 </div>
               ))}
@@ -101,7 +158,14 @@ export function Vsup0110Page(): JSX.Element {
             <div className="erp-tabs"><button className="erp-tab active">Conversões de unidade</button></div>
             <div className="erp-detail-body">
               <div className="erp-fieldset">
-                <div className="erp-fieldset-head">Nova conversão</div>
+                <div className="erp-fieldset-head">
+                  {editando ? "Alterando conversão" : "Nova conversão"}
+                  {dadosDoItem && (
+                    <span style={{ fontWeight: 400, opacity: .7, marginLeft: 8 }}>
+                      — o item usa {[dadosDoItem.uom && `${dadosDoItem.uom} em estoque`, dadosDoItem.purchase_uom && `${dadosDoItem.purchase_uom} na compra`].filter(Boolean).join(" e ") || "unidade não informada"}
+                    </span>
+                  )}
+                </div>
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">De (UM)</label><select className="erp-input" aria-label="De (UM)" value={form.from_uom} onChange={(e) => setF("from_uom", e.target.value)}><UnitOptions /></select></div>
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Para (UM)</label><select className="erp-input" aria-label="Para (UM)" value={form.to_uom} onChange={(e) => setF("to_uom", e.target.value)}><UnitOptions /></select></div>
@@ -119,7 +183,18 @@ export function Vsup0110Page(): JSX.Element {
                       campos em zero, qualquer conversão que não dê inteiro exato é recusada.
                     </p>
                   </div>
-                  <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>Salvar conversão</button></div>
+                  {form.from_uom && form.to_uom && form.factor > 0 && (
+                    <div className="erp-field erp-c12">
+                      <div className="erp-note"><strong>Vai gravar:</strong> {ambosOsSentidos(form.from_uom, form.to_uom, form.factor)}</div>
+                    </div>
+                  )}
+                  {alertaDeUnidade && (
+                    <div className="erp-field erp-c12"><div className="erp-feedback error">{alertaDeUnidade}</div></div>
+                  )}
+                  <div className="erp-field erp-c3" style={{ justifyContent: "flex-end", flexDirection: "row", gap: 6 }}>
+                    {editando && <button className="erp-btn" onClick={() => { setEditando(null); setForm(EMPTY); }} disabled={busy}>Cancelar</button>}
+                    <button className="erp-btn erp-btn-primary" style={{ flex: 1 }} onClick={() => void salvar()} disabled={busy}>{editando ? "Salvar alteração" : "Salvar conversão"}</button>
+                  </div>
                 </div>
               </div>
               <div className="erp-fieldset">
@@ -143,6 +218,16 @@ export function Vsup0110Page(): JSX.Element {
           </section>
         </div>
       </div>
+
+      <ConfirmDialog
+        aberto={!!confirmacao}
+        titulo="Excluir a conversão?"
+        assunto={confirmacao?.rotulo}
+        mensagem="A conversão deixa de existir para este item. Compra, estrutura, ordem e custo que dependem dela passam a falhar por conversão ausente — e o erro aparece no próximo cálculo, não agora."
+        rotuloConfirmar="Excluir conversão"
+        onConfirmar={() => { const id = confirmacao?.id; setConfirmacao(null); if (id) void remover(id); }}
+        onCancelar={() => setConfirmacao(null)}
+      />
 
       <footer className="erp-statusbar">
         <div className="erp-status-item">Conversões: <strong>{list.length}</strong></div>

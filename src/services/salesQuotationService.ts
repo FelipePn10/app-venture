@@ -152,7 +152,16 @@ export interface SalesQuotationItemDTO {
   ipi_pct?: number;
   st_pct?: number;
   total_gross?: number;
+  /** Valor dos PRODUTOS já com desconto — sem imposto. */
   total_net?: number;
+  /** IPI do item, sozinho. */
+  total_ipi?: number;
+  /** ST do item, sozinho. */
+  total_st?: number;
+  /**
+   * Produto + IPI. Até a v1.2.0 o backend somava o ST aqui apesar do nome, e o
+   * valor inflado ia para o pedido na conversão.
+   */
   total_net_with_ipi?: number;
   status?: string;
   notes?: string;
@@ -202,7 +211,14 @@ export interface SalesQuotationDTO {
   surcharge_value?: number;
   retained_tax_value?: number;
   total_gross?: number;
+  /** Produtos com desconto + frete/seguro/acréscimo − descontos e retenções. */
   total_net?: number;
+  /** Soma do IPI dos itens. */
+  total_ipi?: number;
+  /** Soma do ST dos itens. */
+  total_st?: number;
+  /** `total_net` + IPI: a terceira forma de ver o orçamento. */
+  total_with_ipi?: number;
   // textos
   delivery_authorization?: string;
   notes?: string;
@@ -345,6 +361,8 @@ function parseItem(raw: unknown): SalesQuotationItemDTO {
     st_pct: parseNum(o, 'st_pct', 'STPct', 'StPct'),
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),
     total_net: parseNum(o, 'total_net', 'TotalNet'),
+    total_ipi: parseNum(o, 'total_ipi', 'TotalIPI'),
+    total_st: parseNum(o, 'total_st', 'TotalST'),
     total_net_with_ipi: parseNum(o, 'total_net_with_ipi', 'TotalNetWithIPI'),
     status: parseStr(o, 'status', 'Status'),
     notes: optStr(o, 'notes', 'Notes'),
@@ -396,6 +414,9 @@ function parseQuotation(raw: unknown): SalesQuotationDTO {
     retained_tax_value: parseNum(o, 'retained_tax_value', 'RetainedTaxValue'),
     total_gross: parseNum(o, 'total_gross', 'TotalGross'),
     total_net: parseNum(o, 'total_net', 'TotalNet'),
+    total_ipi: parseNum(o, 'total_ipi', 'TotalIPI'),
+    total_st: parseNum(o, 'total_st', 'TotalST'),
+    total_with_ipi: parseNum(o, 'total_with_ipi', 'TotalWithIPI'),
     delivery_authorization: optStr(o, 'delivery_authorization', 'DeliveryAuthorization'),
     notes: optStr(o, 'notes', 'Notes'),
     obs_customer: optStr(o, 'obs_customer', 'ObsCustomer'),
@@ -695,4 +716,74 @@ export async function saveCancellationReason(dto: CancellationReasonDTO): Promis
 }
 export async function setCancellationReasonStatus(code: number, isActive: boolean): Promise<void> {
   await httpClient.patch(`${BASE}/cancellation-reasons/${code}/status`, { is_active: isActive });
+}
+
+// ─── Plano de pagamento e rateio de comissão ─────────────────────────────────
+
+/**
+ * Parcela calculada da condição de pagamento do documento. O backend NÃO grava
+ * este plano: ele acompanha o total e a data de entrega, que mudam enquanto a
+ * proposta está sendo montada. Vira título de verdade só no faturamento.
+ */
+export interface ParcelaPlanoDTO {
+  numero: number;
+  percentual: number;
+  valor: number;
+  /** ISO (AAAA-MM-DD). */
+  vencimento: string;
+  dias_prazo: number;
+  /** EMISSAO · ENTRADA · ENTREGA · FATURAMENTO */
+  evento: string;
+  evento_rotulo: string;
+  descricao: string;
+  /** Vencimento estimado: depende de uma entrega ainda não confirmada. */
+  estimado: boolean;
+  document_type?: string;
+}
+
+export interface PlanoDePagamentoDTO {
+  condicao_code: number;
+  condicao_descricao: string;
+  total: number;
+  parcelas: ParcelaPlanoDTO[];
+  /** Presente quando alguma parcela está presa à entrega. */
+  aviso?: string;
+}
+
+function parseParcela(raw: unknown): ParcelaPlanoDTO {
+  const o = unwrapObject(raw);
+  return {
+    numero: parseNum(o, 'numero', 'Numero'),
+    percentual: parseNum(o, 'percentual', 'Percentual'),
+    valor: parseNum(o, 'valor', 'Valor'),
+    vencimento: parseStr(o, 'vencimento', 'Vencimento'),
+    dias_prazo: parseNum(o, 'dias_prazo', 'DiasPrazo'),
+    evento: parseStr(o, 'evento', 'Evento'),
+    evento_rotulo: parseStr(o, 'evento_rotulo', 'EventoRotulo'),
+    descricao: parseStr(o, 'descricao', 'Descricao'),
+    estimado: parseBool(o, 'estimado', 'Estimado'),
+    document_type: optStr(o, 'document_type', 'DocumentType'),
+  };
+}
+
+export function parsePlanoDePagamento(raw: unknown): PlanoDePagamentoDTO {
+  const o = unwrapObject(raw);
+  const parcelas = o['parcelas'] ?? o['Parcelas'];
+  return {
+    condicao_code: parseNum(o, 'condicao_code', 'CondicaoCode'),
+    condicao_descricao: parseStr(o, 'condicao_descricao', 'CondicaoDescricao'),
+    total: parseNum(o, 'total', 'Total'),
+    parcelas: Array.isArray(parcelas) ? parcelas.map(parseParcela) : [],
+    aviso: optStr(o, 'aviso', 'Aviso'),
+  };
+}
+
+/**
+ * Plano de pagamento do orçamento — responde "quanto o cliente paga e quando".
+ * Recusa com validação quando o orçamento não tem condição de pagamento ou
+ * quando os percentuais da condição não fecham 100%.
+ */
+export async function getSalesQuotationPaymentSchedule(code: number): Promise<PlanoDePagamentoDTO> {
+  const { data } = await httpClient.get(`${BASE}/${code}/payment-schedule`);
+  return parsePlanoDePagamento(data);
 }

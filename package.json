@@ -1,6 +1,6 @@
 {
   "name": "erp-desktop-frontend",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -41,6 +41,7 @@
     "test:screen-search": "node scripts/test-screen-search.mjs",
     "test:commercial-regressions": "node scripts/validate-commercial-regressions.mjs",
     "test:commercial-round2": "node scripts/validate-commercial-round2.mjs",
+    "sim:comercial-round3": "node scripts/ui-sim/comercial-round3.mjs",
     "test:engineering": "node scripts/validate-engineering.mjs",
     "test:rotulos": "node scripts/validate-routine-labels.mjs",
     "test:suprimentos": "node scripts/validate-suprimentos.mjs",

@@ -2,7 +2,9 @@ import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, t
 import { downloadBlob } from '@/services/fileDownload';
 
 const BASE = '/api/customers';
-const SUPPORT = `${BASE}/support`;
+// Caminho literal (e não `${BASE}/support`) para a auditoria de cobertura de
+// rotas conseguir casar as chamadas montadas em runtime com as rotas do backend.
+const SUPPORT = '/api/customers/support';
 /** UUID nulo usado quando a tela não tem um usuário autenticado real. */
 const SYS_USER = '00000000-0000-0000-0000-000000000000';
 
@@ -235,4 +237,141 @@ export async function exportCustomers(fmt: 'xlsx' | 'pdf' | 'csv'): Promise<void
 export async function exportCustomerPDF(code: number, name?: string): Promise<void> {
   const { data } = await httpClient.get(`${BASE}/${code}/report/pdf`, { responseType: 'blob' });
   downloadBlob(data as Blob, `cliente-${code}-${(name || 'ficha').replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}.pdf`);
+}
+
+// ─── Condição de pagamento: parcelas e simulação ─────────────────────────────
+
+/**
+ * Eventos a partir dos quais o vencimento da parcela é contado. Sem eles não era
+ * possível cadastrar "30% de entrada, 20% na entrega e o restante em 28/56
+ * dias": a condição só guardava os dias, e todos contavam da emissão.
+ */
+export const PAYMENT_BASE_EVENTS = [
+  { value: 'EMISSAO', label: 'Emissão do documento' },
+  { value: 'ENTRADA', label: 'Entrada (no ato)' },
+  { value: 'ENTREGA', label: 'Entrega' },
+  { value: 'FATURAMENTO', label: 'Faturamento' },
+] as const;
+
+export function paymentBaseEventLabel(value?: string): string {
+  return PAYMENT_BASE_EVENTS.find((e) => e.value === value)?.label ?? (value || 'Emissão do documento');
+}
+
+export interface InstallmentDTO {
+  id?: number;
+  installment_number: number;
+  due_days: number;
+  description?: string;
+  document_type?: string;
+  movement_type?: string;
+  carrier_id?: number;
+  /**
+   * Quanto do total a parcela leva. Nulo em TODAS as parcelas = divisão em
+   * partes iguais (comportamento antigo). Informado em parte delas, o backend
+   * recusa: não há como adivinhar quanto vai no resto.
+   */
+  percentage?: number;
+  base_event?: string;
+  /** O que falta para a condição fechar 100% — aviso, não erro: a parcela foi gravada. */
+  warning?: string;
+}
+
+function parseInstallment(raw: unknown): InstallmentDTO {
+  const o = unwrapObject(raw);
+  const pct = o['percentage'] ?? o['Percentage'];
+  return {
+    id: parseNum(o, 'id', 'ID') || undefined,
+    installment_number: parseNum(o, 'installment_number', 'InstallmentNumber'),
+    due_days: parseNum(o, 'due_days', 'DueDays'),
+    description: parseStr(o, 'description', 'Description') || undefined,
+    document_type: parseStr(o, 'document_type', 'DocumentType') || undefined,
+    movement_type: parseStr(o, 'movement_type', 'MovementType') || undefined,
+    carrier_id: parseNum(o, 'carrier_id', 'CarrierID') || undefined,
+    // `percentage` nulo é informação (divisão em partes iguais), não zero.
+    percentage: pct === null || pct === undefined ? undefined : Number(pct),
+    base_event: parseStr(o, 'base_event', 'BaseEvent') || 'EMISSAO',
+    warning: parseStr(o, 'warning', 'Aviso') || undefined,
+  };
+}
+
+export async function listPaymentConditionInstallments(conditionCode: number): Promise<InstallmentDTO[]> {
+  const { data } = await httpClient.get(`${SUPPORT}/payment-conditions/${conditionCode}/installments`);
+  return unwrapArray(data).map(parseInstallment);
+}
+
+/** Reenviar a mesma parcela ALTERA (upsert por número), não duplica. */
+export async function addPaymentConditionInstallment(dto: {
+  payment_condition_code: number;
+  installment_number: number;
+  due_days: number;
+  percentage?: number;
+  base_event?: string;
+  description?: string;
+  document_type?: string;
+  carrier_code?: number;
+}): Promise<InstallmentDTO> {
+  const { data } = await httpClient.post(`${SUPPORT}/payment-conditions/installments`, dto);
+  return parseInstallment(data);
+}
+
+export async function deletePaymentConditionInstallment(conditionCode: number, id: number): Promise<void> {
+  await httpClient.delete(`${SUPPORT}/payment-conditions/${conditionCode}/installments/${id}`);
+}
+
+export interface PlanoSimuladoParcela {
+  numero: number;
+  percentual: number;
+  valor: number;
+  vencimento: string;
+  dias_prazo: number;
+  evento: string;
+  evento_rotulo: string;
+  descricao: string;
+  estimado: boolean;
+}
+
+export interface PlanoSimuladoDTO {
+  condicao_code: number;
+  condicao_descricao: string;
+  total: number;
+  parcelas: PlanoSimuladoParcela[];
+  aviso?: string;
+}
+
+/**
+ * Mostra a condição em dinheiro e em datas antes de ela ser usada em qualquer
+ * pedido — é a conferência do cadastro. Sem `total`, o backend usa R$ 1.000 de
+ * referência.
+ */
+export async function simulatePaymentCondition(
+  conditionCode: number,
+  opts?: { total?: number; emissionDate?: string; deliveryDate?: string },
+): Promise<PlanoSimuladoDTO> {
+  const params: Record<string, string> = {};
+  if (opts?.total !== undefined) params.total = String(opts.total);
+  if (opts?.emissionDate) params.emission_date = opts.emissionDate;
+  if (opts?.deliveryDate) params.delivery_date = opts.deliveryDate;
+  const { data } = await httpClient.get(`${SUPPORT}/payment-conditions/${conditionCode}/simulate`, { params });
+  const o = unwrapObject(data);
+  const parcelas = o['parcelas'] ?? o['Parcelas'];
+  return {
+    condicao_code: parseNum(o, 'condicao_code', 'CondicaoCode'),
+    condicao_descricao: parseStr(o, 'condicao_descricao', 'CondicaoDescricao'),
+    total: parseNum(o, 'total', 'Total'),
+    parcelas: (Array.isArray(parcelas) ? parcelas : []).map((raw) => {
+      const p = unwrapObject(raw);
+      return {
+        numero: parseNum(p, 'numero', 'Numero'),
+        percentual: parseNum(p, 'percentual', 'Percentual'),
+        valor: parseNum(p, 'valor', 'Valor'),
+        vencimento: parseStr(p, 'vencimento', 'Vencimento'),
+        dias_prazo: parseNum(p, 'dias_prazo', 'DiasPrazo'),
+        evento: parseStr(p, 'evento', 'Evento'),
+        evento_rotulo: parseStr(p, 'evento_rotulo', 'EventoRotulo'),
+        descricao: parseStr(p, 'descricao', 'Descricao'),
+        estimado: parseBool(p, 'estimado', 'Estimado'),
+      };
+    }),
+    aviso: parseStr(o, 'aviso', 'Aviso') || undefined,
+  };
 }

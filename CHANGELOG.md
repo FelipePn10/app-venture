@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## [v1.3.0] — 2026-09-25
+
+## Novidades
+- **Condição de pagamento com entrada e entrega, do jeito que o cliente negocia.** Agora é possível cadastrar "30% de entrada, 20% na entrega e o restante em 28/56 dias": cada parcela diz quanto leva do total e de que evento o prazo conta — emissão, entrada (no ato), entrega ou faturamento. Antes a condição só guardava os dias, e todos contavam da emissão; a segunda metade da negociação era acertada por fora do sistema.
+- **A condição pode ser conferida em dinheiro antes de ser usada.** Informe um valor de referência e a data de entrega e veja as parcelas com valor e vencimento. Nada é gravado: é a conferência do cadastro.
+- **O orçamento mostra quanto o cliente paga e quando.** A nova aba Pagamento resolve a condição do orçamento em parcelas com valor e data, marcando como *estimada* a parcela que depende de uma entrega ainda não confirmada.
+- **Dois representantes podem receber comissão no mesmo pedido.** O representante da região e o parceiro que trouxe o cliente, cada um com o seu percentual — e o percentual muda de pedido para pedido. Cada linha diz sobre o que a comissão incide (total dos produtos ou total líquido do documento), e o sistema mostra o valor em reais de cada um. O rateio do orçamento vai junto quando ele vira pedido.
+- **Produto, IPI e produto + IPI: três formas de ver o mesmo orçamento.** A capa mostra os três valores, o ST aparece em coluna própria (é cobrado por fora) e um alternador troca a coluna em destaque da grade de itens — sem conta de cabeça.
+- **Novo cadastro de transportadora (VSUP0140).** RNTRC/ANTT com validade, categoria (ETC/CTC/TAC), modal, tabela de frete (piso, R$ por kg, ad valorem, GRIS e pedágio por 100 kg), seguro de carga, frota com placa, capacidade e motorista, e as regiões atendidas com prazo por UF ou faixa de CEP.
+- **Cotação comparativa de frete.** Informe destino, peso e valor da carga e veja quem leva, por quanto e em quantos dias — com o frete aberto em componentes, a mais barata e a mais rápida marcadas, e quem não atende o destino listado à parte.
+- **Ocorrências de entrega da transportadora.** Registre atraso, avaria, extravio e afins; a tela mostra ocorrências, atraso médio e custo dos últimos 12 meses. É o que transforma "essa transportadora atrasa" em número.
+
+## Melhorias
+- A conversão de unidade por item (VSUP0110) deixou de ser exclusiva do administrador: quem cadastra o item é quem sabe a conversão dele. Toda alteração continua registrada no histórico.
+- A tela de conversão passou a mostrar os dois sentidos da conversão, avisa quando o par de unidades não envolve a unidade de estoque nem a de compra do item, permite alterar uma conversão já cadastrada e explica a consequência antes de excluir.
+- No cadastro da condição de pagamento, a próxima parcela já vem numerada, escolher "entrada" zera e trava o prazo em dias, e o rodapé da lista diz se os percentuais fecham 100%.
+- A transportadora avisa o que impede transportar antes de a expedição descobrir: habilitação ou seguro vencido, frota sem veículo ativo, tabela de frete em branco, nenhuma região cadastrada.
+
+## Correções
+- **Cadastrar uma condição de pagamento não funcionava mais.** A tela devolvia um erro técnico do banco; nenhuma condição nova podia ser criada.
+- **Todo plano de pagamento saía como "à vista".** O sistema lia a condição sem as parcelas, por mais parcelada que ela fosse.
+- **O valor "líquido com IPI" do orçamento somava o ICMS-ST**, apesar do nome — e esse valor inflado era copiado para o pedido na conversão.
+- **Converter apenas parte do orçamento levava o valor da quantidade inteira** para o item do pedido.
+- **Cadastrar um representante não o vinculava à empresa**: ele existia, mas não podia ser usado em pedido nem em orçamento ("representante não encontrado na empresa autenticada").
+- Cada empresa passa a ver somente as suas condições de pagamento e os seus representantes — inclusive no relatório e no acompanhamento de representantes.
+- Em Serviços de Terceiros, a situação da ordem oferecia opções que o sistema recusava (Aberta, Em andamento). Agora a lista traz as situações reais — Planejada, Firme, Liberada com/sem pedido de compra, Concluída, Cancelada — e só as transições permitidas a partir da situação atual.
+
 ## [v1.2.0] — 2026-09-24
 
 ## Novidades

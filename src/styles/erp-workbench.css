@@ -343,6 +343,24 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-feedback.success { background: var(--v-ok-bg); border: 1px solid var(--v-ok-bd); border-left: 3px solid var(--v-green); color: var(--v-ok); }
 .erp-feedback.error { background: var(--v-err-bg); border: 1px solid var(--v-err-bd); border-left: 3px solid var(--v-err); color: var(--v-err); }
 .erp-feedback.info { background: var(--v-info-bg); border: 1px solid var(--v-info-bd); border-left: 3px solid var(--v-info); color: var(--v-info); }
+/* `warn` é o caso do "gravou, mas falta algo": a parcela entrou e a condição
+   ainda não fecha 100%. Sem esta variante a mensagem saía sem cor nenhuma. */
+.erp-feedback.warn { background: var(--v-warn-bg); border: 1px solid var(--v-warn-bd); border-left: 3px solid var(--v-warn); color: var(--v-warn); }
+
+/* ── CHIPS (alternador de leitura) ────────────────────────────────────────────
+   Botões curtos e mutuamente exclusivos para trocar COMO um mesmo dado é lido
+   (produto · IPI · produto + IPI). Não é filtro nem navegação: o conteúdo é o
+   mesmo, muda a coluna em destaque. */
+.erp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.erp-chip {
+  height: 28px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--v-border-strong); background: var(--v-surface-2); color: var(--v-text-2);
+  font-family: var(--v-font); font-size: 12px; font-weight: 600; letter-spacing: .2px;
+  display: inline-flex; align-items: center; transition: background .12s, color .12s, border-color .12s;
+}
+.erp-chip:hover:not(:disabled) { background: var(--v-surface-3); color: var(--v-text); border-color: var(--v-green); }
+.erp-chip.active { background: var(--v-green); border-color: var(--v-green); color: #fff; box-shadow: var(--v-shadow-sm); }
+.erp-chip:focus-visible { outline: none; box-shadow: var(--v-focus); }
 
 /* ── STATUS BAR ───────────────────────────────────────────────────────────── */
 .erp-statusbar {

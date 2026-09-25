@@ -78,6 +78,7 @@ const CONFERIDAS = new Map([
   ['RESTRICTION_CONNECTORS', 'envia AND/OR; E/OU são apenas rótulos'],
   ['OP_ORIGINS', 'INTERNA/EXTERNA/TERCEIROS conferem com operation_origin_enum'],
   ['FREIGHT_MODALITIES', 'shipments.freight_modality é varchar sem constraint; não é table_composition_enum'],
+  ['CARRIER_FREIGHT_TYPES', 'shipping_carriers.default_freight_type é varchar; o backend valida CIF/FOB/TERCEIROS/SEM_FRETE — não é table_composition_enum (Incoterm da tabela de venda)'],
 ]);
 
 const achados = [];

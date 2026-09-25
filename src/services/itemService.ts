@@ -36,6 +36,8 @@ export interface ItemDTO {
   group_code?: number;
   modifier_code?: number;
   uom?: string;
+  /** UM de COMPRA. Difere da de estoque quando se compra em barra e se estoca em mm — é essa diferença que a conversão resolve. */
+  purchase_uom?: string;
   minimum_stock?: number;
   eng_type?: string;
   type_struct?: string;
@@ -119,6 +121,7 @@ function parseItem(raw: unknown): ItemDTO {
     group_code: parseNum(pdm, 'group_code', 'GroupCode') || undefined,
     modifier_code: parseNum(pdm, 'modifier_code', 'ModifierCode') || undefined,
     uom: parseStr(wh, 'unit_of_measurement', 'UnitOfMeasurement') || undefined,
+    purchase_uom: parseStr(unwrapObject(o['supplies'] ?? o['Supplies']), 'purchase_uom', 'PurchaseUom', 'PurchaseUOM') || undefined,
     minimum_stock: parseNum(wh, 'minimum_stock', 'MinimumStock'),
     eng_type: parseStr(eng, 'type', 'Type') || undefined,
     type_struct: parseStr(eng, 'type_struct', 'TypeStruct') || undefined,
