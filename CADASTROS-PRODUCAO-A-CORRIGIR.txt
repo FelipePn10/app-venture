@@ -1,0 +1,281 @@
+================================================================================
+CADASTROS DE PRODUÇÃO QUE PRECISAM DE CORREÇÃO — TECNOFER
+Levantado em 26/09/2026 · empresa 1 (Tecnofer) · banco de produção na migração 363
+================================================================================
+
+COMO ISTO FOI LEVANTADO
+-----------------------
+Nada foi alterado em produção. O banco de produção foi copiado (pg_dump, somente
+leitura) para um ambiente separado — Postgres na porta 5440 e API na 5081 — e a
+rotina completa da empresa foi simulada lá: vender, planejar (MRP), calcular
+capacidade (CRP), sequenciar (APS), receber material, produzir, apontar,
+concluir, faturar, gerar e baixar título. O roteiro dessa simulação está em
+`scripts/simulacao-rotina-empresa.mjs` e pode ser repetido a qualquer momento.
+
+Ao subir a cópia, o ambiente de teste TENTOU autorizar uma NF-e de verdade e o
+provedor (Focus NF-e) recusou por CNPJ não autorizado. Regra que passou a valer:
+ao restaurar produção em ambiente de teste, apague o token fiscal primeiro
+(`UPDATE fiscal_configs SET focus_nfe_token=NULL, focus_nfe_ambiente='homologacao'`).
+
+O que era DEFEITO DO SISTEMA foi corrigido no código (lista no fim deste
+arquivo). O que está abaixo é CADASTRO: só a empresa pode decidir.
+
+================================================================================
+1. BLOQUEIA FATURAR — CÓDIGO DO MUNICÍPIO ZERADO NA CONFIGURAÇÃO FISCAL
+================================================================================
+O QUE ESTÁ: `fiscal_configs.codigo_municipio = 0000000`, com município
+"Mandaguari" e UF "PR" preenchidos.
+
+POR QUE ESTÁ ERRADO: o código IBGE do município do emitente é campo obrigatório
+da NF-e (cMun, grupo emit/enderEmit). Com 0000000 a SEFAZ rejeita a nota.
+
+QUAL É O VALOR CERTO: Mandaguari/PR = **4114302** (tabela IBGE de municípios).
+
+COMO CORRIGIR: tela de Configurações Fiscais, campo "Código do município"; ou
+    UPDATE fiscal_configs SET codigo_municipio = '4114302' WHERE enterprise_id = 1;
+
+NÃO APLIQUEI porque é escrita direta no banco de produção — peça e eu aplico, ou
+corrija pela tela (1 minuto). É o único item deste arquivo em que o valor certo
+não depende de decisão da empresa.
+
+================================================================================
+2. BLOQUEIA VENDER — FALTAM TRÊS CADASTROS COMERCIAIS
+================================================================================
+2.1 CONDIÇÃO DE PAGAMENTO COMERCIAL (tabela `payment_conditions`) — VAZIA.
+    As 8 condições que existem (28/56/84/98, 21/42/63, 30/60/90, 45, 30, 7, 14,
+    28/56/84) estão em `condicoes_pagamento`, que é a tabela do FINANCEIRO
+    (contas a pagar/receber). O pedido e o orçamento de venda leem a OUTRA
+    tabela. Efeito: pedido e orçamento nascem sem condição de pagamento, e o
+    plano de pagamento da proposta não tem o que calcular.
+    CORRIGIR EM: VCLI0520 › aba "Condição de Pagamento" (cadastre as mesmas 8 e
+    aproveite para usar percentual + evento por parcela, ex.: 30% entrada,
+    20% entrega, restante 28/56).
+
+2.2 REPRESENTANTE (`representatives`) — VAZIO.
+    Sem representante não há comissão no pedido — nem a comissão dividida entre
+    dois representantes. CORRIGIR EM: cadastro de Representante.
+
+2.3 PREÇO DE VENDA (`sales_table_prices`) — VAZIO, e a tabela "a prazo"
+    (código 1) está SEM VIGÊNCIA (validity_start/validity_end nulos).
+    Efeito comprovado na simulação: ao incluir o item no orçamento o sistema
+    recusa com "não existe preço válido para o item na tabela".
+    CORRIGIR EM: VCLI0520 › aba "Tabela de Vendas" (vigência) e a grade de
+    preços da tabela.
+
+2.4 CLIENTES SEM CONDIÇÃO E SEM TABELA DE PREÇO: os 7 clientes estão com
+    `payment_condition_id` e `sales_table_id` nulos. O pedido não herda nada do
+    cliente e tudo tem de ser digitado a cada venda.
+
+2.5 CLIENTES SÓ COM ENDEREÇO DE COBRANÇA: nenhum tem endereço de ENTREGA. Para
+    quem despacha mercadoria, a NF-e e o romaneio usam o endereço de entrega
+    quando ele difere do de cobrança.
+
+================================================================================
+3. BLOQUEIA PLANEJAR E PRODUZIR — ROTEIROS
+================================================================================
+3.1 SÓ 1 ROTEIRO PARA 13 ITENS FABRICADOS. Existe roteiro apenas para
+    TP-01001-A ("Cortar no Laser"). Sem roteiro o sistema recusa firmar a
+    sugestão do MRP ("o item não possui roteiro de fabricação aprovado"), a OF
+    não tem etapa, o CRP não tem carga e o custo não tem operação.
+    Itens fabricados sem roteiro: RN-01001, RN-01001-PRIME, RN-01002,
+    TP-01001-B, TP-01001-C, TP-01001-D, TP-01001PRIME-A, TP-01002-A,
+    TP-0120/50-E, TP-0050-I, TP-0060-I, TP-0120/60-E (e os BU- que a empresa
+    fabricar — ver item 4).
+
+3.2 O ÚNICO ROTEIRO ESTÁ SEM TEMPO UNITÁRIO. A etapa tem `setup_time` = 300 s
+    e `run_time` VAZIO — só o preparo. Sem tempo por peça a etapa não consome
+    capacidade nem gera custo de operação. O cadastro de OPERAÇÕES está certo
+    (Cortar no Laser: 300 s de setup, 60 s por peça, unidade SEGUNDO): basta a
+    etapa do roteiro herdar ou informar o tempo.
+
+3.3 REFUGO DE 21,23% NA ETAPA. `scrap_pct = 21.23` em "Cortar no Laser" do
+    TP-01001-A. Se for perda de chapa no aproveitamento, o lugar dela é a perda
+    da ESTRUTURA (material), não o refugo da OPERAÇÃO — refugo de operação
+    aumenta a quantidade a produzir em todas as etapas anteriores. Confirme a
+    intenção; a conta muda bastante.
+
+3.4 TRÊS CENTROS DE TRABALHO SEM CUSTO/HORA: MORSA (11), TERCEIROS (13) e
+    TORNO CNC (14). Qualquer etapa nesses centros entra no custo com R$ 0,00.
+    Os outros 11 estão preenchidos (LASER 120,00/h … LIMPEZA 22,12/h).
+
+3.5 MÃO DE OBRA ZERADA EM TODOS OS CENTROS: `labor_cost_per_hour = 0` nos 11
+    centros com custo. Se a intenção é que a tarifa/hora já embuta a mão de
+    obra, está correto — confirme, porque o custo separa os dois.
+
+================================================================================
+4. DECISÃO DE ENGENHARIA — 6 ITENS "COMPRADOS" QUE TÊM ESTRUTURA
+================================================================================
+Estes itens estão marcados como COMPRADO (`engineering_type = 1`) e ao mesmo
+tempo têm estrutura de componentes cadastrada:
+
+    BU-120/50    (2 componentes)   BU-0050-I  (1)
+    BU-0060-I    (1)               BU-0120/60 (2)
+    TP-0050-I    (1)               TP-0120/60-E (é componente, sem estrutura)
+
+Efeito: o MRP sugere COMPRAR o item e ignora a estrutura dele. Na simulação, as
+buchas apareceram como sugestão de compra mesmo tendo componentes.
+
+Chama atenção que a família de 50 mm está misturada (uns comprados, outros
+fabricados) e a família de 60 mm está TODA como comprada — as duas são o mesmo
+tipo de peça. Com TORNO CNC cadastrado como centro de trabalho e buchas
+semi-acabadas (TP-0050-I, TP-0060-I) na estrutura, o mais provável é que sejam
+fabricadas e a marcação tenha ficado errada.
+
+NÃO ALTEREI: comprar ou fabricar é decisão da empresa. Depois de decidir, o
+campo é "Tipo" na engenharia do item (0 = fabricado, 1 = comprado, 2 = de
+terceiro).
+
+================================================================================
+5. ITENS DUPLICADOS E DE TESTE — LIMPEZA
+================================================================================
+5.1 DUPLICADOS SEM HÍFEN, NÃO USADOS EM NENHUMA ESTRUTURA:
+    TP-01001A  ← duplicata de TP-01001-A
+    TP-01001B  ← duplicata de TP-01001-B
+    TP-01001C  ← duplicata de TP-01001-C
+    Os três com o mesmo nome e peso dos originais. Continuam aparecendo em toda
+    busca de item e em todo relatório.
+
+5.2 ITEM DE TESTE: TP-00000A "COMPONENTE" — sem estrutura, sem uso. Apareceu
+    como sugestão do MRP na simulação, poluindo o resultado.
+
+5.3 ITEM GENÉRICO: "1 — CHAPA AÇO CARBONO", sem espessura, não usado em
+    estrutura nenhuma (as chapas usadas são 5, 8 e 9, com espessura).
+
+COMO TRATAR: inative (não apague) pelo cadastro de item. Desde a v1.2.0 item
+inativo não aparece mais nas buscas de lançamento e continua legível nos
+documentos antigos. Não inativei nada: pode haver intenção de uso futuro.
+
+5.4 CONVERSÃO DUPLICADA NO ITEM 101 (tubo Ø60,3): existem duas conversões,
+    1 UN = 6000 MM e 1 PC = 6000 MM. Se a unidade de compra é UN, a linha PC
+    está sobrando. Os outros tubos (102, 103, 104) têm só a de UN.
+
+================================================================================
+6. "ITEM BASE" MARCADO EM 15 ITENS QUE NÃO SÃO MODELO
+================================================================================
+Os 15 itens cadastrados primeiro (as 4 chapas, RN-01001, TP-00000A, os
+TP-01001*, BU-120/50, TP-0120/50-E) estão com "Item Base" marcado
+(`is_base = true`, `nature = 2`). Os 14 cadastrados depois estão com o marcador
+desligado.
+
+POR QUE ISSO ACONTECEU: a tela de cadastro de item nascia com "Item Base"
+marcado, e todo item cadastrado virava modelo. O padrão da tela já foi corrigido
+(v1.2.0) — o que ficou é o histórico.
+
+EFEITO: item base aparece na busca de "item base" do PDM/configurador. Não afeta
+venda, compra, MRP nem custo.
+
+CORREÇÃO SUGERIDA (só se a empresa concordar que nenhum deles é modelo):
+    UPDATE items SET is_base = false, nature = 0
+    WHERE enterprise_id = 1 AND is_base = true
+      AND business_code IN ('1','5','8','9','RN-01001','TP-00000A','TP-01001A',
+      'TP-01001B','TP-01001C','TP-01001-A','TP-01001-B','TP-01001-C',
+      'TP-01001-D','BU-120/50','TP-0120/50-E');
+NÃO APLIQUEI: "ser modelo de outros itens" é decisão de engenharia.
+
+================================================================================
+7. FISCAL — NCM AUSENTE EM TODOS OS 29 ITENS
+================================================================================
+`accounting_sale_fiscal_classification_code` está vazio em 100% dos itens. A NF-e
+exige NCM por item; sem ele a nota não sai. A tabela de NCM do sistema está
+carregada (95 registros), então é preencher o item.
+
+Sugestões a CONFERIR com a contabilidade (não preenchi nada):
+  - chapas de aço carbono: 7208.xx / 7209.xx conforme laminação e espessura;
+  - tubos redondos sem costura/com costura: 7304.xx / 7306.xx;
+  - peças/estruturas de aço fabricadas: 7326.90.90 ou 8716.90.90 quando
+    caracterizadas como parte de reboque/semirreboque (o caso das balanças asa
+    delta para carreta Randon).
+O CEST também está vazio — necessário se algum item tiver ICMS-ST.
+
+================================================================================
+8. FINANCEIRO E CONTÁBIL — FALTAM OS CADASTROS BÁSICOS
+================================================================================
+8.1 NENHUMA CONTA BANCÁRIA (`contas_bancarias` vazia). Sem conta bancária NÃO É
+    POSSÍVEL BAIXAR título: a baixa exige a conta em que o dinheiro entrou.
+    Comprovado na simulação (a baixa só funcionou depois de cadastrar uma).
+
+8.2 PLANO DE CONTAS COM UMA ÚNICA CONTA: "1 — DESPESAS". O balancete vem vazio
+    e não há como classificar receita, custo, ativo e passivo. Os 29 centros de
+    custo estão bem cadastrados (CC-ADM, CC-ADM-CTB, …) — falta o plano.
+
+8.3 PARÂMETROS DE MARGEM DO MÊS NÃO CADASTRADOS (09/2026). A simulação de
+    margem/formação de preço não roda sem eles (juros, ciclo de caixa, encargos
+    do mês). Tela de Margem › aba Parâmetros.
+
+8.4 SEM PORTADOR (`carriers` vazia). É o portador FINANCEIRO (carteira, limite,
+    dias de recebimento) que a condição de pagamento e o cliente referenciam.
+
+================================================================================
+9. QUALIDADE — NENHUM PLANO DE INSPEÇÃO
+================================================================================
+`inspection_plans` está vazia. Se alguma etapa de roteiro for marcada como ponto
+de inspeção, a ordem é criada com AVISO e a conferência não é aberta até existir
+plano ativo (comportamento proposital desde a v1.2.0 — não trava a fábrica).
+
+================================================================================
+10. O QUE ESTÁ BEM CADASTRADO (para não mexer)
+================================================================================
+- Estrutura dos produtos: coerente e completa. RN-01001 = 2× TP-01001-A,
+  2× TP-01001-B, 1× TP-01001-C, 1× TP-01001-D, 1× BU-120/50. O MRP explodiu a
+  árvore inteira corretamente na simulação (12 sugestões, LLC 0 a 3).
+- Almoxarifados: 6, com tipo e disposição certos (MP, INSPEÇÃO, PROCESSO como
+  linha de produção, PA, EXPEDIÇÃO, REFUGO) e cada item no seu (8 em MP,
+  15 em PROCESSO, 6 em PA).
+- Máquinas (9) ligadas ao tipo certo e todas no calendário TURNO GERAL
+  (seg-sex 07:50–17:20). Sete turnos cadastrados.
+- Operações (16) com tempos em SEGUNDO, setup e tempo por peça — exatamente o
+  modelo que o CRP e o custo precisam.
+- Conversões de unidade dos tubos: 1 UN = 6000 MM nos quatro tubos.
+- Configuração fiscal completa fora do código do município (CNPJ, IE, regime 3,
+  ICMS interno 19,5%, endereço, logo, vencimentos de imposto).
+- 28 funcionários e 29 centros de custo cadastrados.
+
+================================================================================
+11. DEFEITOS DO SISTEMA ENCONTRADOS NESTA SIMULAÇÃO (JÁ CORRIGIDOS NO CÓDIGO)
+================================================================================
+Estes NÃO são cadastro — eram bugs, e todos foram corrigidos e testados:
+
+A) ORÇAMENTO/PEDIDO GRAVAVA NO ITEM ERRADO. O código do item era traduzido duas
+   vezes (middleware + caso de uso). Como a Tecnofer tem códigos comerciais
+   numéricos ("1","5","8","9") convivendo com as chaves internas 1..29, um
+   orçamento de RN-01001 (chave interna 5) era gravado como CHAPA AÇO CARBONO
+   3 MM (código comercial "5"). Respondia 201, sem erro.
+
+B) LIBERAR ORDEM PLANEJADA DO PRODUTO ACABADO FALHAVA. Mesmo problema na
+   geração da OF: a chave interna 5 era relida como o comercial "5" e o sistema
+   respondia "o item não possui roteiro de fabricação aprovado".
+
+C) CHÃO DE FÁBRICA NÃO CONSEGUIA APONTAR. A tela manda o CÓDIGO do funcionário
+   (1..28) e as tabelas de produção exigem a chave interna (31..58): todo
+   apontamento voltava "um dos vínculos informados não existe na empresa
+   autenticada".
+
+D) BAIXAR TÍTULO (A PAGAR E A RECEBER) ESTAVA QUEBRADO. O lançamento no fluxo
+   de caixa não preenchia a empresa, coluna obrigatória desde o isolamento do
+   financeiro: a baixa falhava com "há um campo obrigatório ausente ou
+   inválido". Nenhum recebimento podia ser registrado.
+
+E) CRP NÃO ENXERGAVA ROTEIRO SEM MÁSCARA. A consulta comparava `mask = ''` em
+   vez de tratar o nulo, e roteiro sem máscara (o caso de quem não usa item
+   configurado — todos os da Tecnofer) ficava invisível: o cálculo de capacidade
+   devolvia todas as ordens como "sem carga".
+
+F) ERRO DO PROVEDOR FISCAL VIRAVA "ERRO INTERNO DO SERVIDOR". A recusa da Focus
+   NF-e ("CNPJ do emitente não autorizado") chegava como 500 genérico. Agora
+   chega com o motivo, e "token não configurado" virou aviso acionável.
+
+G) REGRA DE ORDEM PLANEJADA VIRAVA 500. Tentar liberar uma ordem já liberada
+   respondia "erro interno do servidor" em vez do motivo.
+
+================================================================================
+ORDEM SUGERIDA PARA COLOCAR A EMPRESA PARA RODAR
+================================================================================
+1. Código do município na configuração fiscal (item 1) — 1 minuto, libera NF-e.
+2. NCM dos 29 itens (item 7) — com a contabilidade.
+3. Condição de pagamento comercial, representante, vigência e preços da tabela
+   (item 2) — libera orçamento e pedido.
+4. Conta bancária e plano de contas (item 8) — libera baixa e balancete.
+5. Roteiros dos 12 itens fabricados, com tempo por peça (item 3) — libera MRP →
+   ordem planejada → OF → CRP/APS → custo.
+6. Decidir comprado × fabricado das buchas (item 4).
+7. Inativar duplicados e itens de teste (item 5).

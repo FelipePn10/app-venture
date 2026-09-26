@@ -45,6 +45,7 @@
     "sim:abas": "node scripts/ui-sim/telas-em-abas.mjs",
     "sim:login": "node scripts/ui-sim/login-manter-conectado.mjs",
     "sim:real": "node scripts/ui-sim/ponta-a-ponta-real.mjs",
+    "sim:rotina": "node scripts/simulacao-rotina-empresa.mjs",
     "test:engineering": "node scripts/validate-engineering.mjs",
     "test:rotulos": "node scripts/validate-routine-labels.mjs",
     "test:suprimentos": "node scripts/validate-suprimentos.mjs",
