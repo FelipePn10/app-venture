@@ -31,7 +31,16 @@ const REFERENCE_LABEL: Record<string, string> = { MANUAL: "Manual", SALES_ORDER:
 
 const EMPTY_MOV: MovementDTO = { item_code: "", warehouse_id: 0, movement_type: "IN", quantity: 0, unit_price: 0, lot: "" };
 
+/**
+ * A tela era uma rolagem única com oito assuntos: ATP, saldos, lançamento,
+ * movimentos, reservas, separação, guarda, lotes e consumo. Quem ia lançar um
+ * movimento passava por tudo. Cada assunto virou uma aba, e a barra de
+ * ferramentas (item + consultar) continua valendo para todas.
+ */
+type AbaEstoque = "saldos" | "movimentos" | "reservas" | "separacao" | "lotes";
+
 export function Vest0100Page(): JSX.Element {
+  const [aba, setAba] = useState<AbaEstoque>("saldos");
   const [itemCode, setItemCode] = useState("");
   const [movements, setMovements] = useState<MovementDTO[]>([]);
   const [balances, setBalances] = useState<BalanceDTO[]>([]);
@@ -189,6 +198,14 @@ export function Vest0100Page(): JSX.Element {
     setFeedback({ type: "success", message: "Consumo médio recalculado." });
   });
 
+  const ABAS: { id: AbaEstoque; label: string; hint: string; contador?: number }[] = [
+    { id: "saldos", label: "Saldos e ATP", hint: "Disponível para promessa, saldo por depósito e consumo médio" },
+    { id: "movimentos", label: "Movimentos", hint: "Lançar entrada/saída e ver o histórico", contador: movements.length },
+    { id: "reservas", label: "Reservas", hint: "Reservar, liberar e consumir saldo" },
+    { id: "separacao", label: "Separação e guarda", hint: "FEFO/FIFO, onda de separação, endereço sugerido, curva ABC e transferência" },
+    { id: "lotes", label: "Lotes", hint: "Registro, rastreabilidade e genealogia", contador: lots.length },
+  ];
+
   return (
     <div className="erp-screen">
       <header className="erp-titlebar">
@@ -208,10 +225,23 @@ export function Vest0100Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Estoque</button></div>
+          <div className="erp-tabs">
+            {ABAS.map((a) => (
+              <button key={a.id} className={`erp-tab${aba === a.id ? " active" : ""}`} onClick={() => setAba(a.id)} title={a.hint}>
+                {a.label}{a.contador !== undefined ? ` (${a.contador})` : ""}
+              </button>
+            ))}
+          </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
+        {aba === "saldos" && (<>
+        {!atp && balances.length === 0 && (
+          <div className="erp-note">
+            Selecione o item na barra e clique em <strong>Consultar</strong> para ver o disponível
+            para promessa (ATP), o saldo de cada depósito e o consumo médio.
+          </div>
+        )}
         {/* ATP + saldos */}
         {atp && (
           <>
@@ -232,6 +262,18 @@ export function Vest0100Page(): JSX.Element {
           </div></div></div>
         )}
 
+        {/* Consumo médio do item (ROP) */}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Consumo médio mensal (ROP)</div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={recalcConsumo} disabled={busy}>Recalcular consumo do item</button></div>
+          {consumption && <>
+            <div className="erp-field erp-c3"><label className="erp-label">Consumo médio/mês</label><input className="erp-input num" value={num(consumption.avg_monthly_consumption)} readOnly /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Total consumido</label><input className="erp-input num" value={num(consumption.total_consumed)} readOnly /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Janela (meses)</label><input className="erp-input num" value={consumption.window_months} readOnly /></div>
+          </>}
+        </div></div>
+        </>)}
+
+        {aba === "movimentos" && (<>
         {/* Lançar movimento */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Lançar movimento</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={movForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setMovForm((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
@@ -261,6 +303,9 @@ export function Vest0100Page(): JSX.Element {
           </table>
         </div></div></div>
 
+        </>)}
+
+        {aba === "reservas" && (<>
         {/* Reservas */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Reservas (ATP)</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={resForm.item_code || ""} onChange={(e) => setResForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
@@ -278,6 +323,9 @@ export function Vest0100Page(): JSX.Element {
             <button className="erp-btn" onClick={consumir} disabled={busy}>Consumir</button></div>
         </div></div>
 
+        </>)}
+
+        {aba === "separacao" && (<>
         {/* Separação por endereço (FEFO/FIFO) */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Separação — de onde tirar</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label">Quantidade</label>
@@ -423,6 +471,9 @@ export function Vest0100Page(): JSX.Element {
           )}
         </div></div>
 
+        </>)}
+
+        {aba === "lotes" && (<>
         {/* Lotes / genealogia */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Lotes / rastreabilidade ({lots.length})</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><input className="erp-input num"  value={lotForm.item_code || ""} onChange={(e) => setLotForm((p) => ({ ...p, item_code: e.target.value }))} /></div>
@@ -456,16 +507,8 @@ export function Vest0100Page(): JSX.Element {
             <ReadableRecord value={genealogy} emptyLabel="Sem genealogia para este lote." />
           </div></div>
         )}
+        </>)}
 
-        {/* Consumo médio */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Consumo médio mensal (ROP)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={recalcConsumo} disabled={busy}>Recalcular consumo do item</button></div>
-          {consumption && <>
-            <div className="erp-field erp-c3"><label className="erp-label">Consumo médio/mês</label><input className="erp-input num" value={num(consumption.avg_monthly_consumption)} readOnly /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Total consumido</label><input className="erp-input num" value={num(consumption.total_consumed)} readOnly /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Janela (meses)</label><input className="erp-input num" value={consumption.window_months} readOnly /></div>
-          </>}
-        </div></div>
       </div></section></div>
 
       <footer className="erp-statusbar">

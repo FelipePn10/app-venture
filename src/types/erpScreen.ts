@@ -462,6 +462,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "suprimento",
   },
   {
+    code: "VSUP0140",
+    title: "Cadastro de Transportadora",
+    description: "Cadastrar o perfil de transporte do fornecedor transportadora: RNTRC/ANTT, modal, tabela de frete, seguro, frota com motorista, regiões atendidas com prazo, ocorrências de entrega e cotação comparativa de frete.",
+    module: "suprimento",
+  },
+  {
     code: "VSUP0130",
     title: "Fornecedor Preferencial por Item",
     description: "Vincular fornecedores a um item com ranking de preferência, código/descrição/UM do item no fornecedor e lead time.",

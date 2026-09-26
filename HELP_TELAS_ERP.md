@@ -9062,6 +9062,61 @@ usa o fornecedor de menor ranking ao gerar pedidos a partir de solicitações.
 
 ---
 
+#### VSUP0140 — Cadastro de Transportadora
+
+##### Objetivo
+
+Guardar o **perfil de transporte** da transportadora. A transportadora continua sendo um
+**fornecedor** (é por ele que o frete é pago, no contas a pagar de sempre); aqui ficam os
+dados que só o frete usa: habilitação na **ANTT (RNTRC)**, **modal**, **tabela de frete**,
+**seguro de carga**, **frota com motorista**, **regiões atendidas com prazo** e as
+**ocorrências de entrega** que formam a avaliação.
+
+> Não confundir com o cadastro de **portador** (`carriers`), que é financeiro: carteira,
+> limite de crédito e dias de recebimento.
+
+##### Passo a passo
+
+1. **+ Nova transportadora** e escolha o **fornecedor** já cadastrado (VSUP0500).
+2. Informe o **RNTRC** (8 dígitos) e sua validade, a **categoria ANTT** (ETC empresa, CTC
+   cooperativa, TAC autônomo) e o **modal**. Transportadora rodoviária que **emite CT-e**
+   precisa de RNTRC — sem ele a nota é rejeitada na SEFAZ.
+3. Preencha a **tabela de frete**: piso, R$ por kg, **ad valorem** sobre a mercadoria,
+   **GRIS** (gerenciamento de risco) e **pedágio por 100 kg**. Cada componente existe
+   porque é cobrado separadamente na praça.
+4. Informe o **seguro** (seguradora, apólice, validade e cobertura). O sistema avisa quando
+   o valor da carga passa da cobertura.
+5. Na aba **Frota**, cadastre placas (aceita AAA9999 e Mercosul AAA9A99), capacidade em kg e
+   m³, eixos e motorista.
+6. Na aba **Regiões**, diga **onde** ela entrega — por UF ou por faixa de CEP —, o **prazo**
+   em dias e, se houver, a tabela própria daquela região (ela prevalece sobre a da capa).
+7. Na aba **Ocorrências**, registre atraso, avaria, extravio etc. É o que transforma "essa
+   transportadora atrasa" em número: a aba de dados mostra ocorrências, atraso médio e custo
+   dos últimos 12 meses.
+
+##### Cotação comparativa de frete
+
+Com nenhuma transportadora selecionada, a tela mostra a **cotação**: informe UF/CEP, peso,
+volume e valor da carga e o sistema compara todas as transportadoras ativas que atendem o
+destino — **mais barata** e **mais rápida** marcadas, com o frete **aberto em componentes**
+(peso, ad valorem, GRIS, pedágio) e a previsão de entrega. Quem não atende o destino aparece
+como informação, não como erro.
+
+##### Observações importantes
+
+- **Pendências** (em amarelo) não impedem gravar, mas impedem transportar: RNTRC ou seguro
+  vencido, frota sem veículo ativo, tabela de frete em branco, nenhuma região cadastrada.
+- **Gravar envia frota e regiões junto**: o que está na grade da tela é o que fica gravado.
+- **Inativar** tira a transportadora da cotação; o cadastro de fornecedor e os pedidos já
+  emitidos não mudam.
+
+##### Telas relacionadas
+
+- **VSUP0500 (Cadastro de Fornecedor)**: é lá que a transportadora nasce.
+- **VVND0300 / VVND0200**: usam o frete no orçamento e no pedido de venda.
+
+---
+
 ### Módulo: Ciclo de Aquisição
 
 ---

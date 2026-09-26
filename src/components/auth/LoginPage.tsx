@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { login } from "@/services/authService";
 import { getClientVersion } from "@/services/versionService";
-import { useAuthStore } from "@/store/authStore";
+import { getRememberedEmail, isRememberMeChosen, setRememberMe, useAuthStore } from "@/store/authStore";
 import { WindowControls } from "@/components/window/WindowControls";
 import { PasswordChangeDialog } from "@/components/system/PasswordChangeDialog";
 import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
@@ -12,7 +12,11 @@ export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
   const setAuthData = useAuthStore((state) => state.setAuthData);
 
-  const [email, setEmail] = useState("");
+  // A caixa "manter conectado" não fazia nada: era um checkbox sem estado e sem
+  // ninguém lendo. Agora ela decide o prazo do token no backend e ONDE a sessão
+  // é guardada (disco × sessão da janela), e traz o e-mail do último acesso.
+  const [rememberMe, setRemember] = useState(() => isRememberMeChosen());
+  const [email, setEmail] = useState(() => getRememberedEmail());
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -54,12 +58,16 @@ export function LoginPage(): JSX.Element {
     setIsSubmitting(true);
 
     try {
-      const response = await login({ email, password });
+      const response = await login({ email, password, rememberMe });
+      // A escolha é registrada ANTES de gravar o token: é ela que decide se a
+      // sessão vai para o disco ou só para a janela atual.
+      setRememberMe(rememberMe, email);
       setAuthData({
         token: response.token,
         userName: response.userName,
         refreshToken: response.refreshToken,
         expiresAt: response.expiresAt,
+        rememberMe: response.rememberMe ?? rememberMe,
         user: response.user,
       });
       navigate("/dashboard", { replace: true });
@@ -1057,8 +1065,13 @@ export function LoginPage(): JSX.Element {
 
               {/* Lembrar */}
               <div className="lp-remember-row">
-                <label className="lp-check-label">
-                  <input type="checkbox" className="lp-checkbox" />
+                <label className="lp-check-label" title="Continua conectado ao fechar e reabrir o sistema, por até 30 dias. Trocar a senha encerra a sessão.">
+                  <input
+                    type="checkbox"
+                    className="lp-checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRemember(e.target.checked)}
+                  />
                   <span className="lp-check-text">Manter conectado</span>
                 </label>
               </div>

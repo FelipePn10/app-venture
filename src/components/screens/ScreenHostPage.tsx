@@ -125,6 +125,7 @@ const Vpdc0200Page = lazy(() => import("./suprimento/Vpdc0200Page").then((m) => 
 const Vsup0110Page = lazy(() => import("./suprimento/Vsup0110Page").then((m) => ({ default: m.Vsup0110Page })));
 const Vsup0120Page = lazy(() => import("./suprimento/Vsup0120Page").then((m) => ({ default: m.Vsup0120Page })));
 const Vsup0130Page = lazy(() => import("./suprimento/Vsup0130Page").then((m) => ({ default: m.Vsup0130Page })));
+const Vsup0140Page = lazy(() => import("./suprimento/Vsup0140Page").then((m) => ({ default: m.Vsup0140Page })));
 const Vsup0200Page = lazy(() => import("./suprimento/Vsup0200Page").then((m) => ({ default: m.Vsup0200Page })));
 const Vsup0300Page = lazy(() => import("./suprimento/Vsup0300Page").then((m) => ({ default: m.Vsup0300Page })));
 const Vsup0400Page = lazy(() => import("./suprimento/Vsup0400Page").then((m) => ({ default: m.Vsup0400Page })));
@@ -258,6 +259,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSUP0110: <Vsup0110Page />,
   VSUP0120: <Vsup0120Page />,
   VSUP0130: <Vsup0130Page />,
+  VSUP0140: <Vsup0140Page />,
   VSUP0200: <Vsup0200Page />,
   VPDC0200: <Vpdc0200Page />,
   VSUP0300: <Vsup0300Page />,

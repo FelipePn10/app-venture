@@ -81,7 +81,17 @@ function leituraDoDesvio(desvio: number, padrao: number): string {
   return pct > 0 ? `estourou ${pct.toFixed(1)}%` : `economizou ${Math.abs(pct).toFixed(1)}%`;
 }
 
+/**
+ * A tela empilhava numa rolagem só a criação da OF, a lista, o apontamento, o
+ * consumo, a conclusão, o custo, as etapas, a leitura por código de barras e os
+ * materiais. Quem estava apontando produção rolava por tudo a cada lançamento.
+ * As abas seguem o que a pessoa está fazendo: escolher a ordem → apontar →
+ * acompanhar as etapas → cuidar do material.
+ */
+type AbaOF = "ordens" | "apontamento" | "etapas" | "materiais";
+
 export function Vpro0900Page(): JSX.Element {
+  const [aba, setAba] = useState<AbaOF>("ordens");
   const [orders, setOrders] = useState<ProductionOrderDTO[]>([]);
   const [selected, setSelected] = useState<ProductionOrderDTO | null>(null);
   const [appointments, setAppointments] = useState<AppointmentDTO[]>([]);
@@ -147,7 +157,8 @@ export function Vpro0900Page(): JSX.Element {
   });
 
   const listar = () => run(async () => { setOrders(await listProductionOrders()); });
-  const abrir = (id?: number) => { if (id) void run(async () => { await loadDetails(id); }); };
+  /** Abrir uma ordem leva para o apontamento: é o que se faz com a OF aberta. */
+  const abrir = (id?: number) => { if (id) void run(async () => { await loadDetails(id); setAba("apontamento"); }); };
 
   const criar = () => run(async () => {
     if (!newOf.item_code) { setFeedback({ type: "error", message: "Item é obrigatório." }); return; }
@@ -238,6 +249,13 @@ export function Vpro0900Page(): JSX.Element {
 
   const st = selected?.status;
 
+  const ABAS: { id: AbaOF; label: string; hint: string; contador?: number; exigeOrdem?: boolean }[] = [
+    { id: "ordens", label: "Ordens", hint: "Criar a OF e escolher a ordem de trabalho", contador: orders.length },
+    { id: "apontamento", label: "Apontamento", hint: "Produção, refugo, consumo de insumo, conclusão e custo da ordem", exigeOrdem: true },
+    { id: "etapas", label: "Etapas", hint: "Apontamento por etapa do roteiro, operações, apontamentos e leitura por código de barras", contador: operations.length, exigeOrdem: true },
+    { id: "materiais", label: "Materiais", hint: "Materiais da ordem, alocação de lotes e destino de sucata", contador: materials.length, exigeOrdem: true },
+  ];
+
   return (
     <div className="erp-screen">
       <header className="erp-titlebar">
@@ -255,10 +273,19 @@ export function Vpro0900Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Ordem de Produção</button></div>
+          <div className="erp-tabs">
+            {ABAS.map((a) => (
+              <button key={a.id} className={`erp-tab${aba === a.id ? " active" : ""}`}
+                onClick={() => setAba(a.id)} title={a.hint}
+                disabled={a.exigeOrdem && !selected}>
+                {a.label}{a.contador !== undefined ? ` (${a.contador})` : ""}
+              </button>
+            ))}
+          </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
+        {aba === "ordens" && (<>
         {/* Nova OF */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Nova ordem (Aberto)</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={newOf.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setNewOf((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
@@ -288,8 +315,12 @@ export function Vpro0900Page(): JSX.Element {
         </div></div>
         </div>
 
+        </>)}
+
         {selected && (
           <>
+            {/* A capa da OF e os botões de transição valem em todas as abas: é
+                o contexto do que está sendo apontado. */}
             <div className="erp-fieldset"><div className="erp-fieldset-head">OF {selected.id} — {statusLabel(selected.status)} · item {selected.item_code}</div><div className="erp-fieldset-body">
               <div className="erp-tgroup" style={{ flexWrap: "wrap", gap: 8 }}>
                 <button className="erp-btn erp-btn-primary" onClick={() => transicao("Iniciada", startProductionOrder)} disabled={busy || st !== "OPEN"}>Iniciar (→ Em produção)</button>
@@ -300,6 +331,7 @@ export function Vpro0900Page(): JSX.Element {
               </div>
             </div></div>
 
+            {aba === "apontamento" && (<>
             {/* Apontamento + Consumo */}
             <div className="erp-fieldset-body" style={{ gap: 0 }}>
               <div className="erp-c6">
@@ -414,6 +446,9 @@ export function Vpro0900Page(): JSX.Element {
               </div>
             )}
 
+            </>)}
+
+            {aba === "etapas" && (<>
             {operations.length > 0 && <div className="erp-fieldset">
               <div className="erp-fieldset-head">Apontamento da etapa</div>
               <div className="erp-fieldset-body">
@@ -489,6 +524,9 @@ export function Vpro0900Page(): JSX.Element {
             </div></div>
             </div>
 
+            </>)}
+
+            {aba === "materiais" && (<>
             {/* Materiais da OF (MRP): demanda, alocação de lotes, destino de sucata */}
             <div className="erp-fieldset"><div className="erp-fieldset-head">Materiais da OF ({materials.length})</div><div className="erp-fieldset-body">
               
@@ -520,6 +558,7 @@ export function Vpro0900Page(): JSX.Element {
               </table>
             </div></div>
             </div>
+            </>)}
           </>
         )}
       </div></section></div>
