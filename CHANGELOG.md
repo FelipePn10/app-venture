@@ -15,12 +15,14 @@
 - **Ocorrências de entrega da transportadora.** Registre atraso, avaria, extravio e afins; a tela mostra ocorrências, atraso médio e custo dos últimos 12 meses. É o que transforma "essa transportadora atrasa" em número.
 
 ## Melhorias
+- **Estoque, MRP e Ordem de Produção deixaram de ser uma rolagem sem fim.** Cada tela foi dividida em abas pelo que a pessoa está fazendo: no Estoque, *Saldos e ATP · Movimentos · Reservas · Separação e guarda · Lotes*; no MRP, *Plano · Resultado · Item · Relatórios*; na Ordem de Produção, *Ordens · Apontamento · Etapas · Materiais* — e abrir uma ordem já leva para o apontamento.
 - A conversão de unidade por item (VSUP0110) deixou de ser exclusiva do administrador: quem cadastra o item é quem sabe a conversão dele. Toda alteração continua registrada no histórico.
 - A tela de conversão passou a mostrar os dois sentidos da conversão, avisa quando o par de unidades não envolve a unidade de estoque nem a de compra do item, permite alterar uma conversão já cadastrada e explica a consequência antes de excluir.
 - No cadastro da condição de pagamento, a próxima parcela já vem numerada, escolher "entrada" zera e trava o prazo em dias, e o rodapé da lista diz se os percentuais fecham 100%.
 - A transportadora avisa o que impede transportar antes de a expedição descobrir: habilitação ou seguro vencido, frota sem veículo ativo, tabela de frete em branco, nenhuma região cadastrada.
 
 ## Correções
+- **"Manter conectado" não funcionava.** A caixa na tela de login era só um desenho: marcá-la não mudava nada, e ao reabrir o sistema a senha era pedida de novo. Agora ela vale de verdade — a sessão dura uma semana e é renovada a cada vez que você abre o sistema (até 30 dias), o e-mail do último acesso volta preenchido e a caixa continua marcada. Sem marcar, a sessão vale só enquanto o sistema está aberto e nada fica guardado no computador. Trocar a senha continua encerrando a sessão.
 - **Cadastrar uma condição de pagamento não funcionava mais.** A tela devolvia um erro técnico do banco; nenhuma condição nova podia ser criada.
 - **Todo plano de pagamento saía como "à vista".** O sistema lia a condição sem as parcelas, por mais parcelada que ela fosse.
 - **O valor "líquido com IPI" do orçamento somava o ICMS-ST**, apesar do nome — e esse valor inflado era copiado para o pedido na conversão.

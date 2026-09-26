@@ -32,7 +32,16 @@ const fmtCell = (v: unknown): string => {
   return /^\d{4}-\d{2}-\d{2}T/.test(s) ? s.slice(0, 10) : s;
 };
 
+/**
+ * A tela juntava numa rolagem só o cadastro do plano, o resultado do cálculo, o
+ * perfil do item e cinco relatórios. Quem ia olhar as exceções do MRP rolava por
+ * tudo. Cada etapa do ciclo virou uma aba, na ordem em que o planejador trabalha:
+ * monta o plano → roda → olha o resultado → investiga o item → tira relatório.
+ */
+type AbaMrp = "plano" | "resultado" | "item" | "relatorios";
+
 export function Vmrp0100Page(): JSX.Element {
+  const [aba, setAba] = useState<AbaMrp>("plano");
   const [planCode, setPlanCode] = useState("1");
   const [initialOrder, setInitialOrder] = useState("10000");
   const [plans, setPlans] = useState<ProductionPlanDTO[]>([]);
@@ -180,6 +189,13 @@ export function Vmrp0100Page(): JSX.Element {
   });
   const reportCols = report && report.rows.length > 0 ? Array.from(report.rows.reduce((set, row) => { Object.keys(row).forEach((k) => set.add(k)); return set; }, new Set<string>())) : [];
 
+  const ABAS: { id: AbaMrp; label: string; hint: string; contador?: number }[] = [
+    { id: "plano", label: "Plano", hint: "Criar o plano, escolher a abrangência e as empresas inter-fábrica" },
+    { id: "resultado", label: "Resultado", hint: "Sugestões, exceções e ordens planejadas do cálculo", contador: suggestions.length },
+    { id: "item", label: "Item", hint: "Perfil time-phased e regras de planejamento do item" },
+    { id: "relatorios", label: "Relatórios", hint: "Perfil, disponibilidade, necessidades, explosão e ponto de reposição" },
+  ];
+
   return (
     <div className="erp-screen">
       <header className="erp-titlebar">
@@ -201,10 +217,17 @@ export function Vmrp0100Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">MRP</button></div>
+          <div className="erp-tabs">
+            {ABAS.map((a) => (
+              <button key={a.id} className={`erp-tab${aba === a.id ? " active" : ""}`} onClick={() => setAba(a.id)} title={a.hint}>
+                {a.label}{a.contador !== undefined ? ` (${a.contador})` : ""}
+              </button>
+            ))}
+          </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
+        {aba === "plano" && (<>
         {/* Planos MRP (o plano que o cálculo roda) */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Planos de produção (MRP)</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label">Novo — código</label><input className="erp-input num" type="number" value={newPlan.code} onChange={(e) => setNewPlan((p) => ({ ...p, code: e.target.value }))} /></div>
@@ -267,6 +290,9 @@ export function Vmrp0100Page(): JSX.Element {
         )}
 
         {/* Sugestões */}
+        </>)}
+
+        {aba === "resultado" && (<>
         <div className="erp-fieldset"><div className="erp-fieldset-head">Sugestões de ordens ({suggestions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
           <table className="erp-grid">
             <thead><tr><th>Código</th><th>Item</th><th>Qtd</th><th>Tipo ordem</th><th>Demanda</th><th>Necessidade</th><th>Início previsto</th><th>Término previsto</th><th>Máquina</th><th>Capacidade</th><th>LLC</th><th></th></tr></thead>
@@ -316,6 +342,9 @@ export function Vmrp0100Page(): JSX.Element {
         </div></div></div>
 
         {/* Perfil do item */}
+        </>)}
+
+        {aba === "item" && (<>
         <div className="erp-fieldset"><div className="erp-fieldset-head">Perfil MRP do item (tabela time-phased)</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c3"><label className="erp-label">Item</label><input className="erp-input" maxLength={60} value={profileItem} onChange={(e) => setProfileItem(e.target.value)} placeholder="Ex.: TEA452-0" /></div>
           <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={verPerfil} disabled={busy}>Ver perfil</button></div>
@@ -348,6 +377,9 @@ export function Vmrp0100Page(): JSX.Element {
         )}
         </div></div>
 
+        </>)}
+
+        {aba === "relatorios" && (<>
         {/* Relatórios operacionais (/api/mrp-reports) */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Relatórios operacionais — <span style={{fontWeight:400,opacity:0.65}}>perfil · disponibilidade · necessidades agrupadas · explosão · ponto de reposição</span></div><div className="erp-fieldset-body">
           <div className="erp-field erp-c3"><label className="erp-label">Relatório</label>
@@ -367,6 +399,7 @@ export function Vmrp0100Page(): JSX.Element {
               </table></div>
         )}
         </div></div>
+        </>)}
       </div></section></div>
 
       <footer className="erp-statusbar">

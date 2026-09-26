@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { httpClient } from '@/services/httpClient';
-import type { AuthResponse, LoginPayload, SessionProfileResponse } from '@/types/auth';
+import type { AuthResponse, LoginPayload, SessionProfileResponse, SessionRenewResponse } from '@/types/auth';
 
 const AUTH_LOGIN_PATH = import.meta.env.VITE_AUTH_LOGIN_PATH ?? '/users/login';
 const AUTH_ME_PATH = import.meta.env.VITE_AUTH_ME_PATH ?? '';
 const AUTH_LOGIN_FIELD = import.meta.env.VITE_AUTH_LOGIN_FIELD ?? 'email';
 const AUTH_LOGIN_FALLBACK_FIELDS = [AUTH_LOGIN_FIELD, 'email', 'username', 'login', 'userName'];
+const AUTH_RENEW_PATH = '/users/session/renew';
 
 
 /**
@@ -158,9 +159,12 @@ async function tryLoginWithField(field: string, payload: LoginPayload): Promise<
   const response = await httpClient.post(AUTH_LOGIN_PATH, {
     [field]: identifier,
     password: payload.password,
+    // O prazo do token é decidido pelo backend a partir desta escolha.
+    remember_me: payload.rememberMe === true,
   });
 
-  return extractAuthResponse(response.data, identifier);
+  const auth = extractAuthResponse(response.data, identifier);
+  return { ...auth, rememberMe: payload.rememberMe === true };
 }
 
 async function loginWithApi(payload: LoginPayload): Promise<AuthResponse> {
@@ -199,6 +203,35 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
     throw new Error('Preencha usuário/e-mail e senha para continuar.');
   }
   return loginWithApi(payload);
+}
+
+/**
+ * Renova a sessão: troca um token válido por outro com prazo cheio. É o que faz
+ * o "manter conectado" durar mais que a validade de um token — o app chama na
+ * abertura quando o vencimento está próximo.
+ *
+ * Devolve `null` quando o backend recusa (sessão passou do teto de 30 dias, ou
+ * a rota não existe numa versão antiga do servidor): nesse caso a sessão segue
+ * com o token atual até ele vencer de verdade.
+ */
+export async function renewSession(): Promise<SessionRenewResponse | null> {
+  try {
+    const response = await httpClient.post<unknown>(AUTH_RENEW_PATH, {});
+    const flat = flattenPayload(response.data);
+    const token = flat['token'] ?? findInFlat(flat, 'token');
+    if (!token) return null;
+    const claims = decodeJwt(token) ?? {};
+    return {
+      token,
+      expiresAt:
+        flat['expires_at'] ??
+        findInFlat(flat, 'expires_at', 'expiresat') ??
+        (typeof claims.exp === 'number' ? new Date(claims.exp * 1000).toISOString() : undefined),
+      rememberMe: (flat['remember_me'] ?? findInFlat(flat, 'remember_me', 'rememberme')) === 'true',
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchSessionProfile(): Promise<SessionProfileResponse | null> {
