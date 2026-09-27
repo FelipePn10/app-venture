@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-## [v1.3.0] — 2026-09-25
-
 ## Novidades
+- **Confira a nota fiscal antes de emitir.** Na tela de NF-e de Saída, o botão **Prévia** abre a nota inteira do jeito que ela será enviada à Receita: quem emite e para quem, com o endereço completo; cada item com NCM, CFOP e os impostos; os totais com a conta escrita por extenso; e as parcelas com valor e vencimento. No topo fica a conferência, separando o que **impede** a emissão do que é só **atenção** — e cada linha diz em qual tela se resolve. Enquanto houver algo que impede, o botão de emitir fica bloqueado. A prévia não envia nada e pode ser aberta quantas vezes quiser. Emitir é para sempre: nota autorizada só se desfaz por cancelamento, com prazo e justificativa.
+- **A nota já sabe o endereço do cliente.** Ao informar o cliente, a nota traz nome, CNPJ, inscrição estadual e o endereço do cadastro — o de entrega quando existe, senão o de cobrança. Para uma entrega pontual em outro lugar, basta digitar o endereço na própria nota.
 - **Condição de pagamento com entrada e entrega, do jeito que o cliente negocia.** Agora é possível cadastrar "30% de entrada, 20% na entrega e o restante em 28/56 dias": cada parcela diz quanto leva do total e de que evento o prazo conta — emissão, entrada (no ato), entrega ou faturamento. Antes a condição só guardava os dias, e todos contavam da emissão; a segunda metade da negociação era acertada por fora do sistema.
 - **A condição pode ser conferida em dinheiro antes de ser usada.** Informe um valor de referência e a data de entrega e veja as parcelas com valor e vencimento. Nada é gravado: é a conferência do cadastro.
 - **O orçamento mostra quanto o cliente paga e quando.** A nova aba Pagamento resolve a condição do orçamento em parcelas com valor e data, marcando como *estimada* a parcela que depende de uma entrega ainda não confirmada.
@@ -15,6 +15,8 @@
 - **Ocorrências de entrega da transportadora.** Registre atraso, avaria, extravio e afins; a tela mostra ocorrências, atraso médio e custo dos últimos 12 meses. É o que transforma "essa transportadora atrasa" em número.
 
 ## Melhorias
+- **O número da nota fiscal deixou de ser digitado à mão.** Deixe o campo em branco e o sistema usa o próximo número da sequência da empresa. Informar o número continua possível, para quem precisa retomar uma numeração existente.
+- Emitir passou a pedir confirmação com o valor, o destinatário e o ambiente (produção ou homologação) à vista, porque a nota autorizada não volta atrás.
 - **Estoque, MRP e Ordem de Produção deixaram de ser uma rolagem sem fim.** Cada tela foi dividida em abas pelo que a pessoa está fazendo: no Estoque, *Saldos e ATP · Movimentos · Reservas · Separação e guarda · Lotes*; no MRP, *Plano · Resultado · Item · Relatórios*; na Ordem de Produção, *Ordens · Apontamento · Etapas · Materiais* — e abrir uma ordem já leva para o apontamento.
 - A conversão de unidade por item (VSUP0110) deixou de ser exclusiva do administrador: quem cadastra o item é quem sabe a conversão dele. Toda alteração continua registrada no histórico.
 - A tela de conversão passou a mostrar os dois sentidos da conversão, avisa quando o par de unidades não envolve a unidade de estoque nem a de compra do item, permite alterar uma conversão já cadastrada e explica a consequência antes de excluir.
@@ -22,6 +24,13 @@
 - A transportadora avisa o que impede transportar antes de a expedição descobrir: habilitação ou seguro vencido, frota sem veículo ativo, tabela de frete em branco, nenhuma região cadastrada.
 
 ## Correções
+- **O botão "Autorizar" nunca aparecia numa nota nova.** A listagem de NF-e não reconhecia a situação da nota, então a nota em rascunho ficava sem ação nenhuma — não dava para emitir pela tela. E uma nota apenas *aguardando autorização* já aparecia como autorizada, oferecendo cancelamento e carta de correção. A situação agora é exibida em português e cada ação aparece na hora certa.
+- **A nota fiscal saía sem o endereço do destinatário** — logradouro, bairro, município e CEP são obrigatórios, e a Receita recusaria a emissão. Nenhuma nota tinha onde guardar esses dados.
+- **A nota declarava "dinheiro à vista" mesmo numa venda a prazo** e não levava as duplicatas. Agora cada parcela vai com a sua forma de pagamento e o seu vencimento.
+- **O faturamento gerava um único título de 30 dias, sem cliente.** Uma venda em 28/56/84 virava uma parcela só no contas a receber, e o título não tinha dono — extrato por cliente, atrasos e limite de crédito ficavam cegos. Agora sai um título por parcela da condição de pagamento, com o cliente e o pedido.
+- **Toda nota digitada nascia com o número 0.**
+- **Converter parte de um orçamento criava um pedido valendo mais do que os seus itens**: a capa levava o total do orçamento inteiro.
+- O aviso de "orçamento convertido em pedido" saía com todos os itens sem descrição.
 - **"Manter conectado" não funcionava.** A caixa na tela de login era só um desenho: marcá-la não mudava nada, e ao reabrir o sistema a senha era pedida de novo. Agora ela vale de verdade — a sessão dura uma semana e é renovada a cada vez que você abre o sistema (até 30 dias), o e-mail do último acesso volta preenchido e a caixa continua marcada. Sem marcar, a sessão vale só enquanto o sistema está aberto e nada fica guardado no computador. Trocar a senha continua encerrando a sessão.
 - **Cadastrar uma condição de pagamento não funcionava mais.** A tela devolvia um erro técnico do banco; nenhuma condição nova podia ser criada.
 - **Todo plano de pagamento saía como "à vista".** O sistema lia a condição sem as parcelas, por mais parcelada que ela fosse.
