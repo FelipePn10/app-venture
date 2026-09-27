@@ -1,0 +1,504 @@
+================================================================================
+CADASTROS QUE PRECISAM SER COMPLETADOS ANTES DE OPERAR O SISTEMA
+Tecnofer · levantado em 26/09/2026 · revisado em 27/09/2026
+================================================================================
+
+SOBRE ESTE DOCUMENTO
+
+Conferimos, um por um, os cadastros que já estão no sistema e simulamos a rotina
+completa da empresa: fazer um orçamento, virar pedido, planejar a produção,
+calcular a capacidade da fábrica, receber material, produzir, apontar, concluir,
+faturar, gerar e receber os títulos.
+
+A boa notícia: a parte mais difícil já está bem feita — a estrutura dos produtos,
+os almoxarifados, as máquinas, os turnos e as operações com tempos. O que falta
+são cadastros de apoio, e é isso que está listado aqui.
+
+Cada item abaixo diz três coisas: O QUE FALTA, POR QUE ISSO TRAVA o dia a dia e
+COMO RESOLVER (em qual tela, em qual aba, em qual campo). Nenhum dado de vocês
+foi alterado — as decisões são todas do time.
+
+--------------------------------------------------------------------------------
+RESUMO: FAÇA NESTA ORDEM
+--------------------------------------------------------------------------------
+OBRIGATÓRIO — sem isto o sistema recusa concluir a operação
+  Classificações fiscais e o NCM dos itens ....... seção 1   com a contabilidade
+  Tabela de venda: vigência e preço por item ..... seção 2   libera orçar
+  Condição de pagamento comercial com parcelas ... seção 3.1 libera vender a prazo
+  Endereço completo dos clientes ................. seção 3.2 libera faturar
+  Conta bancária ................................. seção 4.1 libera receber
+  Roteiro de fabricação dos itens que faltam ..... seção 5   libera produzir
+
+RECOMENDADO — o sistema funciona, mas algo fica incompleto
+  Cliente com condição e tabela padrão ........... seção 3.3 poupa digitação
+  Representantes ................................. seção 3.4 só se pagam comissão
+  Plano de contas e parâmetros de margem ......... seção 4.2 e 4.3
+  Portadores ..................................... seção 4.4
+  Código do município na Configuração Fiscal ..... seção 4.5 CT-e, NFS-e e SPED
+  Custo/hora de 3 centros de trabalho ............ seção 5.4 custo do produto
+  Decisões do time (comprado × fabricado etc.) ... seção 6   organização
+
+ANTES DE EMITIR A PRIMEIRA NOTA, use a PRÉVIA DA NF-e (ver a seção 8 deste
+documento): ela mostra a nota inteira e lista o que ainda falta, sem transmitir
+nada para a Receita.
+
+================================================================================
+1. FALTA A CLASSIFICAÇÃO FISCAL (NCM) — E ELA PRECISA SER CRIADA ANTES
+================================================================================
+Este é o item mais importante do documento, e ele tem DUAS etapas. Muita gente
+tenta fazer só a segunda e não encontra nada para escolher.
+
+O QUE ESTÁ NO SISTEMA
+  - O cadastro de CLASSIFICAÇÕES FISCAIS está VAZIO: nenhuma classificação
+    cadastrada.
+  - Por consequência, nenhum dos 29 itens tem classificação fiscal de venda.
+
+(Existe, sim, uma tabela de alíquotas por NCM já carregada com 95 NCMs — ela
+serve para o cálculo do imposto. Mas é outra coisa: é a tabela de alíquotas, não
+o cadastro de classificação que o item aponta. Por isso, ao abrir a lupa do
+campo no item, hoje não aparece nenhuma opção.)
+
+POR QUE ISSO TRAVA
+A nota fiscal exige o NCM de cada item vendido. Sem NCM a nota não é transmitida
+— a conferência prévia do sistema barra a emissão com a mensagem "item está sem
+NCM". O NCM também é o que define automaticamente IPI, ICMS, PIS e COFINS: com
+ele preenchido, o sistema já traz as alíquotas prontas para o orçamento e para a
+nota, e vocês param de conferir imposto a cada venda.
+
+COMO RESOLVER — ETAPA 1: criar as classificações fiscais
+Tela: VFIS0350 — Classificações Fiscais
+1. Clique em nova classificação.
+2. Preencha a Descrição (obrigatória — ex.: "Chapa de aço carbono"), o NCM e,
+   quando houver substituição tributária, o CEST.
+3. Informe a vigência (inicial e final) e as alíquotas padrão: ICMS, IPI (com os
+   CST de entrada e de saída) e, se for o caso, o % de ST.
+4. Salve. Repita para cada grupo de produto — não é uma por item, é uma por
+   NCM/tipo de mercadoria.
+
+COMO RESOLVER — ETAPA 2: ligar a classificação a cada item
+Tela: VENT0200 — Cadastro de Itens, aba Contábil, campo
+"Classif. Fiscal Venda" (e "Classif. Fiscal Compra" para o que é comprado).
+1. Abra o item.
+2. Clique na lupa do campo e escolha a classificação criada na etapa 1.
+3. A tela mostra o que o item vai herdar (NCM, IPI, ICMS, PIS, COFINS). Confira
+   e salve.
+
+IMPORTANTE: quem define o NCM correto é a contabilidade de vocês. Como referência
+para a conversa, os itens se agrupam assim:
+  - chapas de aço carbono (itens 1, 5, 8, 9);
+  - tubos redondos (itens 101, 102, 103, 104);
+  - peças e conjuntos fabricados (as balanças RN-, as laterais TP-, as buchas BU-).
+Peças que são parte de reboque/semirreboque normalmente têm NCM diferente de
+peças de aço em geral — vale confirmar com a contabilidade, porque muda imposto.
+
+Preencha o CEST na classificação dos produtos que tiverem substituição
+tributária (ICMS-ST) — sem CEST, a nota desses itens tende a ser recusada.
+
+Os itens que vocês decidirem inativar (ver a seção de decisões) não precisam de
+classificação fiscal.
+
+================================================================================
+2. TABELA DE VENDA: VIGÊNCIA E PREÇO POR ITEM
+================================================================================
+O QUE ESTÁ NO SISTEMA
+Existe uma tabela chamada "a prazo". Confira a vigência dela e observe que não
+há preço cadastrado para nenhum item.
+
+POR QUE ISSO TRAVA
+É a PRIMEIRA trava que vocês vão encontrar. No nosso teste, ao tentar incluir o
+produto no orçamento o sistema recusou de duas formas:
+  - sem tabela na capa do orçamento: "o orçamento não possui tabela de preço";
+  - com tabela mas sem preço: "não existe preço válido para o item na tabela".
+
+COMO RESOLVER
+Tela: VCST0202 — Tabelas de Venda e Preços por Item
+(ou VCLI0520, aba Tabela de Vendas, para os dados da tabela)
+1. Confira/informe a vigência da tabela: data de início e data de fim.
+   (Tabela vencida ou sem vigência é recusada no orçamento.)
+2. Cadastre o preço de cada item que a empresa vende — no mínimo os produtos
+   acabados (RN-01001, RN-01001-PRIME, RN-01002 e as buchas que vocês vendem).
+3. Deixe a situação do preço como ATIVO e sem bloqueio.
+4. No orçamento, lembre de informar a tabela na capa: o item só aceita preço de
+   uma tabela que esteja na capa do documento.
+
+================================================================================
+3. CONDIÇÃO DE PAGAMENTO, ENDEREÇO DO CLIENTE E REPRESENTANTE
+================================================================================
+3.1 CONDIÇÃO DE PAGAMENTO PARA VENDA (obrigatório para vender a prazo)
+O QUE ESTÁ NO SISTEMA
+Vocês cadastraram 8 condições (28/56/84/98, 21/42/63, 30/60/90, 45, 30, 7, 14 e
+28/56/84), mas elas estão no cadastro do FINANCEIRO, que é o usado por contas a
+pagar e a receber. O pedido de venda lê outro cadastro, que está vazio.
+
+POR QUE ISSO TRAVA
+O orçamento e o pedido nascem sem condição de pagamento. Sem ela o sistema não
+consegue dizer ao cliente quanto ele paga e em que datas.
+
+COMO RESOLVER
+Tela: VCLI0520 — Apoio de Cliente (Comercial), aba Condição de Pagamento
+1. Cadastre a condição (ex.: "28/56/84 dias") com a descrição e o prazo médio.
+2. Em seguida, na mesma tela, informe as PARCELAS dessa condição. Para cada
+   parcela você diz:
+     - o número da parcela (1, 2, 3…);
+     - quanto por cento do total ela leva;
+     - de que evento o prazo conta: emissão, ENTRADA (no ato), ENTREGA ou
+       faturamento;
+     - os dias de prazo.
+3. O rodapé da lista avisa se os percentuais fecham 100%. Enquanto não fecham,
+   a parcela é gravada e fica o aviso — é normal enquanto você monta.
+4. Use o botão "Simular": informe um valor de referência e a data de entrega e
+   o sistema mostra as parcelas com valor em reais e vencimento. É a conferência
+   do cadastro antes de usar em venda.
+
+DICA: agora dá para cadastrar condições como "30% de entrada, 20% na entrega e o
+restante em 28/56 dias" — é só usar o percentual e o evento em cada parcela.
+
+IMPORTANTE: o que você cadastrar aqui é o que vira as PARCELAS DA NOTA FISCAL e
+os TÍTULOS do contas a receber no faturamento. Uma venda em 28/56/84 com a
+condição cadastrada gera três títulos nas datas certas; sem condição, a nota sai
+à vista e gera um título só.
+
+3.2 ENDEREÇO COMPLETO DOS CLIENTES (obrigatório para faturar)
+O QUE ESTÁ NO SISTEMA
+Os clientes têm endereço de COBRANÇA; nenhum tem endereço de ENTREGA.
+
+POR QUE ISSO TRAVA
+A nota fiscal eletrônica exige o endereço completo do destinatário: logradouro,
+número, bairro, município, UF e CEP. O sistema busca esse endereço no cadastro do
+cliente — usa o de ENTREGA quando existe e, na falta dele, o de COBRANÇA. Se
+faltar qualquer um desses campos, a emissão é barrada (a conferência prévia
+mostra exatamente qual campo está em branco).
+
+COMO RESOLVER
+Tela: VCLI0500 — Cadastro de Cliente, aba de endereços
+1. Confira se o endereço de cobrança tem logradouro, número, bairro, município,
+   UF e CEP preenchidos. Campo em branco impede a nota.
+2. Inclua o endereço do tipo "Entrega" para os clientes que recebem a mercadoria
+   em local diferente do de cobrança — é para lá que a nota e o romaneio vão.
+3. Cadastre um contato com e-mail: é por ele que o cliente recebe a nota
+   automaticamente.
+
+3.3 LIGAR CLIENTE À CONDIÇÃO E À TABELA (recomendado)
+Os 7 clientes estão sem condição de pagamento e sem tabela de preço padrão. Com
+esses dois campos preenchidos, o pedido já nasce com a condição e o preço certos
+do cliente, em vez de alguém digitar a cada venda. E, quando a nota é digitada
+solta (sem pedido), é dessa condição do cliente que saem as parcelas.
+COMO RESOLVER: tela VCLI0500 — Cadastro de Cliente, nas condições comerciais.
+
+3.4 REPRESENTANTES (recomendado — só se pagam comissão)
+O QUE ESTÁ NO SISTEMA: nenhum representante cadastrado.
+O QUE ACONTECE HOJE: a venda funciona sem representante — conferimos, o orçamento
+vira pedido normalmente. O que não existe sem ele é o cálculo de comissão.
+COMO RESOLVER: tela VVND0400 — Representantes. Cadastre nome, documento
+(CNPJ/CPF) e o percentual de comissão. No pedido é possível dividir a comissão
+entre dois representantes (o da região e o parceiro que trouxe o cliente), cada
+um com o seu percentual — e esse rateio acompanha o orçamento quando ele vira
+pedido.
+
+================================================================================
+4. FINANCEIRO E CONTABILIDADE
+================================================================================
+4.1 NENHUMA CONTA BANCÁRIA CADASTRADA (obrigatório para receber)
+POR QUE ISSO TRAVA
+Para dar baixa em um título (registrar que o cliente pagou) o sistema pede em
+qual conta o dinheiro entrou. Sem nenhuma conta cadastrada, nenhum recebimento
+pode ser registrado e o fluxo de caixa fica vazio.
+COMO RESOLVER: tela VFIN0100 — Contas Bancárias. Cadastre banco, agência,
+conta, descrição e o saldo inicial (o saldo do dia em que começarem a usar).
+Se usarem PIX, cadastre também a chave.
+
+4.2 PLANO DE CONTAS COM UMA ÚNICA CONTA (recomendado)
+O QUE ESTÁ NO SISTEMA: existe apenas a conta "1 — DESPESAS".
+POR QUE ISSO TRAVA
+Sem plano de contas não há como classificar receita, custo, ativo e passivo — o
+balancete sai vazio e a contabilidade não fecha pelo sistema.
+COMO RESOLVER: tela VFIN0120 — Plano de Contas. O ideal é a contabilidade de
+vocês passar o plano que já usam hoje e cadastrá-lo com a mesma numeração —
+assim os relatórios do sistema conversam com o que o contador já conhece.
+Os 29 centros de custo (CC-ADM, CC-ADM-FIN, CC-AUX…) já estão cadastrados e
+bem organizados: falta só o plano de contas.
+
+4.3 PARÂMETROS DE MARGEM DO MÊS (recomendado)
+POR QUE ISSO TRAVA
+A tela que mostra quanto sobra de cada venda (margem de contribuição) depende dos
+parâmetros do mês — encargos, juros e prazo médio de caixa. Sem eles a simulação
+de preço não roda.
+COMO RESOLVER: tela VCUS0200 — Margem de Contribuição, aba de Parâmetros.
+Cadastre o mês corrente; depois é só repetir/ajustar a cada mês.
+
+4.4 PORTADORES (recomendado)
+Não há portador cadastrado. É o "portador" do financeiro — carteira de cobrança,
+dias de recebimento, limite. A condição de pagamento e o cliente podem apontar
+para ele. Se vocês trabalham com boleto/carteira definida, vale cadastrar.
+COMO RESOLVER: tela VCLI0510 — Apoio de Cliente (Básico), cadastro de
+portadores.
+
+4.5 CÓDIGO DO MUNICÍPIO ESTÁ ZERADO NA CONFIGURAÇÃO FISCAL (recomendado)
+O QUE ESTÁ NO SISTEMA
+Na Configuração Fiscal, o município aparece como "Mandaguari" e o estado como
+"PR", mas o campo do CÓDIGO do município está preenchido com zeros (0000000).
+
+O QUE ISSO AFETA — e o que NÃO afeta
+Conferimos exatamente onde esse número é usado, para vocês não perderem tempo com
+o que não é problema:
+  - A NF-e de produto SAI normalmente. O município dela é resolvido pelo nome
+    mais a UF, então o zero não impede faturar.
+  - O que sai com código inválido é o CT-e (frete), a NFS-e (nota de serviço) e
+    os arquivos do SPED — a EFD ICMS/IPI e a ECD contábil. Esses arquivos levam o
+    código do IBGE direto no registro de abertura, e o validador (ou o contador)
+    recusa.
+
+COMO RESOLVER
+Tela: VFIS0100 — Configuração Fiscal
+1. Abra a tela e localize o endereço da empresa.
+2. No campo do código do município, informe: 4114302
+   (é o código oficial do IBGE para Mandaguari/PR).
+3. Salve.
+
+Esse número não é uma escolha da empresa: é o código oficial da cidade. Leva um
+minuto e evita retrabalho no fechamento do mês. Se preferirem, podemos aplicar
+por vocês — basta avisar.
+
+================================================================================
+5. FALTAM ROTEIROS DE FABRICAÇÃO (E TEMPO NO ROTEIRO QUE EXISTE)
+================================================================================
+5.1 EXISTE APENAS 1 ROTEIRO EM TODO O SISTEMA
+O QUE ESTÁ NO SISTEMA
+Há roteiro apenas para TP-01001-A (uma etapa: "Cortar no Laser"). Todos os outros
+itens fabricados estão sem roteiro.
+
+POR QUE ISSO TRAVA
+O roteiro é o que diz POR ONDE a peça passa e QUANTO TEMPO leva. Sem ele:
+  - o planejamento (MRP) sugere a ordem, mas o sistema recusa transformá-la em
+    ordem de fabricação — a mensagem é "o item não possui roteiro de fabricação
+    aprovado";
+  - a ordem de fabricação nasce sem etapas, então o chão de fábrica não tem o que
+    apontar;
+  - o cálculo de capacidade (CRP) não mostra carga nas máquinas;
+  - o custo do produto sai só com material, sem o custo de fabricação.
+
+ITENS QUE PRECISAM DE ROTEIRO
+  produtos acabados: RN-01001, RN-01001-PRIME, RN-01002
+  peças fabricadas:  TP-01001-B, TP-01001-C, TP-01001-D, TP-01001PRIME-A,
+                     TP-01002-A, TP-0120/50-E, TP-0060-I
+  dependem da decisão 6.1 (só precisam de roteiro se ficarem como "Fabricado"):
+                     TP-0050-I, TP-0120/60-E e as buchas BU-
+
+COMO RESOLVER
+Tela: VENT0202 — Cadastro do Roteiro de Fabricação
+1. Escolha o item e crie o roteiro (deixe como padrão e aprovado).
+2. Para cada etapa, na sequência em que a peça passa, informe:
+     - a OPERAÇÃO (as 16 já estão cadastradas: Cortar no Laser, Dobrar na
+       Dobradeira, Soldagem MIG, Pintura, Usinar no Torno…);
+     - o CENTRO DE TRABALHO (Laser, Dobradeira, Torno CNC…);
+     - o TEMPO DE PREPARO (setup) e o TEMPO POR PEÇA.
+3. O tempo pode ser informado em segundos, minutos ou horas — escolha a unidade
+   e o sistema converte. O cadastro de operações de vocês está em SEGUNDOS, o que
+   é o mais prático para a fábrica.
+
+DICA: a tela VITM0100 — Item & Prontidão para o MRP tem um checklist que diz,
+item por item, o que ainda falta (estrutura, roteiro, fornecedor, conversão). Use
+ela para acompanhar o progresso deste trabalho.
+
+5.2 O ROTEIRO QUE EXISTE ESTÁ SEM TEMPO POR PEÇA
+O QUE ESTÁ NO SISTEMA
+A etapa "Cortar no Laser" do TP-01001-A tem o tempo de PREPARO (300 segundos = 5
+minutos), mas o tempo POR PEÇA está vazio.
+
+POR QUE ISSO TRAVA
+Só com o preparo, o sistema entende que produzir 1 peça ou 500 peças leva o mesmo
+tempo. A capacidade da máquina e o custo de fabricação ficam errados.
+
+COMO RESOLVER
+Na mesma tela (VENT0202), informe o tempo por peça da etapa. O cadastro da
+operação "Cortar no Laser" já tem 60 segundos por peça — basta a etapa herdar ou
+repetir esse valor (ou o tempo real dessa peça específica, se for diferente).
+
+5.3 REFUGO DE 21,23% NA ETAPA — CONFIRMAR SE ESTÁ NO LUGAR CERTO
+O QUE ESTÁ NO SISTEMA
+A etapa "Cortar no Laser" do TP-01001-A está com 21,23% de refugo.
+
+POR QUE VALE CONFERIR
+Há dois lugares diferentes para registrar perda, e eles têm efeitos distintos:
+  - PERDA NA ESTRUTURA (no material): "para fazer 1 lateral eu gasto 21% mais
+    chapa". Aumenta a compra de chapa.
+  - REFUGO NA OPERAÇÃO (nesta etapa): "de cada 100 peças que entram no laser,
+    21 são perdidas". Aumenta a quantidade a produzir em TODAS as etapas
+    anteriores, não só a chapa.
+Se o número de 21,23% representa o aproveitamento da chapa (sobra de corte), o
+lugar certo é a perda da estrutura, não o refugo da operação.
+
+COMO RESOLVER
+Perda de material: tela VENT0210 — Cadastro de Estrutura de Produtos, campo
+de perda do componente.
+Refugo de operação: tela VENT0202, campo de refugo da etapa.
+
+5.4 TRÊS CENTROS DE TRABALHO SEM CUSTO POR HORA
+O QUE ESTÁ NO SISTEMA
+Onze centros têm custo/hora cadastrado (Laser R$ 120,00, Dobradeira R$ 114,39,
+Guilhotina R$ 57,10, Pintura R$ 62,33, Limpeza R$ 22,12 e outros). Faltam três:
+  - MORSA
+  - TERCEIROS
+  - TORNO CNC
+POR QUE IMPORTA: qualquer etapa nesses centros entra no custo do produto com
+R$ 0,00 por hora — o produto sai mais barato do que é.
+COMO RESOLVER: tela VCUS0100 — Custos (Centro, Compra, Alocação e Overhead),
+na parte de custo/hora por centro de trabalho, informando o valor/hora como foi
+feito nos outros onze.
+
+OBSERVAÇÃO: nos onze centros preenchidos, o custo está todo em "máquina" e a
+"mão de obra" está zerada. Se a intenção é que o valor/hora já inclua a mão de
+obra, está certo — só confirme, porque o relatório de custo mostra os dois
+separados.
+
+================================================================================
+6. DECISÕES QUE O TIME PRECISA TOMAR
+================================================================================
+Não mexemos em nada aqui: são escolhas de vocês.
+
+6.1 SEIS ITENS ESTÃO MARCADOS COMO "COMPRADO" MAS TÊM ESTRUTURA CADASTRADA
+Itens: BU-120/50, BU-0050-I, BU-0060-I, BU-0120/60, TP-0050-I e TP-0120/60-E.
+
+O que acontece hoje: como estão marcados "Comprado", o planejamento sugere
+COMPRAR essas peças e ignora a estrutura delas — a lista de material que vocês
+cadastraram para elas não é usada.
+
+O que chama atenção: a família de 50 mm está misturada (umas como comprada,
+outras como fabricada) e a família de 60 mm está toda como comprada — são o mesmo
+tipo de peça. Como existe TORNO CNC cadastrado e existem buchas semi-acabadas
+(TP-0050-I, TP-0060-I) na estrutura, é possível que a intenção fosse "fabricado".
+
+COMO RESOLVER (depois de decidir): tela VENT0200 — Cadastro de Itens, aba
+Engenharia, campo "Tipo de Item":
+  - Fabricado → gera ordem de fabricação (exige estrutura e roteiro);
+  - Comprado → gera ordem de compra (exige fornecedor preferencial);
+  - De terceiro → não gera ordem.
+
+6.2 ITENS DUPLICADOS E ITEM DE TESTE
+Estão cadastrados e não são usados em nenhuma estrutura:
+  - TP-01001A, TP-01001B, TP-01001C — são as mesmas peças de TP-01001-A,
+    TP-01001-B e TP-01001-C (sem o hífen), com o mesmo nome e o mesmo peso;
+  - TP-00000A "COMPONENTE" — parece item de teste;
+  - item "1 — CHAPA AÇO CARBONO" — chapa sem espessura; as chapas realmente
+    usadas são as 5, 8 e 9 (3 mm, 7,94 mm e 9,5 mm).
+
+O que acontece hoje: eles aparecem em toda busca de item e em todo relatório, e
+podem ser escolhidos por engano num pedido ou numa estrutura. No nosso teste, o
+TP-00000A chegou a aparecer no resultado do planejamento.
+
+COMO RESOLVER: tela VENT0200 — Cadastro de Itens → INATIVE o item (não
+apague). Item inativo não aparece mais nas buscas de pedido, orçamento, ordem e
+estrutura, mas continua visível nos documentos antigos e pode ser reativado
+quando quiserem.
+
+6.3 "ITEM BASE" MARCADO EM 15 ITENS
+Os 15 itens cadastrados primeiro (as 4 chapas, RN-01001, TP-00000A, os TP-01001*,
+BU-120/50 e TP-0120/50-E) estão com o marcador "Item Base" ligado. Os 14
+cadastrados depois estão sem.
+
+O que significa "Item Base": é o item que serve de MODELO para criar outros itens
+parecidos (pelo configurador de produto). Não afeta venda, compra, planejamento
+nem custo — só faz o item aparecer na busca de "item base".
+
+Pelo padrão da marcação (exatamente os 15 primeiros itens, e nenhum dos 14 mais
+recentes), tudo indica que os primeiros cadastros foram salvos com essa opção já
+marcada, sem intenção — vale conferir se algum deles é de fato um modelo.
+
+COMO RESOLVER (se concordarem que nenhum deles é modelo): tela VENT0200, aba
+Capa, no grupo de marcadores, desmarque "Item Base" nesses itens.
+
+6.4 CONVERSÃO DUPLICADA NO TUBO 101
+O tubo Ø 60,3 (item 101) tem duas conversões cadastradas: 1 UN = 6.000 MM e
+1 PC = 6.000 MM. Os outros tubos (102, 103, 104) têm apenas a de UN. Se a
+unidade de compra é UN, a linha de PC está sobrando.
+COMO RESOLVER: tela VSUP0110 — Conversão de UM por Item, excluir a linha que
+não for usada (a tela explica a consequência antes de excluir).
+
+6.5 NENHUM PLANO DE INSPEÇÃO CADASTRADO
+Se vocês pretendem controlar qualidade por etapa, o plano de inspeção precisa
+existir. Quando uma etapa do roteiro é marcada como ponto de inspeção e não há
+plano cadastrado, a ordem de fabricação é criada normalmente e a etapa fica com
+um aviso — a fábrica não para, mas a conferência de qualidade não é aberta.
+COMO RESOLVER: tela VINS0200 — Cadastro do Roteiro de Inspeção (e
+VPRO0400 para os pontos de inspeção).
+
+================================================================================
+7. O QUE JÁ ESTÁ BEM CADASTRADO — NÃO PRECISA MEXER
+================================================================================
+- ESTRUTURA DOS PRODUTOS: completa e coerente. A balança RN-01001 leva
+  2 laterais (TP-01001-A), 2 peitos de pombo (TP-01001-B), 1 fechamento superior
+  (TP-01001-C), 1 fechamento inferior (TP-01001-D) e 1 bucha (BU-120/50). No
+  teste, o planejamento explodiu a árvore inteira corretamente, até a chapa e o
+  tubo.
+- ALMOXARIFADOS: os 6 estão certos e com o tipo correto (Matéria-Prima,
+  Inspeção de Recebimento, Processo/Chão de Fábrica como linha de produção,
+  Produto Acabado, Expedição, Refugo), e cada item está ligado ao seu.
+- MÁQUINAS E TURNOS: as 9 máquinas estão ligadas ao tipo certo e ao calendário
+  TURNO GERAL (segunda a sexta, 07:50 às 17:20). Os 7 turnos estão cadastrados.
+- OPERAÇÕES: as 16 operações têm tempo de preparo e tempo por peça em segundos —
+  exatamente o que o cálculo de capacidade e o custo precisam.
+- CONVERSÃO DOS TUBOS: 1 UN = 6.000 MM nos quatro tubos, o que permite consumir
+  o tubo em milímetros na estrutura e comprar em barras.
+- CONFIGURAÇÃO FISCAL: completa fora do código do município — CNPJ, inscrição
+  estadual, regime, alíquota de ICMS interno (19,5%), endereço, logo e
+  vencimentos de imposto. O acesso ao provedor da NF-e também já está
+  configurado.
+- TABELA DE ALÍQUOTAS POR NCM: 95 NCMs com IPI, PIS e COFINS já carregados. É o
+  que faz o cálculo do imposto depois que a classificação fiscal do item apontar
+  para o NCM (item 1).
+- FUNCIONÁRIOS (28) e CENTROS DE CUSTO (29): cadastrados e organizados.
+
+================================================================================
+8. A PRÉVIA DA NF-e — USE ANTES DA PRIMEIRA EMISSÃO
+================================================================================
+Emitir uma nota é irreversível: nota autorizada só sai do ar por cancelamento,
+que tem prazo, exige justificativa e fica registrado. Para o time poder conferir
+tudo ANTES, a tela de NF-e tem a prévia.
+
+COMO USAR
+Tela: VFIS0200 — NF-e de Saída
+1. Na listagem, na linha da nota em rascunho, clique em "Prévia".
+2. A janela abre com a nota inteira, exatamente como ela será transmitida:
+     - CONFERÊNCIA no topo: a lista do que está pendente, separada em
+       "Impede" (a nota não pode ser transmitida) e "Atenção" (transmite, mas
+       tem consequência). Cada linha diz o que fazer e em qual tela;
+     - EMITENTE e DESTINATÁRIO com endereço completo — campo em branco aparece
+       destacado em vermelho;
+     - ITENS com NCM, CFOP, CST e o imposto de cada linha;
+     - TOTAIS, com a conta escrita em palavras (produtos + IPI + ICMS-ST + frete
+       + seguro − desconto);
+     - PAGAMENTO: as parcelas com valor, vencimento e a forma declarada na nota.
+       São essas que viram os títulos do contas a receber;
+     - o documento técnico que será enviado, se quiserem ver.
+3. Enquanto houver pendência do tipo "Impede", o botão de emitir fica
+   desabilitado. Resolvido o cadastro, abra a prévia de novo e emita por ali.
+
+A prévia não transmite nada, não muda o status da nota e pode ser aberta quantas
+vezes quiserem.
+
+ATENÇÃO AO AMBIENTE: o canto da janela mostra se o sistema está em PRODUÇÃO
+(nota vale de verdade) ou HOMOLOGAÇÃO (nota de teste, sem valor fiscal).
+
+================================================================================
+9. COMO CONFERIR QUE ESTÁ TUDO PRONTO
+================================================================================
+Depois de completar os itens obrigatórios (1 a 6 do resumo), faça este teste no
+próprio sistema:
+
+1. Monte um orçamento para um cliente com um produto acabado, veja o valor do
+   produto, do IPI e do produto + IPI, e confira a aba PAGAMENTO (deve mostrar as
+   parcelas com valor e vencimento).
+2. Transforme o orçamento em pedido e confira a aba COMISSÃO. Confira também que
+   o total da capa do pedido é igual à soma dos itens.
+3. Lance a necessidade do produto, rode o planejamento (MRP), firme a sugestão e
+   libere a ordem — a ordem de fabricação deve nascer COM as etapas do roteiro.
+4. Veja a carga das máquinas no cálculo de capacidade (CRP) e o sequenciamento.
+5. Dê entrada da matéria-prima, aponte a produção com o operador, consuma o
+   material e conclua a ordem — o produto acabado deve entrar no estoque.
+6. Gere a nota a partir do pedido, ABRA A PRÉVIA e confira. Só então emita.
+7. Confira os títulos gerados: devem ser um por parcela da condição de pagamento,
+   com o cliente e as datas certas. Dê baixa em um deles — o valor deve aparecer
+   no fluxo de caixa e no saldo da conta bancária.
+
+Se qualquer passo recusar, a mensagem da tela diz o que falta cadastrar. Estamos
+à disposição para acompanhar essa primeira rodada com vocês.

@@ -21,10 +21,19 @@ import { getCustomer } from "@/services/customerService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadCarriers, loadCustomers, loadEstablishments, loadInvoiceTypes, loadItems, loadPaymentConditions, loadWarehouses, type LookupOption } from "@/services/lookups";
+import { loadCarriers, loadCustomers, loadEstablishments, loadInvoiceTypes, loadItems, loadPaymentConditions, loadRepresentatives, loadWarehouses, type LookupOption } from "@/services/lookups";
+import {
+  getSalesOrderCommissionSplit,
+  saveSalesOrderCommissionSplit,
+  COMMISSION_ROLES,
+  COMMISSION_BASES,
+  MAX_COMMISSION_REPRESENTATIVES,
+  type RateioComissaoDTO,
+  type RateioComissaoLinhaDTO,
+} from "@/services/salesCommissionService";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type DetailTab = "dados" | "itens";
+type DetailTab = "dados" | "itens" | "comissao";
 const today = () => new Date().toISOString().slice(0, 10);
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -56,6 +65,8 @@ export function Vvnd0200Page(): JSX.Element {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<DetailTab>("dados");
+  const [rateio, setRateio] = useState<RateioComissaoDTO | null>(null);
+  const [rateioLinhas, setRateioLinhas] = useState<RateioComissaoLinhaDTO[]>([]);
   /** modo criação (form em branco) vs. visualização de um pedido existente */
   const [creating, setCreating] = useState(true);
   const [cancelDialog, setCancelDialog] = useState(false);
@@ -99,7 +110,35 @@ export function Vvnd0200Page(): JSX.Element {
     const detail = await getSalesOrder(code);
     setSelected(detail);
     setOrders((current) => current.map((order) => order.code === code ? { ...order, ...detail } : order));
+    // O rateio de comissão vem junto: o pedido pode ter mais de um representante
+    // (o da região e o parceiro que trouxe o cliente), e a capa mostra só um.
+    const rt = await getSalesOrderCommissionSplit(code).catch(() => null);
+    setRateio(rt);
+    setRateioLinhas(rt?.representatives.map((l) => ({ ...l })) ?? []);
   }, []);
+
+  const somaRateioPct = useMemo(() => rateioLinhas.reduce((acc, l) => acc + (Number(l.commission_pct) || 0), 0), [rateioLinhas]);
+  const addRepresentante = () => setRateioLinhas((atual) => atual.length >= MAX_COMMISSION_REPRESENTATIVES ? atual : [...atual, {
+    representative_code: 0,
+    role: atual.some((l) => l.role === "PRINCIPAL") ? "PARCEIRO" : "PRINCIPAL",
+    commission_pct: 0,
+    commission_base: "TOTAL_PRODUTOS",
+  }]);
+  const alterarRepresentante = (idx: number, campo: keyof RateioComissaoLinhaDTO, valor: string | number) => {
+    setRateioLinhas((atual) => atual
+      .map((l, i) => (i === idx ? { ...l, [campo]: valor } as RateioComissaoLinhaDTO : l))
+      // Só um principal: marcar outro rebaixa o anterior aqui, sem gastar uma
+      // ida ao servidor para ouvir "não".
+      .map((l, i) => (campo === "role" && valor === "PRINCIPAL" && i !== idx && l.role === "PRINCIPAL" ? { ...l, role: "PARCEIRO" } : l)));
+  };
+  const removerRepresentante = (idx: number) => setRateioLinhas((atual) => atual.filter((_, i) => i !== idx));
+  const salvarRateio = () => { const code = selected?.code; if (!code) return; void run(async () => {
+    const atualizado = await saveSalesOrderCommissionSplit(code, rateioLinhas.filter((l) => l.representative_code > 0));
+    setRateio(atualizado);
+    setRateioLinhas(atualizado.representatives.map((l) => ({ ...l })));
+    await refreshSelected(code);
+    setFeedback({ type: "success", message: `Rateio gravado: ${atualizado.representatives.length} representante(s), R$ ${money(atualizado.total_valor)} de comissão.` });
+  }); };
 
   const listarTodos = () => run(async () => { setOrders(await listSalesOrders()); });
   const aplicarFiltro = () => run(async () => {
@@ -371,9 +410,10 @@ export function Vvnd0200Page(): JSX.Element {
               <div className="erp-tabs">
                 <button className={`erp-tab${tab === "dados" ? " active" : ""}`} onClick={() => setTab("dados")}>Dados gerais</button>
                 <button className={`erp-tab${tab === "itens" ? " active" : ""}`} onClick={() => setTab("itens")}>Itens ({items.length})</button>
+                <button className={`erp-tab${tab === "comissao" ? " active" : ""}`} onClick={() => setTab("comissao")}>Comissão ({rateioLinhas.length})</button>
               </div>
               <div className="erp-detail-body">
-                {tab === "dados" ? (
+                {tab === "dados" && (
                   <>
                     <div className="erp-fieldset">
                       <div className="erp-fieldset-head">
@@ -402,7 +442,9 @@ export function Vvnd0200Page(): JSX.Element {
                       </div>
                     </div>
                   </>
-                ) : (
+                )}
+
+                {tab === "itens" && (
                   <>
                     {isDraft && (
                       <div className="erp-fieldset">
@@ -462,6 +504,106 @@ export function Vvnd0200Page(): JSX.Element {
                     </div>
                     {!isDraft && <p style={{ fontSize: 12, color: "var(--v-text-3)" }}>Itens só podem ser adicionados/cancelados enquanto o pedido está em <strong>Rascunho</strong>.</p>}
                   </>
+                )}
+
+                {tab === "comissao" && (
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">
+                      Rateio de comissão
+                      {rateio && <span className="erp-badge info">{somaRateioPct.toLocaleString("pt-BR")}% · R$ {money(rateio.total_valor)}</span>}
+                    </div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c12">
+                        <small className="erp-hint">
+                          Dois representantes podem receber comissão no mesmo pedido — o da região e o parceiro
+                          que trouxe o cliente — e o percentual muda de pedido para pedido. O <strong>principal</strong>
+                          é o que fica espelhado na capa (o campo &quot;Comissão %&quot; dos dados gerais).
+                          A base de cada linha decide o valor: o total líquido carrega frete e acréscimos, o total
+                          dos produtos não.
+                        </small>
+                      </div>
+                      {rateio && (
+                        <>
+                          <div className="erp-field erp-c3"><label className="erp-label">Base: total dos produtos</label><input className="erp-input num" value={money(rateio.total_produtos)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Base: total líquido</label><input className="erp-input num" value={money(rateio.total_liquido)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Comissão total</label><input className="erp-input strong num" value={money(rateio.total_valor)} readOnly /></div>
+                          <div className="erp-field erp-c3"><label className="erp-label">Soma dos percentuais</label><input className="erp-input num" value={`${somaRateioPct.toLocaleString("pt-BR")}%`} readOnly /></div>
+                        </>
+                      )}
+                      <div className="erp-field erp-c12">
+                        <div className="erp-grid-wrap">
+                          <table className="erp-grid">
+                            <thead>
+                              <tr>
+                                <th style={{ width: 240 }}>Representante</th>
+                                <th style={{ width: 170 }}>Papel</th>
+                                <th className="num" style={{ width: 110 }}>Comissão %</th>
+                                <th style={{ width: 210 }}>Base de cálculo</th>
+                                <th className="num" style={{ width: 130 }}>Valor</th>
+                                <th>Observação</th>
+                                <th style={{ width: 90 }} />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rateioLinhas.length === 0 && (
+                                <tr><td colSpan={7} className="erp-grid-empty">Nenhum representante no rateio deste pedido.</td></tr>
+                              )}
+                              {rateioLinhas.map((l, idx) => (
+                                <tr key={l.id ?? `novo-${idx}`}>
+                                  <td>
+                                    <LookupField
+                                      value={l.representative_code || undefined}
+                                      onChange={(v) => alterarRepresentante(idx, "representative_code", Number(v) || 0)}
+                                      loader={loadRepresentatives}
+                                      entityLabel="representante"
+                                    />
+                                  </td>
+                                  <td>
+                                    <select className="erp-cell-input" value={l.role}
+                                      onChange={(e) => alterarRepresentante(idx, "role", e.target.value)}>
+                                      {COMMISSION_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <input className="erp-cell-input num" type="number" step="0.01" min="0" max="100"
+                                      value={l.commission_pct} onChange={(e) => alterarRepresentante(idx, "commission_pct", Number(e.target.value))} />
+                                  </td>
+                                  <td>
+                                    <select className="erp-cell-input" value={l.commission_base}
+                                      onChange={(e) => alterarRepresentante(idx, "commission_base", e.target.value)}>
+                                      {COMMISSION_BASES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+                                    </select>
+                                  </td>
+                                  <td className="num">{money(l.commission_value)}</td>
+                                  <td>
+                                    <input className="erp-cell-input" value={l.notes ?? ""} placeholder="por que este representante entra"
+                                      onChange={(e) => alterarRepresentante(idx, "notes", e.target.value)} />
+                                  </td>
+                                  <td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removerRepresentante(idx)} disabled={busy}>Remover</button></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <button className="erp-btn" onClick={addRepresentante} disabled={busy || rateioLinhas.length >= MAX_COMMISSION_REPRESENTATIVES}>+ Representante</button>
+                      </div>
+                      <div className="erp-field erp-c3">
+                        <button className="erp-btn erp-btn-primary" onClick={salvarRateio}
+                          disabled={busy || rateioLinhas.some((l) => !l.representative_code) || somaRateioPct > 100}>Gravar rateio</button>
+                      </div>
+                      <div className="erp-field erp-c6">
+                        <small className="erp-hint">
+                          {rateioLinhas.length >= MAX_COMMISSION_REPRESENTATIVES
+                            ? `Limite de ${MAX_COMMISSION_REPRESENTATIVES} representantes por pedido.`
+                            : somaRateioPct > 100
+                              ? "A soma das comissões passa de 100% — acerte os percentuais antes de gravar."
+                              : "Gravar substitui o rateio inteiro do pedido e espelha o principal na capa."}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </>

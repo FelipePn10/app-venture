@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type ServicePrice, type ServiceOrder, type ServiceMovement, type GlobalConversion, type PriceHistoryEntry,
-  FREIGHT_TYPES, ORDER_STATUSES, MOVEMENT_TYPES,
+  FREIGHT_TYPES, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS, orderStatusLabel, MOVEMENT_TYPES,
   listServicePrices, createServicePrice, updateServicePrice, deleteServicePrice, servicePriceHistory,
   readjustServicePrices, copyMoveServicePrices, resolveServiceCost,
   listServiceOrders, updateServiceOrderStatus, getServiceOrderMovements, addServiceOrderMovement,
@@ -464,9 +464,14 @@ export function Vtps0100Page(): JSX.Element {
                             <td><span className="erp-badge info">{enumLabel(o.status)}</span></td>
                             <td>
                               <button className="erp-btn erp-btn-sm" onClick={() => abrirMovimentos(o)}>Remessa/retorno</button>{" "}
-                              <select className="erp-input" style={{ width: 120, display: "inline-block" }} value={o.status}
-                                onChange={(e) => void mudarStatus(o, e.target.value)} aria-label={`Situação da ordem ${o.code}`}>
-                                {ORDER_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                              <select className="erp-input" style={{ width: 190, display: "inline-block" }} value={o.status}
+                                onChange={(e) => void mudarStatus(o, e.target.value)} aria-label={`Situação da ordem ${o.code}`}
+                                disabled={(ORDER_STATUS_TRANSITIONS[o.status] ?? []).length === 0}
+                                title={(ORDER_STATUS_TRANSITIONS[o.status] ?? []).length === 0 ? "Ordem encerrada: a situação não muda mais." : undefined}>
+                                <option value={o.status}>{orderStatusLabel(o.status)}</option>
+                                {(ORDER_STATUS_TRANSITIONS[o.status] ?? []).map((v) => (
+                                  <option key={v} value={v}>{orderStatusLabel(v)}</option>
+                                ))}
                               </select>
                             </td>
                           </tr>

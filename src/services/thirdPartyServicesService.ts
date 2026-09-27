@@ -192,12 +192,37 @@ export interface ServiceOrder {
   notes?: string;
 }
 
+/**
+ * Situações da ordem de serviço de terceiro, exatamente como o backend aceita
+ * (`UpdateOrderStatus`) e como a CHECK da tabela permite. A lista anterior
+ * oferecia OPEN/IN_PROGRESS/DONE, que o banco recusa: o filtro nunca casava e a
+ * troca de situação voltava "situação de ordem de serviço inválida".
+ */
 export const ORDER_STATUSES: { value: string; label: string }[] = [
-  { value: 'OPEN', label: 'Aberta' },
-  { value: 'IN_PROGRESS', label: 'Em andamento' },
-  { value: 'DONE', label: 'Concluída' },
+  { value: 'PLANNED', label: 'Planejada' },
+  { value: 'FIRM', label: 'Firme' },
+  { value: 'RELEASED_WITH_PO', label: 'Liberada com pedido de compra' },
+  { value: 'RELEASED_WITHOUT_PO', label: 'Liberada sem pedido de compra' },
+  { value: 'COMPLETED', label: 'Concluída' },
   { value: 'CANCELLED', label: 'Cancelada' },
 ];
+
+/**
+ * Transições que o backend aceita a partir de cada situação. A tela oferece só
+ * essas: escolher um destino inválido só devolvia erro depois do clique.
+ */
+export const ORDER_STATUS_TRANSITIONS: Record<string, string[]> = {
+  PLANNED: ['FIRM', 'CANCELLED'],
+  FIRM: ['RELEASED_WITH_PO', 'RELEASED_WITHOUT_PO', 'CANCELLED'],
+  RELEASED_WITH_PO: ['COMPLETED', 'CANCELLED'],
+  RELEASED_WITHOUT_PO: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+export function orderStatusLabel(value?: string): string {
+  return ORDER_STATUSES.find((s) => s.value === value)?.label ?? (value || '—');
+}
 
 function parseOrder(raw: unknown): ServiceOrder {
   const o = unwrapObject(raw);

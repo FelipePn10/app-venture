@@ -112,6 +112,12 @@ const goDivisionReq = read('internal/application/dto/request/sales_division_dto_
 const goDivisionRes = read('internal/application/dto/response/sales_division_response.go');
 
 const service = readFront('src/services/salesQuotationService.ts');
+/**
+ * O rateio de comissão do orçamento é consumido por `salesCommissionService.ts`:
+ * o backend atende pedido e orçamento com o mesmo caso de uso, então o serviço
+ * do front também é um só. A conferência de rotas olha os dois arquivos.
+ */
+const servicoComissao = readFront('src/services/salesCommissionService.ts');
 const divisionService = readFront('src/services/salesDivisionService.ts');
 
 const quotationResponseFields = goJsonFields(goResponse, 'SalesQuotationResponse');
@@ -232,12 +238,15 @@ check('rotas do backend × chamadas do serviço', () => {
   if (itemsBlock) collect(itemsBlock[0], '/items');
 
   const frontRoutes = new Set();
-  for (const m of service.matchAll(/httpClient\.(get|post|put|patch|delete)(?:<[^>]*>)?\(\s*`([^`]+)`/g)) {
+  for (const m of (service + servicoComissao).matchAll(/httpClient\.(get|post|put|patch|delete)(?:<[^>]*>)?\(\s*`([^`]+)`/g)) {
     const url = m[2]
       .replace('${BASE}', '/api/sales-quotation')
       .replace(/\$\{code\}/g, '{code}')
       .replace(/\$\{itemCode\}/g, '{itemCode}')
       .replace(/\$\{attachmentID\}/g, '{attachmentID}');
+    // O serviço de comissão atende os dois documentos; aqui só conferimos as
+    // chamadas ao orçamento — as do pedido são do contrato do pedido de venda.
+    if (!url.startsWith('/api/sales-quotation')) continue;
     frontRoutes.add(`${m[1].toUpperCase()} ${url}`);
   }
 

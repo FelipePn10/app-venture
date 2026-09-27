@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
-import { fetchSessionProfile } from '@/services/authService';
+import { fetchSessionProfile, renewSession } from '@/services/authService';
 import { useAuthStore } from '@/store/authStore';
+
+/**
+ * A partir de quanto tempo restante a sessão é renovada na abertura do app.
+ * Metade da validade de um token comum: quem usa o ERP com alguma regularidade
+ * nunca chega perto do vencimento, e quem ficou dias fora renova na volta.
+ */
+const LIMITE_PARA_RENOVAR_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Uma renovação por abertura do app. Em StrictMode o efeito roda duas vezes no
+ * desenvolvimento, e sem esta trava o app pediria dois tokens a cada abertura.
+ */
+let sessaoJaRenovada = false;
 
 /** Distingue "token recusado" de "não consegui perguntar" (404, rede, 5xx). */
 function isAuthenticationFailure(error: unknown): boolean {
@@ -10,11 +23,15 @@ function isAuthenticationFailure(error: unknown): boolean {
 
 export function SessionBootstrap({ children }: { children: JSX.Element }): JSX.Element {
   const [isReady, setIsReady] = useState(false);
-  const { isAuthenticated, clearAuthData, setUserProfile } = useAuthStore((state) => ({
-    isAuthenticated: state.isAuthenticated,
-    clearAuthData: state.clearAuthData,
-    setUserProfile: state.setUserProfile,
-  }));
+  const { isAuthenticated, clearAuthData, setUserProfile, millisUntilExpiry, setSessionToken } = useAuthStore(
+    (state) => ({
+      isAuthenticated: state.isAuthenticated,
+      clearAuthData: state.clearAuthData,
+      setUserProfile: state.setUserProfile,
+      millisUntilExpiry: state.millisUntilExpiry,
+      setSessionToken: state.setSessionToken,
+    }),
+  );
 
   useEffect(() => {
     async function bootstrapSession(): Promise<void> {
@@ -24,6 +41,21 @@ export function SessionBootstrap({ children }: { children: JSX.Element }): JSX.E
       }
 
       try {
+        // Renovação da sessão: com "manter conectado", o token ganha prazo novo
+        // a cada abertura, e quem usa o sistema não volta para a tela de login.
+        // A recusa do backend (teto de 30 dias, servidor antigo) não derruba
+        // nada: a sessão segue com o token atual até ele vencer.
+        if (!sessaoJaRenovada && useAuthStore.getState().rememberMe && millisUntilExpiry() < LIMITE_PARA_RENOVAR_MS) {
+          sessaoJaRenovada = true;
+          const renovada = await renewSession();
+          if (renovada) {
+            setSessionToken({
+              token: renovada.token,
+              expiresAt: renovada.expiresAt,
+              rememberMe: renovada.rememberMe,
+            });
+          }
+        }
         const profile = await fetchSessionProfile();
         if (profile) {
           setUserProfile({
@@ -44,7 +76,7 @@ export function SessionBootstrap({ children }: { children: JSX.Element }): JSX.E
     }
 
     void bootstrapSession();
-  }, [clearAuthData, isAuthenticated, setUserProfile]);
+  }, [clearAuthData, isAuthenticated, millisUntilExpiry, setSessionToken, setUserProfile]);
 
   if (!isReady) {
     return (
