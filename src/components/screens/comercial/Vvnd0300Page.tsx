@@ -1025,8 +1025,9 @@ export function Vvnd0300Page(): JSX.Element {
                       <div className="erp-field erp-c12">
                         <small className="erp-hint">
                           Responde a pergunta que o cliente faz antes de aprovar: quanto ele paga e quando.
-                          O plano é calculado sobre o total líquido e a data de entrega do orçamento — não fica
-                          gravado, e vira título de verdade no faturamento.
+                          O plano é calculado sobre o que o cliente paga — produto + IPI + ICMS-ST — e sobre a
+                          data de entrega do orçamento. Não fica gravado: vira duplicata na nota fiscal e título
+                          no contas a receber quando o pedido é faturado.
                         </small>
                       </div>
                       {planoErro && <div className="erp-field erp-c12"><div className="erp-feedback warn">{planoErro}</div></div>}
