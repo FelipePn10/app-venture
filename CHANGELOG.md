@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.3.0] — 2026-09-27
+
 ## Novidades
 - **Confira a nota fiscal antes de emitir.** Na tela de NF-e de Saída, o botão **Prévia** abre a nota inteira do jeito que ela será enviada à Receita: quem emite e para quem, com o endereço completo; cada item com NCM, CFOP e os impostos; os totais com a conta escrita por extenso; e as parcelas com valor e vencimento. No topo fica a conferência, separando o que **impede** a emissão do que é só **atenção** — e cada linha diz em qual tela se resolve. Enquanto houver algo que impede, o botão de emitir fica bloqueado. A prévia não envia nada e pode ser aberta quantas vezes quiser. Emitir é para sempre: nota autorizada só se desfaz por cancelamento, com prazo e justificativa.
 - **A nota já sabe o endereço do cliente.** Ao informar o cliente, a nota traz nome, CNPJ, inscrição estadual e o endereço do cadastro — o de entrega quando existe, senão o de cobrança. Para uma entrega pontual em outro lugar, basta digitar o endereço na própria nota.
