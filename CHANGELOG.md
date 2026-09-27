@@ -24,6 +24,10 @@
 - A transportadora avisa o que impede transportar antes de a expedição descobrir: habilitação ou seguro vencido, frota sem veículo ativo, tabela de frete em branco, nenhuma região cadastrada.
 
 ## Correções
+- **Uma falha ao carregar a comissão podia apagar o rateio.** Se a leitura do rateio falhasse, a aba mostrava uma lista vazia e editável como se o documento não tivesse representante; incluir um e gravar apagava o rateio real. Agora a falha é dita na tela e a edição fica bloqueada até a leitura dar certo.
+- **Na transportadora, limpar um valor de frete da região gravava zero.** Campo em branco significa "usa a tabela de frete da transportadora", mas virava uma cobrança de zero — diferença que só aparecia na cotação. Em branco voltou a significar "herda o padrão".
+- **Depois de abrir uma transportadora não havia como voltar à comparação de frete.** A tela ficava presa no cadastro; agora existe o caminho de volta.
+- **Alterar uma conversão e trocar a unidade criava outra conversão** em vez de alterar a que estava na tela, deixando a antiga para trás. As unidades identificam a conversão e passam a ficar travadas durante a alteração.
 - **O botão "Autorizar" nunca aparecia numa nota nova.** A listagem de NF-e não reconhecia a situação da nota, então a nota em rascunho ficava sem ação nenhuma — não dava para emitir pela tela. E uma nota apenas *aguardando autorização* já aparecia como autorizada, oferecendo cancelamento e carta de correção. A situação agora é exibida em português e cada ação aparece na hora certa.
 - **A nota fiscal saía sem o endereço do destinatário** — logradouro, bairro, município e CEP são obrigatórios, e a Receita recusaria a emissão. Nenhuma nota tinha onde guardar esses dados.
 - **A nota declarava "dinheiro à vista" mesmo numa venda a prazo** e não levava as duplicatas. Agora cada parcela vai com a sua forma de pagamento e o seu vencimento.

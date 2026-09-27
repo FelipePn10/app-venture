@@ -167,8 +167,23 @@ export function Vsup0110Page(): JSX.Element {
                   )}
                 </div>
                 <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c3"><label className="erp-label erp-req">De (UM)</label><select className="erp-input" aria-label="De (UM)" value={form.from_uom} onChange={(e) => setF("from_uom", e.target.value)}><UnitOptions /></select></div>
-                  <div className="erp-field erp-c3"><label className="erp-label erp-req">Para (UM)</label><select className="erp-input" aria-label="Para (UM)" value={form.to_uom} onChange={(e) => setF("to_uom", e.target.value)}><UnitOptions /></select></div>
+                  {/*
+                    O par de unidades É a identidade da conversão: a gravação
+                    localiza o registro por item + De + Para. Trocar uma unidade
+                    durante uma alteração criava uma conversão NOVA e deixava a
+                    antiga para trás, em vez de alterar a que está na tela.
+                    Para trocar a unidade, cancele e cadastre a conversão certa.
+                  */}
+                  <div className="erp-field erp-c3"><label className="erp-label erp-req">De (UM)</label><select className="erp-input" aria-label="De (UM)" value={form.from_uom} disabled={editando !== null} onChange={(e) => setF("from_uom", e.target.value)}><UnitOptions /></select></div>
+                  <div className="erp-field erp-c3"><label className="erp-label erp-req">Para (UM)</label><select className="erp-input" aria-label="Para (UM)" value={form.to_uom} disabled={editando !== null} onChange={(e) => setF("to_uom", e.target.value)}><UnitOptions /></select></div>
+                  {editando && (
+                    <div className="erp-field erp-c6">
+                      <span className="erp-hint">
+                        As unidades identificam a conversão e não mudam na alteração — trocá-las criaria outra
+                        conversão e deixaria esta como está. Cancele e cadastre uma nova para outro par.
+                      </span>
+                    </div>
+                  )}
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">Fator</label><input className="erp-input num" type="number" step="0.0001" value={form.factor} onChange={(e) => setF("factor", Number(e.target.value))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Arredondamento (%)</label><input className="erp-input num" type="number" step="0.01" min="0" value={form.rounding_percent ?? 0} onChange={(e) => setF("rounding_percent", Number(e.target.value))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Tolerância</label><input className="erp-input num" type="number" step="0.0001" min="0" value={form.tolerance_value ?? 0} onChange={(e) => setF("tolerance_value", Number(e.target.value))} /></div>

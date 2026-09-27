@@ -90,6 +90,8 @@ export function Vsup0140Page(): JSX.Element {
   }); };
 
   const nova = () => { setCriando(true); setSelecionada(null); setForm({ ...VAZIO }); setOcorrencias([]); setTab("dados"); setFeedback(null); };
+  /** Fecha a transportadora aberta e devolve a tela à comparação de frete. */
+  const fecharDetalhe = () => { setCriando(false); setSelecionada(null); setForm({ ...VAZIO }); setOcorrencias([]); setTab("dados"); setFeedback(null); };
 
   const setF = <K extends keyof ShippingCarrierDTO>(k: K, v: ShippingCarrierDTO[K]) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -122,8 +124,15 @@ export function Vsup0140Page(): JSX.Element {
   const delVeiculo = (idx: number) => setF("vehicles", (form.vehicles ?? []).filter((_, i) => i !== idx));
 
   const addRegiao = () => setF("service_areas", [...(form.service_areas ?? []), { ...REGIAO_VAZIA }]);
-  const setRegiao = (idx: number, campo: keyof CarrierServiceAreaDTO, valor: string | number | boolean) =>
+  const setRegiao = (idx: number, campo: keyof CarrierServiceAreaDTO, valor: string | number | boolean | undefined) =>
     setF("service_areas", (form.service_areas ?? []).map((a, i) => (i === idx ? { ...a, [campo]: valor } : a)));
+  /**
+   * Campo numérico da região em branco significa "usa a tabela de frete da
+   * transportadora", não zero. `Number("")` devolve 0, então limpar o campo
+   * gravava um zero explícito e a região passava a cobrar nada em vez de herdar
+   * o padrão — diferença que só aparecia na cotação.
+   */
+  const numeroOuHerda = (v: string): number | undefined => (v.trim() === "" ? undefined : Number(v));
   const delRegiao = (idx: number) => setF("service_areas", (form.service_areas ?? []).filter((_, i) => i !== idx));
 
   const lancarOcorrencia = () => { const id = selecionada?.id; if (!id) return; void run(async () => {
@@ -224,6 +233,14 @@ export function Vsup0140Page(): JSX.Element {
             {criando || selecionada ? (
               <>
                 <div className="erp-tabs">
+                  {/*
+                    A comparação de frete só aparece quando nenhuma transportadora
+                    está aberta, e nada limpava a seleção: quem abrisse uma
+                    transportadora ficava sem caminho de volta para a cotação.
+                  */}
+                  <button className="erp-tab" onClick={fecharDetalhe} title="Voltar para a comparação de frete">
+                    ← Comparar frete
+                  </button>
                   <button className={`erp-tab${tab === "dados" ? " active" : ""}`} onClick={() => setTab("dados")}>
                     {criando ? "Nova transportadora" : "Dados e tabela de frete"}
                   </button>
@@ -438,10 +455,10 @@ export function Vsup0140Page(): JSX.Element {
                                     <td><input className="erp-cell-input" value={a.city ?? ""} onChange={(e) => setRegiao(idx, "city", e.target.value)} /></td>
                                     <td><input className="erp-cell-input num" value={a.postal_code_from ?? ""} placeholder="01000000" onChange={(e) => setRegiao(idx, "postal_code_from", e.target.value)} /></td>
                                     <td><input className="erp-cell-input num" value={a.postal_code_to ?? ""} placeholder="01999999" onChange={(e) => setRegiao(idx, "postal_code_to", e.target.value)} /></td>
-                                    <td><input className="erp-cell-input num" type="number" min="0" value={a.lead_days ?? 0} onChange={(e) => setRegiao(idx, "lead_days", Number(e.target.value))} /></td>
-                                    <td><input className="erp-cell-input num" type="number" step="0.01" min="0" value={a.min_value ?? 0} onChange={(e) => setRegiao(idx, "min_value", Number(e.target.value))} /></td>
-                                    <td><input className="erp-cell-input num" type="number" step="0.000001" min="0" value={a.kg_rate ?? 0} onChange={(e) => setRegiao(idx, "kg_rate", Number(e.target.value))} /></td>
-                                    <td><input className="erp-cell-input num" type="number" step="0.01" min="0" max="100" value={a.pct_value ?? 0} onChange={(e) => setRegiao(idx, "pct_value", Number(e.target.value))} /></td>
+                                    <td><input className="erp-cell-input num" type="number" min="0" value={a.lead_days ?? ""} placeholder="—" onChange={(e) => setRegiao(idx, "lead_days", numeroOuHerda(e.target.value))} /></td>
+                                    <td><input className="erp-cell-input num" type="number" step="0.01" min="0" value={a.min_value ?? ""} placeholder="padrão" onChange={(e) => setRegiao(idx, "min_value", numeroOuHerda(e.target.value))} /></td>
+                                    <td><input className="erp-cell-input num" type="number" step="0.000001" min="0" value={a.kg_rate ?? ""} placeholder="padrão" onChange={(e) => setRegiao(idx, "kg_rate", numeroOuHerda(e.target.value))} /></td>
+                                    <td><input className="erp-cell-input num" type="number" step="0.01" min="0" max="100" value={a.pct_value ?? ""} placeholder="padrão" onChange={(e) => setRegiao(idx, "pct_value", numeroOuHerda(e.target.value))} /></td>
                                     <td><input type="checkbox" checked={a.is_active !== false} onChange={(e) => setRegiao(idx, "is_active", e.target.checked)} /></td>
                                     <td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => delRegiao(idx)} disabled={busy}>Remover</button></td>
                                   </tr>

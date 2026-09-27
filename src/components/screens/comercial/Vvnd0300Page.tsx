@@ -154,6 +154,13 @@ export function Vvnd0300Page(): JSX.Element {
   const [planoErro, setPlanoErro] = useState("");
   const [rateio, setRateio] = useState<RateioComissaoDTO | null>(null);
   const [rateioLinhas, setRateioLinhas] = useState<RateioComissaoLinhaDTO[]>([]);
+  /**
+   * Erro na LEITURA do rateio. "Não tem rateio" e "não consegui ler o rateio"
+   * pareciam a mesma coisa: a falha virava lista vazia e editável, e gravar por
+   * cima apagava o rateio que estava lá. Enquanto isto tem valor, a aba é só
+   * leitura.
+   */
+  const [rateioErro, setRateioErro] = useState("");
   const [creating, setCreating] = useState(true);
   const [pending, setPending] = useState<PendingAction>(null);
   const [reasonCode, setReasonCode] = useState(0);
@@ -246,11 +253,18 @@ export function Vvnd0300Page(): JSX.Element {
     const [ev, at, rt] = await Promise.all([
       listSalesQuotationEvents(code).catch(() => [] as QuotationEventDTO[]),
       listSalesQuotationAttachments(code).catch(() => [] as QuotationAttachmentDTO[]),
-      getQuotationCommissionSplit(code).catch(() => null),
+      getQuotationCommissionSplit(code).then((r) => ({ ok: true as const, r })).catch((e) => ({ ok: false as const, e })),
     ]);
     setEvents(ev); setAttachments(at);
-    setRateio(rt);
-    setRateioLinhas(rt?.representatives.map((l) => ({ ...l })) ?? []);
+    if (rt.ok) {
+      setRateio(rt.r);
+      setRateioLinhas(rt.r?.representatives.map((l) => ({ ...l })) ?? []);
+      setRateioErro("");
+    } else {
+      setRateio(null);
+      setRateioLinhas([]);
+      setRateioErro(errMessage(rt.e));
+    }
     // O plano de pagamento é calculado: recusa quando a condição não fecha 100%
     // ou o orçamento não tem condição, e isso é informação para a tela, não erro.
     try {
@@ -1088,6 +1102,15 @@ export function Vvnd0300Page(): JSX.Element {
                       {rateio && <span className="erp-badge info">{somaRateioPct.toLocaleString("pt-BR")}% · R$ {money(rateio.total_valor)}</span>}
                     </div>
                     <div className="erp-fieldset-body">
+                      {rateioErro && (
+                        <div className="erp-field erp-c12">
+                          <div className="erp-feedback error">
+                            Não foi possível ler o rateio de comissão deste orçamento: {rateioErro}. A edição está
+                            bloqueada para não gravar por cima do que já existe — recarregue o orçamento para tentar
+                            de novo.
+                          </div>
+                        </div>
+                      )}
                       <div className="erp-field erp-c12">
                         <small className="erp-hint">
                           Mais de um representante pode receber comissão no mesmo documento — o da região e o
@@ -1121,7 +1144,9 @@ export function Vvnd0300Page(): JSX.Element {
                             </thead>
                             <tbody>
                               {rateioLinhas.length === 0 && (
-                                <tr><td colSpan={7} className="erp-grid-empty">Nenhum representante no rateio{locked ? "" : " — use \u201c+ Representante\u201d para incluir"}.</td></tr>
+                                <tr><td colSpan={7} className="erp-grid-empty">{rateioErro
+                                  ? "O rateio não pôde ser lido — o conteúdo real não está sendo mostrado."
+                                  : `Nenhum representante no rateio${locked ? "" : " — use \u201c+ Representante\u201d para incluir"}.`}</td></tr>
                               )}
                               {rateioLinhas.map((l, idx) => (
                                 <tr key={l.id ?? `novo-${idx}`}>
@@ -1168,7 +1193,7 @@ export function Vvnd0300Page(): JSX.Element {
                           </table>
                         </div>
                       </div>
-                      {!locked && (
+                      {!locked && !rateioErro && (
                         <>
                           <div className="erp-field erp-c3">
                             <button className="erp-btn" onClick={addRepresentante}
