@@ -46,6 +46,8 @@
     "sim:login": "node scripts/ui-sim/login-manter-conectado.mjs",
     "sim:real": "node scripts/ui-sim/ponta-a-ponta-real.mjs",
     "sim:rotina": "node scripts/simulacao-rotina-empresa.mjs",
+    "sim:previa-nfe": "node scripts/ui-sim/previa-nfe.mjs",
+    "validate:comercial-fiscal": "node scripts/validacao-orcamento-pedido-nfe.mjs",
     "test:engineering": "node scripts/validate-engineering.mjs",
     "test:rotulos": "node scripts/validate-routine-labels.mjs",
     "test:suprimentos": "node scripts/validate-suprimentos.mjs",

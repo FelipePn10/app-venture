@@ -1,6 +1,6 @@
 ================================================================================
 CADASTROS QUE PRECISAM SER COMPLETADOS ANTES DE OPERAR O SISTEMA
-Tecnofer · levantado em 26/09/2026
+Tecnofer · levantado em 26/09/2026 · revisado em 27/09/2026
 ================================================================================
 
 SOBRE ESTE DOCUMENTO
@@ -21,60 +21,67 @@ foi alterado — as decisões são todas do time.
 --------------------------------------------------------------------------------
 RESUMO: FAÇA NESTA ORDEM
 --------------------------------------------------------------------------------
-  1. Código do município na Configuração Fiscal ............ 1 minuto
-  2. Classificação fiscal (NCM) dos 29 itens ............... com a contabilidade
-  3. Condição de pagamento, representante e preços ......... libera vender
-  4. Conta bancária e plano de contas ...................... libera o financeiro
-  5. Roteiro de fabricação dos itens que faltam ............ libera produzir
-  6. Decisões do time (comprado x fabricado, duplicados) ... quando puderem
+OBRIGATÓRIO — sem isto o sistema recusa concluir a operação
+  Classificações fiscais e o NCM dos itens ....... seção 1   com a contabilidade
+  Tabela de venda: vigência e preço por item ..... seção 2   libera orçar
+  Condição de pagamento comercial com parcelas ... seção 3.1 libera vender a prazo
+  Endereço completo dos clientes ................. seção 3.2 libera faturar
+  Conta bancária ................................. seção 4.1 libera receber
+  Roteiro de fabricação dos itens que faltam ..... seção 5   libera produzir
 
-Os itens 1 a 5 são obrigatórios: sem eles o sistema recusa concluir a operação.
-O item 6 é organização do cadastro — o sistema funciona, mas fica confuso.
+RECOMENDADO — o sistema funciona, mas algo fica incompleto
+  Cliente com condição e tabela padrão ........... seção 3.3 poupa digitação
+  Representantes ................................. seção 3.4 só se pagam comissão
+  Plano de contas e parâmetros de margem ......... seção 4.2 e 4.3
+  Portadores ..................................... seção 4.4
+  Código do município na Configuração Fiscal ..... seção 4.5 CT-e, NFS-e e SPED
+  Custo/hora de 3 centros de trabalho ............ seção 5.4 custo do produto
+  Decisões do time (comprado × fabricado etc.) ... seção 6   organização
+
+ANTES DE EMITIR A PRIMEIRA NOTA, use a PRÉVIA DA NF-e (ver a seção 8 deste
+documento): ela mostra a nota inteira e lista o que ainda falta, sem transmitir
+nada para a Receita.
 
 ================================================================================
-1. CÓDIGO DO MUNICÍPIO ESTÁ ZERADO NA CONFIGURAÇÃO FISCAL
+1. FALTA A CLASSIFICAÇÃO FISCAL (NCM) — E ELA PRECISA SER CRIADA ANTES
 ================================================================================
+Este é o item mais importante do documento, e ele tem DUAS etapas. Muita gente
+tenta fazer só a segunda e não encontra nada para escolher.
+
 O QUE ESTÁ NO SISTEMA
-Na Configuração Fiscal, o município aparece como "Mandaguari" e o estado como
-"PR", mas o campo do CÓDIGO do município está preenchido com zeros (0000000).
+  - O cadastro de CLASSIFICAÇÕES FISCAIS está VAZIO: nenhuma classificação
+    cadastrada.
+  - Por consequência, nenhum dos 29 itens tem classificação fiscal de venda.
+
+(Existe, sim, uma tabela de alíquotas por NCM já carregada com 95 NCMs — ela
+serve para o cálculo do imposto. Mas é outra coisa: é a tabela de alíquotas, não
+o cadastro de classificação que o item aponta. Por isso, ao abrir a lupa do
+campo no item, hoje não aparece nenhuma opção.)
 
 POR QUE ISSO TRAVA
-Toda nota fiscal eletrônica leva o código do município do emitente — é um número
-oficial do IBGE, obrigatório. Com zeros, a Receita rejeita a nota. Ou seja: a
-primeira tentativa de faturar vai falhar.
-
-COMO RESOLVER
-Tela: VFIS0100 — Configuração Fiscal
-1. Abra a tela e localize o endereço da empresa.
-2. No campo do código do município, informe: 4114302
-   (é o código oficial do IBGE para Mandaguari/PR).
-3. Salve.
-
-Esse número não é uma escolha da empresa: é o código oficial da cidade. Se
-preferirem, podemos aplicar por vocês — basta avisar.
-
-================================================================================
-2. FALTA A CLASSIFICAÇÃO FISCAL (NCM) EM TODOS OS 29 ITENS
-================================================================================
-O QUE ESTÁ NO SISTEMA
-Nenhum dos 29 itens tem classificação fiscal de venda preenchida.
-
-POR QUE ISSO TRAVA
-A nota fiscal exige o NCM de cada item vendido. Sem isso a nota não é emitida.
-O NCM também é o que define automaticamente IPI, ICMS, PIS e COFINS do item — com
+A nota fiscal exige o NCM de cada item vendido. Sem NCM a nota não é transmitida
+— a conferência prévia do sistema barra a emissão com a mensagem "item está sem
+NCM". O NCM também é o que define automaticamente IPI, ICMS, PIS e COFINS: com
 ele preenchido, o sistema já traz as alíquotas prontas para o orçamento e para a
 nota, e vocês param de conferir imposto a cada venda.
 
-COMO RESOLVER
+COMO RESOLVER — ETAPA 1: criar as classificações fiscais
+Tela: VFIS0350 — Classificações Fiscais
+1. Clique em nova classificação.
+2. Preencha a Descrição (obrigatória — ex.: "Chapa de aço carbono"), o NCM e,
+   quando houver substituição tributária, o CEST.
+3. Informe a vigência (inicial e final) e as alíquotas padrão: ICMS, IPI (com os
+   CST de entrada e de saída) e, se for o caso, o % de ST.
+4. Salve. Repita para cada grupo de produto — não é uma por item, é uma por
+   NCM/tipo de mercadoria.
+
+COMO RESOLVER — ETAPA 2: ligar a classificação a cada item
 Tela: VENT0200 — Cadastro de Itens, aba Contábil, campo
 "Classif. Fiscal Venda" (e "Classif. Fiscal Compra" para o que é comprado).
 1. Abra o item.
-2. Clique na lupa do campo e busque a classificação fiscal.
-3. Ao escolher, a tela mostra o que o item vai herdar (NCM, IPI, ICMS, PIS,
-   COFINS). Confira e salve.
-
-A tabela de classificações fiscais já está carregada no sistema (95 registros),
-então é só escolher.
+2. Clique na lupa do campo e escolha a classificação criada na etapa 1.
+3. A tela mostra o que o item vai herdar (NCM, IPI, ICMS, PIS, COFINS). Confira
+   e salve.
 
 IMPORTANTE: quem define o NCM correto é a contabilidade de vocês. Como referência
 para a conversa, os itens se agrupam assim:
@@ -84,17 +91,40 @@ para a conversa, os itens se agrupam assim:
 Peças que são parte de reboque/semirreboque normalmente têm NCM diferente de
 peças de aço em geral — vale confirmar com a contabilidade, porque muda imposto.
 
-Preencha também o CEST nos itens que tiverem substituição tributária (ICMS-ST).
+Preencha o CEST na classificação dos produtos que tiverem substituição
+tributária (ICMS-ST) — sem CEST, a nota desses itens tende a ser recusada.
 
-Os itens que vocês decidirem inativar (ver 6.2) não precisam de NCM.
+Os itens que vocês decidirem inativar (ver a seção de decisões) não precisam de
+classificação fiscal.
 
 ================================================================================
-3. NÃO É POSSÍVEL FAZER UM ORÇAMENTO OU PEDIDO AINDA
+2. TABELA DE VENDA: VIGÊNCIA E PREÇO POR ITEM
 ================================================================================
-São cinco cadastros. Os três primeiros são obrigatórios; os dois últimos são
-recomendados (poupam digitação e evitam erro na nota).
+O QUE ESTÁ NO SISTEMA
+Existe uma tabela chamada "a prazo". Confira a vigência dela e observe que não
+há preço cadastrado para nenhum item.
 
-3.1 CONDIÇÃO DE PAGAMENTO PARA VENDA
+POR QUE ISSO TRAVA
+É a PRIMEIRA trava que vocês vão encontrar. No nosso teste, ao tentar incluir o
+produto no orçamento o sistema recusou de duas formas:
+  - sem tabela na capa do orçamento: "o orçamento não possui tabela de preço";
+  - com tabela mas sem preço: "não existe preço válido para o item na tabela".
+
+COMO RESOLVER
+Tela: VCST0202 — Tabelas de Venda e Preços por Item
+(ou VCLI0520, aba Tabela de Vendas, para os dados da tabela)
+1. Confira/informe a vigência da tabela: data de início e data de fim.
+   (Tabela vencida ou sem vigência é recusada no orçamento.)
+2. Cadastre o preço de cada item que a empresa vende — no mínimo os produtos
+   acabados (RN-01001, RN-01001-PRIME, RN-01002 e as buchas que vocês vendem).
+3. Deixe a situação do preço como ATIVO e sem bloqueio.
+4. No orçamento, lembre de informar a tabela na capa: o item só aceita preço de
+   uma tabela que esteja na capa do documento.
+
+================================================================================
+3. CONDIÇÃO DE PAGAMENTO, ENDEREÇO DO CLIENTE E REPRESENTANTE
+================================================================================
+3.1 CONDIÇÃO DE PAGAMENTO PARA VENDA (obrigatório para vender a prazo)
 O QUE ESTÁ NO SISTEMA
 Vocês cadastraram 8 condições (28/56/84/98, 21/42/63, 30/60/90, 45, 30, 7, 14 e
 28/56/84), mas elas estão no cadastro do FINANCEIRO, que é o usado por contas a
@@ -123,50 +153,52 @@ Tela: VCLI0520 — Apoio de Cliente (Comercial), aba Condição de Pagamento
 DICA: agora dá para cadastrar condições como "30% de entrada, 20% na entrega e o
 restante em 28/56 dias" — é só usar o percentual e o evento em cada parcela.
 
-3.2 REPRESENTANTES
+IMPORTANTE: o que você cadastrar aqui é o que vira as PARCELAS DA NOTA FISCAL e
+os TÍTULOS do contas a receber no faturamento. Uma venda em 28/56/84 com a
+condição cadastrada gera três títulos nas datas certas; sem condição, a nota sai
+à vista e gera um título só.
+
+3.2 ENDEREÇO COMPLETO DOS CLIENTES (obrigatório para faturar)
+O QUE ESTÁ NO SISTEMA
+Os clientes têm endereço de COBRANÇA; nenhum tem endereço de ENTREGA.
+
+POR QUE ISSO TRAVA
+A nota fiscal eletrônica exige o endereço completo do destinatário: logradouro,
+número, bairro, município, UF e CEP. O sistema busca esse endereço no cadastro do
+cliente — usa o de ENTREGA quando existe e, na falta dele, o de COBRANÇA. Se
+faltar qualquer um desses campos, a emissão é barrada (a conferência prévia
+mostra exatamente qual campo está em branco).
+
+COMO RESOLVER
+Tela: VCLI0500 — Cadastro de Cliente, aba de endereços
+1. Confira se o endereço de cobrança tem logradouro, número, bairro, município,
+   UF e CEP preenchidos. Campo em branco impede a nota.
+2. Inclua o endereço do tipo "Entrega" para os clientes que recebem a mercadoria
+   em local diferente do de cobrança — é para lá que a nota e o romaneio vão.
+3. Cadastre um contato com e-mail: é por ele que o cliente recebe a nota
+   automaticamente.
+
+3.3 LIGAR CLIENTE À CONDIÇÃO E À TABELA (recomendado)
+Os 7 clientes estão sem condição de pagamento e sem tabela de preço padrão. Com
+esses dois campos preenchidos, o pedido já nasce com a condição e o preço certos
+do cliente, em vez de alguém digitar a cada venda. E, quando a nota é digitada
+solta (sem pedido), é dessa condição do cliente que saem as parcelas.
+COMO RESOLVER: tela VCLI0500 — Cadastro de Cliente, nas condições comerciais.
+
+3.4 REPRESENTANTES (recomendado — só se pagam comissão)
 O QUE ESTÁ NO SISTEMA: nenhum representante cadastrado.
-POR QUE ISSO TRAVA: o pedido não tem a quem atribuir a venda, e não há como
-calcular comissão.
+O QUE ACONTECE HOJE: a venda funciona sem representante — conferimos, o orçamento
+vira pedido normalmente. O que não existe sem ele é o cálculo de comissão.
 COMO RESOLVER: tela VVND0400 — Representantes. Cadastre nome, documento
 (CNPJ/CPF) e o percentual de comissão. No pedido é possível dividir a comissão
 entre dois representantes (o da região e o parceiro que trouxe o cliente), cada
-um com o seu percentual.
-
-3.3 TABELA DE PREÇO DE VENDA (VIGÊNCIA E PREÇOS)
-O QUE ESTÁ NO SISTEMA
-Existe uma tabela chamada "a prazo", mas ela está sem período de vigência e sem
-nenhum preço cadastrado.
-
-POR QUE ISSO TRAVA
-Ao tentar incluir o produto no orçamento, o sistema recusa com a mensagem "não
-existe preço válido para o item na tabela". Foi exatamente o que aconteceu no
-nosso teste.
-
-COMO RESOLVER
-Tela: VCST0202 — Tabelas de Venda e Preços por Item
-(ou VCLI0520, aba Tabela de Vendas, para os dados da tabela)
-1. Informe a vigência da tabela: data de início e data de fim.
-   (Tabela vencida ou sem vigência é recusada no orçamento.)
-2. Cadastre o preço de cada item que a empresa vende — no mínimo os produtos
-   acabados (RN-01001, RN-01001-PRIME, RN-01002 e as buchas que vocês vendem).
-3. Deixe a situação do preço como ativa e sem bloqueio.
-
-3.4 LIGAR CLIENTE À CONDIÇÃO E À TABELA (recomendado, não obrigatório)
-Os 7 clientes estão sem condição de pagamento e sem tabela de preço padrão. Com
-esses dois campos preenchidos, o pedido já nasce com a condição e o preço certos
-do cliente, em vez de alguém digitar a cada venda.
-COMO RESOLVER: tela VCLI0500 — Cadastro de Cliente, nas condições comerciais.
-
-3.5 ENDEREÇO DE ENTREGA DOS CLIENTES (recomendado)
-Todos os clientes têm apenas endereço de COBRANÇA. Quando a mercadoria vai para
-um endereço diferente do de cobrança, a nota e o romaneio precisam do endereço de
-entrega cadastrado.
-COMO RESOLVER: tela VCLI0500, aba de endereços, incluir o tipo "Entrega".
+um com o seu percentual — e esse rateio acompanha o orçamento quando ele vira
+pedido.
 
 ================================================================================
-4. O FINANCEIRO NÃO CONSEGUE RECEBER NEM FECHAR CONTABILIDADE
+4. FINANCEIRO E CONTABILIDADE
 ================================================================================
-4.1 NENHUMA CONTA BANCÁRIA CADASTRADA
+4.1 NENHUMA CONTA BANCÁRIA CADASTRADA (obrigatório para receber)
 POR QUE ISSO TRAVA
 Para dar baixa em um título (registrar que o cliente pagou) o sistema pede em
 qual conta o dinheiro entrou. Sem nenhuma conta cadastrada, nenhum recebimento
@@ -175,7 +207,7 @@ COMO RESOLVER: tela VFIN0100 — Contas Bancárias. Cadastre banco, agência,
 conta, descrição e o saldo inicial (o saldo do dia em que começarem a usar).
 Se usarem PIX, cadastre também a chave.
 
-4.2 PLANO DE CONTAS COM UMA ÚNICA CONTA
+4.2 PLANO DE CONTAS COM UMA ÚNICA CONTA (recomendado)
 O QUE ESTÁ NO SISTEMA: existe apenas a conta "1 — DESPESAS".
 POR QUE ISSO TRAVA
 Sem plano de contas não há como classificar receita, custo, ativo e passivo — o
@@ -186,7 +218,7 @@ assim os relatórios do sistema conversam com o que o contador já conhece.
 Os 29 centros de custo (CC-ADM, CC-ADM-FIN, CC-AUX…) já estão cadastrados e
 bem organizados: falta só o plano de contas.
 
-4.3 PARÂMETROS DE MARGEM DO MÊS
+4.3 PARÂMETROS DE MARGEM DO MÊS (recomendado)
 POR QUE ISSO TRAVA
 A tela que mostra quanto sobra de cada venda (margem de contribuição) depende dos
 parâmetros do mês — encargos, juros e prazo médio de caixa. Sem eles a simulação
@@ -200,6 +232,32 @@ dias de recebimento, limite. A condição de pagamento e o cliente podem apontar
 para ele. Se vocês trabalham com boleto/carteira definida, vale cadastrar.
 COMO RESOLVER: tela VCLI0510 — Apoio de Cliente (Básico), cadastro de
 portadores.
+
+4.5 CÓDIGO DO MUNICÍPIO ESTÁ ZERADO NA CONFIGURAÇÃO FISCAL (recomendado)
+O QUE ESTÁ NO SISTEMA
+Na Configuração Fiscal, o município aparece como "Mandaguari" e o estado como
+"PR", mas o campo do CÓDIGO do município está preenchido com zeros (0000000).
+
+O QUE ISSO AFETA — e o que NÃO afeta
+Conferimos exatamente onde esse número é usado, para vocês não perderem tempo com
+o que não é problema:
+  - A NF-e de produto SAI normalmente. O município dela é resolvido pelo nome
+    mais a UF, então o zero não impede faturar.
+  - O que sai com código inválido é o CT-e (frete), a NFS-e (nota de serviço) e
+    os arquivos do SPED — a EFD ICMS/IPI e a ECD contábil. Esses arquivos levam o
+    código do IBGE direto no registro de abertura, e o validador (ou o contador)
+    recusa.
+
+COMO RESOLVER
+Tela: VFIS0100 — Configuração Fiscal
+1. Abra a tela e localize o endereço da empresa.
+2. No campo do código do município, informe: 4114302
+   (é o código oficial do IBGE para Mandaguari/PR).
+3. Salve.
+
+Esse número não é uma escolha da empresa: é o código oficial da cidade. Leva um
+minuto e evita retrabalho no fechamento do mês. Se preferirem, podemos aplicar
+por vocês — basta avisar.
 
 ================================================================================
 5. FALTAM ROTEIROS DE FABRICAÇÃO (E TEMPO NO ROTEIRO QUE EXISTE)
@@ -383,25 +441,64 @@ VPRO0400 para os pontos de inspeção).
   o tubo em milímetros na estrutura e comprar em barras.
 - CONFIGURAÇÃO FISCAL: completa fora do código do município — CNPJ, inscrição
   estadual, regime, alíquota de ICMS interno (19,5%), endereço, logo e
-  vencimentos de imposto.
+  vencimentos de imposto. O acesso ao provedor da NF-e também já está
+  configurado.
+- TABELA DE ALÍQUOTAS POR NCM: 95 NCMs com IPI, PIS e COFINS já carregados. É o
+  que faz o cálculo do imposto depois que a classificação fiscal do item apontar
+  para o NCM (item 1).
 - FUNCIONÁRIOS (28) e CENTROS DE CUSTO (29): cadastrados e organizados.
 
 ================================================================================
-8. COMO CONFERIR QUE ESTÁ TUDO PRONTO
+8. A PRÉVIA DA NF-e — USE ANTES DA PRIMEIRA EMISSÃO
 ================================================================================
-Depois de completar os itens 1 a 5, faça este teste no próprio sistema:
+Emitir uma nota é irreversível: nota autorizada só sai do ar por cancelamento,
+que tem prazo, exige justificativa e fica registrado. Para o time poder conferir
+tudo ANTES, a tela de NF-e tem a prévia.
+
+COMO USAR
+Tela: VFIS0200 — NF-e de Saída
+1. Na listagem, na linha da nota em rascunho, clique em "Prévia".
+2. A janela abre com a nota inteira, exatamente como ela será transmitida:
+     - CONFERÊNCIA no topo: a lista do que está pendente, separada em
+       "Impede" (a nota não pode ser transmitida) e "Atenção" (transmite, mas
+       tem consequência). Cada linha diz o que fazer e em qual tela;
+     - EMITENTE e DESTINATÁRIO com endereço completo — campo em branco aparece
+       destacado em vermelho;
+     - ITENS com NCM, CFOP, CST e o imposto de cada linha;
+     - TOTAIS, com a conta escrita em palavras (produtos + IPI + ICMS-ST + frete
+       + seguro − desconto);
+     - PAGAMENTO: as parcelas com valor, vencimento e a forma declarada na nota.
+       São essas que viram os títulos do contas a receber;
+     - o documento técnico que será enviado, se quiserem ver.
+3. Enquanto houver pendência do tipo "Impede", o botão de emitir fica
+   desabilitado. Resolvido o cadastro, abra a prévia de novo e emita por ali.
+
+A prévia não transmite nada, não muda o status da nota e pode ser aberta quantas
+vezes quiserem.
+
+ATENÇÃO AO AMBIENTE: o canto da janela mostra se o sistema está em PRODUÇÃO
+(nota vale de verdade) ou HOMOLOGAÇÃO (nota de teste, sem valor fiscal).
+
+================================================================================
+9. COMO CONFERIR QUE ESTÁ TUDO PRONTO
+================================================================================
+Depois de completar os itens obrigatórios (1 a 6 do resumo), faça este teste no
+próprio sistema:
 
 1. Monte um orçamento para um cliente com um produto acabado, veja o valor do
    produto, do IPI e do produto + IPI, e confira a aba PAGAMENTO (deve mostrar as
    parcelas com valor e vencimento).
-2. Transforme o orçamento em pedido e confira a aba COMISSÃO.
+2. Transforme o orçamento em pedido e confira a aba COMISSÃO. Confira também que
+   o total da capa do pedido é igual à soma dos itens.
 3. Lance a necessidade do produto, rode o planejamento (MRP), firme a sugestão e
    libere a ordem — a ordem de fabricação deve nascer COM as etapas do roteiro.
 4. Veja a carga das máquinas no cálculo de capacidade (CRP) e o sequenciamento.
 5. Dê entrada da matéria-prima, aponte a produção com o operador, consuma o
    material e conclua a ordem — o produto acabado deve entrar no estoque.
-6. Fature, gere os títulos e dê baixa em um deles — o valor deve aparecer no
-   fluxo de caixa e no saldo da conta bancária.
+6. Gere a nota a partir do pedido, ABRA A PRÉVIA e confira. Só então emita.
+7. Confira os títulos gerados: devem ser um por parcela da condição de pagamento,
+   com o cliente e as datas certas. Dê baixa em um deles — o valor deve aparecer
+   no fluxo de caixa e no saldo da conta bancária.
 
 Se qualquer passo recusar, a mensagem da tela diz o que falta cadastrar. Estamos
 à disposição para acompanhar essa primeira rodada com vocês.

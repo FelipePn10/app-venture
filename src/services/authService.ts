@@ -234,8 +234,21 @@ export async function renewSession(): Promise<SessionRenewResponse | null> {
   }
 }
 
+/**
+ * Busca o perfil do usuário num endpoint de identidade, quando existe um.
+ *
+ * O backend não expõe `/users/me`: o nome, o e-mail e o perfil já vêm do login e
+ * dos claims do JWT. Chamar um endereço inexistente a cada abertura do app
+ * rendia dois 404 (o efeito roda duas vezes em StrictMode) numa rota que tem
+ * limite de taxa — gastava a cota de autenticação e enchia o console de erro
+ * que não era erro, escondendo os de verdade.
+ *
+ * Por isso a chamada só acontece quando `VITE_AUTH_ME_PATH` está configurado.
+ * Sem ele, a identidade que o login resolveu continua valendo.
+ */
 export async function fetchSessionProfile(): Promise<SessionProfileResponse | null> {
-  const mePath = AUTH_ME_PATH.trim() || '/users/me';
+  const mePath = AUTH_ME_PATH.trim();
+  if (!mePath) return null;
 
   try {
     const response = await httpClient.get<unknown>(mePath);
