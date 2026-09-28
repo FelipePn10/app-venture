@@ -48,7 +48,14 @@ httpClient.interceptors.response.use(
     }
 
     if (error?.response?.status === 401) {
-      useAuthStore.getState().clearAuthData();
+      // A recusa de login ou de renovação não invalida o token atual. Uma
+      // resposta atrasada de uma sessão anterior também não pode derrubar a nova.
+      const path = String(error.config?.url ?? '');
+      const sentToken = String(error.config?.headers?.Authorization ?? '').replace(/^Bearer\s+/i, '');
+      if (!/\/users\/(login|session\/renew)(?:\?|$)/.test(path) &&
+          sentToken && useAuthStore.getState().token === sentToken) {
+        useAuthStore.getState().clearAuthData();
+      }
     }
 
     return Promise.reject(error);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchSessionProfile, renewSession } from '@/services/authService';
 import { useAuthStore } from '@/store/authStore';
+import { listenForWindowSessions, receiveWindowSession } from '@/services/windowSession';
 
 /**
  * A partir de quanto tempo restante a sessão é renovada na abertura do app.
@@ -34,10 +35,33 @@ export function SessionBootstrap({ children }: { children: JSX.Element }): JSX.E
   );
 
   useEffect(() => {
+    let disposed = false;
+    let stop: (() => void) | undefined;
+    void listenForWindowSessions().then((unlisten) => {
+      if (disposed) unlisten();
+      else stop = unlisten;
+    });
+    return () => { disposed = true; stop?.(); };
+  }, []);
+
+  useEffect(() => {
     async function bootstrapSession(): Promise<void> {
       if (!isAuthenticated()) {
-        setIsReady(true);
-        return;
+        const session = await receiveWindowSession();
+        if (session?.token && session.userName) {
+          useAuthStore.getState().setAuthData({
+            token: session.token,
+            userName: session.userName,
+            refreshToken: session.refreshToken,
+            expiresAt: session.expiresAt,
+            rememberMe: session.rememberMe,
+            user: session.user,
+          });
+        }
+        if (!useAuthStore.getState().isAuthenticated()) {
+          setIsReady(true);
+          return;
+        }
       }
 
       try {
