@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## [v1.3.1] — 2026-09-28
+
+## Correções
+- Corrigimos a abertura das rotinas em novas janelas: quem entra sem marcar “manter conectado” continua autenticado enquanto usa o sistema, sem voltar inesperadamente à tela de login.
+
 ## [v1.3.0] — 2026-09-27
 
 ## Novidades
