@@ -553,3 +553,161 @@ export function loadEmployeesByRole(role: string): LookupLoader {
 
 /** Mecânicos — responsáveis por manutenção de recurso. */
 export const loadMaintenanceResponsibles = loadEmployeesByRole('MECANICO');
+
+// ─── Financeiro e fiscal: o que a pessoa não sabe de cabeça ──────────────────
+//
+// Conta bancária, plano de contas, centro de custo e número de nota eram campos
+// de digitar o ID interno do registro ("NF Saída (ID)", "Plano Contas (ID)").
+// Ninguém sabe o id do banco de dados de uma nota fiscal — e o campo aceitava
+// qualquer número, gravando vínculo com documento errado sem acusar nada.
+
+/**
+ * Contas bancárias da empresa. O rótulo leva banco, agência e conta porque é
+ * assim que a pessoa reconhece a conta; a descrição vem no complemento.
+ */
+export const loadBankAccounts = cached(async () => {
+  const { listContasBancarias } = await import('@/services/financialService');
+  return (await listContasBancarias()).map((c) => ({
+    code: c.id,
+    label: `${c.banco || '—'} · Ag ${c.agencia || '—'} · CC ${c.conta || '—'}${c.digito ? `-${c.digito}` : ''}`,
+    sub: c.descricao || c.titular || undefined,
+  })).filter((o) => o.code);
+});
+
+/**
+ * Plano de contas. O código contábil manda na ordenação — 3.1.02 tem de vir
+ * depois de 3.1.01, e ordenar por descrição espalharia as contas de um mesmo
+ * grupo pela lista.
+ */
+export const loadChartOfAccounts = cached(async () => {
+  const { listPlanoContas } = await import('@/services/financialService');
+  return (await listPlanoContas())
+    .map((p) => ({
+      code: p.id,
+      label: `${p.codigo} — ${p.descricao}`,
+      sub: p.tipo ? `${p.tipo}${p.natureza ? ` · ${p.natureza}` : ''}` : undefined,
+    }))
+    .filter((o) => o.code)
+    .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+});
+
+/** Centros de custo. */
+export const loadFinancialCostCenters = cached(async () => {
+  const { listCentrosCusto } = await import('@/services/financialService');
+  return (await listCentrosCusto())
+    .map((c) => ({ code: c.id, label: `${c.codigo} — ${c.descricao}`, sub: c.tipo || undefined }))
+    .filter((o) => o.code)
+    .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+});
+
+/**
+ * Notas fiscais de SAÍDA, identificadas pelo número e série — não pelo id
+ * interno. A escolha devolve o `id`, que é o que o vínculo exige, mas quem
+ * escolhe vê "NF 5911/1 · CLIENTE · R$ 412,60".
+ *
+ * Canceladas continuam na lista e marcadas como inativas: um título já vinculado
+ * a uma nota cancelada precisa ser encontrado para ser corrigido.
+ */
+export const loadFiscalExits = cached(async () => {
+  const { listExits } = await import('@/services/nfeService');
+  return (await listExits())
+    .map((e) => ({
+      code: e.id,
+      label: `NF ${e.numero_nf}${e.serie ? `/${e.serie}` : ''}`,
+      sub: [e.razao_social_destinatario, e.data_emissao?.slice(0, 10),
+        e.valor_total ? `R$ ${e.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '']
+        .filter(Boolean).join(' · ') || undefined,
+      inactive: /cancel/i.test(e.status || ''),
+    }))
+    .filter((o) => o.code)
+    .sort((a, b) => b.label.localeCompare(a.label, 'pt-BR', { numeric: true }));
+});
+
+/** Notas fiscais de ENTRADA, pelo número e pelo emitente. */
+export const loadFiscalEntries = cached(async () => {
+  const { listEntries } = await import('@/services/nfeService');
+  return (await listEntries())
+    .map((e) => ({
+      code: e.id,
+      label: `NF ${e.numero_nf}${e.serie ? `/${e.serie}` : ''}`,
+      sub: [e.razao_social_emitente, e.data_entrada?.slice(0, 10),
+        e.valor_total ? `R$ ${e.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '']
+        .filter(Boolean).join(' · ') || undefined,
+      inactive: /cancel/i.test(e.status || ''),
+    }))
+    .filter((o) => o.code)
+    .sort((a, b) => b.label.localeCompare(a.label, 'pt-BR', { numeric: true }));
+});
+
+/**
+ * NCMs já cadastrados na tabela tributária. Serve para reaproveitar um NCM que
+ * já tem alíquota configurada em vez de digitar de novo e criar duplicata com
+ * tributação divergente — que é como a mesma mercadoria acaba saindo com IPI
+ * diferente em duas notas.
+ */
+export const loadNcmTables = cached(async () => {
+  const { listNcmTaxes } = await import('@/services/taxTableService');
+  return (await listNcmTaxes())
+    .map((n) => ({
+      code: n.ncm,
+      label: n.ncm,
+      sub: n.description || `IPI ${(n.aliq_ipi * 100).toFixed(2)}%` || undefined,
+    }))
+    .filter((o) => o.code)
+    .sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true }));
+});
+
+/** Regras do esquema de rateio de indiretos (VCUS0100). */
+export const loadOverheadRules = cached(async () => {
+  const { listOverheadRules } = await import('@/services/standardCostService');
+  return (await listOverheadRules())
+    .map((r) => ({
+      code: r.id,
+      label: `${r.code} — ${r.description}`,
+      sub: `${r.base} · ${r.method}`,
+      inactive: !r.is_active,
+    }))
+    .filter((o) => o.code);
+});
+
+/**
+ * CFOPs cadastrados.
+ *
+ * A chave do CFOP é o próprio CÓDIGO de quatro dígitos (5102, 5901, 6108) — não há
+ * id interno separado. Os campos da tela chamavam isso de "CFOP (ID)", o que fazia
+ * parecer um número do banco de dados; é o código fiscal, e a lupa busca por ele e
+ * pela descrição.
+ */
+export const loadCfops = cached(async () => {
+  const { listCfops } = await import('@/services/fiscalSupportService');
+  return (await listCfops()).map((c) => ({
+    code: c.code,
+    label: `${c.code} — ${c.description || 'sem descrição'}`,
+    sub: c.utilization || undefined,
+    inactive: c.is_active === false,
+  })).filter((o) => o.code);
+});
+
+/**
+ * Linhas da apuração de ICMS (registro E110 do SPED). Identificadas pelo CÓDIGO da
+ * linha, não por id interno — o campo da tela chamava isso de "Linha Apur. (ID)".
+ */
+export const loadIcmsApuracaoLines = cached(async () => {
+  const { listLinhasApuracaoIcms } = await import('@/services/fiscalSupportService');
+  return (await listLinhasApuracaoIcms()).map((l) => ({
+    code: l.code,
+    label: `${l.code} — ${l.description || 'sem descrição'}`,
+    sub: l.accepts_entries ? 'aceita lançamento' : 'somente totalizadora',
+    inactive: l.is_active === false,
+  })).filter((o) => o.code);
+});
+
+/** Códigos de ajuste da apuração de ICMS (registro E111 do SPED). */
+export const loadIcmsAdjustmentCodes = cached(async () => {
+  const { listAjustesApuracaoIcms } = await import('@/services/fiscalSupportService');
+  return (await listAjustesApuracaoIcms()).map((a) => ({
+    code: a.code,
+    label: `${a.code} — ${a.description || 'sem descrição'}`,
+    inactive: a.is_active === false,
+  })).filter((o) => o.code);
+});

@@ -113,3 +113,25 @@ export async function listIcmsInterestadual(): Promise<IcmsInterestadual[]> {
 export async function upsertIcmsInterestadual(dto: IcmsInterestadual): Promise<void> {
   await httpClient.post(`${BASE}/icms-interestadual`, dto);
 }
+
+/**
+ * As 27 unidades federativas. Domínio fechado: UF é campo de duas letras que a
+ * tela oferecia como texto livre, e "Sp", "sp" ou "SPO" gravavam uma alíquota que
+ * nenhuma nota encontrava depois — a consulta procura por "SP".
+ */
+export const UFS = [
+  'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT',
+  'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+] as const;
+export type UF = (typeof UFS)[number];
+
+/** Nome do estado, para a lista não ser só duas letras. */
+export const UF_NAMES: Record<UF, string> = {
+  AC: 'Acre', AL: 'Alagoas', AM: 'Amazonas', AP: 'Amapá', BA: 'Bahia',
+  CE: 'Ceará', DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás',
+  MA: 'Maranhão', MG: 'Minas Gerais', MS: 'Mato Grosso do Sul', MT: 'Mato Grosso',
+  PA: 'Pará', PB: 'Paraíba', PE: 'Pernambuco', PI: 'Piauí', PR: 'Paraná',
+  RJ: 'Rio de Janeiro', RN: 'Rio Grande do Norte', RO: 'Rondônia', RR: 'Roraima',
+  RS: 'Rio Grande do Sul', SC: 'Santa Catarina', SE: 'Sergipe',
+  SP: 'São Paulo', TO: 'Tocantins',
+};
