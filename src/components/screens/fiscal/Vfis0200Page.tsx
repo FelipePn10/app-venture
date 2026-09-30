@@ -305,7 +305,7 @@ export function Vfis0200Page(): JSX.Element {
                         <tr key={nf.id}>
                           <td style={{ fontWeight: 600 }}>{nf.numero_nf}</td>
                           <td>{nf.serie}</td>
-                          <td>{nf.razao_social_destinatario}<br /><small style={{ color: "#8aa894" }}>{nf.cnpj_destinatario}</small></td>
+                          <td>{nf.razao_social_destinatario}<br /><small style={{ color: "var(--v-text-muted)" }}>{nf.cnpj_destinatario}</small></td>
                           <td>{statusPill(nf.status)}</td>
                           <td>{money(nf.valor_total)}</td>
                           <td>{nf.data_emissao?.slice(0, 10) || "—"}</td>
@@ -545,18 +545,18 @@ export function Vfis0200Page(): JSX.Element {
                     <div className="erp-field erp-c6" key={rotulo}>
                       <label className="erp-label">{rotulo}</label>
                       <div className="erp-note" style={{ lineHeight: 1.6 }}>
-                        <strong>{parte.nome || <em style={{ color: "#b4472f" }}>— sem nome —</em>}</strong><br />
-                        {parte.documento || <em style={{ color: "#b4472f" }}>— sem CNPJ/CPF —</em>}
+                        <strong>{parte.nome || <em style={{ color: "var(--v-err)" }}>— sem nome —</em>}</strong><br />
+                        {parte.documento || <em style={{ color: "var(--v-err)" }}>— sem CNPJ/CPF —</em>}
                         {parte.ie ? ` · IE ${parte.ie}` : " · sem IE"}<br />
-                        {parte.logradouro || <em style={{ color: "#b4472f" }}>— sem logradouro —</em>}
+                        {parte.logradouro || <em style={{ color: "var(--v-err)" }}>— sem logradouro —</em>}
                         {parte.numero ? `, ${parte.numero}` : ""}
                         {parte.complemento ? ` — ${parte.complemento}` : ""}<br />
-                        {parte.bairro || <em style={{ color: "#b4472f" }}>— sem bairro —</em>}
+                        {parte.bairro || <em style={{ color: "var(--v-err)" }}>— sem bairro —</em>}
                         {" · "}
-                        {parte.municipio || <em style={{ color: "#b4472f" }}>— sem município —</em>}
+                        {parte.municipio || <em style={{ color: "var(--v-err)" }}>— sem município —</em>}
                         {parte.uf ? `/${parte.uf}` : ""}
                         {parte.codigo_municipio ? ` (IBGE ${parte.codigo_municipio})` : ""}<br />
-                        CEP {parte.cep || <em style={{ color: "#b4472f" }}>—</em>}
+                        CEP {parte.cep || <em style={{ color: "var(--v-err)" }}>—</em>}
                         {parte.email ? ` · ${parte.email}` : ""}
                         {parte.telefone ? ` · ${parte.telefone}` : ""}
                       </div>

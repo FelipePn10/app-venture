@@ -102,15 +102,16 @@ export function Vfis0360Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Tipos de Operação de Entra</button></div>
+          {/* UMA barra de abas. A segunda, com uma aba só e o rótulo truncado
+              ("Tipos de Operação de Entra"), era decorativa. */}
+          <div className="erp-tabs" role="tablist" aria-label="Tipos de operação de entrada">
+            <button role="tab" aria-selected={tab === "operacoes"} className={`erp-tab ${tab === "operacoes" ? "active" : ""}`} onClick={() => setTab("operacoes")}>Tipos de Operação</button>
+            <button role="tab" aria-selected={tab === "grupos"} className={`erp-tab ${tab === "grupos" ? "active" : ""}`} onClick={() => setTab("grupos")}>Grupos de Estado</button>
+          </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         <div className="erp-fieldset">
-          <div className="erp-tabs">
-            <button className={`erp-tab ${tab === "operacoes" ? "active" : ""}`} onClick={() => setTab("operacoes")}>Tipos de Operação</button>
-            <button className={`erp-tab ${tab === "grupos" ? "active" : ""}`} onClick={() => setTab("grupos")}>Grupos de Estado</button>
-          </div>
 
           {tab === "operacoes" && (
             <div className="erp-fieldset-body">
@@ -140,7 +141,7 @@ export function Vfis0360Page(): JSX.Element {
                 <button className="erp-btn" onClick={() => void validar()} disabled={busy}>Validar</button>
               </div>
 
-              <div className="erp-fieldset-body" style={{ marginTop: 12 }}>
+              <div className="erp-field erp-c12" style={{ marginTop: 12 }}>
                 <table className="erp-grid">
                   <thead><tr><th>Código</th><th>Descrição</th><th>Natureza</th><th>Grupo</th><th style={{ width: 80 }}>Ações</th></tr></thead>
                   <tbody>
@@ -173,7 +174,7 @@ export function Vfis0360Page(): JSX.Element {
                 <input className="erp-input" style={{ width: 60, height: 30 }} maxLength={2} placeholder="UF" value={ufAdd.uf} onChange={(e) => setUfAdd((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
                 <button className="erp-btn" onClick={() => void addUf()} disabled={busy}>Adicionar</button>
               </div>
-              <div className="erp-fieldset-body" style={{ marginTop: 12 }}>
+              <div className="erp-field erp-c12" style={{ marginTop: 12 }}>
                 <table className="erp-grid">
                   <thead><tr><th>Código</th><th>Descrição</th><th>UFs</th></tr></thead>
                   <tbody>

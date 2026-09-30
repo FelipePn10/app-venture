@@ -100,14 +100,18 @@ export function Vfis0320Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Parâmetros ICMS</button></div>
+          {/* UMA barra de abas. Havia duas empilhadas: uma com uma aba única e
+              decorativa ("Parâmetros ICMS") acima das abas de verdade — dois
+              controles parecidos em sequência, sendo que só o de baixo faz algo. */}
+          <div className="erp-tabs" role="tablist" aria-label="Blocos do parâmetro fiscal">
+            {BLOCOS.map((b) => (
+              <button key={b.id} role="tab" aria-selected={bloco === b.id}
+                className={`erp-tab${bloco === b.id ? " active" : ""}`}
+                onClick={() => setBloco(b.id)}>{b.label}</button>
+            ))}
+          </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
-        <div className="erp-tabs">
-          {BLOCOS.map((b) => (
-            <button key={b.id} className={`erp-tab${bloco === b.id ? " active" : ""}`} onClick={() => setBloco(b.id)}>{b.label}</button>
-          ))}
-        </div>
 
         {bloco === "chave" && (
         <div className="erp-fieldset"><div className="erp-fieldset-head">Identificação — <span style={{fontWeight:400,opacity:0.65}}>{editId !== null ? `Editando #${editId}` : "Forneça NCM ou Item, nunca ambos"}</span></div><div className="erp-fieldset-body">

@@ -85,16 +85,18 @@ export function Vctb0200Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Contabilidade</button></div>
+          {/* UMA barra de abas, no topo do painel. Havia uma segunda, decorativa,
+              com uma aba só ("Contabilidade") acima destas — dois controles
+              idênticos em sequência, e só o de baixo navega. */}
+          <div className="erp-tabs" role="tablist" aria-label="Áreas da contabilidade">
+            <button role="tab" aria-selected={tab === "plans"} className={`erp-tab ${tab === "plans" ? "active" : ""}`} onClick={() => setTab("plans")}>Planos</button>
+            <button role="tab" aria-selected={tab === "accounts"} className={`erp-tab ${tab === "accounts" ? "active" : ""}`} onClick={() => setTab("accounts")}>Contas</button>
+            <button role="tab" aria-selected={tab === "journal"} className={`erp-tab ${tab === "journal" ? "active" : ""}`} onClick={() => { setTab("journal"); void loadJournal(); }}>Lançamentos</button>
+            <button role="tab" aria-selected={tab === "balancete"} className={`erp-tab ${tab === "balancete" ? "active" : ""}`} onClick={() => setTab("balancete")}>Balancete</button>
+          </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         <div className="erp-fieldset">
-          <div className="erp-tabs">
-            <button className={`erp-tab ${tab === "plans" ? "active" : ""}`} onClick={() => setTab("plans")}>Planos</button>
-            <button className={`erp-tab ${tab === "accounts" ? "active" : ""}`} onClick={() => setTab("accounts")}>Contas</button>
-            <button className={`erp-tab ${tab === "journal" ? "active" : ""}`} onClick={() => { setTab("journal"); void loadJournal(); }}>Lançamentos</button>
-            <button className={`erp-tab ${tab === "balancete" ? "active" : ""}`} onClick={() => setTab("balancete")}>Balancete</button>
-          </div>
 
           {tab === "plans" && (
             <div className="erp-fieldset-body">
@@ -103,7 +105,7 @@ export function Vctb0200Page(): JSX.Element {
                 <div className="erp-field erp-c3"><label className="erp-label">Ano</label><input className="erp-input num" type="number" value={pForm.year} onChange={(e) => setPForm((p) => ({ ...p, year: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void savePlan()} disabled={busy}>Criar plano</button></div>
               
-              <div className="erp-fieldset-body" style={{ marginTop: 16 }}><table className="erp-grid">
+              <div className="erp-field erp-c12" style={{ marginTop: 16 }}><table className="erp-grid">
                 <thead><tr><th>ID</th><th>Nome</th><th>Ano</th><th style={{ width: 90 }}>Ações</th></tr></thead>
                 <tbody>{plans.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum plano.</td></tr>}
                   {plans.map((p) => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.year}</td>
@@ -121,7 +123,7 @@ export function Vctb0200Page(): JSX.Element {
                 <div className="erp-field erp-c2"><label className="erp-label">Natureza</label><select className="erp-input" value={aForm.nature} onChange={(e) => setAForm((p) => ({ ...p, nature: e.target.value as AccountNature }))}><option value="DEVEDORA">Devedora</option><option value="CREDORA">Credora</option></select></div>
                 <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveAccount()} disabled={busy}>+</button></div>
               
-              <div className="erp-fieldset-body" style={{ marginTop: 16 }}><table className="erp-grid">
+              <div className="erp-field erp-c12" style={{ marginTop: 16 }}><table className="erp-grid">
                 <thead><tr><th>ID</th><th>Código</th><th>Nome</th><th>Tipo</th><th>Natureza</th></tr></thead>
                 <tbody>{accounts.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma conta.</td></tr>}
                   {accounts.map((a) => <tr key={a.id}><td>{a.id}</td><td style={{ fontWeight: 600 }}>{a.code}</td><td>{a.name}</td><td>{a.account_type}</td><td>{a.nature}</td></tr>)}
@@ -138,7 +140,7 @@ export function Vctb0200Page(): JSX.Element {
                 <div className="erp-field erp-c2"><label className="erp-label">Valor</label><input className="erp-input num" type="number" step="0.01" value={jForm.value || ""} onChange={(e) => setJForm((p) => ({ ...p, value: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void saveJournal()} disabled={busy}>Lançar</button></div>
               
-              <div className="erp-fieldset-body" style={{ marginTop: 16 }}><table className="erp-grid">
+              <div className="erp-field erp-c12" style={{ marginTop: 16 }}><table className="erp-grid">
                 <thead><tr><th>Data</th><th>Histórico</th><th>Débito</th><th>Crédito</th><th>Valor</th></tr></thead>
                 <tbody>{journal.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum lançamento no período.</td></tr>}
                   {journal.map((j) => <tr key={j.id}><td>{j.entry_date?.slice(0, 10)}</td><td>{j.history}</td><td>{j.debit_account_id}</td><td>{j.credit_account_id}</td><td>{money(j.value)}</td></tr>)}
@@ -156,7 +158,7 @@ export function Vctb0200Page(): JSX.Element {
                     <div className="erp-metric"><div className="erp-metric-label">Total créditos</div><div className="erp-metric-value">{money(balancete.total_credit)}</div></div>
                     <div className="erp-metric"><div className="erp-metric-label">Partidas dobradas</div><div className="erp-metric-value">{balancete.balanced ? "✓ OK" : "✗"}</div></div>
                   </div>
-                  <div className="erp-fieldset-body" style={{ marginTop: 14 }}><table className="erp-grid">
+                  <div className="erp-field erp-c12" style={{ marginTop: 14 }}><table className="erp-grid">
                     <thead><tr><th>Conta</th><th>Nome</th><th>Débito</th><th>Crédito</th><th>Saldo</th></tr></thead>
                     <tbody>{balancete.rows.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem movimento.</td></tr>}
                       {balancete.rows.map((r, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{r.account_code}</td><td>{r.account_name}</td><td>{money(r.debit)}</td><td>{money(r.credit)}</td><td>{money(r.balance)}</td></tr>)}

@@ -6,6 +6,8 @@ import {
 import { enumLabel } from "@/utils/enumLabels";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadFiscalEntries } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -148,7 +150,7 @@ export function Vfis0220Page(): JSX.Element {
                         style={{ cursor: "pointer" }} onClick={() => setSelecionado(c.id)}>
                         <td style={{ fontWeight: 600 }}>{c.numero_cte}</td>
                         <td>{c.serie || "—"}</td>
-                        <td>{c.razao_social_emitente}<br /><small style={{ color: "#8aa894" }}>{c.cnpj_emitente}</small></td>
+                        <td>{c.razao_social_emitente}<br /><small style={{ color: "var(--v-text-muted)" }}>{c.cnpj_emitente}</small></td>
                         <td>{c.uf_emitente || "—"}</td>
                         <td>{c.tipo_rateio || "—"}</td>
                         <td>{money(c.valor_frete)}</td>
@@ -200,8 +202,12 @@ export function Vfis0220Page(): JSX.Element {
                     <input className="erp-input num" type="number" step="0.01" value={form.valor_icms} onChange={(e) => setF("valor_icms", Number(e.target.value))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">CST ICMS</label>
                     <input className="erp-input" value={form.cst_icms} onChange={(e) => setF("cst_icms", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">NF-e Entrada vinculada (ID)</label>
-                    <input className="erp-input num" type="number" value={form.fiscal_entry_id ?? ""} onChange={(e) => setF("fiscal_entry_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+                  <div className="erp-field erp-c4"><label className="erp-label">NF-e de entrada vinculada</label>
+                    <LookupField value={form.fiscal_entry_id} loader={loadFiscalEntries}
+                      entityLabel="nota fiscal de entrada" placeholder="Buscar por número da nota"
+                      allowManualCode={false} clearable
+                      onChange={(c) => setF("fiscal_entry_id", c ? Number(c) : undefined)} />
+                    <span className="erp-hint">Busca pelo número, série e emitente — não pelo identificador interno.</span></div>
                 
               </div>
             </div>

@@ -6,6 +6,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadEstablishments } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -86,8 +88,10 @@ export function Vfis0550Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Documento de origem  — <span style={{fontWeight:400,opacity:0.65}}>SPED C180/C181/C185/C186/1250/1251</span></div><div className="erp-fieldset-body">
           
-            <div className="erp-field erp-c2"><label className="erp-label erp-req">Empresa (ID)</label>
-              <input className="erp-input num" type="number" value={form.empresa_id || ""} onChange={(e) => setF("empresa_id", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label erp-req">Empresa</label>
+              <LookupField value={form.empresa_id || undefined} loader={loadEstablishments}
+                entityLabel="empresa" placeholder="Escolher a empresa" allowManualCode={false}
+                onChange={(c) => setF("empresa_id", Number(c ?? 0))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label erp-req">Período</label>
               <input className="erp-input" value={form.period} placeholder="2024-01" onChange={(e) => setF("period", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo</label>
