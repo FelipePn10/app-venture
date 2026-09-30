@@ -16,6 +16,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  * `Suspense` lá embaixo.
  */
 const Vent0800Page = lazy(() => import("./almoxarifado/Vent0800Page").then((m) => ({ default: m.Vent0800Page })));
+const Vben0100Page = lazy(() => import("./almoxarifado/Vben0100Page").then((m) => ({ default: m.Vben0100Page })));
+const Vben0200Page = lazy(() => import("./almoxarifado/Vben0200Page").then((m) => ({ default: m.Vben0200Page })));
 
 const Vent0200Page = lazy(() => import("./engenharia/Vent0200Page").then((m) => ({ default: m.Vent0200Page })));
 const Vent0210Page = lazy(() => import("./engenharia/Vent0210Page").then((m) => ({ default: m.Vent0210Page })));
@@ -68,6 +70,10 @@ const Vfin0210Page = lazy(() => import("./financeiro/Vfin0210Page").then((m) => 
 const Vfin0300Page = lazy(() => import("./financeiro/Vfin0300Page").then((m) => ({ default: m.Vfin0300Page })));
 const Vfin0400Page = lazy(() => import("./financeiro/Vfin0400Page").then((m) => ({ default: m.Vfin0400Page })));
 const Vfin0500Page = lazy(() => import("./financeiro/Vfin0500Page").then((m) => ({ default: m.Vfin0500Page })));
+// VFIN0600 e VFIN0620 eram rotinas genéricas de JSON. VFIN0620 aceitava qualquer
+// arquivo e respondia sucesso; VFIN0600 exigia digitar o corpo da requisição à mão.
+const Vfin0600Page = lazy(() => import("./financeiro/Vfin0600Page").then((m) => ({ default: m.Vfin0600Page })));
+const Vfin0620Page = lazy(() => import("./financeiro/Vfin0620Page").then((m) => ({ default: m.Vfin0620Page })));
 const Vfis0100Page = lazy(() => import("./fiscal/Vfis0100Page").then((m) => ({ default: m.Vfis0100Page })));
 const Vfis0110Page = lazy(() => import("./fiscal/Vfis0110Page").then((m) => ({ default: m.Vfis0110Page })));
 const Vfis0200Page = lazy(() => import("./fiscal/Vfis0200Page").then((m) => ({ default: m.Vfis0200Page })));
@@ -260,6 +266,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSUP0120: <Vsup0120Page />,
   VSUP0130: <Vsup0130Page />,
   VSUP0140: <Vsup0140Page />,
+  VBEN0100: <Vben0100Page />,
+  VBEN0200: <Vben0200Page />,
   VSUP0200: <Vsup0200Page />,
   VPDC0200: <Vpdc0200Page />,
   VSUP0300: <Vsup0300Page />,
@@ -290,6 +298,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VFIN0300: <Vfin0300Page />,
   VFIN0400: <Vfin0400Page />,
   VFIN0500: <Vfin0500Page />,
+  VFIN0600: <Vfin0600Page />,
+  VFIN0620: <Vfin0620Page />,
   VFIS0100: <Vfis0100Page />,
   VFIS0110: <Vfis0110Page />,
   VFIS0200: <Vfis0200Page />,

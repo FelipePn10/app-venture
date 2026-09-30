@@ -1080,6 +1080,11 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VENG0400", title: "Desenhos e Revisões", description: "Desenhos, revisões, distribuição, características e parâmetros fabris.", module: "engenharia" },
   { code: "VMRP0200", title: "Pipeline MRP → CRP → APS", description: "Execução coordenada do planejamento de materiais, capacidade e sequência.", module: "planejamento" },
   { code: "VEST0300", title: "Máscaras de Lote e Série", description: "Composição e geração automática de códigos de lote e série.", module: "almoxarifado" },
+  // Beneficiamento — material do cliente em poder da empresa. Telas NOVAS: o
+  // estoque próprio (VEST0100) segue como está. Prefixo VBEN, e não VTER, porque
+  // VTER* é o sentido oposto (serviço que MANDAMOS para fora).
+  { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901), acompanhar saldo por linha, lançar retorno (5902), sobra e sucata (5903) com rastreabilidade, bloquear material sem pedido ou divergente e encerrar com aprovação.", module: "almoxarifado" },
+  { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Saldo do material que pertence ao cliente e está em poder da empresa, por cliente proprietário, item da nota e NF-e de remessa, ordenado pelo prazo fiscal de retorno. Não entra na valoração do estoque próprio.", module: "almoxarifado" },
   { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento" },
   { code: "VSUP0640", title: "Registros Operacionais de Compras", description: "Ocorrências normalizadas de compra, recebimento e inspeção.", module: "suprimento" },
   { code: "VSUP0650", title: "Histórico de Movimentos de Compra", description: "Rastreabilidade consolidada de movimentos por fornecedor e item.", module: "suprimento" },
