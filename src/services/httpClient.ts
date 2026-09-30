@@ -2,12 +2,11 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { getClientVersion } from '@/services/clientVersion';
 import { notifyClientUpgradeRequired, type ClientUpgradeRequiredDetail } from '@/services/versionCompatibility';
+import { urlDaApiAtiva } from '@/services/tenantDirectory';
 
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 15000);
-const API_BASE_URL = import.meta.env.VITE_API_URL?.trim();
 
 export const httpClient = axios.create({
-  baseURL: API_BASE_URL || undefined,
   timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
@@ -16,6 +15,14 @@ export const httpClient = axios.create({
 
 httpClient.interceptors.request.use(async (config) => {
   const token = useAuthStore.getState().token;
+
+  // O endereço da API é resolvido A CADA requisição, não na criação do cliente.
+  // Um instalador só atende várias empresas, e qual servidor responde depende do
+  // domínio do e-mail com que a pessoa entrou — decisão que não existe ainda no
+  // momento em que este módulo é carregado. Vazio significa mesma origem, que é
+  // como o ambiente de desenvolvimento fala com o proxy do vite.
+  const baseURL = urlDaApiAtiva();
+  config.baseURL = baseURL || undefined;
 
   config.headers = config.headers ?? {};
   config.headers['X-ERP-Client-Version'] = await getClientVersion();

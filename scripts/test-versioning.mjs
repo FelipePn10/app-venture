@@ -11,7 +11,15 @@ assert.match(cargo, new RegExp(`\\[package\\][\\s\\S]*?version = "${packageInfo.
 assert.deepEqual(config.bundle.targets, ['nsis']);
 assert.equal(config.bundle.createUpdaterArtifacts, true);
 assert.ok(config.plugins.updater.pubkey.length > 100, 'chave pública do updater ausente');
-assert.deepEqual(config.plugins.updater.endpoints, ['https://github.com/FelipePn10/app-venture/releases/latest/download/latest.json']);
+// Os endpoints são tentados em ORDEM, e a ordem é a regra: o domínio da Venture
+// vem primeiro, porque é o canal que o cliente conhece e o único que continua
+// valendo se a distribuição sair do GitHub. O GitHub fica como reserva — se o
+// espelho do portal ficar para trás numa release, o cliente ainda se atualiza.
+// Por isso a asserção é de lista exata, e não de "contém".
+assert.deepEqual(config.plugins.updater.endpoints, [
+  'https://app.venturerp.com/updates/latest.json',
+  'https://github.com/FelipePn10/app-venture/releases/latest/download/latest.json',
+]);
 assert.ok(!config.plugins.updater.pubkey.includes('PRIVATE'), 'configuração contém material privado');
 
 const changelog = fs.readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');

@@ -4,6 +4,12 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { login } from "@/services/authService";
 import { getClientVersion } from "@/services/versionService";
 import { getRememberedEmail, isRememberMeChosen, setRememberMe, useAuthStore } from "@/store/authStore";
+import {
+  definirTenantAtivo,
+  dominioDoEmail,
+  lerTenantAtivo,
+  resolverTenantPorEmail,
+} from "@/services/tenantDirectory";
 import { WindowControls } from "@/components/window/WindowControls";
 import { PasswordChangeDialog } from "@/components/system/PasswordChangeDialog";
 import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
@@ -28,6 +34,12 @@ export function LoginPage(): JSX.Element {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [clientVersion, setClientVersion] = useState<string>("");
+  // Qual empresa o e-mail digitado resolve. Mostrar isso ANTES de entrar evita o
+  // erro mais caro do modelo multiempresa: digitar a senha certa no servidor
+  // errado e receber "usuário ou senha inválidos" sem entender o motivo.
+  const [empresaLabel, setEmpresaLabel] = useState<string | null>(
+    () => lerTenantAtivo()?.name ?? null,
+  );
 
   useEffect(() => {
     let alive = true;
@@ -38,6 +50,27 @@ export function LoginPage(): JSX.Element {
       alive = false;
     };
   }, []);
+
+  // Resolve a empresa a partir do domínio, com folga para terminar de digitar.
+  // Só roda quando já existe um domínio inteiro, para não consultar a cada letra.
+  useEffect(() => {
+    const dominio = dominioDoEmail(email);
+    if (!dominio || !dominio.includes(".")) {
+      setEmpresaLabel(null);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(() => {
+      void resolverTenantPorEmail(email).then((resolvido) => {
+        if (!alive) return;
+        setEmpresaLabel(resolvido.fixadoNoBuild ? null : (resolvido.tenant?.name ?? null));
+      });
+    }, 400);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [email]);
 
   const versionLabel = clientVersion && clientVersion !== "dev" ? `v${clientVersion}` : "dev";
 
@@ -58,6 +91,11 @@ export function LoginPage(): JSX.Element {
     setIsSubmitting(true);
 
     try {
+      // A empresa é resolvida ANTES do login: é ela que define para qual servidor
+      // a requisição vai. Gravar depois não serviria — o pedido já teria saído.
+      const destino = await resolverTenantPorEmail(email);
+      definirTenantAtivo(destino);
+
       const response = await login({ email, password, rememberMe });
       // A escolha é registrada ANTES de gravar o token: é ela que decide se a
       // sessão vai para o disco ou só para a janela atual.
@@ -431,6 +469,15 @@ export function LoginPage(): JSX.Element {
         .lp-input.lp-input-error {
           border-color: #e05252;
           box-shadow: 0 0 0 3px rgba(224, 82, 82, 0.1);
+        }
+
+        .lp-field-tenant {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          margin-top: 6px;
+          font-size: 11.5px;
+          color: #4d7a5c;
         }
 
         .lp-field-error {
@@ -944,6 +991,20 @@ export function LoginPage(): JSX.Element {
                       />
                     </svg>
                     {fieldErrors.email}
+                  </span>
+                )}
+                {!fieldErrors.email && empresaLabel && (
+                  <span className="lp-field-tenant">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <path
+                        d="M2 10V4.2L6 2l4 2.2V10"
+                        stroke="#4d7a5c"
+                        strokeWidth="1.2"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M5 10V7h2v3" stroke="#4d7a5c" strokeWidth="1.2" strokeLinejoin="round" />
+                    </svg>
+                    Conectando em {empresaLabel}
                   </span>
                 )}
               </div>

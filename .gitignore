@@ -13,3 +13,6 @@ src-tauri/target
 # locais. O gerador é fonte; PDFs e Markdown são entregáveis versionados.
 .ai/treinamento/_build/*
 !.ai/treinamento/_build/build.py
+
+# Artefatos locais da Vercel (projeto vinculado e token OIDC).
+.vercel/

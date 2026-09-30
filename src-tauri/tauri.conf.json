@@ -11,7 +11,7 @@
   },
   "app": {
     "security": {
-      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost https://api.venturerp.com https://dev-api.venturerp.com https://api.github.com http://localhost:* ws://localhost:*; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self'"
+      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost https://api.venturerp.com https://dev-api.venturerp.com https://*.venturerp.com https://api.github.com http://localhost:* ws://localhost:*; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self'"
     },
     "windows": [
       {
@@ -46,6 +46,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQzMjAzRERDQTI0OUI5NjkKUldScHVVbWkzRDBnUXhoRWp2ZFA2STlRWVpzeGlMTE5pYXpjams1aVc2dWlmU1gwMjJYRE1kVzEK",
       "endpoints": [
+        "https://app.venturerp.com/updates/latest.json",
         "https://github.com/FelipePn10/app-venture/releases/latest/download/latest.json"
       ],
       "windows": {

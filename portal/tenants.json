@@ -1,0 +1,23 @@
+{
+  "_comentario": [
+    "Catálogo de empresas do VentureERP: domínio de e-mail → endereço da API.",
+    "Publicado em https://app.venturerp.com/tenants.json e lido pelo aplicativo",
+    "desktop no login (src/services/tenantDirectory.ts).",
+    "",
+    "Um cliente novo entra aqui, sem nova versão do desktop. Regras:",
+    "  - apiUrl precisa ser https, só host, sem caminho nem credencial;",
+    "  - emailDomains sem @ e em minúsculas;",
+    "  - domínio fora da lista cai em defaultApiUrl, que hoje é a Tecnofer.",
+    "",
+    "Este arquivo NÃO contém segredo: é só o mapa de para onde cada empresa fala."
+  ],
+  "defaultApiUrl": "https://api.venturerp.com",
+  "tenants": [
+    {
+      "id": "usimac",
+      "name": "Usimac Usinagem",
+      "apiUrl": "https://usimac.api.venturerp.com",
+      "emailDomains": ["usimacusinagem.com.br"]
+    }
+  ]
+}
