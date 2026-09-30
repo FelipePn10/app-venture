@@ -234,15 +234,197 @@ Custo/hora dos centros (VCUS0100)
 
 > **Sem o custo do chão, precificar é apostar.**
 
-## 4.2 `VCUS0100` — Custos (as entradas)
+## 4.2 `VCUS0100` — Custos
 
-| Bloco | O que cadastra |
+> **O que a tela responde.** *"Quanto custa fabricar uma peça, e de onde vem cada
+> centavo desse custo."* Seis abas: **Apuração do custo**, **Esquema de indiretos**,
+> **Centros de trabalho**, **Custos de compra**, **Histórico** e **Rateio contábil**.
+
+### ⚠️⚠️ O que mudou nesta versão — leia antes de usar
+
+O motor de custo já fazia o essencial: descia a estrutura, aplicava perda, creditava
+co-produto, escolhia substituto, cobrava cada operação na taxa do **seu** centro de
+trabalho separando hora-máquina de hora-homem, diluía o setup pelo lote e reconhecia
+operação de terceiro. Faltava o que os ERPs grandes chamam de **esquema de cálculo**:
+
+| Lacuna | Consequência |
 |:--|:--|
-| **Custo/hora** por centro de trabalho | Alimenta a conversão da OF e o custo padrão |
-| **Custo de compra** por item | Entrada de material |
-| **Bases de alocação** | Critério de rateio |
-| **Alocações de overhead** | Indiretos |
-| **Rollup** | Recalcula o custo padrão de um item |
+| **Os indiretos não entravam.** `overhead` era gravado **sempre zero** — a coluna existia e não havia como configurar | Energia, depreciação, supervisão e aluguel **não chegavam ao custo do produto**. O custo saía sistematicamente **abaixo** do real |
+| **O custo saía em dois números** — "material" e "operação" | Sem separar preparação, máquina, mão de obra e terceiro, não se sabe **o que atacar** |
+| **Não havia nível próprio × nível inferior** | Um aumento no custo não dizia se veio **da fábrica** ou **do que se comprou** |
+| **Toda apuração sobrescrevia a anterior** | Não se respondia *"por que o custo subiu 12% este mês"* |
+
+> **As quatro estão fechadas.** Se você tem custo apurado de antes, **reapure**: o
+> número anterior não tinha indireto nenhum.
+
+### 4.2.1 Aba **Apuração do custo**
+
+| Campo | Observação |
+|:--|:--|
+| **Item** ✅ | 🔍 lupa |
+| **Lote de referência** | O setup é **diluído por ele**. Com `1`, cada peça carrega o setup inteiro — é o número conservador |
+
+Clique **Apurar custo**. A tela devolve três blocos.
+
+**Bloco 1 — indicadores**
+
+| Indicador | O que é |
+|:--|:--|
+| **Custo total unitário** | O número final |
+| **Esta etapa agrega** | Nível próprio: conversão + indiretos desta fábrica |
+| **Veio dos componentes** | Nível inferior: o custo total do que está abaixo na estrutura |
+| **Indiretos no total** | Que fatia do custo é indireto |
+
+**Bloco 2 — composição, componente a componente**
+
+| Componente | O que é | O que fazer se estiver alto |
+|:--|:--|:--|
+| **Material** | Componentes comprados, com perda e crédito de co-produto aplicados | Negociar compra, revisar perda da estrutura |
+| **Preparação (setup)** | Diluída pelo lote informado | **Aumentar o lote** — é o único componente que o lote reduz |
+| **Hora-máquina** | Ocupação do equipamento na taxa do CT de cada operação | Outro recurso, outro roteiro |
+| **Mão de obra direta** | Horas-homem, já multiplicadas pelo tamanho da equipe | Revisar equipe no roteiro |
+| **Serviço de terceiro** | Operações externas, no preço vigente do fornecedor | Internalizar, ou renegociar |
+| **Indiretos** | Aplicados pelo esquema de rateio | Ver aba *Esquema de indiretos* |
+
+> ⚠️ **Se "Indiretos" vier zero e houver um aviso amarelo no topo**, é porque
+> **nenhuma regra está cadastrada**. O custo está incompleto — falta energia,
+> depreciação, supervisão e aluguel.
+
+**Bloco 3 — de onde vem cada centavo de indireto**
+
+Uma linha por regra aplicada: **Regra · Base · Método · Taxa · Valor da base ·
+Aplicado**. É o que você mostra quando alguém questionar o custo.
+
+**Bloco 4 — composição pela estrutura**
+
+A árvore, um nível por linha, com todos os componentes abertos.
+
+> 💡 **Cada nível mostra o que ELE agrega.** O que o pai recebe de um componente é o
+> **total** dele — é por isso que a hora-máquina do filho **não** soma na
+> hora-máquina do pai. Ela já está dentro do total que subiu.
+
+### 4.2.2 Aba **Esquema de indiretos** ⭐ (nova)
+
+> **O que é.** As regras que trazem energia, depreciação, supervisão e aluguel para
+> dentro do custo do produto. É o equivalente ao **esquema de cálculo** do SAP, às
+> **taxas de CIF** do TOTVS e às **despesas indiretas** do Focco.
+
+| Campo | O que é |
+|:--|:--|
+| **Código** ✅ | `CIF-ENERGIA`, `CIF-SUPERV`… |
+| **Descrição** ✅ | **Escreva o motivo.** É o que explica o indireto quando alguém questionar |
+| **Incide sobre** ✅ | A base — ver tabela abaixo |
+| **Método** ✅ | Percentual · R$ por hora · R$ por unidade |
+| **Taxa** ✅ | Em **percentual** (`12` para 12%) ou em **reais**, conforme o método |
+| **Vigente de** ✅ / **Vigente até** | Em branco no "até": vale indefinidamente |
+| **Só no centro de trabalho** | 🔍 lupa. Energia caríssima só na usinagem, por exemplo |
+| **Só no item** | 🔍 lupa. Um produto com tratamento próprio |
+| **Conta contábil do indireto** | 🔍 lupa. Liga o indireto do produto ao que a contabilidade lançou |
+| **Centro de custo de origem** | 🔍 lupa |
+
+#### As sete bases
+
+| Base | Incide sobre | Exemplo de uso |
+|:--|:--|:--|
+| **Material** | O material do item | Armazenagem, seguro de estoque |
+| **Preparação (setup)** | O custo de preparação | Ferramental de setup |
+| **Hora-máquina** | A ocupação de máquina | **Energia**, depreciação do equipamento |
+| **Hora-homem** | A mão de obra direta | Encargos, supervisão de produção |
+| **Conversão** | Setup + máquina + homem | Aluguel do galpão, custo fixo de fábrica |
+| **Serviço de terceiro** | O que foi para fora | Frete e controle do serviço externo |
+| **Custo total antes dos indiretos** | Tudo somado | Administração geral rateada ao produto |
+
+#### Os três métodos
+
+| Método | Como calcula | Quando usar |
+|:--|:--|:--|
+| **Percentual sobre a base** | `base × taxa` | Quando o indireto acompanha o valor |
+| **R$ por hora da base** | `horas × taxa` | **Energia** (R$/h de máquina), supervisão (R$/h de homem). ⚠️ Só sobre bases medidas em horas |
+| **R$ por unidade produzida** | valor fixo por peça | Embalagem, etiqueta, custo por peça independente de valor |
+
+> ⭐⭐ **A ordem de aplicação é FIXA, não a ordem de cadastro.** Primeiro as bases
+> específicas (material, setup, máquina, homem, terceiro), depois **Conversão**,
+> depois **Total**. E **nenhum indireto incide sobre outro** — a base de *Total* é
+> material + conversão + terceiro, sem o indireto já aplicado.
+>
+> **Por que isso importa:** sem essa regra, duas instalações com as **mesmas** regras
+> cadastradas em ordem diferente chegariam a **custos diferentes** — e ninguém
+> conseguiria explicar a divergência.
+
+> ⚠️ **O erro de digitação mais provável: `12` em vez de `0,12`.** O campo pede
+> **percentual** (digite `12`), e o sistema guarda a fração. Se você informar por API,
+> mande `0.12` — a validação recusa acima de 100% e diz o número certo na mensagem.
+
+> ⚠️ **Desativar não apaga.** As apurações antigas apontam para a regra; apagá-la
+> deixaria o histórico sem explicação. A regra desativada continua na lista, apagada.
+
+> ⚠️ **Regra fora de vigência não aplica.** Uma regra vencida ontem simplesmente não
+> entra — e o custo sai plausível, só menor. Confira a vigência quando o indireto
+> "sumir".
+
+### 4.2.3 Aba **Centros de trabalho**
+
+| Campo | O que é |
+|:--|:--|
+| **Centro de trabalho** ✅ | 🔍 lupa |
+| **R$ por hora-máquina** | Ocupação do equipamento, rode ele sozinho ou não |
+| **R$ por hora-homem** | ⭐ **Multiplicada pelo tamanho da equipe** do roteiro |
+
+> ⭐ **Separar máquina de homem é o que permite custear** um roteiro em que a máquina
+> roda sozinha (só hora-máquina) ou em que dois operadores atendem um equipamento
+> (hora-homem × 2).
+
+⚠️ **Sem taxa cadastrada, o roteiro não gera custo de conversão** — o custo sai só
+com material, e ninguém percebe.
+
+### 4.2.4 Aba **Custos de compra**
+
+O custo das **folhas** da estrutura: o que a apuração usa como material.
+
+⚠️ **Alterar aqui não reapura sozinho** os produtos que consomem o item. Rode a
+apuração deles.
+
+### 4.2.5 Aba **Histórico** ⭐ (nova)
+
+Escolha o item e consulte. A tela mostra duas coisas:
+
+**1. O que mudou desde a apuração anterior** — componente a componente, com a
+variação em reais e em percentual. O que subiu aparece em **vermelho**.
+
+> ⭐ **É esta tabela que responde "por que o custo subiu 12%".** Se a variação está
+> em *Material*, foi compra; em *Hora-máquina*, foi taxa de centro; em *Indiretos*,
+> foi regra nova.
+
+**2. A série de apurações** — uma linha por apuração, com todos os componentes.
+
+> ⚠️ **Duas apurações só são comparáveis com o MESMO lote**, porque a preparação é
+> diluída por ele. A tela mostra o lote de cada uma para você conferir.
+
+> ⭐ **O histórico não é sobrescrito nem apagado.** O banco recusa alteração: uma
+> apuração passada é fato consumado, e reescrevê-la apagaria a explicação de uma
+> variação já analisada.
+
+### 4.2.6 Aba **Rateio contábil**
+
+> ⚠️ **Não confunda com o Esquema de indiretos.** Esta aba distribui custo **entre
+> centros de custo** (contabilidade); o esquema de indiretos leva custo **para o
+> produto**. São dois movimentos diferentes.
+
+**Base de alocação** — o critério do rateio: horas-máquina, área ocupada, número de
+pessoas. **Distribuição** — de qual centro sai, para qual vai, em que período, por
+percentual fixo ou por base.
+
+### 4.2.7 ⭐ A ordem de cadastro, se você está começando
+
+```
+1. Custos de compra      →  quanto custa o material comprado
+2. Centros de trabalho   →  R$/hora de máquina e de homem
+3. Esquema de indiretos  →  energia, depreciação, supervisão, aluguel
+4. Apuração do custo     →  roda o cálculo
+5. Histórico             →  acompanha a variação mês a mês
+```
+
+Pular o passo 3 é o que produz custo sistematicamente abaixo do real.
 
 ---
 
@@ -567,21 +749,196 @@ ABERTO → LIBERADO → EM_CARREGAMENTO → CARREGADO → DESPACHADO
 
 ## 9.2 `VFIS0110` — Tabelas Tributárias
 
-| Aba | Chave | O que cadastra |
+> **Para que serve.** É o **piso** da tributação: o que vale quando nenhuma regra
+> mais específica alcança a operação. Toda nota emitida passa por aqui, mesmo que
+> você nunca abra a tela — por isso cadastro incompleto aqui não dá erro: dá nota
+> com imposto a menos.
+
+A tela tem **três abas**, e cada uma responde a uma pergunta diferente.
+
+### 9.2.1 Aba **NCM — IPI, PIS e COFINS**
+
+Responde: *"quanto de IPI, PIS e COFINS incide sobre esta mercadoria?"* — a
+mercadoria é identificada pela sua classificação fiscal (NCM).
+
+| Campo | O que é | Como preencher |
 |:--|:--|:--|
-| **NCM** | NCM de 8 dígitos — ⚠️ **imutável** | Alíquotas de IPI, PIS, COFINS + **CSTs**. Padrões sugeridos: PIS `0,0165` · COFINS `0,076` (cumulativo) |
-| **ICMS Interno** | UF (2 caracteres) | Alíquota interna (ex.: `0,18` = 18%) + **FCP** |
-| **ICMS Interestadual** | UF origem + UF destino | Alíquota conforme CONFAZ |
+| **NCM** (busca) | Lupa que lista os NCMs **já cadastrados** | Escolher um NCM existente **carrega a tributação atual** para você conferir antes de alterar. Use sempre que a mercadoria já tiver tributação definida — é o que evita cadastrar o mesmo NCM duas vezes com alíquotas diferentes |
+| **NCM (digitar)** | O código em si, **8 dígitos** | Só dígitos; o contador ao lado mostra `n/8`. Com 4 ou 6 dígitos a nota sai com classificação incompleta e a SEFAZ rejeita |
+| **Descrição da mercadoria** | Texto livre | Não vai na nota. Serve para **quem confere** saber o que aquele número classifica. Preencha: seis meses depois ninguém lembra que `76169900` é "outras obras de alumínio" |
+| **Alíquota IPI (%)** | Percentual do IPI | Digite **em percentual**: `6,5` para 6,5%. Zero é resposta válida (mercadoria não tributada) |
+| **Alíquota PIS (%)** | Percentual do PIS | `0,65` no regime **cumulativo** · `1,65` no **não cumulativo** |
+| **Alíquota COFINS (%)** | Percentual da COFINS | `3,00` no **cumulativo** · `7,60` no **não cumulativo** |
+| **CST IPI** | Situação tributária do IPI | `50` saída tributada · `51` isenta · `52` suspensão · `53` saída não tributada |
+| **CST PIS** | Situação tributária do PIS | `01` tributado alíquota normal · `06` alíquota zero · `07` isento · `08` sem incidência |
+| **CST COFINS** | Situação tributária da COFINS | Na prática **acompanha o CST do PIS** — as duas contribuições andam juntas |
 
-### ⭐ Alíquotas interestaduais (CONFAZ)
+> ⚠️ **Regime cumulativo × não cumulativo.** As alíquotas de PIS/COFINS dependem do
+> regime da EMPRESA, não da mercadoria. Lucro Presumido normalmente é cumulativo
+> (0,65% / 3,00%); Lucro Real é não cumulativo (1,65% / 7,60%). Errar isso erra
+> **todas** as notas. Confirme com o contador antes de cadastrar o primeiro NCM.
+
+**Campo de busca da lista.** A tabela de NCM de uma indústria passa facilmente de
+cem linhas. O campo *Buscar por NCM ou descrição* filtra pelos dois — digite `8471`
+ou `monitor`. Cada linha tem **Alterar** (carrega no formulário) e **Desativar**.
+
+> ⚠️ **Desativar um NCM** faz as notas novas com aquela mercadoria saírem **sem** IPI,
+> PIS e COFINS configurados. A tela avisa antes de confirmar.
+
+### 9.2.2 Aba **ICMS Interno por UF**
+
+Responde: *"quanto de ICMS incide quando vendo dentro do estado?"*
+
+| Campo | O que é | Como preencher |
+|:--|:--|:--|
+| **UF** | Lista fechada das 27 unidades federativas, com o nome do estado | Escolher uma UF **já cadastrada** carrega as alíquotas atuais |
+| **Alíquota ICMS (%)** | Alíquota interna do estado | `18` em SP · `18` em MG · `20` no RJ (confira: muda por lei estadual) |
+| **Alíquota FCP (%)** | Fundo de Combate à Pobreza | `0` quando o estado não cobra. Onde existe, some à alíquota do ICMS na nota |
+
+> 💡 **Por que a UF virou lista.** Era campo de texto livre, e `Sp`, `sp` ou `SPO`
+> gravavam uma alíquota que **nenhuma nota encontrava** depois — a busca procura por
+> `SP`. Com lista fechada o erro não acontece.
+
+O rodapé mostra `n de 27`: é o quanto do país está coberto. Você só precisa das UFs
+para as quais realmente vende.
+
+### 9.2.3 Aba **ICMS Interestadual**
+
+Responde: *"quanto de ICMS incide quando vendo para outro estado?"* — e a resposta
+depende do **par origem → destino**.
+
+| Campo | O que é |
+|:--|:--|
+| **UF de origem** | De onde a mercadoria sai — normalmente a UF do emitente |
+| **UF de destino** | Para onde vai. Escolher um par já cadastrado carrega a alíquota atual |
+| **Alíquota ICMS (%)** | A alíquota do par |
+
+#### ⭐ As alíquotas interestaduais (CONFAZ) — o que decorar
+
 ```
-7%   Sul/Sudeste (exceto ES)  →  Norte, Nordeste, Centro-Oeste e ES
-12%  Entre estados das mesmas regiões, ou casos não cobertos acima
-4%   Operações interestaduais com PRODUTOS IMPORTADOS
+ 7%   Sul / Sudeste (exceto ES)   →   Norte, Nordeste, Centro-Oeste e ES
+12%   Todos os outros pares entre estados
+ 4%   Operações interestaduais com PRODUTO IMPORTADO (qualquer par)
 ```
 
-⚠️ **O NCM é imutável após a criação.** Para corrigir, desative e crie novo.
-⚠️ Manter as alíquotas atualizadas conforme a legislação é **responsabilidade do usuário**.
+> ⚠️ **Origem igual ao destino é operação interna**, e a tela recusa: a alíquota
+> dessa operação vive na aba *ICMS Interno*. Aceitar aqui criaria duas fontes de
+> verdade para o mesmo imposto — e quando as duas divergem, ninguém descobre qual
+> a nota usou.
+
+O campo *Filtrar por UF* mostra os pares em que aquela UF aparece como origem **ou**
+destino — é assim que se confere "para quais estados eu já tenho alíquota".
+
+### 9.2.4 ⚠️ O detalhe que mais gera retrabalho
+
+**As alíquotas são digitadas em PERCENTUAL e guardadas como FRAÇÃO.** Você digita
+`18`; o sistema guarda `0,18`. A tela cuida da conversão nos dois sentidos, e todas
+as colunas mostram `%`.
+
+> Isso importa porque, se você olhar o banco ou uma exportação técnica, vai ver
+> `0,18` — e isso está **certo**. Não "corrija" para 18 por fora da tela: isso
+> gravaria 1800%.
+
+---
+
+## 9.2.5 `VFIS0320` — Parâmetros de ICMS e IPI
+
+> **Por que esta tela vem junto com a VFIS0110.** As duas respondem à mesma
+> pergunta — "qual alíquota usar?" — em **níveis diferentes de precisão**. A
+> VFIS0110 diz "IPI deste NCM é 6,5%". A VFIS0320 diz "**mas** quando vendo este
+> NCM para o Paraná, para contribuinte, na operação de venda, o ICMS é 12% com
+> redução de base de 33,33% amparada no artigo tal". Quando existe parâmetro, ele
+> **ganha** da tabela tributária.
+>
+> Na prática: **VFIS0110 é o piso; VFIS0320 é a exceção.** Comece pela VFIS0110 e
+> só cadastre VFIS0320 quando houver um tratamento específico a registrar.
+
+### Aba **Parâmetros ICMS** — grupo *Identificação*
+
+Define **para qual operação** o parâmetro vale. É a chave de busca.
+
+| Campo | O que é | Cuidado |
+|:--|:--|:--|
+| **UF** | Estado de destino da operação | Obrigatório: o tratamento muda por estado |
+| **NCM** | Aplica a todos os itens daquela classificação | ⚠️ **Informe NCM OU Código Item, nunca os dois.** O cabeçalho da tela lembra isso |
+| **Código Item** | Aplica a um item específico | Mais preciso que o NCM; use quando um único produto tem tratamento próprio |
+| **Máscara do item** | Variante do item (cor, dimensão) | Em branco, vale para todas as variantes |
+| **Tipo Operação** | Venda, devolução, remessa, bonificação… | É o que separa "vender" de "devolver": o CST muda |
+| **Cliente** / **Estabelecimento do cliente** | Restringe a um cliente ou a uma filial dele | Use para regime especial concedido a um cliente específico |
+| **Tipo de NF — saída / entrada** | Espécie do documento | Casa o parâmetro com a natureza da nota |
+| **Descrição** | Texto livre | **Escreva o motivo do parâmetro aqui.** É o que responde "por que esta nota saiu com 12%?" meses depois |
+
+### Grupo *ICMS — alíquota, redução, diferimento e acréscimos*
+
+A separação **Contribuinte × Não-Contribuinte** aparece em quase todo campo, e é a
+distinção mais importante da tela: a mesma mercadoria, para o mesmo estado, tem
+tratamento diferente se o destinatário é empresa inscrita no ICMS ou consumidor
+final.
+
+| Campo | O que é |
+|:--|:--|
+| **% ICMS Contrib.** / **Não-Contrib.** | A alíquota efetiva em cada caso |
+| **CST Contrib.** / **Não-Contrib.** | Situação tributária (`00` tributada integralmente, `20` com redução, `40` isenta, `41` não tributada, `51` diferimento, `60` ST já recolhida…) |
+| **CSOSN** | Código equivalente para emitente do **Simples Nacional** |
+| **Situação B** | Situação tributária complementar exigida por alguns estados |
+| **CST devolução Contrib.** / **Não-Contrib.** | O CST muda na devolução; sem estes campos a nota de devolução sai com o CST da venda |
+| **Dispositivo legal Contrib.** / **Não-Contrib.** | O **embasamento** da alíquota diferenciada (cadastrado em `VFIS0310`). ⚠️ Alíquota reduzida sem dispositivo legal na nota é autuação |
+| **% redução Contrib.** / **Não-Contrib.** + **Incide sobre** | Redução de base de cálculo. `Incide sobre` diz sobre qual base a redução é aplicada |
+| **Disp. legal redução** (cada um) | Embasamento da redução |
+| **% diferimento** + **Incide sobre** + **Dispositivo legal** | Parcela do imposto **postergada** para etapa seguinte. É o tratamento da industrialização em SP (Portaria CAT 22/2007) |
+| **Código do benefício (RBC)** | Código do benefício fiscal na tabela nacional; obrigatório na NF-e quando há benefício |
+| **% acréscimo Contrib.** / **Não-Contrib.** + **Natureza** | Acréscimos sobre a base (frete, seguro, despesas) e a natureza de cada um |
+
+### Grupo *Substituição tributária e DIFAL*
+
+| Campo | O que é |
+|:--|:--|
+| **% ST Contrib.** / **Não-Contrib.** / **uso e consumo** | Alíquota da substituição tributária em cada destinação |
+| **% redução da ST** + **Disp. legal** | Redução da base da ST |
+| **% ICMS interno** | Alíquota interna do estado de DESTINO — é a base do cálculo da ST |
+| **Modalidade da base (modBCST)** | Como a base da ST é formada: MVA, pauta, preço tabelado, valor da operação. Vai na NF-e |
+| **% p/ ST Contrib.** / **Não-Contrib.** | MVA (margem de valor agregado) aplicada |
+| **% FCP-ST partilha** | Fundo de Combate à Pobreza dentro da ST |
+| **Tratamento** (DIFAL) | Como o diferencial de alíquota é tratado |
+| **% redução** / **% redução na compra** / **Incide sobre (compra)** | Reduções específicas do DIFAL |
+| **Dif. alíquota ST uso/consumo** | Diferencial na aquisição para uso e consumo |
+
+> ⚠️ **ST e DIFAL não se somam por acidente.** Operação com ST recolhida na origem
+> (CST `60`) **não** tem DIFAL. Se você cadastrar os dois no mesmo parâmetro, a nota
+> sai com imposto a mais — e o cliente reclama antes do fisco.
+
+### Grupo *IPI*
+
+| Campo | O que é |
+|:--|:--|
+| **CST saída** / **CST entrada** | Situação tributária do IPI em cada sentido |
+| **Origem da classificação** | De onde vem a classificação fiscal aplicada |
+| **% redução Contrib.** / **Não-Contrib.** + **Incide sobre** + **Dispositivo legal** | Redução de base do IPI, com embasamento |
+
+### Grupo *Regimes especiais, FCI e benefícios*
+
+| Campo | O que é |
+|:--|:--|
+| **Anexo do Simples** | Anexo da LC 123 aplicável quando o emitente é Simples Nacional |
+| **% ICMS origens 1, 2, 3 e 8** | Alíquota para mercadoria **importada** (origens 1, 2, 3 e 8 da tabela de origem) |
+| **% ST origens 1, 2, 3 e 8** | ST para mercadoria importada |
+| **CST do FCI** | Situação tributária ligada à Ficha de Conteúdo de Importação |
+| **Geral** / **Contribuinte** / **Não contribuinte** (benefícios) | Códigos de benefício aplicáveis a cada caso |
+
+### ⚠️ Os três erros mais comuns na VFIS0320
+
+1. **Preencher NCM e Código Item juntos.** A tela pede um ou outro; com os dois, a
+   busca fica ambígua.
+2. **Cadastrar alíquota reduzida sem dispositivo legal.** A nota sai, a SEFAZ
+   autoriza — e a autuação vem depois, porque a redução não tem amparo declarado.
+3. **Esquecer o CST de devolução.** Só aparece quando a primeira devolução acontece,
+   e aí a nota já saiu com o CST da venda.
+
+### 💡 Como testar se o parâmetro funcionou
+
+Emita a **prévia** de uma NF-e (`VFIS0200`) para um cliente daquela UF com aquele
+item. A prévia mostra a alíquota aplicada **sem transmitir nada** à SEFAZ. Se a
+alíquota não for a esperada, percorra a escada da seção 9.3 de cima para baixo.
 
 ---
 
@@ -809,88 +1166,347 @@ Notação hierárquica com pontos: `3` → `3.1` → `3.1.01`.
 
 ## 12.2 `VFIN0210` — Contas a Receber
 
-**O título que a venda gerou.**
+**O título que a venda gerou.** A tela tem duas abas: **Carteira** (consulta e
+baixa) e **Novo título** (cadastro manual).
 
-### Criação
-Nº Documento ✅ · Cliente (ID) · **NF Saída (ID)** · Forma de Pagamento (padrão `boleto`) · **Valor Bruto** ✅ · **Emissão** ✅ · **Vencimento** ✅ · Desconto · Parc. nº / Parc. tot. · Observação → **Salvar** (status **pendente**).
+### 12.2.1 Aba **Carteira** — o painel de idade
 
-### Baixa (recebimento)
-1. Localize um título **pendente** (âmbar) ou **parcial** (azul) → **Baixar**.
-2. **Conta Bancária** ✅ · **Valor Recebido** ✅ · **Data Recebimento** ✅ · Observação.
-3. **Confirmar Baixa**.
+No topo, a **composição por idade** da carteira: `Vencido`, `7`, `15`, `30`,
+`60 dias`, `Acima de 60` e **Total a receber**.
 
-### Status
+> ⚠️ **Estes cartões são da carteira INTEIRA**, sempre — eles não acompanham o
+> filtro. É deliberado: eles respondem *"quanto está vencido no total"*, e recortá-los
+> pelo filtro os transformaria numa soma do que já está na grade logo abaixo.
+
+### 12.2.2 Aba **Carteira** — o filtro (⭐ mudou nesta versão)
+
+| Campo | Para que serve |
+|:--|:--|
+| **Cliente** | 🔍 Lupa. Toda a carteira de um cliente |
+| **Situação** | Pendente · Recebido em parte · Recebido · Quitado · Cancelado |
+| **Período por** | **Vencimento** ou **Emissão** — escolha qual data o período filtra |
+| **De** / **Até** | O período em si |
+| **Nº do documento** | Casa por **trecho**: `1001` encontra `NF-1001/2` |
+| **Valor de** / **Valor até** | Faixa de valor bruto |
+| **Só títulos vencidos e em aberto** | Caixa de marcação. Vencimento no passado **E** título não quitado |
+
+> ⭐ **Vencimento × Emissão — por que a escolha existe.** Quem **cobra** pergunta
+> "o que vence nesta semana" (vencimento). Quem **confere a conta com o cliente**
+> pergunta "o que faturamos em setembro" (emissão). São duas perguntas diferentes
+> sobre os mesmos títulos, e antes só a primeira era possível.
+
+> ⚠️ **O que mudou e por quê.** Até esta versão havia **um** seletor de situação — e
+> ele **não funcionava**. O servidor lia o filtro do corpo de uma requisição `GET`
+> (nenhum navegador envia corpo em `GET`), e comparava `pendente` com a coluna que
+> grava `PENDENTE`. O sintoma não era erro: a tela mostrava **a carteira inteira**
+> com o filtro marcado, e quem consultava concluía que não havia título vencido.
+> **Se você usou este filtro antes e confiou no resultado, reconfira.**
+
+### 12.2.3 Aba **Carteira** — a grade
+
+| Coluna | Observação |
+|:--|:--|
+| **Documento** | Mostra `parcela n/total` embaixo quando o título é parcelado |
+| **Cliente** | Nome resolvido do código |
+| **Emissão** / **Vencimento** | O vencimento traz os **dias de atraso** embaixo (`12 dia(s) em atraso`, `vence hoje`, `em 5 dia(s)`) e fica **vermelho** quando vencido e em aberto |
+| **Valor** / **Recebido** / **Saldo** | Saldo só aparece em título aberto |
+| **Situação** | Etiqueta colorida |
+| **Ações** | **Baixar** e **Cancelar** em títulos abertos; em títulos encerrados, a data do recebimento |
+
+O **rodapé da tabela** soma valor, recebido e saldo dos títulos **mostrados**.
+
+### 12.2.4 Baixa (recebimento)
+
+1. Clique **Baixar** num título aberto.
+2. **Conta bancária que recebeu** ✅ (🔍 lupa) · **Valor recebido** ✅ · **Data do recebimento** ✅ · Observação.
+3. **Confirmar baixa**.
+
+> ⚠️ **A conta bancária NÃO vem preenchida.** Antes assumia a primeira da lista, e
+> confirmar sem olhar creditava o recebimento na conta errada. Agora é escolha
+> obrigatória.
+
+> ⭐ **Recebimento parcial é nativo.** Valor menor que o saldo registra parcial, e a
+> mensagem diz o saldo restante. Valor **acima** do saldo é recusado com os dois
+> números na mensagem.
+
+### 12.2.5 Aba **Novo título**
+
+| Campo | Observação |
+|:--|:--|
+| **Nº do documento** ✅ | |
+| **Cliente** | 🔍 lupa |
+| **Nota fiscal de saída** | 🔍 lupa — ⭐ **busca pelo NÚMERO e série da nota** |
+| **Pedido de venda** | 🔍 lupa. Fecha o ciclo pedido → nota → recebimento |
+| **Emissão** / **Vencimento** ✅ | Vencimento anterior à emissão é recusado |
+| **Valor bruto** ✅ / **Desconto** | Desconto maior que o bruto é recusado |
+| **Valor líquido** | Calculado, somente leitura |
+| **Forma de recebimento** | Lista fechada: Boleto · Transferência · PIX · Dinheiro · Cartão · Cheque · Débito automático · Outra |
+| **Parcela** / **de** | Parcela maior que o total é recusada |
+
+> ⭐ **"NF Saída (ID)" acabou.** Era um campo numérico para digitar o **identificador
+> interno da nota no banco de dados** — número que ninguém sabe de cabeça, e que o
+> campo aceitava sem conferir: o título ficava vinculado à nota errada **sem nenhum
+> aviso**. Agora você busca `NF 5911/1 · CLIENTE · R$ 412,60` e o sistema resolve o
+> vínculo interno.
+
+> 💡 **Forma de pagamento virou lista** pelo mesmo motivo: era texto livre, e
+> `boleto`, `Boleto` e `BOL` viravam **três formas diferentes** nos relatórios.
+
+### Ciclo de situação
 ```
-pendente (âmbar) → parcial (azul) → pago (verde)
-                                  → cancelado (vermelho)
+PENDENTE (âmbar) → PARCIAL (azul) → RECEBIDO / PAGO (verde)
+                                  → CANCELADO (vermelho)
 ```
 
-⭐ **Sem fluxo de aprovação** — diferente do Contas a Pagar.
-⭐ **Recebimento parcial é nativo** — o hint mostra o **saldo restante**.
-
-### Dashboard de aging
-Faixas: **Vencido** · **7** · **15** · **30** · **60 dias** · **Acima de 60 dias** + **Total**.
-
-⚠️ Os cartões são **informativos** — para filtrar a tabela, use o **seletor de status**.
-⚠️ Só aparecem as faixas que **têm título** no período.
-💡 As **cores da tabela** indicam o **status** do título, não a faixa de aging.
+⭐ **Sem fluxo de aprovação** — ao contrário do Contas a Pagar.
 
 ---
 
 ## 12.3 `VFIN0200` — Contas a Pagar
 
-**O título que a compra do Dia 2 gerou.**
+**O título que a compra do Dia 2 gerou.** Mesma estrutura de duas abas do
+VFIN0210, com o que é próprio do lado a pagar.
 
-> ⭐ **INTEGRAÇÃO CRÍTICA:** aprovar uma **NF-e de Entrada** no `VFIS0210` **gera automaticamente** uma conta a pagar aqui.
+> ⭐ **INTEGRAÇÃO CRÍTICA:** aprovar uma **NF-e de Entrada** no `VFIS0210` **gera
+> automaticamente** uma conta a pagar aqui.
 
-### Ciclo — diferente do Receber
+### 12.3.1 O ciclo — diferente do Receber
 ```
-pendente (âmbar) ──aprovar──▶ aprovado (azul) ──baixar──▶ pago (verde)
-       │                            │
-       └──rejeitar (com motivo)──▶ cancelado (vermelho) ◀──cancelar──┘
+PENDENTE ──aprovar──▶ APROVADO ──pagar──▶ PAGO
+    │                     │
+    └─rejeitar (c/ motivo)─┴──cancelar──▶ CANCELADO
 ```
 
-⚠️ **A rejeição solicita um motivo** e o título vai para **cancelado**.
-⚠️ **Só título aprovado pode ser baixado.**
+> ⭐ **Por que a assimetria.** Você quer um segundo olhar antes de **tirar** dinheiro
+> do caixa, não antes de colocar. O botão **Pagar** só aparece depois da aprovação.
+
+⚠️ **A rejeição exige motivo.** A tela pergunta, e o texto fica registrado — é o
+que você responde ao fornecedor quando ele cobrar.
 ⚠️ **Cancelamento não tem desfazer.**
 
-### Campos de rateio (opcionais mas importantes)
-**Plano Contas (ID)** — classificação contábil
-**Centro Custo (ID)** — rateio da despesa
+### 12.3.2 O filtro — tudo do VFIN0210, mais o que é do lado a pagar
 
-> 💡 **Por que a assimetria?** Você quer um segundo olhar antes de **tirar** dinheiro do caixa, não antes de colocar.
+Além de fornecedor, situação, período (vencimento ou emissão), documento, faixa de
+valor e "só vencidos":
+
+| Campo | Para que serve |
+|:--|:--|
+| **Conta do plano** | 🔍 Lupa. "Tudo que foi classificado em despesa com energia" |
+| **Centro de custo** | 🔍 Lupa. "Tudo que a usinagem gastou no mês" |
+
+### 12.3.3 A grade
+
+Tem uma coluna a mais que o Receber: **Aprovação** — `Aguardando aprovação`,
+`Aprovado` ou `Rejeitado`, separada da situação do título.
+
+> 💡 **Por que duas colunas de situação.** Um título pode estar **aguardando
+> aprovação** e **já vencido** ao mesmo tempo. São dois problemas diferentes, com
+> dois responsáveis diferentes.
+
+O indicador **Aguardando aprovação** aparece no painel de idade quando há títulos
+parados — é a fila que trava o pagamento.
+
+### 12.3.4 Aba **Novo título** — os campos próprios
+
+| Campo | Observação |
+|:--|:--|
+| **Tipo de documento** | Lista fechada: NF-e · NFS-e · CT-e · Fatura · Recibo · Boleto · Contrato · Outro |
+| **Nota fiscal de entrada** | 🔍 lupa — ⭐ era `NF Entrada (ID)` |
+| **Pedido de compra** | 🔍 lupa. Fecha o ciclo pedido → nota → pagamento |
+| **Conta do plano** | 🔍 lupa — ⭐ era `Plano Contas (ID)` |
+| **Centro de custo** | 🔍 lupa — ⭐ era `Centro Custo (ID)` |
+
+> ⭐ **Os três campos "(ID)" acabaram.** Eram campos numéricos pedindo o
+> identificador do registro no banco. Além de ninguém saber esses números, **qualquer
+> valor era aceito** — o título ficava classificado na conta contábil errada, e isso
+> só aparece no fechamento.
+
+### 12.3.5 Baixa (pagamento)
+
+Igual à do Receber, com **Conta bancária de onde sai** (🔍 lupa, sem valor
+pré-escolhido) · **Valor pago** · **Data do pagamento** · Observação.
 
 ---
 
-## 12.4 `VFIN0300` — Fluxo de Caixa e Saldos
+## 12.4 `VFIN0300` — Fluxo de Caixa & Saldos
 
-Tela **exclusivamente consultiva** — 3 abas.
+Tela **consultiva** — três abas. É o espelho de tudo o que aconteceu no caixa.
 
-| Aba | Parâmetros | O que mostra |
-|:--|:--|:--|
-| **Realizado** | Início **e** Fim | **Entradas** (verde) · **Saídas** (vermelho) · **Saldo** + tabela cronológica com **Conciliação** (Sim/Não) |
-| **Projetado** | Apenas Início | Vencimento, tipo, descrição e valor dos **lançamentos futuros previstos** |
-| **Saldos das Contas** | — | Quantidade de contas + **saldo total somado** + saldo atual de cada conta |
+### 12.4.1 Aba **Realizado** — o que entrou e saiu
 
-⚠️ **Os títulos precisam ter sido baixados** para aparecerem na aba **Realizado**.
-⭐ Saldos = **saldo inicial** do `VFIN0100` + **todas as baixas** registradas.
-⚠️ A aba **Projetado não tem conciliação** — são previsões.
-⚠️ Todas as alterações são feitas nas **telas de origem** (`VFIN0200`, `VFIN0210`, `VFIN0100`).
+**Parâmetros:** Início **e** Fim · **Agrupar** (Dia / Semana / Mês, só afeta o gráfico).
+
+**Recortes** (⭐ novos):
+
+| Campo | Para que serve |
+|:--|:--|
+| **Conta bancária** | 🔍 Lupa. ⭐ Com mais de uma conta, o caixa somado **não responde** se há saldo NA conta de onde o pagamento vai sair |
+| **Tipo de movimento** | Entradas e saídas · Só entradas · Só saídas |
+| **Buscar no histórico** | Cliente, fornecedor, documento |
+
+**O que a aba mostra:**
+1. **Gráfico** de entradas (verde) e saídas (vermelho) por dia, semana ou mês, com o **saldo acumulado** no rótulo de cada coluna.
+2. **Indicadores**: Entradas · Saídas · Saldo do período (vermelho quando negativo) · Lançamentos.
+3. **Tabela** cronológica: Data · Tipo · Histórico · **Conta** · Conciliado (Sim/Não) · Valor. O rodapé traz o saldo do período.
+
+> ⚠️ **Os títulos precisam ter sido BAIXADOS** para aparecerem aqui. Título em
+> aberto é previsão, e previsão vive na aba **Projetado**.
+
+### 12.4.2 Aba **Projetado** — o que ainda vai acontecer
+
+**Parâmetro:** apenas *A partir de* — é uma projeção para frente.
+
+Mostra o mesmo gráfico e, ⭐ **novo**, os **totais**: A receber · A pagar · **Saldo
+projetado** · Títulos. Antes havia a curva e nenhum número.
+
+⚠️ **Não tem conciliação** — são previsões, não movimento de banco.
+
+### 12.4.3 Aba **Saldos das contas**
+
+Contas · **Saldo total** · e o saldo de cada conta, com o negativo em vermelho.
+
+⭐ Saldo = **saldo inicial** do `VFIN0100` + **todas as baixas** registradas.
+
+> ⚠️ **Tudo aqui é leitura.** Para mudar qualquer número, vá à tela de origem:
+> `VFIN0200` (a pagar), `VFIN0210` (a receber), `VFIN0100` (cadastro da conta).
 
 > ## ⭐ O caixa é o espelho de tudo
 >
-> A **venda** virou **nota** → a nota virou **título a receber** → o título entra no **fluxo de caixa**.
-> A **compra** do Dia 2 virou **título a pagar**.
+> A **venda** virou **nota** → a nota virou **título a receber** → o título baixado
+> entra no **fluxo de caixa**. A **compra** do Dia 2 virou **título a pagar** e sai
+> pelo mesmo caixa.
 
-## 12.5 Complementos financeiros
+---
+
+## 12.5 `VFIN0600` — Adiantamentos de Clientes e Fornecedores
+
+> **O que é.** Dinheiro que mudou de mãos **antes de existir título**: pagamento
+> antecipado a fornecedor ou recebimento antecipado de cliente. O caixa se move no
+> registro; o **saldo** fica guardado para abater títulos depois.
+
+> ⭐ **Esta tela é nova.** Antes era um formulário de JSON genérico: você digitava
+> `{"tipo":"PAGAR","conta_bancaria_id":1,...}` à mão, sem lista de saldos, sem
+> escolher a conta numa busca e sem saber em qual título aplicar. Registrar era
+> possível; **usar** o saldo, na prática, não.
+
+### 12.5.1 Aba **Saldos disponíveis**
+
+Indicadores: **Adiantado a fornecedores** · **Recebido de clientes** · **Com saldo a
+aplicar** · **Registrados**. Filtro por **Tipo** e **Parceiro** (🔍 lupa).
+
+A grade traz `#` · Tipo · Parceiro · Documento · Data · Valor · **Aplicado** ·
+**Saldo** · Situação · **Aplicar**.
+
+| Situação | Significa |
+|:--|:--|
+| **Saldo integral disponível** | Nada aplicado ainda |
+| **Saldo usado em parte** | Parte já abateu título |
+| **Saldo todo aplicado** | Acabou |
+| **Cancelado** | Linha aparece apagada |
+
+### 12.5.2 Aplicar o saldo em um título
+
+Clique **Aplicar**. A tela carrega **somente** os títulos em aberto **do mesmo
+parceiro** e **do lado certo** da operação, e propõe o menor valor entre o saldo do
+adiantamento e o saldo do título.
+
+> ⚠️ **A regra que a tela protege.** Adiantamento **pago a fornecedor** só abate
+> conta **a pagar**; **recebido de cliente** só abate conta **a receber**. Cruzar os
+> dois abateria a dívida com um parceiro usando o crédito de outro — por isso a
+> lista já vem filtrada, e não há como escolher errado.
+
+> 💡 **Um adiantamento grande pode abater vários títulos** ao longo do tempo. O saldo
+> diminui a cada aplicação, e a situação acompanha.
+
+### 12.5.3 Aba **Novo adiantamento**
+
+| Campo | Observação |
+|:--|:--|
+| **Tipo** ✅ | *Pago a fornecedor* ou *Recebido de cliente*. A dica embaixo diz se o valor SAI ou ENTRA da conta |
+| **Fornecedor / Cliente** ✅ | 🔍 lupa — muda conforme o tipo. Trocar o tipo **limpa** a escolha, porque o parceiro deixa de existir na lista certa |
+| **Conta bancária** ✅ | 🔍 lupa. O rótulo diz "de onde sai" ou "onde entra" conforme o tipo |
+| **Valor** ✅ | Maior que zero |
+| **Data** ✅ | Não aceita data futura: o caixa se move nesta data |
+| **Documento** / **Descrição** | Recibo, contrato, comprovante |
+
+⚠️ **Registrar move o caixa imediatamente.** Não é uma promessa — é um movimento.
+⚠️ **A aplicação não tem exclusão.**
+
+---
+
+## 12.6 `VFIN0620` — Conciliação Bancária por OFX
+
+> **O que é.** Importa o extrato da conta e casa cada lançamento com o pagamento ou
+> recebimento já registrado no sistema.
+
+> ⚠️⚠️ **O defeito que esta versão corrige — leia.** A rotina anterior aceitava
+> **qualquer** arquivo e respondia **sucesso**. Importar um JSON, um PDF ou uma
+> planilha dava "sucesso" com **zero lançamento** — e quem importava concluía que o
+> extrato do mês estava vazio, não que havia mandado o arquivo errado. **Se alguma
+> conciliação passada "não trouxe nada", era isto.**
+
+### 12.6.1 Os três passos da tela
+
+**1. Conta bancária do extrato** (🔍 lupa). Os lançamentos entram no extrato
+**desta** conta. A tela mostra banco, agência, conta e descrição para você confirmar.
+
+**2. Arquivo do extrato.** Escolha o `.ofx`. A tela confere **na hora** e mostra:
+
+| Resultado | O que aparece |
+|:--|:--|
+| **Aceito** | Nome do arquivo, **quantos lançamentos**, banco, conta e **período** lidos do próprio arquivo |
+| **Recusado** | O motivo, dizendo **o que parece** ter sido enviado ("parece um arquivo JSON", "é um arquivo PDF", "parece uma planilha ou CSV") e **qual formato baixar** |
+
+> ⭐ **A conferência é por ESTRUTURA, não por extensão.** Renomear um PDF para
+> `.ofx` não engana: o sistema procura o cabeçalho `OFXHEADER` ou a marcação
+> `<OFX>`. O filtro do diálogo de arquivo (`.ofx`) é só conveniência.
+
+> ⚠️ **Aviso de conta divergente.** Se o arquivo é da conta `99999-0` e você escolheu
+> a `12345-6`, a tela avisa **antes** e pede confirmação. Conciliar o extrato de uma
+> conta contra os pagamentos de outra casa lançamentos que nunca existiram ali — é o
+> erro mais caro desta tela.
+
+**3. Importar extrato.** O resultado mostra quatro números:
+
+| Indicador | Significa |
+|:--|:--|
+| **Importados** | Entraram agora |
+| **Conciliados automaticamente** | Casaram com um pagamento ou recebimento de mesmo valor e data |
+| **Já existiam** | Duplicados — reimportar o mesmo arquivo **não duplica nada** |
+| **Ignorados** | ⭐ Linhas que **não** entraram, com o motivo de cada uma |
+
+> ⭐ **"Ignorados" é novo e importa.** Linha com data ou valor ilegível era descartada
+> **em silêncio**: você via "importados: 12" num extrato de 15 lançamentos e não tinha
+> como saber dos 3 que faltaram. Agora cada linha descartada aparece com o motivo.
+
+### 12.6.2 Como a conciliação funciona
+
+Cada lançamento é identificado pelo código único que o banco atribui (**FITID**)
+somado à conta, à data e ao valor. É esse identificador que permite reimportar o
+mesmo arquivo — ou um período que se sobrepõe — sem duplicar movimento.
+
+O que não casar fica **pendente** e aparece como **não conciliado** no `VFIN0300`.
+
+### 12.6.3 Onde baixar o arquivo certo
+
+No internet banking, procure **"extrato para Money"**, **"OFX"** ou **"Open
+Financial Exchange"**. CSV, PDF, planilha e comprovante **não servem**: a
+conciliação precisa do identificador único de cada lançamento, que só o OFX traz.
+
+⚠️ Limite de **8 MB** por arquivo — se passar, baixe um período menor.
+
+---
+
+## 12.7 Complementos financeiros
 
 | Tela | O que faz | ⚠️ Atenção |
 |:--|:--|:--|
-| `VFIN0600` | **Adiantamentos** de clientes e fornecedores | `PAGAR` **não** pode ser aplicado em conta a receber, nem `RECEBER` em conta a pagar. Valor zero, negativo ou acima do saldo é recusado. **A aplicação não tem exclusão** |
-| `VFIN0610` | **Remessa Bancária CNAB 240** (`.rem`) | **Não reutilize sequência já aceita pelo banco.** **Valide no homologador do banco** — gerar o arquivo **não significa** que o banco registrou os títulos |
-| `VFIN0620` | **Conciliação Bancária por OFX** | **Compare banco/agência/conta com o cabeçalho do arquivo.** Use o `.ofx` **original**; **não converta PDF/CSV mudando a extensão**. Confira duplicidades em reimportações |
-| `VFIN0500` | **Relatórios** (R01–R18) | R05 = DRE · R09/R10 = Aging Receber/Pagar · R11/R12 = Extrato por Fornecedor/Cliente. Relatórios grandes **demoram** — aguarde antes de trocar |
+| `VFIN0610` | **Remessa Bancária CNAB 240** (`.rem`) | **Não reutilize sequência já aceita pelo banco.** **Valide no homologador** — gerar o arquivo **não significa** que o banco registrou os títulos |
+| `VFIN0500` | **Relatórios** (R01–R19) | R05 = DRE · R09/R10 = Aging Receber/Pagar · R11/R12 = Extrato por Fornecedor/Cliente. Relatórios grandes **demoram** |
 | `VFIN0130` | Centros de Custo | `PRODUTIVO` / `ADMINISTRATIVO` / `COMERCIAL` / `AUXILIAR` |
+| `VFIN0100` | Contas bancárias | O **saldo inicial** daqui é a base de todo saldo do `VFIN0300` |
+| `VFIN0110` | Condições de pagamento | Parcelas, percentuais e evento base |
+| `VFIN0120` | Plano de contas | A classificação contábil que o `VFIN0200` usa |
 
 ---
 
