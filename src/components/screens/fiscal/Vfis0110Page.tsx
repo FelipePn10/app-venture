@@ -64,6 +64,19 @@ function somenteDigitos(texto: string, maximo: number): string {
   return texto.replace(/\D/g, "").slice(0, maximo);
 }
 
+/**
+ * NCM com a máscara da TIPI, só para exibir.
+ *
+ * O cadastro guarda 8 dígitos limpos de propósito: é a forma que a SEFAZ exige no
+ * XML e a única que casa com a classificação fiscal do item. A máscara aparece
+ * apenas na leitura, porque é assim que o usuário reconhece o código na tabela.
+ */
+function ncmComMascara(ncm: string): string {
+  const d = ncm.replace(/\D/g, "");
+  if (d.length !== 8) return ncm;
+  return `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}`;
+}
+
 /** Campo de percentual: sufixo visível e domínio numérico. */
 function CampoPercentual({ label, valor, onChange, hint, obrigatorio }: {
   label: string; valor: number; onChange: (fracaoNova: number) => void; hint?: string; obrigatorio?: boolean;
@@ -128,8 +141,11 @@ export function Vfis0110Page(): JSX.Element {
   const ncmsFiltrados = useMemo(() => {
     const termo = buscaNcm.trim().toLowerCase();
     if (!termo) return ncms;
+    // Procurar por "8466.20.90" tem de achar o registro gravado como "84662090".
+    const digitos = termo.replace(/\D/g, "");
     return ncms.filter((n) =>
-      n.ncm.includes(termo) || (n.description ?? "").toLowerCase().includes(termo));
+      (digitos !== "" && n.ncm.includes(digitos))
+      || (n.description ?? "").toLowerCase().includes(termo));
   }, [ncms, buscaNcm]);
 
   const intersFiltrados = useMemo(() => {
@@ -157,11 +173,11 @@ export function Vfis0110Page(): JSX.Element {
   }
 
   async function removeNcm(ncm: string) {
-    if (!window.confirm(`Desativar a tributação do NCM ${ncm}?\n\nNotas novas com este NCM passam a sair sem IPI, PIS e COFINS configurados.`)) return;
+    if (!window.confirm(`Desativar a tributação do NCM ${ncmComMascara(ncm)}?\n\nNotas novas com este NCM passam a sair sem IPI, PIS e COFINS configurados.`)) return;
     setBusy(true); setFeedback(null);
     try {
       await deleteNcmTax(ncm);
-      setFeedback({ type: "success", message: `NCM ${ncm} desativado.` });
+      setFeedback({ type: "success", message: `NCM ${ncmComMascara(ncm)} desativado.` });
       await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -169,7 +185,7 @@ export function Vfis0110Page(): JSX.Element {
   /** Carrega o formulário com uma linha existente, para conferir e corrigir. */
   function editarNcm(n: NcmTaxTable) {
     setNcmForm({ ...n });
-    setFeedback({ type: "info", message: `NCM ${n.ncm} carregado para alteração. Salvar substitui a tributação atual.` });
+    setFeedback({ type: "info", message: `NCM ${ncmComMascara(n.ncm)} carregado para alteração. Salvar substitui a tributação atual.` });
   }
 
   async function saveInterno() {
@@ -259,7 +275,7 @@ export function Vfis0110Page(): JSX.Element {
                   <div className="erp-fieldset-head">
                     Tributação por NCM
                     <span style={{ fontWeight: 400, opacity: 0.65 }}>
-                      {ncmForm.ncm ? ` — alterando ${ncmForm.ncm}` : " — novo registro"}
+                      {ncmForm.ncm ? ` — alterando ${ncmComMascara(ncmForm.ncm)}` : " — novo registro"}
                     </span>
                   </div>
                   <div className="erp-fieldset-body">
@@ -367,7 +383,7 @@ export function Vfis0110Page(): JSX.Element {
                           )}
                           {ncmsFiltrados.map((n) => (
                             <tr key={n.ncm}>
-                              <td style={{ fontWeight: 600 }}>{n.ncm}</td>
+                              <td style={{ fontWeight: 600 }}>{ncmComMascara(n.ncm)}</td>
                               <td>{n.description || "—"}</td>
                               <td className="num">{pct(n.aliq_ipi)}%</td>
                               <td className="num">{pct(n.aliq_pis)}%</td>
