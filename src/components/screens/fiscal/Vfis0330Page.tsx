@@ -6,6 +6,10 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import {
+  loadItems, loadCustomers, loadSuppliers, loadEstablishments, loadMarketSegments,
+} from "@/services/lookups";
 
 type FindForm = { uf: string; item_id: string; customer_id: string; op_type: IcmsOpType };
 const EMPTY_FIND: FindForm = { uf: "", item_id: "", customer_id: "", op_type: "SAIDA" };
@@ -125,20 +129,31 @@ export function Vfis0330Page(): JSX.Element {
                 {OPS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">NCM</label>
               <input className="erp-input" value={form.ncm_code ?? ""} onChange={(e) => setF("ncm_code", e.target.value)} /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Item (ID)</label>
-              <input className="erp-input num" type="number" value={form.item_id ?? ""} onChange={(e) => setOptNum("item_id", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Item</label>
+              <LookupField value={form.item_id ?? undefined} loader={loadItems}
+                entityLabel="item" placeholder="Buscar item" clearable allowManualCode={false}
+                onChange={(c) => setF("item_id", c ? Number(c) : undefined)} />
+              <span className="erp-hint">Em branco, a regra vale para todos os itens do NCM.</span></div>
             <div className="erp-field erp-c2"><label className="erp-label">Preferencial</label>
               <div className="erp-toggle-row">
                 <label className="erp-toggle"><input type="checkbox" checked={!!form.is_preferential} onChange={(e) => setF("is_preferential", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>
                 <span className="erp-toggle-label">{form.is_preferential ? "Sim" : "Não"}</span></div></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Cliente (ID)</label>
-              <input className="erp-input num" type="number" value={form.customer_id ?? ""} onChange={(e) => setOptNum("customer_id", e.target.value)} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Fornecedor (ID)</label>
-              <input className="erp-input num" type="number" value={form.supplier_id ?? ""} onChange={(e) => setOptNum("supplier_id", e.target.value)} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento (ID)</label>
-              <input className="erp-input num" type="number" value={form.establishment_id ?? ""} onChange={(e) => setOptNum("establishment_id", e.target.value)} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Seg. Mercado (ID)</label>
-              <input className="erp-input num" type="number" value={form.market_segment_id ?? ""} onChange={(e) => setOptNum("market_segment_id", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Cliente</label>
+              <LookupField value={form.customer_id ?? undefined} loader={loadCustomers}
+                entityLabel="cliente" placeholder="Buscar cliente" clearable allowManualCode={false}
+                onChange={(c) => setF("customer_id", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+              <LookupField value={form.supplier_id ?? undefined} loader={loadSuppliers}
+                entityLabel="fornecedor" placeholder="Buscar fornecedor" clearable allowManualCode={false}
+                onChange={(c) => setF("supplier_id", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento</label>
+              <LookupField value={form.establishment_id ?? undefined} loader={loadEstablishments}
+                entityLabel="estabelecimento" placeholder="Buscar estabelecimento" clearable allowManualCode={false}
+                onChange={(c) => setF("establishment_id", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Segmento de mercado</label>
+              <LookupField value={form.market_segment_id ?? undefined} loader={loadMarketSegments}
+                entityLabel="segmento de mercado" placeholder="Buscar segmento de mercado" clearable allowManualCode={false}
+                onChange={(c) => setF("market_segment_id", c ? Number(c) : undefined)} /></div>
           </div>
         </div>
 
@@ -182,7 +197,7 @@ export function Vfis0330Page(): JSX.Element {
           
           {findDone && (
             findResult ? (
-              <div className="erp-fieldset-body" style={{ marginTop: 12 }}>
+              <div className="erp-field erp-c12" style={{ marginTop: 12 }}>
                 <table className="erp-grid">
                   <thead><tr><th>#</th><th>UF</th><th>Operação</th><th>Escopo</th><th>% Contrib.</th><th>CST</th></tr></thead>
                   <tbody>
@@ -200,6 +215,9 @@ export function Vfis0330Page(): JSX.Element {
 
         <div className="erp-fieldset-head">Regras — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div>
         <div className="erp-fieldset"><div className="erp-fieldset-body">
+          {/* erp-c12: sem o span a tabela vira um item de uma coluna de
+              doze e sai comprimida — foi o layout quebrado medido aqui. */}
+          <div className="erp-field erp-c12">
           <table className="erp-grid">
             <thead><tr><th>#</th><th>UF</th><th>Operação</th><th>Escopo</th><th>% Contrib.</th><th>CST</th><th style={{ width: 80 }}>Ações</th></tr></thead>
             <tbody>
@@ -214,6 +232,7 @@ export function Vfis0330Page(): JSX.Element {
               ))}
             </tbody>
           </table>
+          </div>
         </div></div>
       </div></section></div>
 

@@ -6,6 +6,10 @@ import {
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import {
+  loadEstablishments, loadCfops, loadIcmsApuracaoLines, loadIcmsAdjustmentCodes,
+} from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -122,8 +126,10 @@ export function Vfis0560Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Nota  — <span style={{fontWeight:400,opacity:0.65}}>{editId !== null ? `Editando #${editId}` : "Nova (status RASCUNHO)"}</span></div><div className="erp-fieldset-body">
           
-            <div className="erp-field erp-c2"><label className="erp-label erp-req">Empresa (ID)</label>
-              <input className="erp-input num" type="number" value={form.empresa_id || ""} onChange={(e) => setF("empresa_id", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label erp-req">Empresa</label>
+              <LookupField value={form.empresa_id || undefined} loader={loadEstablishments}
+                entityLabel="empresa" placeholder="Escolher a empresa" allowManualCode={false}
+                onChange={(c) => setF("empresa_id", Number(c ?? 0))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Finalidade</label>
               <select className="erp-input" value={form.purpose} onChange={(e) => setF("purpose", e.target.value as NotaEspecialPurpose)}>
                 {PURPOSES.map((p) => <option key={p} value={p}>{enumLabel(p)}</option>)}</select></div>
@@ -135,12 +141,20 @@ export function Vfis0560Page(): JSX.Element {
               <div className="erp-toggle-row">
                 <label className="erp-toggle"><input type="checkbox" checked={!!form.auto_generate_summary} onChange={(e) => setF("auto_generate_summary", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>
                 <span className="erp-toggle-label">{form.auto_generate_summary ? "Sim" : "Não"}</span></div></div>
-            <div className="erp-field erp-c2"><label className="erp-label">CFOP (ID)</label>
-              <input className="erp-input num" type="number" value={form.cfop_id ?? ""} onChange={(e) => setF("cfop_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Linha Apur. (ID)</label>
-              <input className="erp-input num" type="number" value={form.icms_apuracao_line_id ?? ""} onChange={(e) => setF("icms_apuracao_line_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Cód. Ajuste (ID)</label>
-              <input className="erp-input num" type="number" value={form.adjustment_code_id ?? ""} onChange={(e) => setF("adjustment_code_id", e.target.value ? Number(e.target.value) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">CFOP</label>
+              <LookupField value={form.cfop_id ?? undefined} loader={loadCfops}
+                entityLabel="CFOP" placeholder="Buscar pelo código" allowManualCode={false} clearable
+                onChange={(c) => setF("cfop_id", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Linha da apuração de ICMS</label>
+              <LookupField value={form.icms_apuracao_line_id ?? undefined} loader={loadIcmsApuracaoLines}
+                entityLabel="linha da apuração" placeholder="Buscar a linha" allowManualCode={false} clearable
+                onChange={(c) => setF("icms_apuracao_line_id", c ? Number(c) : undefined)} />
+              <span className="erp-hint">Registro E110 do SPED Fiscal.</span></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Código de ajuste</label>
+              <LookupField value={form.adjustment_code_id ?? undefined} loader={loadIcmsAdjustmentCodes}
+                entityLabel="código de ajuste" placeholder="Buscar o código" allowManualCode={false} clearable
+                onChange={(c) => setF("adjustment_code_id", c ? Number(c) : undefined)} />
+              <span className="erp-hint">Registro E111 do SPED Fiscal.</span></div>
             <div className="erp-field erp-c3"><label className="erp-label">Valor Total</label>
               <input className="erp-input num" type="number" step="0.01" value={form.total_value} onChange={(e) => setF("total_value", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">ICMS Total</label>
@@ -152,6 +166,9 @@ export function Vfis0560Page(): JSX.Element {
 
         <div className="erp-fieldset-head">Notas — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div>
         <div className="erp-fieldset"><div className="erp-fieldset-body">
+          {/* erp-c12: sem o span a tabela vira um item de uma coluna de
+              doze e sai comprimida — foi o layout quebrado medido aqui. */}
+          <div className="erp-field erp-c12">
           <table className="erp-grid">
             <thead><tr><th>#</th><th>Período</th><th>Finalidade</th><th>Status</th><th>Total</th><th>ICMS</th><th style={{ width: 150 }}>Ações</th></tr></thead>
             <tbody>
@@ -168,6 +185,7 @@ export function Vfis0560Page(): JSX.Element {
               ))}
             </tbody>
           </table>
+          </div>
         </div></div>
 
         {selected && (

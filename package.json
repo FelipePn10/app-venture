@@ -38,6 +38,8 @@
     "audit:api-coverage": "node scripts/audit-api-route-coverage.mjs ${VENTURE_BACKEND_ROOT:-/home/felipepanosso/GolandProjects/panossoerp-ajustes} --fail-on-missing",
     "test:versioning": "node scripts/test-versioning.mjs",
     "test:download-notice": "node scripts/test-download-notice.mjs",
+    "test:tenant-directory": "node scripts/test-tenant-directory.mjs",
+    "test:beneficiamento": "node scripts/test-beneficiamento-contrato.mjs",
     "test:screen-search": "node scripts/test-screen-search.mjs",
     "test:commercial-regressions": "node scripts/validate-commercial-regressions.mjs",
     "test:commercial-round2": "node scripts/validate-commercial-round2.mjs",
@@ -62,7 +64,8 @@
     "audit:tenant": "node scripts/audit-tenant-isolation.mjs",
     "audit:roundtrip": "node scripts/audit-roundtrip.mjs",
     "sim:telas": "node scripts/ui-sim/varrer.mjs",
-    "sim:explorar": "bash scripts/ui-sim/explorar-tudo.sh"
+    "sim:explorar": "bash scripts/ui-sim/explorar-tudo.sh",
+    "audit:grade": "node scripts/audit-grade.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",

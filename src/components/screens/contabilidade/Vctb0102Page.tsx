@@ -893,7 +893,7 @@ export function Vctb0102Page(): JSX.Element {
                           : "comercial";
                         return (
                           <tr key={cc.code} onClick={() => handleSelectFromList(cc)}>
-                            <td style={{ fontWeight: 600, color: "#1a4a2a" }}>{cc.code}</td>
+                            <td style={{ fontWeight: 600, color: "var(--v-ok)" }}>{cc.code}</td>
                             <td style={{ color: cc.parent_code ? "#233029" : "#94a49a" }}>
                               {cc.parent_code ?? "—"}
                             </td>
@@ -905,8 +905,8 @@ export function Vctb0102Page(): JSX.Element {
                             </td>
                             <td style={{ textAlign: "center" }}>
                               {cc.is_ratio
-                                ? <span style={{ color: "#2a8040", fontWeight: 600, fontSize: 12 }}>Sim</span>
-                                : <span style={{ color: "#94a49a", fontSize: 12 }}>Não</span>
+                                ? <span style={{ color: "var(--v-ok)", fontWeight: 600, fontSize: 12 }}>Sim</span>
+                                : <span style={{ color: "var(--v-text-muted)", fontSize: 12 }}>Não</span>
                               }
                             </td>
                             <td style={{ fontSize: 12 }}>{formatDateBR(cc.start_date)}</td>
@@ -1256,8 +1256,8 @@ export function Vctb0102Page(): JSX.Element {
                     <tbody>
                       {empresas.map((e, i) => (
                         <tr key={i}>
-                          <td style={{ color: "#94a49a", fontSize: 12 }}>{i + 1}</td>
-                          <td style={{ fontWeight: 600, color: "#1a4a2a" }}>{e.empresa}</td>
+                          <td style={{ color: "var(--v-text-muted)", fontSize: 12 }}>{i + 1}</td>
+                          <td style={{ fontWeight: 600, color: "var(--v-ok)" }}>{e.empresa}</td>
                           <td style={{ color: e.unidade ? "#233029" : "#94a49a" }}>
                             {e.unidade || "—"}
                           </td>
@@ -1275,7 +1275,7 @@ export function Vctb0102Page(): JSX.Element {
                   </table>
                 )}
 
-                <div style={{ marginTop: 16, padding: "10px 14px", background: "#f0f8ff", border: "1px solid #c7def8", borderLeft: "3px solid #4a90d9", borderRadius: 8, fontSize: 12, color: "#1a4070", lineHeight: 1.55 }}>
+                <div style={{ marginTop: 16, padding: "10px 14px", background: "#f0f8ff", border: "1px solid #c7def8", borderLeft: "3px solid #4a90d9", borderRadius: 8, fontSize: 12, color: "var(--v-info)", lineHeight: 1.55 }}>
                   <strong>Unidade:</strong> Informar a unidade de medida para o Custo Operacional (FCST0113) e Cálculo do Tempo Trabalhado (FCST0252). Exemplos: Hora, Minuto.
                 </div>
               </div>
@@ -1305,7 +1305,7 @@ export function Vctb0102Page(): JSX.Element {
               ? <span className="ctb-modo-novo" style={{ fontSize: 11 }}><span className="ctb-modo-dot" />Novo Cadastro</span>
               : <span className="ctb-modo-edicao" style={{ fontSize: 11 }}><span className="ctb-modo-dot" />Editando #{codigoEdit}</span>
             }
-            <span style={{ color: "#a9b6ac", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
+            <span style={{ color: "var(--v-text-muted)", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
           </div>
         </footer>
 

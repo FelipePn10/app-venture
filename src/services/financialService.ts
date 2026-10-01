@@ -75,6 +75,21 @@ export interface ContaPagar {
   valor_pago: number;
   data_vencimento: string;
   fornecedor_id?: number;
+  /** Campos que a resposta já trazia e o parser descartava. */
+  tipo_documento?: string;
+  data_emissao?: string;
+  data_pagamento?: string;
+  status_aprovacao?: string;
+  fiscal_entry_id?: number;
+  purchase_order_id?: number;
+  plano_contas_id?: number;
+  centro_custo_id?: number;
+  desconto?: number;
+  juros?: number;
+  multa?: number;
+  parcela_numero?: number;
+  parcela_total?: number;
+  forma_pagamento?: string;
 }
 
 export interface ContaReceberDTO {
@@ -100,6 +115,21 @@ export interface ContaReceber {
   valor_recebido: number;
   data_vencimento: string;
   cliente_id?: number;
+  /**
+   * Campos que a resposta já trazia e o parser descartava. Sem emissão não se
+   * confere a carteira com o parceiro; sem o vínculo da nota e do pedido a grade
+   * não fecha o ciclo pedido → nota → recebimento.
+   */
+  data_emissao?: string;
+  data_recebimento?: string;
+  fiscal_exit_id?: number;
+  sales_order_id?: number;
+  desconto?: number;
+  juros?: number;
+  multa?: number;
+  parcela_numero?: number;
+  parcela_total?: number;
+  forma_pagamento?: string;
 }
 
 export interface BaixaPagamentoDTO {
@@ -127,12 +157,102 @@ export interface AgingBucket {
   total: number;
 }
 
+/**
+ * Filtros da carteira. Viajam na QUERY STRING.
+ *
+ * ⚠️ Até esta versão o backend lia estes campos do CORPO de uma rota GET — e
+ * nenhum cliente HTTP manda corpo num GET. O filtro nunca chegava: a tela mostrava
+ * a carteira inteira com o filtro marcado, e quem consultava concluía que não
+ * havia título vencido quando havia.
+ *
+ * `status` é comparado sem diferenciar maiúsculas: a coluna grava em MAIÚSCULAS.
+ */
 export interface ListFilters {
   status?: string;
+  /** VENCIMENTO (padrão) ou EMISSAO — a data sobre a qual o período filtra. */
+  date_field?: 'VENCIMENTO' | 'EMISSAO';
   start_date?: string;
   end_date?: string;
   fornecedor_id?: number | string;
   cliente_id?: number | string;
+  /** Casa por trecho, sem diferenciar caixa. */
+  documento?: string;
+  tipo_documento?: string;
+  plano_contas_id?: number | string;
+  centro_custo_id?: number | string;
+  sales_order_id?: number | string;
+  fiscal_exit_id?: number | string;
+  valor_minimo?: number | string;
+  valor_maximo?: number | string;
+  /** Em aberto com vencimento anterior a hoje. */
+  somente_vencidos?: boolean | string;
+  status_aprovacao?: string;
+}
+
+/** Situações do título, com o rótulo que a tela mostra. O valor é MAIÚSCULO porque
+ *  é assim que a coluna grava; a tela enviava minúsculas e não filtrava nada. */
+export const STATUS_TITULO_PAGAR = [
+  { valor: '', rotulo: 'Todas as situações' },
+  { valor: 'PENDENTE', rotulo: 'Pendente' },
+  { valor: 'APROVADO', rotulo: 'Aprovado' },
+  { valor: 'PAGO', rotulo: 'Pago' },
+  { valor: 'VENCIDO', rotulo: 'Vencido' },
+  { valor: 'CANCELADO', rotulo: 'Cancelado' },
+] as const;
+
+export const STATUS_TITULO_RECEBER = [
+  { valor: '', rotulo: 'Todas as situações' },
+  { valor: 'PENDENTE', rotulo: 'Pendente' },
+  { valor: 'PARCIAL', rotulo: 'Recebido em parte' },
+  { valor: 'RECEBIDO', rotulo: 'Recebido' },
+  { valor: 'PAGO', rotulo: 'Quitado' },
+  { valor: 'CANCELADO', rotulo: 'Cancelado' },
+] as const;
+
+/** Formas de pagamento. Era campo de texto livre: "boleto", "Boleto" e "BOL"
+ *  viravam três formas diferentes nos relatórios. */
+export const FORMAS_DE_PAGAMENTO = [
+  'BOLETO', 'TRANSFERENCIA', 'PIX', 'DINHEIRO', 'CARTAO', 'CHEQUE', 'DEBITO_AUTOMATICO', 'OUTRO',
+] as const;
+export type FormaDePagamento = (typeof FORMAS_DE_PAGAMENTO)[number];
+
+export const FORMA_PAGAMENTO_LABELS: Record<FormaDePagamento, string> = {
+  BOLETO: 'Boleto',
+  TRANSFERENCIA: 'Transferência',
+  PIX: 'PIX',
+  DINHEIRO: 'Dinheiro',
+  CARTAO: 'Cartão',
+  CHEQUE: 'Cheque',
+  DEBITO_AUTOMATICO: 'Débito automático',
+  OUTRO: 'Outra',
+};
+
+/** Tipos de documento de um título a pagar. */
+export const TIPOS_DE_DOCUMENTO = ['NF-e', 'NFS-e', 'CT-e', 'FATURA', 'RECIBO', 'BOLETO', 'CONTRATO', 'OUTRO'] as const;
+
+/**
+ * Dias de atraso de um título em aberto. Negativo = ainda a vencer.
+ * Calculado na tela porque o endpoint não devolve; a data de referência é a do
+ * navegador, e é por isso que o número aparece ao lado do vencimento e não sozinho.
+ */
+export function diasDeAtraso(vencimento?: string): number | undefined {
+  if (!vencimento) return undefined;
+  const venc = new Date(`${vencimento.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(venc.getTime())) return undefined;
+  const hoje = new Date();
+  hoje.setHours(12, 0, 0, 0);
+  return Math.round((hoje.getTime() - venc.getTime()) / 86400000);
+}
+
+/** Um filtro da carteira está ativo quando qualquer campo foi preenchido. */
+export function temFiltroAtivo(f: ListFilters): boolean {
+  return Object.entries(f).some(([, v]) => v !== undefined && v !== null && v !== '' && v !== false);
+}
+
+/** Título em aberto: nem pago, nem recebido, nem cancelado. */
+export function estaEmAberto(status: string): boolean {
+  const s = (status || '').toUpperCase();
+  return !['PAGO', 'RECEBIDO', 'CANCELADO', 'QUITADO'].includes(s);
 }
 
 // ─── Fluxo de caixa & saldos ────────────────────────────────────────────────
@@ -247,7 +367,21 @@ function parsePagar(raw: unknown): ContaPagar {
     valor_bruto: parseNum(o, 'valor_bruto', 'ValorBruto'),
     valor_pago: parseNum(o, 'valor_pago', 'ValorPago'),
     data_vencimento: parseStr(o, 'data_vencimento', 'DataVencimento'),
-    fornecedor_id: parseNum(o, 'fornecedor_id', 'FornecedorID'),
+    fornecedor_id: parseNum(o, 'fornecedor_id', 'FornecedorID') || undefined,
+    tipo_documento: parseStr(o, 'tipo_documento', 'TipoDocumento') || undefined,
+    data_emissao: parseStr(o, 'data_emissao', 'DataEmissao') || undefined,
+    data_pagamento: parseStr(o, 'data_pagamento', 'DataPagamento') || undefined,
+    status_aprovacao: parseStr(o, 'status_aprovacao', 'StatusAprovacao') || undefined,
+    fiscal_entry_id: parseNum(o, 'fiscal_entry_id', 'FiscalEntryID') || undefined,
+    purchase_order_id: parseNum(o, 'purchase_order_id', 'PurchaseOrderID') || undefined,
+    plano_contas_id: parseNum(o, 'plano_contas_id', 'PlanoContasID') || undefined,
+    centro_custo_id: parseNum(o, 'centro_custo_id', 'CentroCustoID') || undefined,
+    desconto: parseNum(o, 'desconto', 'Desconto'),
+    juros: parseNum(o, 'juros', 'Juros'),
+    multa: parseNum(o, 'multa', 'Multa'),
+    parcela_numero: parseNum(o, 'parcela_numero', 'ParcelaNumero') || undefined,
+    parcela_total: parseNum(o, 'parcela_total', 'ParcelaTotal') || undefined,
+    forma_pagamento: parseStr(o, 'forma_pagamento', 'FormaPagamento') || undefined,
   };
 }
 
@@ -260,7 +394,17 @@ function parseReceber(raw: unknown): ContaReceber {
     valor_bruto: parseNum(o, 'valor_bruto', 'ValorBruto'),
     valor_recebido: parseNum(o, 'valor_recebido', 'ValorRecebido'),
     data_vencimento: parseStr(o, 'data_vencimento', 'DataVencimento'),
-    cliente_id: parseNum(o, 'cliente_id', 'ClienteID'),
+    cliente_id: parseNum(o, 'cliente_id', 'ClienteID') || undefined,
+    data_emissao: parseStr(o, 'data_emissao', 'DataEmissao') || undefined,
+    data_recebimento: parseStr(o, 'data_recebimento', 'DataRecebimento') || undefined,
+    fiscal_exit_id: parseNum(o, 'fiscal_exit_id', 'FiscalExitID') || undefined,
+    sales_order_id: parseNum(o, 'sales_order_id', 'SalesOrderID') || undefined,
+    desconto: parseNum(o, 'desconto', 'Desconto'),
+    juros: parseNum(o, 'juros', 'Juros'),
+    multa: parseNum(o, 'multa', 'Multa'),
+    parcela_numero: parseNum(o, 'parcela_numero', 'ParcelaNumero') || undefined,
+    parcela_total: parseNum(o, 'parcela_total', 'ParcelaTotal') || undefined,
+    forma_pagamento: parseStr(o, 'forma_pagamento', 'FormaPagamento') || undefined,
   };
 }
 
@@ -277,11 +421,17 @@ export function agingTotal(buckets: AgingBucket[]): number {
   return buckets.reduce((sum, b) => sum + b.total, 0);
 }
 
+/**
+ * Monta a query string do filtro. Campo vazio, nulo ou `false` fica FORA: mandar
+ * `somente_vencidos=false` ou `status=` seria informar o filtro como "vazio", e o
+ * backend distingue "não informado" de "informado vazio".
+ */
 function buildParams(f?: ListFilters): Record<string, string> | undefined {
   if (!f) return undefined;
   const p: Record<string, string> = {};
   for (const [k, v] of Object.entries(f)) {
-    if (v !== undefined && v !== null && v !== '') p[k] = String(v);
+    if (v === undefined || v === null || v === '' || v === false) continue;
+    p[k] = v === true ? '1' : String(v);
   }
   return Object.keys(p).length ? p : undefined;
 }
@@ -470,4 +620,114 @@ export async function apurarImpostos(competencia: string): Promise<ApuracaoImpos
 export async function getApuracao(competencia: string): Promise<ApuracaoImposto[]> {
   const { data } = await httpClient.get(`${BASE}/apuracao-impostos/${encodeURIComponent(competencia)}`);
   return unwrapArray(data).map(parseApuracao);
+}
+
+// ─── Conciliação bancária por OFX (VFIN0620) ────────────────────────────────
+
+/** O que a importação do extrato devolve. */
+export interface ImportacaoOFX {
+  importados: number;
+  duplicados: number;
+  conciliados: number;
+  /** Linhas descartadas por data ou valor ilegível — antes sumiam em silêncio. */
+  ignorados: number;
+  avisos?: string[];
+  /** Identificação lida do próprio arquivo, para conferir a conta antes de conciliar. */
+  banco_do_arquivo?: string;
+  conta_do_arquivo?: string;
+  periodo_inicio?: string;
+  periodo_fim?: string;
+}
+
+/**
+ * Importa um extrato OFX para a conta bancária e concilia o que casar.
+ *
+ * O arquivo vai como texto no corpo. O servidor RECUSA o que não for OFX — antes
+ * aceitava qualquer coisa e respondia sucesso com zero lançamento, então importar
+ * um JSON ou um PDF parecia dar certo e a pessoa concluía que o extrato do mês
+ * estava vazio.
+ */
+export async function importarOFX(contaBancariaID: number, conteudo: string): Promise<ImportacaoOFX> {
+  const { data } = await httpClient.post(`${BASE}/conciliacao/${contaBancariaID}/importar-ofx`, {
+    ofx_content: conteudo,
+  });
+  const o = unwrapObject(data);
+  return {
+    importados: parseNum(o, 'importados', 'Importados'),
+    duplicados: parseNum(o, 'duplicados', 'Duplicados'),
+    conciliados: parseNum(o, 'conciliados', 'Conciliados'),
+    ignorados: parseNum(o, 'ignorados', 'Ignorados'),
+    avisos: unwrapArray(o['avisos'] ?? o['Avisos']).map(String),
+    banco_do_arquivo: parseStr(o, 'banco_do_arquivo', 'BancoDoArquivo') || undefined,
+    conta_do_arquivo: parseStr(o, 'conta_do_arquivo', 'ContaDoArquivo') || undefined,
+    periodo_inicio: parseStr(o, 'periodo_inicio', 'PeriodoInicio') || undefined,
+    periodo_fim: parseStr(o, 'periodo_fim', 'PeriodoFim') || undefined,
+  };
+}
+
+/** O que a conferência do arquivo encontrou antes de enviar. */
+export interface ConferenciaDoOFX {
+  valido: boolean;
+  /** Mensagem pronta para a tela quando não é OFX. */
+  motivo?: string;
+  lancamentos: number;
+  banco?: string;
+  conta?: string;
+  periodo?: string;
+}
+
+/**
+ * Confere se o arquivo escolhido é um extrato OFX, ANTES de enviar.
+ *
+ * A validação definitiva é do servidor — esta é a que dá resposta imediata e evita
+ * subir um arquivo de megabytes para receber a recusa. A checagem é por ESTRUTURA,
+ * não por extensão: um `.ofx` é só um nome, e um PDF renomeado passaria.
+ */
+export function conferirArquivoOFX(conteudo: string): ConferenciaDoOFX {
+  const texto = conteudo.trim();
+  if (!texto) {
+    return { valido: false, lancamentos: 0, motivo: 'O arquivo está vazio.' };
+  }
+  const temRaiz = /<OFX>/i.test(texto);
+  const temHeader = /OFXHEADER\s*[:=]/i.test(texto);
+  if (!temRaiz && !temHeader) {
+    return {
+      valido: false, lancamentos: 0,
+      motivo: `Este arquivo não é um extrato OFX: ${descreverArquivo(texto)}. `
+        + 'No site do banco, baixe o extrato no formato OFX (Money / Open Financial Exchange).',
+    };
+  }
+  const lancamentos = (texto.match(/<STMTTRN>/gi) ?? []).length;
+  if (lancamentos === 0) {
+    return {
+      valido: false, lancamentos: 0,
+      motivo: 'O arquivo é um OFX válido, mas não tem nenhum lançamento. '
+        + 'Confira se o período escolhido no banco tem movimento.',
+    };
+  }
+  // A identificação da conta vem do CABEÇALHO, antes do primeiro lançamento: uma
+  // tag homônima dentro de um lançamento apontaria a conta errada no aviso.
+  const cabecalho = texto.split(/<STMTTRN>/i)[0];
+  const banco = /<BANKID>\s*([^<\s]+)/i.exec(cabecalho)?.[1];
+  const conta = /<ACCTID>\s*([^<\s]+)/i.exec(cabecalho)?.[1];
+  const inicio = /<DTSTART>\s*(\d{8})/i.exec(cabecalho)?.[1];
+  const fim = /<DTEND>\s*(\d{8})/i.exec(cabecalho)?.[1];
+  return {
+    valido: true, lancamentos, banco, conta,
+    periodo: inicio && fim ? `${dataOFX(inicio)} a ${dataOFX(fim)}` : undefined,
+  };
+}
+
+function dataOFX(aaaammdd: string): string {
+  return `${aaaammdd.slice(6, 8)}/${aaaammdd.slice(4, 6)}/${aaaammdd.slice(0, 4)}`;
+}
+
+/** Diz o que parece ter sido escolhido, para a recusa ajudar em vez de só barrar. */
+function descreverArquivo(texto: string): string {
+  if (texto.startsWith('{') || texto.startsWith('[')) return 'parece um arquivo JSON';
+  if (texto.startsWith('%PDF')) return 'é um arquivo PDF';
+  if (texto.startsWith('PK')) return 'é um ZIP, XLSX ou DOCX';
+  if (texto.startsWith('<?xml')) return 'é um XML que não é OFX (nota fiscal, talvez)';
+  if (texto.includes(';') || texto.includes(',')) return 'parece uma planilha ou CSV';
+  return 'é um texto sem estrutura OFX';
 }

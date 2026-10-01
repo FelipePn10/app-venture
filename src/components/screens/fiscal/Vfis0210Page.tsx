@@ -182,7 +182,7 @@ export function Vfis0210Page(): JSX.Element {
                     {list.map((nf) => (
                       <tr key={nf.id}>
                         <td style={{ fontWeight: 600 }}>{nf.numero_nf}</td>
-                        <td>{nf.razao_social_emitente}<br /><small style={{ color: "#8aa894" }}>{nf.cnpj_emitente}</small></td>
+                        <td>{nf.razao_social_emitente}<br /><small style={{ color: "var(--v-text-muted)" }}>{nf.cnpj_emitente}</small></td>
                         <td>{statusPill(nf.status)}</td>
                         <td>{money(nf.valor_total)}</td>
                         <td>{nf.data_entrada?.slice(0, 10) || "—"}</td>

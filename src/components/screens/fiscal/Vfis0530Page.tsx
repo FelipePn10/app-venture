@@ -88,6 +88,9 @@ export function Vfis0530Page(): JSX.Element {
 
         <div className="erp-fieldset-head">Linhas — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div>
         <div className="erp-fieldset"><div className="erp-fieldset-body">
+          {/* erp-c12: sem o span a tabela vira um item de uma coluna de
+              doze e sai comprimida — foi o layout quebrado medido aqui. */}
+          <div className="erp-field erp-c12">
           <table className="erp-grid">
             <thead><tr><th style={{ width: 80 }}>Código</th><th>Descrição</th><th>Tipo</th><th>Aceita lanç.</th><th style={{ width: 80 }}>Ações</th></tr></thead>
             <tbody>
@@ -101,6 +104,7 @@ export function Vfis0530Page(): JSX.Element {
               ))}
             </tbody>
           </table>
+          </div>
         </div></div>
       </div></section></div>
 

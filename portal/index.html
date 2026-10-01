@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venture ERP — Instalação</title>
+<meta name="description" content="Página de instalação do Venture ERP para Windows.">
+<meta name="robots" content="noindex">
+<!--
+  Página de instalação entregue ao cliente. Substitui o link para a página de
+  releases do GitHub, que expunha código-fonte e histórico a quem só precisa
+  instalar o sistema.
+
+  A versão e o link do instalador NÃO são escritos aqui: vêm de
+  /updates/latest.json, o mesmo manifesto que o app usa para se atualizar. Assim
+  a página não precisa ser republicada a cada release, e nunca oferece uma versão
+  diferente da que o app instalado buscaria.
+-->
+<style>
+  :root {
+    --verde-escuro: #0d1f12;
+    --verde-medio: #162e20;
+    --verde-claro: #4d7a5c;
+    --verde-borda: #cfe0d4;
+    --fundo: #f2f6f0;
+    --texto: #1c2b21;
+    --texto-suave: #55665c;
+    --branco: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--fundo);
+    color: var(--texto);
+    line-height: 1.55;
+  }
+
+  header {
+    background: var(--verde-escuro);
+    color: var(--branco);
+    padding: 22px 24px;
+  }
+
+  .marca {
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .marca strong { font-size: 19px; font-weight: 600; letter-spacing: .2px; }
+  .marca span { font-size: 13px; color: #9dbcab; }
+
+  main { max-width: 880px; margin: 0 auto; padding: 36px 24px 56px; }
+
+  h1 { font-size: 26px; margin: 0 0 8px; font-weight: 600; }
+  .subtitulo { color: var(--texto-suave); margin: 0 0 30px; font-size: 15px; }
+
+  .cartao {
+    background: var(--branco);
+    border: 1px solid var(--verde-borda);
+    border-radius: 10px;
+    padding: 26px;
+    margin-bottom: 22px;
+  }
+
+  .versao {
+    display: inline-block;
+    font-size: 12.5px;
+    color: var(--verde-claro);
+    background: #eef5f0;
+    border: 1px solid var(--verde-borda);
+    border-radius: 999px;
+    padding: 3px 11px;
+    margin-bottom: 16px;
+  }
+
+  .botao {
+    display: inline-block;
+    background: var(--verde-medio);
+    color: var(--branco);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 13px 26px;
+    border-radius: 7px;
+  }
+
+  .botao:hover { background: var(--verde-escuro); }
+  .botao[aria-disabled="true"] { background: #9aa8a0; pointer-events: none; }
+
+  .alternativa { font-size: 13px; color: var(--texto-suave); margin-top: 14px; }
+  .alternativa a { color: var(--verde-claro); }
+
+  h2 { font-size: 16px; margin: 0 0 12px; font-weight: 600; }
+
+  ol, ul { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 7px; }
+
+  .requisitos { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .requisito { font-size: 14px; }
+  .requisito dt { color: var(--texto-suave); font-size: 12.5px; margin-bottom: 2px; }
+  .requisito dd { margin: 0; font-weight: 500; }
+
+  .aviso {
+    font-size: 13.5px;
+    background: #fdf8ec;
+    border: 1px solid #ecdcb4;
+    border-radius: 7px;
+    padding: 13px 15px;
+    margin-top: 18px;
+    color: #5f4e26;
+  }
+
+  footer {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+    font-size: 13px;
+    color: var(--texto-suave);
+  }
+
+  footer a { color: var(--verde-claro); }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 22px; }
+    .cartao { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca"><strong>Venture ERP</strong><span>Instalação para Windows</span></div>
+</header>
+
+<main>
+  <h1>Instalar o Venture ERP</h1>
+  <p class="subtitulo">
+    Baixe o instalador, execute e entre com o e-mail corporativo que a Venture
+    cadastrou para você. O sistema identifica a sua empresa pelo domínio do
+    e-mail — não há servidor para configurar.
+  </p>
+
+  <section class="cartao">
+    <span class="versao" id="versao">Consultando a versão publicada…</span>
+    <div>
+      <a class="botao" id="download" href="#" aria-disabled="true">Baixar instalador</a>
+    </div>
+    <p class="alternativa" id="alternativa"></p>
+  </section>
+
+  <section class="cartao">
+    <h2>Como instalar</h2>
+    <ol>
+      <li>Baixe o instalador e execute o arquivo.</li>
+      <li>
+        Se o Windows exibir um aviso de aplicativo desconhecido, escolha
+        <strong>Mais informações</strong> e depois <strong>Executar assim mesmo</strong>.
+      </li>
+      <li>Aguarde a instalação e abra o <strong>ERP Venture</strong>.</li>
+      <li>Entre com o e-mail corporativo e a senha recebida da Venture.</li>
+      <li>Troque a senha no primeiro acesso.</li>
+    </ol>
+    <p class="aviso">
+      As atualizações chegam sozinhas: o sistema avisa quando há versão nova e se
+      atualiza ao ser reaberto. Não é preciso voltar a esta página.
+    </p>
+  </section>
+
+  <section class="cartao">
+    <h2>Requisitos</h2>
+    <dl class="requisitos">
+      <div class="requisito"><dt>Sistema</dt><dd>Windows 10 ou 11, 64 bits</dd></div>
+      <div class="requisito"><dt>Memória</dt><dd>4 GB ou mais</dd></div>
+      <div class="requisito"><dt>Espaço em disco</dt><dd>200 MB</dd></div>
+      <div class="requisito"><dt>Internet</dt><dd>Conexão permanente</dd></div>
+    </dl>
+  </section>
+</main>
+
+<footer>
+  Problemas para instalar ou entrar? Fale com o suporte da Venture —
+  <a href="mailto:suporte@venturerp.com">suporte@venturerp.com</a>.
+</footer>
+
+<script>
+  // A página pergunta ao manifesto do updater qual é a versão atual. É a MESMA
+  // fonte que o app instalado consulta, então a página nunca oferece uma versão
+  // diferente daquela que o updater entregaria.
+  (async function () {
+    const versao = document.getElementById('versao');
+    const botao = document.getElementById('download');
+    const alternativa = document.getElementById('alternativa');
+
+    // O manifesto aponta para o GitHub, que é de onde o binário assinado sai — e
+    // de propósito: o updater do aplicativo usa esse mesmo arquivo, e trocar a URL
+    // por um redirecionamento arriscaria o canal de atualização de quem já usa o
+    // sistema. Para o download pelo navegador, que segue redirecionamento sem
+    // dúvida, a página usa /downloads/<arquivo> no domínio da Venture.
+    function pelaVenture(url) {
+      const arquivo = String(url).split('/').pop();
+      return '/downloads/' + arquivo;
+    }
+
+    /** Escolhe o instalador .exe entre as plataformas do manifesto. */
+    function acharInstalador(manifesto) {
+      const plataformas = manifesto && manifesto.platforms;
+      if (!plataformas) return null;
+      const chaves = Object.keys(plataformas).filter((k) => k.startsWith('windows'));
+      // O .exe (NSIS) é o caminho comum; o .msi fica como alternativa para TI.
+      for (const chave of chaves) {
+        const url = plataformas[chave] && plataformas[chave].url;
+        if (typeof url === 'string' && url.endsWith('.exe')) return url;
+      }
+      for (const chave of chaves) {
+        const url = plataformas[chave] && plataformas[chave].url;
+        if (typeof url === 'string') return url;
+      }
+      return null;
+    }
+
+    function acharMsi(manifesto) {
+      const plataformas = (manifesto && manifesto.platforms) || {};
+      for (const chave of Object.keys(plataformas)) {
+        const url = plataformas[chave] && plataformas[chave].url;
+        if (typeof url === 'string' && url.endsWith('.msi')) return url;
+      }
+      return null;
+    }
+
+    try {
+      const resposta = await fetch('/updates/latest.json', { cache: 'no-store' });
+      if (!resposta.ok) throw new Error('manifesto indisponível');
+      const manifesto = await resposta.json();
+      const instalador = acharInstalador(manifesto);
+      if (!instalador) throw new Error('sem instalador para Windows no manifesto');
+
+      versao.textContent = 'Versão ' + String(manifesto.version || '').replace(/^v/, '');
+      botao.href = pelaVenture(instalador);
+      botao.removeAttribute('aria-disabled');
+
+      const msi = acharMsi(manifesto);
+      if (msi && msi !== instalador) {
+        alternativa.innerHTML =
+          'Instalação em rede pela TI: <a href="' + pelaVenture(msi) + '">pacote MSI</a>.';
+      }
+    } catch (erro) {
+      // Sem manifesto não se inventa link: oferecer um endereço adivinhado
+      // levaria a pessoa a um 404 e pareceria falha do sistema.
+      versao.textContent = 'Não foi possível consultar a versão publicada';
+      alternativa.innerHTML =
+        'Tente recarregar a página. Se persistir, peça o instalador ao suporte — ' +
+        '<a href="mailto:suporte@venturerp.com">suporte@venturerp.com</a>.';
+    }
+  })();
+</script>
+
+</body>
+</html>

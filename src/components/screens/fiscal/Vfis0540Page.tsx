@@ -11,6 +11,8 @@ import {
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCfops } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -122,8 +124,11 @@ export function Vfis0540Page(): JSX.Element {
               <input className="erp-input" value={form.period} placeholder="2024-01" onChange={(e) => setF("period", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label erp-req">UF</label>
               <input className="erp-input" maxLength={2} value={form.uf} onChange={(e) => setF("uf", e.target.value.toUpperCase())} /></div>
-            <div className="erp-field erp-c2"><label className="erp-label erp-req">CFOP (ID)</label>
-              <input className="erp-input num" type="number" value={form.cfop_id || ""} onChange={(e) => setF("cfop_id", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c4"><label className="erp-label erp-req">CFOP</label>
+              <LookupField value={form.cfop_id || undefined} loader={loadCfops}
+                entityLabel="CFOP" placeholder="Buscar pelo código ou descrição" allowManualCode={false}
+                onChange={(c) => setF("cfop_id", Number(c ?? 0))} />
+              <span className="erp-hint">O CFOP é identificado pelo código de quatro dígitos (5102, 5901, 6108).</span></div>
             <div className="erp-field erp-c3"><label className="erp-label">Base ICMS</label>
               <input className="erp-input num" type="number" step="0.01" value={form.icms_base} onChange={(e) => setF("icms_base", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Valor ICMS</label>

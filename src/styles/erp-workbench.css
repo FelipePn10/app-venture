@@ -304,6 +304,20 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 }
 .erp-grid tfoot td.num { text-align: right; }
 .erp-grid-empty { padding: 34px 12px; text-align: center; color: var(--v-text-muted); }
+
+/* Estado de célula e de linha na grade.
+   Usados pelas telas de beneficiamento (VBEN0100/VBEN0200) para o prazo fiscal:
+   vencido em vermelho, vencendo em âmbar. Linha apagada é o movimento estornado —
+   continua visível, porque "saiu e voltou" é informação de conferência, mas não
+   compete com o que ainda sustenta saldo. */
+.erp-grid td.erp-cell-danger {
+  color: var(--v-err); background: var(--v-err-bg); font-weight: 650;
+}
+.erp-grid td.erp-cell-warn {
+  color: var(--v-warn); background: var(--v-warn-bg); font-weight: 650;
+}
+.erp-grid tbody tr.erp-row-muted td { color: var(--v-text-muted); text-decoration: line-through; }
+.erp-grid tbody tr.erp-row-muted td strong { text-decoration: none; color: var(--v-warn); }
 /* inline add-item row */
 .erp-grid .erp-addrow td { background: var(--v-green-soft); border-bottom: 1px solid var(--v-green-border); padding: 7px 8px; }
 .erp-cell-input { width: 100%; height: 30px; border: 1px solid var(--v-border-strong); border-radius: 4px; background: #fff; font-size: 12px; padding: 0 8px; font-family: var(--v-font); outline: none; }
@@ -465,6 +479,11 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-metric::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--v-green); }
 .erp-metric-label { font-size: 10px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; color: var(--v-text-muted); margin-bottom: 5px; }
 .erp-metric-value { font-size: 24px; font-weight: 700; color: var(--v-text); line-height: 1.05; font-variant-numeric: tabular-nums; }
+/* Sinal do indicador. Existe porque as telas financeiras vinham pintando o número
+   com cor literal no `style` (#1e6030, #b91c1c): a mesma cor escrita à mão em
+   quatro lugares não acompanha o tema escuro nem a paleta oficial. */
+.erp-metric-value.erp-metric-ok { color: var(--v-ok); }
+.erp-metric-value.erp-metric-danger { color: var(--v-err); }
 
 .erp-toggle-row { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
 .erp-toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; cursor: pointer; }
