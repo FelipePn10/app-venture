@@ -160,8 +160,14 @@ export function Vsup0500Page(): JSX.Element {
 
   const setF = <K extends keyof SupplierDTO>(k: K, v: SupplierDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
   const kindOf = (code?: number) => types.find((t) => t.code === code)?.kind;
-  // Mesma regra da validação: só transportadora/redespacho dispensam a IE.
-  const ieRequired = !NO_IE_KINDS.includes(kindOf(form.supplier_type_code) ?? "");
+  // Mesma regra do backend: a inscrição é exigida quando o TIPO pede (transportadora
+  // e redespacho não pedem) E quando o fornecedor é contribuinte de ICMS. Não
+  // contribuinte e isento legitimamente não têm inscrição — prestador de serviço,
+  // pessoa física e boa parte dos MEI. Antes a tela exigia de todos, e a única saída
+  // era inventar um número (que vai para a apuração de ICMS das notas de entrada) ou
+  // declarar o fornecedor transportadora.
+  const ieRequired = !NO_IE_KINDS.includes(kindOf(form.supplier_type_code) ?? "")
+    && form.icms_contributor === "CONTRIBUINTE";
 
   function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEnterprises([]); setCnpjData(null); setFolder("dados"); setEditMode(true); setFeedback(null); }
 
@@ -205,7 +211,8 @@ export function Vsup0500Page(): JSX.Element {
     if (!form.document_number.trim()) return "Documento é obrigatório.";
     if ((form.document_type === "CNPJ" || form.document_type === "CPF") && !validateCNPJOrCPF(form.document_number)) return "CNPJ/CPF inválido (dígito verificador não confere).";
     const kind = kindOf(form.supplier_type_code);
-    if (!NO_IE_KINDS.includes(kind ?? "") && !form.state_registration?.trim()) return "Inscrição Estadual é obrigatória (exceto transportadoras/redespacho).";
+    if (!NO_IE_KINDS.includes(kind ?? "") && form.icms_contributor === "CONTRIBUINTE" && !form.state_registration?.trim())
+      return "Informe a Inscrição Estadual: fornecedor contribuinte de ICMS tem inscrição. Se este não é contribuinte, mude \"Contrib. ICMS\" para não contribuinte ou isento.";
     if (form.is_mei && form.person_type === "FISICA") return "MEI não é permitido para Pessoa Física.";
     if (form.agriculture_ministry_registration?.trim() && !MA_RE.test(form.agriculture_ministry_registration.trim())) return "Registro M.A. deve seguir o formato AA-99999-9.";
     return null;
@@ -477,7 +484,9 @@ export function Vsup0500Page(): JSX.Element {
                         <div className="erp-field erp-c3">
                           <label className={`erp-label${ieRequired ? " erp-req" : ""}`}>Inscr. Estadual</label>
                           <input className="erp-input" value={form.state_registration ?? ""} onChange={(e) => setF("state_registration", e.target.value)} />
-                          <span className="erp-field-hint">{ieRequired ? "Obrigatória para este tipo de fornecedor." : "Dispensada para transportadora e redespacho."}</span>
+                          <span className="erp-field-hint">{ieRequired
+                            ? "Obrigatória: fornecedor contribuinte de ICMS tem inscrição."
+                            : "Dispensada para não contribuinte, isento, transportadora e redespacho."}</span>
                         </div>
                         <div className="erp-field erp-c2"><label className="erp-label">Insc. Municipal</label><input className="erp-input" value={form.municipal_registration ?? ""} onChange={(e) => setF("municipal_registration", e.target.value)} /></div>
                         <div className="erp-field erp-c4"><label className="erp-label">Tipo de fornecedor</label><select className="erp-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value ? Number(e.target.value) : undefined)}><option value="">—</option>{types.map((t) => <option key={t.code} value={t.code}>{t.description} ({t.kind})</option>)}</select></div>
