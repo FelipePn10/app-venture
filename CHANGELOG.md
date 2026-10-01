@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.4.1] — 2026-10-01
+
 ## Correções
 - **Cadastrar fornecedor que não é contribuinte de ICMS voltou a funcionar.** A tela exigia Inscrição Estadual de todo fornecedor que não fosse transportadora, mas quem não é contribuinte legitimamente não tem inscrição — prestador de serviço, pessoa física e boa parte dos MEI. Agora a obrigatoriedade segue o campo **Contrib. ICMS**: marque *não contribuinte* ou *isento* e a inscrição deixa de ser pedida. Nunca preencha a inscrição com um número qualquer para liberar o cadastro: ela entra na apuração de ICMS de todas as notas de entrada daquele fornecedor.
 
