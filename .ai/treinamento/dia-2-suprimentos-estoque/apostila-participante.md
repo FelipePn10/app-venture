@@ -92,10 +92,21 @@ Cadastre tipos informando **descrição** e o **`kind`**:
 
 | Kind | Consequência |
 |:--|:--|
-| `NORMAL` | **Inscrição Estadual obrigatória** |
+| `NORMAL` | Inscrição Estadual obrigatória **se o fornecedor for contribuinte de ICMS** |
 | `TRANSPORTADORA` | IE **dispensada** |
 | `TRANSP_REDESP` | IE dispensada |
 | `REDESPACHO` | IE dispensada |
+
+> **A inscrição estadual depende de duas coisas: o tipo E a condição de ICMS.**
+> No `VSUP0500`, o campo **Contrib. ICMS** aceita *Contribuinte*, *Não
+> contribuinte* e *Isento*. Quem **não é contribuinte** legitimamente não tem
+> inscrição estadual — prestador de serviço, pessoa física e boa parte dos MEI —
+> e nesses casos o campo deixa de ser exigido.
+>
+> Nunca invente um número para "destravar" o cadastro: a inscrição estadual do
+> fornecedor entra na apuração de ICMS de **toda** nota de entrada dele. Se o
+> fornecedor não tem inscrição, a resposta certa é marcar a condição de ICMS, não
+> preencher a inscrição com qualquer coisa.
 
 ### Aba **Contatos**
 Tipos de contato: Comprador, Gerente, Qualidade…
