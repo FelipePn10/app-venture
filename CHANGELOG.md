@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## Novidades
+- **Industrialização com material do cliente.** Quando o cliente manda a chapa para ser trabalhada, o sistema registra a remessa, mantém o saldo dele separado do estoque próprio e acompanha cada baixa. O serviço é apontado por horas, e a nota de retorno sai numa única emissão com a linha do serviço e a do material devolvido, cada uma com a tributação que o contador confirmou. Se a emissão falhar no meio, repetir o faturamento retoma a mesma nota em vez de criar outra. Uma baixa feita por engano pode ser estornada, com motivo registrado e histórico de quem fez o quê.
+- **Custo do item aberto por onde o dinheiro vai.** Em vez de um valor único, o custo mostra material, preparação, máquina, mão de obra, serviço de terceiro e custos indiretos — cada um com o seu valor. Os indiretos deixam de ser zero: dá para cadastrar a regra que a empresa usa (um percentual sobre o material, um valor por hora de máquina, um valor por peça) e o sistema mostra o que foi aplicado em cada apuração, com o histórico para comparar com o mês passado.
+- **Contas a pagar e a receber com filtro de verdade.** Agora dá para ver só o que é de um cliente, só de um fornecedor, só de um período, só o que está em aberto ou vencido, por forma de pagamento ou por documento — e combinar esses filtros. Antes os campos existiam na tela mas a lista vinha inteira do mesmo jeito.
+
+## Melhorias
+- **Lupa para procurar item, cliente, fornecedor e conta bancária.** Nenhum campo exige mais que você saiba o código de cabeça: a lupa abre a busca por nome ou descrição. E nenhuma tela pede mais um "ID" — o que aparece é o número do documento que você reconhece.
+- **Telas fiscais, financeiras e de custo refeitas.** Classificação tributária, contas a pagar e a receber, movimentação de caixa, conciliação bancária e custo do item ganharam o mesmo layout organizado do resto do sistema, sem campos esmagados num canto da tela.
+- **O manual de treinamento ganhou uma seção explicando campo por campo** a classificação tributária e os parâmetros fiscais, e o mesmo detalhe para as telas de financeiro e de custos.
+
+## Correções
+- **A classificação fiscal digitada com pontos deixava a nota sair sem imposto.** Se o código do produto estava cadastrado como 8466.20.90 num lugar e 84662090 no outro, o sistema não reconhecia que era o mesmo código e emitia a nota com IPI, PIS e COFINS zerados — sem nenhum aviso. Agora o código é guardado sempre do mesmo jeito, a tela mostra com os pontos e a busca encontra nos dois formatos. Notas já emitidas não mudam.
+- **Cadastrar cliente ou fornecedor voltou a funcionar em empresas com muitos registros.** Quando o último código cadastrado passava de 2 bilhões, criar um novo falhava com uma mensagem técnica em inglês.
+- **A importação de extrato bancário passou a conferir o arquivo.** Antes qualquer arquivo era aceito e a tela dizia "importado com sucesso" sem ter importado nenhum lançamento. Agora, se o arquivo não for um extrato OFX do banco, o sistema diz o que recebeu e o que esperava.
+
+
 ## [v1.3.1] — 2026-09-28
 
 ## Correções
