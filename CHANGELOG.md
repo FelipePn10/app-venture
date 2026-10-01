@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.4.0] — 2026-10-01
+
 ## Novidades
 - **Industrialização com material do cliente.** Quando o cliente manda a chapa para ser trabalhada, o sistema registra a remessa, mantém o saldo dele separado do estoque próprio e acompanha cada baixa. O serviço é apontado por horas, e a nota de retorno sai numa única emissão com a linha do serviço e a do material devolvido, cada uma com a tributação que o contador confirmou. Se a emissão falhar no meio, repetir o faturamento retoma a mesma nota em vez de criar outra. Uma baixa feita por engano pode ser estornada, com motivo registrado e histórico de quem fez o quê.
 - **Custo do item aberto por onde o dinheiro vai.** Em vez de um valor único, o custo mostra material, preparação, máquina, mão de obra, serviço de terceiro e custos indiretos — cada um com o seu valor. Os indiretos deixam de ser zero: dá para cadastrar a regra que a empresa usa (um percentual sobre o material, um valor por hora de máquina, um valor por peça) e o sistema mostra o que foi aplicado em cada apuração, com o histórico para comparar com o mês passado.
