@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.5.1] — 2026-10-07
+
 ## Novidades
 - **O pedido de compra vira um documento que você envia ao fornecedor.** Gere o PDF do pedido e mande por e-mail direto da tela: o sistema sugere os contatos do fornecedor, guarda o histórico de cada envio e só deixa enviar pedido já aprovado.
 - **Acompanhamento de entregas em uma tela só.** Veja o que está atrasado, o que chega nos próximos sete dias e o que o fornecedor ainda não prometeu. A cada ligação você registra o contato e a nova data, e ela passa a valer como a data prevista da linha.
