@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.5.0] — 2026-10-07
+
 ## Novidades
 - **Nota fiscal de compra conferida de ponta a ponta.** Importe o arquivo da nota (ou baixe da Receita pela chave) e o sistema confere cada item com o cadastro, sugere o item certo, separa o valor por plano de contas e monta as parcelas do contas a pagar. Se o fornecedor ou um item ainda não estiver cadastrado, você cadastra ali mesmo, com os dados que vieram na nota.
 - **Notas emitidas contra a sua empresa chegam sozinhas.** O sistema busca na Receita, de hora em hora, as notas que fornecedores emitiram para você, e avisa quando o prazo para confirmar ou recusar uma delas está acabando.
