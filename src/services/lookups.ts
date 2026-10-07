@@ -415,6 +415,32 @@ export const loadWarehouses = cached(async () => {
   return out.sort((a, b) => Number(a.code) - Number(b.code));
 });
 
+/**
+ * Tipos de operação de entrada (VFIS0360, o "TES"): natureza/CFOP de entrada e
+ * o comportamento da nota (estoque, financeiro, créditos).
+ */
+export const loadEntryOperations = cached(async () => {
+  const { data } = await httpClient.get<unknown>('/api/entry-operations');
+  const out: LookupOption[] = [];
+  for (const raw of unwrapArray(data)) {
+    const o = unwrapObject(raw);
+    if (!o) continue;
+    const code = parseNum(o, 'code', 'Code');
+    if (!code) continue;
+    const comportamento = [
+      o['movimenta_estoque'] === false ? 'sem estoque' : '',
+      o['gera_financeiro'] === false ? 'sem financeiro' : '',
+    ].filter(Boolean).join(' · ');
+    out.push({
+      code,
+      label: `${parseStr(o, 'nature_operation')} · ${parseStr(o, 'description', 'Description')}`,
+      sub: comportamento || undefined,
+      inactive: o['is_active'] === false,
+    });
+  }
+  return out.sort((a, b) => Number(a.code) - Number(b.code));
+});
+
 /** Ferramentas da ferramentaria, para vincular à operação sem digitar o ID. */
 export const loadTools = cached(() =>
   loadEndpoint('/api/routing/tools', ['name', 'Name', 'description', 'Description'], ['code', 'Code', 'description', 'Description']),
@@ -495,11 +521,20 @@ export const loadSalesDivisions = cached(() =>
   loadEndpoint('/api/sales-division/list', ['description', 'Description']),
 );
 
+const STATUS_PEDIDO: Record<string, string> = {
+  R: 'rascunho', P: 'pedido', A: 'em análise', OA: 'orçamento em análise', OF: 'orçamento', F: 'faturado', CANCELLED: 'cancelado',
+};
+
 export const loadSalesOrders = cached(async () =>
   (await listSalesOrders()).map((o) => ({
     code: o.code ?? 0,
-    label: `Pedido ${o.code}`,
-    sub: o.customer_code ? `Cliente ${o.customer_code}` : undefined,
+    label: `Pedido ${o.order_number || o.code}`,
+    sub: [
+      o.customer_code ? `Cliente ${o.customer_code}` : '',
+      o.status ? STATUS_PEDIDO[o.status] ?? o.status : '',
+      o.total_net ? `R$ ${o.total_net.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '',
+    ].filter(Boolean).join(' · ') || undefined,
+    inactive: o.status === 'CANCELLED',
   })).filter((o) => o.code),
 );
 

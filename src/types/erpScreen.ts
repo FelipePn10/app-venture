@@ -768,7 +768,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIN0200",
     title: "Contas a Pagar",
-    description: "Lançar, aprovar, baixar e cancelar contas a pagar; aging.",
+    description: "Lançar, aprovar, baixar e cancelar contas a pagar; rateio e visão por plano de contas; aging.",
     module: "financeiro",
   },
   {
@@ -828,13 +828,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIS0200",
     title: "NF-e de Saída",
-    description: "Emitir NF-e de saída: rascunho, autorização, CC-e, cancelamento, status.",
+    description: "Emitir NF-e de saída (avulsa ou faturando o pedido de venda): rascunho, prévia, autorização, CC-e, cancelamento.",
     module: "fiscal",
   },
   {
     code: "VFIS0210",
     title: "NF-e de Entrada",
-    description: "Lançar/importar NF-e de entrada (XML ou chave) e aprovar.",
+    description: "Importar o XML da NF-e de entrada, conciliar itens com o cadastro, plano de contas por item, parcelas e aprovar.",
     module: "fiscal",
   },
   {
@@ -1116,7 +1116,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VSAC0200", title: "Relatórios e Anexos do Atendimento", description: "Etiquetas, relatórios e documentos do chamado.", module: "assistencia" },
   { code: "VREP0600", title: "Complementos do Representante", description: "Segmentos, planos, interesses e correspondência.", module: "comercial" },
   { code: "VEST0400", title: "Consultas de Estoque por Almoxarifado", description: "Movimentos e saldos persistidos por almoxarifado.", module: "almoxarifado" },
-  { code: "VFIS0600", title: "SPED EFD ICMS/IPI", description: "Geração do arquivo da Escrituração Fiscal Digital.", module: "fiscal" },
+  { code: "VFIS0600", title: "SPED EFD ICMS/IPI", description: "EFD do mês gerada das notas de entrada, saída e CT-e, com a apuração do ICMS e do IPI.", module: "fiscal" },
   { code: "VFIS0610", title: "Importação de NF-e por Chave", description: "Importação da NF-e de compra, baixa do pedido e entrada em estoque.", module: "fiscal" },
   { code: "VADM0100", title: "Trilha de Auditoria", description: "Consulta administrativa de alterações por usuário, rota e período.", module: "cadastros" },
 ];

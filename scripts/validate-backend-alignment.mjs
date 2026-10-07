@@ -17,7 +17,7 @@ const codes = [
   'VTER0100', 'VTER0200', 'VTER0300', 'VTER0400',
   'VAPS0100', 'VAPS0200', 'VAPS0300', 'VAPS0400', 'VAPS0500', 'VAPS0600',
   'VENG0300', 'VENG0400', 'VMRP0200', 'VEST0300',
-  'VSEC0100', 'VPLA0300', 'VRES0100', 'VFIS0600', 'VFIS0610', 'VADM0100', 'VEXP0110', 'VEXP0120',
+  'VSEC0100', 'VPLA0300', 'VRES0100', 'VFIS0610', 'VADM0100', 'VEXP0110', 'VEXP0120',
   'VCLI0117', 'VCLI0202', 'VIMP0102', 'VGAR0211',
   'VENG0500', 'VMAQ0300', 'VCAL0200', 'VPRO1100', 'VVND0600', 'VSAC0200', 'VREP0600', 'VEST0400',
   'VFIN0600', 'VFIN0610', 'VFIN0620',
@@ -46,7 +46,7 @@ const requiredPaths = [
   '/sequencing-profile', '/industrial-profile', '/api/aps/sequence/view', '/api/aps/sequence/settings',
   '/api/bom-headers/', '/api/drawings/', '/api/planning/run-pipeline', '/api/lot-masks/',
   '/api/password-change-requests/', '/api/planning-params/', '/api/restriction-reason/',
-  '/api/fiscal/sped/efd', '/api/fiscal/entries/import-nfe/', '/api/audit-log',
+  '/api/fiscal/entries/import-nfe/', '/api/audit-log',
   '/api/fiscal/config/branding', '/api/fiscal/config/logo',
   '/api/financial/adiantamentos/', '/api/financial/cnab/remessa-240', '/api/financial/conciliacao/',
   '/api/recurring-sales/{code}/recalculate-adjustment',
@@ -87,6 +87,11 @@ if (!host.includes('VPDC0200: <Vpdc0200Page />')) failures.push('VPDC0200 não e
 if (!pedidoCompra.includes('createOrder') || !pedidoCompra.includes('addOrderItem')) {
   failures.push('a tela de pedido de compra não usa o serviço real de pedido');
 }
+// VFIS0600 deixou de ser rotina de JSON cru: a EFD é gerada das próprias notas.
+const spedService = readFileSync(new URL('../src/services/spedEfdService.ts', import.meta.url), 'utf8');
+if (!host.includes('VFIS0600: <Vfis0600Page />')) failures.push('VFIS0600 não está registrada no ScreenHost');
+if (!spedService.includes('/api/fiscal/sped/efd/automatico')) failures.push('a tela da EFD não usa a geração automática');
+if (!screens.includes('code: "VFIS0600"') || !help.includes('### VFIS0600 —')) failures.push('VFIS0600: catálogo ou manual ausente');
 if (!fiscalConfigService.includes('new FormData()') || !fiscalConfigService.includes("body.append('logo'")) failures.push('branding fiscal não usa multipart/FormData');
 if (!fiscalConfigService.includes('MAX_BRANDING_LOGO_BYTES = 2 * 1024 * 1024')) failures.push('limite de 2 MB do branding ausente');
 if (!fiscalConfigScreen.includes('Preview persistido') || !fiscalConfigScreen.includes('getFiscalBrandingLogo')) failures.push('preview persistido do logo ausente');

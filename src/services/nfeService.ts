@@ -90,6 +90,13 @@ export interface FiscalExit {
   chave_nfe?: string;
   protocolo?: string;
   focus_ref?: string;
+  /** 1 normal, 4 devolução (de compra). */
+  finalidade?: number;
+  /** Chave da NF-e de entrada que a devolução referencia. */
+  nfe_referenciada?: string;
+  fiscal_entry_id?: number;
+  /** O que aconteceu depois da SEFAZ (estoque, títulos, contabilidade). */
+  warnings?: string[];
 }
 
 export interface ExitStatus {
@@ -101,7 +108,7 @@ export interface ExitStatus {
   motivo?: string;
 }
 
-function parseExit(raw: unknown): FiscalExit {
+export function parseExit(raw: unknown): FiscalExit {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID'),
@@ -119,6 +126,10 @@ function parseExit(raw: unknown): FiscalExit {
     chave_nfe: parseStr(o, 'chave_nfe', 'ChaveNfe'),
     protocolo: parseStr(o, 'protocolo', 'Protocolo'),
     focus_ref: parseStr(o, 'focus_ref', 'FocusRef'),
+    finalidade: parseNum(o, 'finalidade') || undefined,
+    nfe_referenciada: parseStr(o, 'nfe_referenciada') || undefined,
+    fiscal_entry_id: parseNum(o, 'fiscal_entry_id') || undefined,
+    warnings: unwrapArray(o['warnings']).map(String),
   };
 }
 

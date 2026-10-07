@@ -7,9 +7,10 @@ import {
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { FaturarPedidoPanel } from "./FaturarPedidoPanel";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Mode = "list" | "create";
+type Mode = "list" | "create" | "pedido";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -230,6 +231,7 @@ export function Vfis0200Page(): JSX.Element {
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Cadastro</span>
           <button className="erp-btn erp-btn-new" onClick={novo} disabled={busy}>+ Nova NF-e</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => { setMode("pedido"); setFeedback(null); }} disabled={busy}>Faturar pedido de venda</button>
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Visão</span>
@@ -254,6 +256,21 @@ export function Vfis0200Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">NF-e de Saída</button></div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+
+        {mode === "pedido" && (
+          <FaturarPedidoPanel
+            onFeedback={setFeedback}
+            onCriada={(nf) => {
+              setLastCreated(nf);
+              setMode("list");
+              setFeedback({
+                type: "success",
+                message: `NF-e ${nf.numero_nf} criada em rascunho a partir do pedido (total R$ ${money(nf.valor_total)}). Confira a prévia e autorize.`,
+              });
+              void reload().then(() => abrirPrevia(nf.id));
+            }}
+          />
+        )}
 
         {mode === "list" && (
           <>
@@ -303,7 +320,7 @@ export function Vfis0200Page(): JSX.Element {
                       const isAuth = sit === "autorizada";
                       return (
                         <tr key={nf.id}>
-                          <td style={{ fontWeight: 600 }}>{nf.numero_nf}</td>
+                          <td style={{ fontWeight: 600 }}>{nf.numero_nf}{nf.finalidade === 4 && <><br /><span className="erp-badge erp-badge-amber" title={nf.nfe_referenciada ? `Devolução da NF-e ${nf.nfe_referenciada}` : "Devolução de compra"}>Devolução</span></>}</td>
                           <td>{nf.serie}</td>
                           <td>{nf.razao_social_destinatario}<br /><small style={{ color: "var(--v-text-muted)" }}>{nf.cnpj_destinatario}</small></td>
                           <td>{statusPill(nf.status)}</td>
@@ -312,6 +329,10 @@ export function Vfis0200Page(): JSX.Element {
                           <td>
                             {isDraft && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void abrirPrevia(nf.id)}>Prévia</button>}
                             {isDraft && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void autorizar(nf.id)}>Autorizar</button>}
+                            {sit === "rejeitada" && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void abrirPrevia(nf.id)}
+                              title="A SEFAZ rejeitou: corrija o motivo (veja o status) e transmita de novo">Prévia</button>}
+                            {sit === "rejeitada" && <button className="erp-btn erp-btn-sm" onClick={() => void autorizar(nf.id)}
+                              title="Retransmite a nota rejeitada depois da correção">Reenviar</button>}
                             {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void cce(nf.id)}>Nova CC-e</button>}
                             {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
                             {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelar(nf.id)}>Cancelar</button>}

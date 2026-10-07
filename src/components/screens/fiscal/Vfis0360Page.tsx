@@ -11,6 +11,25 @@ type FeedbackState = { type: "success" | "error" | "info"; message: string } | n
 type Tab = "operacoes" | "grupos";
 const EMPTY: EntryOperationDTO = {
   code: "", description: "", invoice_type_code: "", nature_operation: "", state_group_code: "", supplier_type_code: "",
+  movimenta_estoque: true, gera_financeiro: true, credita_icms: true, credita_ipi: true, credita_pis_cofins: true,
+};
+
+/** Comportamento da operação na nota de entrada (equivalente à TES). */
+const FLAGS: Array<{ campo: "movimenta_estoque" | "gera_financeiro" | "credita_icms" | "credita_ipi" | "credita_pis_cofins"; rotulo: string; ajuda: string }> = [
+  { campo: "movimenta_estoque", rotulo: "Movimenta estoque", ajuda: "A aprovação dá entrada no almoxarifado do item." },
+  { campo: "gera_financeiro", rotulo: "Gera contas a pagar", ajuda: "Desmarque para bonificação, remessa, comodato, conserto." },
+  { campo: "credita_icms", rotulo: "Credita ICMS", ajuda: "Desmarcado, o ICMS vai para o custo do item." },
+  { campo: "credita_ipi", rotulo: "Credita IPI", ajuda: "Desmarcado (uso e consumo, ativo), o IPI vai para o custo." },
+  { campo: "credita_pis_cofins", rotulo: "Credita PIS/COFINS", ajuda: "Regime não cumulativo; desmarcado, vão para o custo." },
+];
+const resumoFlags = (o: EntryOperationDTO) => {
+  const partes = [
+    o.movimenta_estoque === false ? "sem estoque" : "estoque",
+    o.gera_financeiro === false ? "sem financeiro" : "financeiro",
+  ];
+  const creditos = [o.credita_icms !== false && "ICMS", o.credita_ipi !== false && "IPI", o.credita_pis_cofins !== false && "PIS/COFINS"].filter(Boolean);
+  partes.push(creditos.length ? `crédito ${creditos.join("/")}` : "sem créditos");
+  return partes.join(" · ");
 };
 
 export function Vfis0360Page(): JSX.Element {
@@ -132,6 +151,16 @@ export function Vfis0360Page(): JSX.Element {
                   <input className="erp-input" value={form.classification_type ?? ""} onChange={(e) => setF("classification_type", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Classif. (código)</label>
                   <input className="erp-input" value={form.classification_code ?? ""} onChange={(e) => setF("classification_code", e.target.value)} /></div>
+                <div className="erp-field erp-c12">
+                  <label className="erp-label">Comportamento na nota de entrada</label>
+                  <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                    {FLAGS.map((f) => (
+                      <label key={f.campo} title={f.ajuda} style={{ fontSize: 13 }}>
+                        <input type="checkbox" checked={form[f.campo] !== false} onChange={(e) => setF(f.campo, e.target.checked)} /> {f.rotulo}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               
 
               <div className="erp-results-bar" style={{ marginTop: 12 }}>
@@ -143,12 +172,12 @@ export function Vfis0360Page(): JSX.Element {
 
               <div className="erp-field erp-c12" style={{ marginTop: 12 }}>
                 <table className="erp-grid">
-                  <thead><tr><th>Código</th><th>Descrição</th><th>Natureza</th><th>Grupo</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                  <thead><tr><th>Código</th><th>Descrição</th><th>Natureza</th><th>Grupo</th><th>Comportamento</th><th style={{ width: 80 }}>Ações</th></tr></thead>
                   <tbody>
-                    {list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum tipo de operação cadastrado.</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum tipo de operação cadastrado.</td></tr>}
                     {list.map((o) => (
                       <tr key={o.code}>
-                        <td style={{ fontWeight: 600 }}>{o.code}</td><td>{o.description}</td><td>{o.nature_operation}</td><td>{o.state_group_code || "—"}</td>
+                        <td style={{ fontWeight: 600 }}>{o.code}</td><td>{o.description}</td><td>{o.nature_operation}</td><td>{o.state_group_code || "—"}</td><td><small>{resumoFlags(o)}</small></td>
                         <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => edit(o)}>Editar</button></td>
                       </tr>
                     ))}

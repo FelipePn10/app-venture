@@ -41,6 +41,8 @@
     "test:tenant-directory": "node scripts/test-tenant-directory.mjs",
     "test:beneficiamento": "node scripts/test-beneficiamento-contrato.mjs",
     "test:screen-search": "node scripts/test-screen-search.mjs",
+    "test:rateio-entrada": "node scripts/test-rateio-entrada.mjs",
+    "test:sped-efd": "node scripts/test-sped-efd.mjs",
     "test:commercial-regressions": "node scripts/validate-commercial-regressions.mjs",
     "test:commercial-round2": "node scripts/validate-commercial-round2.mjs",
     "sim:comercial-round3": "node scripts/ui-sim/comercial-round3.mjs",

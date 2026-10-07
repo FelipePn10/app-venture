@@ -336,6 +336,16 @@ export interface EntryOperationDTO {
   state_group_code?: CodigoNumerico;
   supplier_type_code?: CodigoNumerico;
   is_active?: boolean;
+  /**
+   * Comportamento da nota com esta operação (o "TES"): movimenta estoque,
+   * gera contas a pagar e quais impostos viram crédito (os demais vão ao custo).
+   * Omitidos na criação, valem verdadeiro.
+   */
+  movimenta_estoque?: boolean;
+  gera_financeiro?: boolean;
+  credita_icms?: boolean;
+  credita_ipi?: boolean;
+  credita_pis_cofins?: boolean;
 }
 export interface StateGroupDTO {
   code: string;

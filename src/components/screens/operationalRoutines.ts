@@ -286,9 +286,6 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Alterar motivo", method: "PUT", path: "/api/restriction-reason/{code}", fields: [id("code", "Código"), json('{"description":"Combinação não permitida","situation":"ACTIVE"}')] },
     remove("/api/restriction-reason/{code}", [id("code", "Código")]),
   ]),
-  VFIS0600: routine("VFIS0600", "SPED EFD ICMS/IPI", "Gera o arquivo texto da Escrituração Fiscal Digital para o período informado.", [
-    { label: "Gerar EFD", method: "POST", path: "/api/fiscal/sped/efd", downloadFilename: "SPED_EFD_ICMS_IPI.txt", fields: [json('{"cnpj":"00000000000000","nome":"EMPRESA","uf":"SP","ie":"","im":"","suframa":"","codigo_municipio":"3550308","regime_tributario":"3","data_inicial":"2026-07-01T00:00:00Z","data_final":"2026-07-31T23:59:59Z","indicador_situacao":"0","contabilista_nome":"","contabilista_cpf":"","contabilista_crc":"","contabilista_cnpj":"","participantes":[],"unidades":[],"itens":[],"documentos_fiscais":[],"inventario":[]}')] },
-  ]),
   VFIS0610: routine("VFIS0610", "Importação de NF-e de compra por chave", "Busca a NF-e na integração fiscal, cria a entrada, baixa o pedido e movimenta o estoque.", [
     create("/api/fiscal/entries/import-nfe/", '{"chave_acesso":"00000000000000000000000000000000000000000000","purchase_order_code":1000,"warehouse_id":1}'),
   ]),
@@ -378,7 +375,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Gerar SPED ECD", method: "POST", path: "/api/accounting/sped/ecd/", downloadFilename: "SPED_ECD.txt", fields: [json('{"plan_id":1,"empresa_id":1,"from":"2026-01-01","to":"2026-12-31","empresa":{"CNPJ":"00000000000191","CPF":"","Nome":"EMPRESA LTDA","UF":"SP","Email":"contabilidade@empresa.com.br","IE":"110042490114","CodigoMunicipio":"3550308","CEP":"01001000","Endereco":"PRACA DA SE","Numero":"100","Complemento":"","Bairro":"SE","Fone":"1130000000","NIRE":"35123456789","IndSitAtiv":"0","IndNireCert":"0","IndGrandePorte":"0","IndEscCons":"N","TipoECD":"0","HashECDSub":"","NumOrd":"1","NomeAudi":"","IndSitEsp":"0"},"livros":[{"NumOrd":"1","NatLivro":"G","NumLiv":"1","DescLiv":"LIVRO DIARIO GERAL","CodHash":"","NumHash":"","PerIni":"2026-01-01T00:00:00Z","PerFin":"2026-12-31T23:59:59Z","CodHashAnt":"","NumHashAnt":""}]}')] },
   ]),
   VFIS0620: routine("VFIS0620", "Manifestação do destinatário e inutilização", "Envia à SEFAZ eventos de manifestação de NF-e recebida e inutiliza faixas não utilizadas de numeração própria.", [
-    create("/api/fiscal/manifestacao", '{"chave_nfe":"00000000000000000000000000000000000000000000","tipo":"CIENCIA","justificativa":"Documento identificado e aguardando conferência"}', false, "Manifestar NF-e"),
+    create("/api/fiscal/manifestacao", '{"chave_nfe":"00000000000000000000000000000000000000000000","tipo":"ciencia","justificativa":""}', false, "Manifestar NF-e"),
     create("/api/fiscal/inutilizacao", '{"serie":1,"numero_inicial":100,"numero_final":105,"justificativa":"Faixa não utilizada por falha controlada de numeração"}', false, "Inutilizar numeração"),
   ]),
   VFIS0630: routine("VFIS0630", "Tabela IBPT e carga tributária aproximada", "Importa o arquivo oficial IBPT/SCI por UF e consulta a carga tributária vigente por NCM.", [

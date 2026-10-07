@@ -23,6 +23,8 @@ export interface ContaBancaria extends ContaBancariaDTO {
    * consumido pelo VFIN0300. Fica opcional para a tela poder cair no saldo inicial.
    */
   saldo_atual?: number;
+  /** Conta contábil do banco (débito/crédito do caixa na contabilização da baixa). */
+  accounting_account_id?: number;
 }
 
 export interface CondicaoPagamentoDTO { nome: string; parcelas: string; }
@@ -38,7 +40,11 @@ export interface PlanoContaDTO {
   parent_code?: string;
   nivel: number;
 }
-export interface PlanoConta extends PlanoContaDTO { id: number; }
+export interface PlanoConta extends PlanoContaDTO {
+  id: number;
+  /** Conta contábil analítica do plano (contabilização automática da NF de entrada). */
+  accounting_account_id?: number;
+}
 
 export interface CentroCustoDTO { codigo: string; descricao: string; tipo: string; }
 export interface CentroCusto extends CentroCustoDTO { id: number; }
@@ -66,7 +72,23 @@ export interface ContaPagarDTO {
   plano_contas_id?: number;
   centro_custo_id?: number;
   observacao: string;
+  /**
+   * Rateio do título por plano de contas / centro de custo. A soma tem de
+   * fechar com o valor bruto. Um título só (o boleto), várias naturezas.
+   */
+  rateios?: Array<{ plano_contas_id: number; centro_custo_id?: number; valor: number }>;
 }
+
+/** Parte do título que vai para um plano de contas. */
+export interface RateioContaPagar {
+  plano_contas_id: number;
+  plano_contas_codigo?: string;
+  plano_contas_nome?: string;
+  centro_custo_id?: number;
+  centro_custo_nome?: string;
+  valor: number;
+}
+
 export interface ContaPagar {
   id: number;
   numero_documento: string;
@@ -90,6 +112,15 @@ export interface ContaPagar {
   parcela_numero?: number;
   parcela_total?: number;
   forma_pagamento?: string;
+  observacao?: string;
+  rateios: RateioContaPagar[];
+  /** Parte do título quitada por um adiantamento ao fornecedor. */
+  valor_adiantamento_abatido?: number;
+}
+
+/** O que ainda se deve no título: bruto − pago − desconto já dado − adiantamento abatido (a mesma conta do backend). */
+export function saldoContaPagar(c: ContaPagar): number {
+  return Number((c.valor_bruto - (c.valor_pago ?? 0) - (c.desconto ?? 0) - (c.valor_adiantamento_abatido ?? 0)).toFixed(2));
 }
 
 export interface ContaReceberDTO {
@@ -115,6 +146,8 @@ export interface ContaReceber {
   valor_recebido: number;
   data_vencimento: string;
   cliente_id?: number;
+  /** Crédito a receber de fornecedor (devolução de compra que passou do que havia em aberto). */
+  fornecedor_id?: number;
   /**
    * Campos que a resposta já trazia e o parser descartava. Sem emissão não se
    * confere a carteira com o parceiro; sem o vínculo da nota e do pedido a grade
@@ -132,15 +165,24 @@ export interface ContaReceber {
   forma_pagamento?: string;
 }
 
+/** O que o cliente ainda deve: bruto − recebido − desconto já concedido (a mesma conta do backend). */
+export function saldoContaReceber(c: ContaReceber): number {
+  return Number((c.valor_bruto - (c.valor_recebido ?? 0) - (c.desconto ?? 0)).toFixed(2));
+}
+
 export interface BaixaPagamentoDTO {
   conta_bancaria_id: number;
   valor_pago: number;
+  /** Desconto obtido na quitação: abate a dívida sem sair do caixa. */
+  desconto?: number;
   data_pagamento: string;
   observacao?: string;
 }
 export interface BaixaRecebimentoDTO {
   conta_bancaria_id: number;
   valor_recebido: number;
+  /** Desconto concedido ao cliente na quitação. */
+  desconto?: number;
   data_recebimento: string;
   observacao?: string;
 }
@@ -231,6 +273,17 @@ export const FORMA_PAGAMENTO_LABELS: Record<FormaDePagamento, string> = {
 export const TIPOS_DE_DOCUMENTO = ['NF-e', 'NFS-e', 'CT-e', 'FATURA', 'RECIBO', 'BOLETO', 'CONTRATO', 'OUTRO'] as const;
 
 /**
+ * Rótulo do tipo de documento. Os títulos gerados pela aprovação da NF de
+ * entrada vêm como NFE (duplicata do fornecedor) e RETENCAO (imposto retido
+ * na fonte, a recolher em guia própria — não se paga ao fornecedor).
+ */
+export const ROTULO_TIPO_DOCUMENTO: Record<string, string> = {
+  NFE: 'NF-e de entrada',
+  RETENCAO: 'Imposto retido a recolher',
+};
+export const rotuloTipoDocumento = (t?: string): string => (t ? ROTULO_TIPO_DOCUMENTO[t.toUpperCase()] ?? t : '—');
+
+/**
  * Dias de atraso de um título em aberto. Negativo = ainda a vencer.
  * Calculado na tela porque o endpoint não devolve; a data de referência é a do
  * navegador, e é por isso que o número aparece ao lado do vencimento e não sozinho.
@@ -317,6 +370,7 @@ function parseContaBancaria(raw: unknown): ContaBancaria {
     saldo_atual: parseNum(o, 'saldo_atual', 'SaldoAtual') || undefined,
     chave_pix: parseStr(o, 'chave_pix', 'ChavePix'),
     tipo_chave_pix: parseStr(o, 'tipo_chave_pix', 'TipoChavePix'),
+    accounting_account_id: parseNum(o, 'accounting_account_id') || undefined,
   };
 }
 
@@ -345,6 +399,7 @@ function parsePlano(raw: unknown): PlanoConta {
     natureza: (parseStr(o, 'natureza', 'Natureza') || 'CREDITO') as PlanoNatureza,
     parent_code: parseStr(o, 'parent_code', 'ParentCode'),
     nivel: parseNum(o, 'nivel', 'Nivel'),
+    accounting_account_id: parseNum(o, 'accounting_account_id') || undefined,
   };
 }
 
@@ -382,7 +437,48 @@ function parsePagar(raw: unknown): ContaPagar {
     parcela_numero: parseNum(o, 'parcela_numero', 'ParcelaNumero') || undefined,
     parcela_total: parseNum(o, 'parcela_total', 'ParcelaTotal') || undefined,
     forma_pagamento: parseStr(o, 'forma_pagamento', 'FormaPagamento') || undefined,
+    observacao: parseStr(o, 'observacao', 'Observacao') || undefined,
+    valor_adiantamento_abatido: parseNum(o, 'valor_adiantamento_abatido') || undefined,
+    rateios: unwrapArray(o['rateios'] ?? o['Rateios']).map(unwrapObject).map((r) => ({
+      plano_contas_id: parseNum(r, 'plano_contas_id', 'PlanoContasID'),
+      plano_contas_codigo: parseStr(r, 'plano_contas_codigo') || undefined,
+      plano_contas_nome: parseStr(r, 'plano_contas_nome') || undefined,
+      centro_custo_id: parseNum(r, 'centro_custo_id') || undefined,
+      centro_custo_nome: parseStr(r, 'centro_custo_nome') || undefined,
+      valor: parseNum(r, 'valor', 'Valor'),
+    })),
   };
+}
+
+/** Linha do contas a pagar agrupado por plano de contas. */
+export interface ContasPagarPorPlano {
+  plano_contas_id?: number;
+  plano_contas_codigo: string;
+  plano_contas_nome: string;
+  centro_custo_id?: number;
+  centro_custo_nome?: string;
+  qtd_titulos: number;
+  valor_total: number;
+  valor_pago: number;
+  valor_aberto: number;
+  valor_vencido: number;
+}
+
+export async function listContasPagarPorPlano(filters: { start_date?: string; end_date?: string; date_field?: string; status?: string; fornecedor_id?: number } = {}): Promise<ContasPagarPorPlano[]> {
+  const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined && v !== ''));
+  const { data } = await httpClient.get(`${BASE}/contas-pagar/por-plano-contas`, { params });
+  return unwrapArray(data).map(unwrapObject).map((o) => ({
+    plano_contas_id: parseNum(o, 'plano_contas_id') || undefined,
+    plano_contas_codigo: parseStr(o, 'plano_contas_codigo'),
+    plano_contas_nome: parseStr(o, 'plano_contas_nome'),
+    centro_custo_id: parseNum(o, 'centro_custo_id') || undefined,
+    centro_custo_nome: parseStr(o, 'centro_custo_nome') || undefined,
+    qtd_titulos: parseNum(o, 'qtd_titulos'),
+    valor_total: parseNum(o, 'valor_total'),
+    valor_pago: parseNum(o, 'valor_pago'),
+    valor_aberto: parseNum(o, 'valor_aberto'),
+    valor_vencido: parseNum(o, 'valor_vencido'),
+  }));
 }
 
 function parseReceber(raw: unknown): ContaReceber {
@@ -395,6 +491,7 @@ function parseReceber(raw: unknown): ContaReceber {
     valor_recebido: parseNum(o, 'valor_recebido', 'ValorRecebido'),
     data_vencimento: parseStr(o, 'data_vencimento', 'DataVencimento'),
     cliente_id: parseNum(o, 'cliente_id', 'ClienteID') || undefined,
+    fornecedor_id: parseNum(o, 'fornecedor_id', 'FornecedorID') || undefined,
     data_emissao: parseStr(o, 'data_emissao', 'DataEmissao') || undefined,
     data_recebimento: parseStr(o, 'data_recebimento', 'DataRecebimento') || undefined,
     fiscal_exit_id: parseNum(o, 'fiscal_exit_id', 'FiscalExitID') || undefined,
