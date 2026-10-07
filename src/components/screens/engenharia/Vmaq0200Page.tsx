@@ -258,7 +258,7 @@ export function Vmaq0200Page(): JSX.Element {
   const [paradaFiltro, setParadaFiltro] = useState({ machine_id: 0, from: HOJE(), to: HOJE() });
   const [paradaForm, setParadaForm] = useState({ machine_id: 0, starts_at: "", ends_at: "", downtime_type: "UNPLANNED", reason: "" });
   const [familias, setFamilias] = useState<SetupFamily[]>([]);
-  const [famForm, setFamForm] = useState<{ family: string; itens: number[] }>({ family: "", itens: [] });
+  const [famForm, setFamForm] = useState<{ family: string; itens: string[] }>({ family: "", itens: [] });
   /** Parada em curso da máquina escolhida na aba Paradas; null = ainda não consultada. */
   const [paradaAberta, setParadaAberta] = useState<MachineStop | null>(null);
   const [consumiveis, setConsumiveis] = useState<MachineConsumable[]>([]);
@@ -501,8 +501,8 @@ export function Vmaq0200Page(): JSX.Element {
       work_center_id: setupCentro,
       from_family: setupForm.from_family.trim() || null,
       to_family: setupForm.to_family.trim() || null,
-      from_item_code: setupForm.from_item_code ? Number(setupForm.from_item_code) : null,
-      to_item_code: setupForm.to_item_code ? Number(setupForm.to_item_code) : null,
+      from_item_code: setupForm.from_item_code || null,
+      to_item_code: setupForm.to_item_code || null,
       setup_minutes: minutos,
       is_active: true,
     });
@@ -1320,7 +1320,7 @@ export function Vmaq0200Page(): JSX.Element {
               <span className="erp-hint">Gravada em maiúsculas — "chapa 3mm" e "CHAPA 3MM" seriam duas famílias.</span></div>
             <div className="erp-field erp-c3"><label className="erp-label erp-req">Acrescentar item</label>
               <LookupField value={undefined} loader={loadItems} entityLabel="item" placeholder="Escolher item"
-                onChange={(c) => { const code = Number(c ?? 0); if (code && !famForm.itens.includes(code)) setFamForm((p) => ({ ...p, itens: [...p.itens, code] })); }} /></div>
+                onChange={(c) => { const code = c ? String(c) : ""; if (code && !famForm.itens.includes(code)) setFamForm((p) => ({ ...p, itens: [...p.itens, code] })); }} /></div>
             <div className="erp-field erp-c4">
               <label className="erp-label">Itens escolhidos ({famForm.itens.length})</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, minHeight: 30 }}>
@@ -1394,11 +1394,11 @@ export function Vmaq0200Page(): JSX.Element {
                 <input className="erp-input" value={setupForm.to_family} placeholder="Ex.: BRANCO"
                   onChange={(e) => setSetupForm((p) => ({ ...p, to_family: e.target.value }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Item de origem</label>
-                <LookupField value={Number(setupForm.from_item_code) || undefined} loader={loadItems}
+                <LookupField value={setupForm.from_item_code || undefined} loader={loadItems}
                   entityLabel="item" placeholder="Qualquer" clearable
                   onChange={(c) => setSetupForm((p) => ({ ...p, from_item_code: c ? String(c) : "" }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Item de destino</label>
-                <LookupField value={Number(setupForm.to_item_code) || undefined} loader={loadItems}
+                <LookupField value={setupForm.to_item_code || undefined} loader={loadItems}
                   entityLabel="item" placeholder="Qualquer" clearable
                   onChange={(c) => setSetupForm((p) => ({ ...p, to_item_code: c ? String(c) : "" }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Preparação (min)</label>

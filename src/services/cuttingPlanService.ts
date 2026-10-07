@@ -42,7 +42,8 @@ export interface CuttingPlanDTO {
 
 export interface CuttingPartDTO {
   id?: number;
-  item_code?: number;
+  /** Código comercial (texto): o backend traduz para a chave interna. */
+  item_code?: string;
   label?: string;
   length_mm?: number;
   width_mm?: number;
@@ -61,7 +62,7 @@ export interface CuttingPartDTO {
   edge_bottom?: boolean;
   edge_left?: boolean;
   edge_right?: boolean;
-  band_item_code?: number;
+  band_item_code?: string;
   band_cost_per_m?: number;
   /** De onde a peça veio (pedido, ordem, projeto). */
   source_ref?: string;

@@ -133,7 +133,6 @@ const Vsup0110Page = lazy(() => import("./suprimento/Vsup0110Page").then((m) => 
 const Vsup0120Page = lazy(() => import("./suprimento/Vsup0120Page").then((m) => ({ default: m.Vsup0120Page })));
 const Vsup0130Page = lazy(() => import("./suprimento/Vsup0130Page").then((m) => ({ default: m.Vsup0130Page })));
 const Vsup0140Page = lazy(() => import("./suprimento/Vsup0140Page").then((m) => ({ default: m.Vsup0140Page })));
-const Vsup0200Page = lazy(() => import("./suprimento/Vsup0200Page").then((m) => ({ default: m.Vsup0200Page })));
 const Vsup0300Page = lazy(() => import("./suprimento/Vsup0300Page").then((m) => ({ default: m.Vsup0300Page })));
 const Vsup0400Page = lazy(() => import("./suprimento/Vsup0400Page").then((m) => ({ default: m.Vsup0400Page })));
 const Vitm0100Page = lazy(() => import("./engenharia/Vitm0100Page").then((m) => ({ default: m.Vitm0100Page })));
@@ -269,7 +268,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSUP0140: <Vsup0140Page />,
   VBEN0100: <Vben0100Page />,
   VBEN0200: <Vben0200Page />,
-  VSUP0200: <Vsup0200Page />,
+  // VSUP0200 foi incorporada à VPDC0200; atalhos antigos abrem as sugestões do MRP lá.
+  VSUP0200: <Vpdc0200Page key="VSUP0200" visaoInicial="sugestoes" />,
   VPDC0200: <Vpdc0200Page />,
   VSUP0300: <Vsup0300Page />,
   VSUP0400: <Vsup0400Page />,

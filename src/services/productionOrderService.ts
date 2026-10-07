@@ -337,7 +337,7 @@ export interface MaterialDTO {
    * componente por outro (faltou o parafuso M6, entrou o M8), registrar a troca
    * é o que explica depois por que a ordem consumiu algo que não está na BOM.
    */
-  substituted_item_code?: number;
+  substituted_item_code?: string;
   quantity: number | string;
   warehouse_id?: number;
   automatic_issue?: boolean;
@@ -378,7 +378,7 @@ function parseMaterial(raw: unknown): MaterialDTO {
     quantity: parseNum(o, 'quantity', 'Quantity'),
     warehouse_id: parseNum(o, 'warehouse_id', 'WarehouseID') || undefined,
     automatic_issue: parseBool(o, 'automatic_issue', 'AutomaticIssue'),
-    substituted_item_code: parseNum(o, 'substituted_item_code', 'SubstitutedItemCode') || undefined,
+    substituted_item_code: parseStr(o, 'substituted_item_code', 'SubstitutedItemCode') || undefined,
     allocated_qty: parseNum(o, 'AttendedQuantity', 'attended_quantity'),
     balance: parseNum(o, 'balance', 'Balance'),
   };

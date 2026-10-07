@@ -439,8 +439,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Suprimento
   {
     code: "VPDC0200",
-    title: "Cadastro de Pedido de Compra",
-    description: "Gerar o pedido de compra e enviá-lo ao fornecedor.",
+    title: "Pedido de Compra",
+    description: "Pedido de compra completo: capa, itens, alçada, PDF e envio ao fornecedor por e-mail, acompanhamento de entregas, histórico de preço, notas por linha, previsão de pagamentos e sugestões do MRP.",
     module: "suprimento",
   },
   {
@@ -471,12 +471,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VSUP0130",
     title: "Fornecedor Preferencial por Item",
     description: "Vincular fornecedores a um item com ranking de preferência, código/descrição/UM do item no fornecedor e lead time.",
-    module: "suprimento",
-  },
-  {
-    code: "VSUP0200",
-    title: "Pedido de Compra",
-    description: "Gerir pedidos de compra (capa + itens com preço/IPI/UM resolvidos), cancelar, e aprovar/rejeitar sugestões de compra do MRP.",
     module: "suprimento",
   },
   {

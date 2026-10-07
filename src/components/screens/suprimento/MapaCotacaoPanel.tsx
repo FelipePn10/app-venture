@@ -1,3 +1,4 @@
+import { resumoPedidosGerados } from "@/services/purchaseOrderService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type QuotationMap, type QuotationItemView,
@@ -20,7 +21,7 @@ import { errMessage } from "@/services/fiscalShared";
  *   que quase nunca é a soma dos melhores preços, e é o número que decide entre
  *   pulverizar a compra ou concentrar num fornecedor só.
  */
-type Props = { quotationCode: number; onClose: () => void; aviso: (t: "success" | "error", m: string) => void };
+type Props = { quotationCode: number; onClose: () => void; aviso: (t: "success" | "error" | "info", m: string) => void };
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -120,8 +121,8 @@ export function MapaCotacaoPanel({ quotationCode, onClose, aviso }: Props): JSX.
           <div className="cot-head-actions">
             <button className="erp-btn erp-btn-primary erp-btn-sm" disabled={busy || selecionados === 0}
               onClick={() => void executar(async () => {
-                await generateQuotationOrders(quotationCode);
-                aviso("success", "Pedidos de compra gerados a partir dos fornecedores escolhidos.");
+                const r = resumoPedidosGerados(await generateQuotationOrders(quotationCode));
+                aviso(r.type, r.message);
                 await carregar();
               })}>Gerar pedidos</button>
             <button className="erp-btn erp-btn-sm" onClick={onClose}>Fechar</button>

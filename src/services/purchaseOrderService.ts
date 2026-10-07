@@ -80,6 +80,8 @@ export interface PurchaseOrderItemDTO {
   /** Quanto já chegou e quanto foi cancelado — o saldo é a diferença. */
   received_qty?: number;
   cancelled_qty?: number;
+  /** Quanto já chegou com nota fiscal (e virou título a pagar). */
+  invoiced_qty?: number;
   unit_price: number;
   discount_pct?: number;
   ipi_pct?: number;
@@ -167,6 +169,7 @@ function parseItem(raw: unknown): PurchaseOrderItemDTO {
     requested_qty: parseNum(o, 'requested_qty', 'RequestedQty'),
     received_qty: parseNum(o, 'received_qty', 'ReceivedQty'),
     cancelled_qty: parseNum(o, 'cancelled_qty', 'CancelledQty'),
+    invoiced_qty: parseNum(o, 'invoiced_qty', 'InvoicedQty'),
     unit_price: parseNum(o, 'unit_price', 'UnitPrice'),
     discount_pct: parseNum(o, 'discount_pct', 'DiscountPct'),
     ipi_pct: parseNum(o, 'ipi_pct', 'IpiPct'),
@@ -264,6 +267,11 @@ export async function getOrder(code: number): Promise<Obj> {
   const { data } = await httpClient.get(`${BASE}/${code}`);
   return unwrapObject(data);
 }
+/** Detalhe já interpretado: capa completa e linhas. */
+export async function getOrderDetail(code: number): Promise<PurchaseOrderDTO> {
+  const { data } = await httpClient.get(`${BASE}/${code}`);
+  return parseOrder(data);
+}
 export async function createOrder(dto: PurchaseOrderDTO): Promise<PurchaseOrderDTO> {
   const { data } = await httpClient.post(`${BASE}/create`, dto);
   return parseOrder(data);
@@ -278,6 +286,32 @@ export async function cancelOrder(code: number): Promise<void> {
 export async function addOrderItem(code: number, item: PurchaseOrderItemDTO): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/${code}/items`, item);
   return unwrapObject(data);
+}
+/** Campos alteráveis de uma linha de pedido ainda não aprovado. */
+export interface PurchaseOrderItemPatch {
+  requested_qty?: number;
+  unit_price?: number;
+  discount_pct?: number;
+  ipi_pct?: number;
+  icms_pct?: number;
+  tolerance_pct?: number;
+  warehouse_id?: number;
+  cost_center_code?: number;
+  delivery_date?: string;
+  notes?: string;
+}
+/** Altera a linha (pedido em rascunho ou parado na alçada); devolve o pedido inteiro, com os totais refeitos. */
+export async function updateOrderItem(code: number, lineCode: number, patch: PurchaseOrderItemPatch): Promise<PurchaseOrderDTO> {
+  const { data } = await httpClient.put(`${BASE}/${code}/items/${lineCode}`, patch);
+  return parseOrder(data);
+}
+/**
+ * Pedido não aprovado: remove a linha. Pedido aprovado: elimina o saldo que
+ * falta receber (o motivo é obrigatório e fica na linha).
+ */
+export async function cancelOrderItem(code: number, lineCode: number, motivo?: string): Promise<PurchaseOrderDTO> {
+  const { data } = await httpClient.post(`${BASE}/${code}/items/${lineCode}/cancel`, { motivo: motivo ?? '' });
+  return parseOrder(data);
 }
 export async function listOrdersBySupplier(supplierCode: number): Promise<PurchaseOrderDTO[]> {
   const { data } = await httpClient.get(`${BASE}/supplier/${supplierCode}`);
@@ -314,10 +348,192 @@ export async function listSuggestions(): Promise<SuggestionDTO[]> {
   const { data } = await httpClient.get(`${BASE}/suggestions`);
   return unwrapArray(data).map(parseSuggestion);
 }
-export async function approveSuggestion(code: number, body: { enterprise_code: number; supplier_code: number; unit_price: number; notes?: string; created_by: string }): Promise<Obj> {
+/** Gera o pedido da sugestão; ele passa pela alçada como qualquer pedido. */
+export async function approveSuggestion(code: number, body: { supplier_code: number; unit_price: number; notes?: string }): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/suggestions/${code}/approve`, body);
   return unwrapObject(data);
 }
 export async function rejectSuggestion(code: number): Promise<void> {
   await httpClient.post(`${BASE}/suggestions/${code}/reject`, {});
+}
+
+// ── Documento do pedido: PDF e envio ao fornecedor ──
+
+/** PDF do pedido (o mesmo que vai anexado ao e-mail). */
+export async function downloadOrderPdf(code: number): Promise<Blob> {
+  const { data } = await httpClient.get(`${BASE}/${code}/pdf`, { responseType: 'blob' });
+  return data as Blob;
+}
+
+export interface Destinatario { email: string; nome?: string; origem: 'CONTATO_PEDIDO' | 'CONTATO' | 'FORNECEDOR' | string; sugerido: boolean }
+export async function listRecipients(code: number): Promise<Destinatario[]> {
+  const { data } = await httpClient.get(`${BASE}/${code}/destinatarios`);
+  return unwrapArray(data).map(unwrapObject).map((o) => ({
+    email: parseStr(o, 'email'), nome: parseStr(o, 'nome') || undefined, origem: parseStr(o, 'origem'), sugerido: o['sugerido'] === true,
+  }));
+}
+
+export interface EnvioPedido { id: number; enviado_em: string; enviado_por?: string; destinatarios: string; assunto: string; situacao: 'ENVIADO' | 'FALHOU' | string; erro?: string }
+function parseEnvio(o: Obj): EnvioPedido {
+  return {
+    id: parseNum(o, 'id'), enviado_em: parseStr(o, 'enviado_em'), enviado_por: parseStr(o, 'enviado_por') || undefined,
+    destinatarios: parseStr(o, 'destinatarios'), assunto: parseStr(o, 'assunto'), situacao: parseStr(o, 'situacao'), erro: parseStr(o, 'erro') || undefined,
+  };
+}
+export async function listShipments(code: number): Promise<EnvioPedido[]> {
+  const { data } = await httpClient.get(`${BASE}/${code}/envios`);
+  return unwrapArray(data).map(unwrapObject).map(parseEnvio);
+}
+/** Envia o PDF por e-mail. Falha de envio volta como erro, mas fica registrada no histórico. */
+export async function sendOrder(code: number, para: string[], mensagem?: string): Promise<EnvioPedido> {
+  const { data } = await httpClient.post(`${BASE}/${code}/enviar`, { para, mensagem: mensagem ?? '' });
+  return parseEnvio(unwrapObject(data));
+}
+
+// ── Acompanhamento de entregas ──
+
+export type SituacaoAcompanhamento = 'ATRASADAS' | 'PROXIMOS_7' | 'SEM_PROMESSA' | 'TODAS';
+export interface Followup { id: number; data_prometida?: string; contato?: string; observacao?: string; registrado_em: string; registrado_por?: string }
+function parseFollowup(o: Obj): Followup {
+  return {
+    id: parseNum(o, 'id'), data_prometida: parseStr(o, 'data_prometida').slice(0, 10) || undefined, contato: parseStr(o, 'contato') || undefined,
+    observacao: parseStr(o, 'observacao') || undefined, registrado_em: parseStr(o, 'registrado_em'), registrado_por: parseStr(o, 'registrado_por') || undefined,
+  };
+}
+export interface LinhaEmAberto {
+  purchase_order_code: number; order_number: number; line_code: number; sequence: number;
+  /** Código comercial do item. */
+  item_code: string; item_name: string; supplier_code: number; supplier_name: string;
+  requested_qty: number; received_qty: number; saldo: number;
+  delivery_date?: string; promised_date?: string; data_prevista?: string; dias_atraso: number; ultimo_contato?: Followup;
+}
+export async function listFollowUp(situacao: SituacaoAcompanhamento, supplierCode?: number): Promise<LinhaEmAberto[]> {
+  const { data } = await httpClient.get(`${BASE}/acompanhamento`, { params: { situacao, ...(supplierCode ? { supplier_code: supplierCode } : {}) } });
+  return unwrapArray(data).map(unwrapObject).map((o) => {
+    const uc = o['ultimo_contato'];
+    return {
+      purchase_order_code: parseNum(o, 'purchase_order_code'), order_number: parseNum(o, 'order_number'), line_code: parseNum(o, 'line_code'),
+      sequence: parseNum(o, 'sequence'), item_code: parseStr(o, 'item_code'), item_name: parseStr(o, 'item_name'),
+      supplier_code: parseNum(o, 'supplier_code'), supplier_name: parseStr(o, 'supplier_name'),
+      requested_qty: parseNum(o, 'requested_qty'), received_qty: parseNum(o, 'received_qty'), saldo: parseNum(o, 'saldo'),
+      delivery_date: parseStr(o, 'delivery_date').slice(0, 10) || undefined, promised_date: parseStr(o, 'promised_date').slice(0, 10) || undefined,
+      data_prevista: parseStr(o, 'data_prevista').slice(0, 10) || undefined, dias_atraso: parseNum(o, 'dias_atraso'),
+      ultimo_contato: uc && typeof uc === 'object' ? parseFollowup(uc as Obj) : undefined,
+    };
+  });
+}
+export async function listLineFollowups(code: number, lineCode: number): Promise<Followup[]> {
+  const { data } = await httpClient.get(`${BASE}/${code}/items/${lineCode}/followups`);
+  return unwrapArray(data).map(unwrapObject).map(parseFollowup);
+}
+/** Registra o contato com o fornecedor; com data, ela vira a data prometida da linha. */
+export async function addLineFollowup(code: number, lineCode: number, f: { data_prometida?: string; contato?: string; observacao?: string }): Promise<Followup> {
+  const { data } = await httpClient.post(`${BASE}/${code}/items/${lineCode}/followups`, {
+    data_prometida: f.data_prometida ?? '', contato: f.contato ?? '', observacao: f.observacao ?? '',
+  });
+  return parseFollowup(unwrapObject(data));
+}
+
+// ── Histórico de preço do item ──
+
+export interface CompraDoItem {
+  fiscal_entry_id: number; numero_nf: number; data_entrada: string; supplier_name: string;
+  quantidade: number; unidade?: string; preco_nota: number; custo_estoque: number; qtd_estoque: number;
+}
+export interface HistoricoPreco {
+  ultima?: CompraDoItem; compras: CompraDoItem[]; qtd_compras_12m: number;
+  custo_medio_12m?: number; custo_minimo_12m?: number; custo_maximo_12m?: number;
+  ultimo_pedido?: { order_number: number; emission_date: string; supplier_name: string; unit_price: number; purchase_uom?: string };
+}
+function parseCompra(o: Obj): CompraDoItem {
+  return {
+    fiscal_entry_id: parseNum(o, 'fiscal_entry_id'), numero_nf: parseNum(o, 'numero_nf'), data_entrada: parseStr(o, 'data_entrada').slice(0, 10),
+    supplier_name: parseStr(o, 'supplier_name'), quantidade: parseNum(o, 'quantidade'), unidade: parseStr(o, 'unidade') || undefined,
+    preco_nota: parseNum(o, 'preco_nota'), custo_estoque: parseNum(o, 'custo_estoque'), qtd_estoque: parseNum(o, 'qtd_estoque'),
+  };
+}
+const optN = (o: Obj, k: string): number | undefined => (o[k] === undefined || o[k] === null ? undefined : parseNum(o, k));
+/** itemCode é o código comercial — o backend traduz. */
+export async function getPriceHistory(itemCode: string): Promise<HistoricoPreco> {
+  const { data } = await httpClient.get(`${BASE}/historico-preco`, { params: { item_code: itemCode } });
+  const o = unwrapObject(data);
+  const ult = o['ultima'];
+  const ped = o['ultimo_pedido'];
+  return {
+    ultima: ult && typeof ult === 'object' ? parseCompra(ult as Obj) : undefined,
+    compras: unwrapArray(o['compras']).map(unwrapObject).map(parseCompra),
+    qtd_compras_12m: parseNum(o, 'qtd_compras_12m'),
+    custo_medio_12m: optN(o, 'custo_medio_12m'), custo_minimo_12m: optN(o, 'custo_minimo_12m'), custo_maximo_12m: optN(o, 'custo_maximo_12m'),
+    ultimo_pedido: ped && typeof ped === 'object' ? (() => { const p = ped as Obj; return {
+      order_number: parseNum(p, 'order_number'), emission_date: parseStr(p, 'emission_date').slice(0, 10), supplier_name: parseStr(p, 'supplier_name'),
+      unit_price: parseNum(p, 'unit_price'), purchase_uom: parseStr(p, 'purchase_uom') || undefined }; })() : undefined,
+  };
+}
+
+// ── Notas que atenderam o pedido ──
+
+export interface NotaDaLinha {
+  line_code: number; fiscal_entry_id: number; numero_nf: number; serie: string; data_emissao: string; data_entrada: string;
+  status: string; quantidade: number; unidade?: string; valor_unitario: number; valor_total: number; supplier_name?: string;
+}
+export async function listOrderInvoices(code: number): Promise<NotaDaLinha[]> {
+  const { data } = await httpClient.get(`${BASE}/${code}/notas`);
+  return unwrapArray(data).map(unwrapObject).map((o) => ({
+    line_code: parseNum(o, 'line_code'), fiscal_entry_id: parseNum(o, 'fiscal_entry_id'), numero_nf: parseNum(o, 'numero_nf'),
+    serie: parseStr(o, 'serie'), data_emissao: parseStr(o, 'data_emissao').slice(0, 10), data_entrada: parseStr(o, 'data_entrada').slice(0, 10),
+    status: parseStr(o, 'status'), quantidade: parseNum(o, 'quantidade'), unidade: parseStr(o, 'unidade') || undefined,
+    valor_unitario: parseNum(o, 'valor_unitario'), valor_total: parseNum(o, 'valor_total'), supplier_name: parseStr(o, 'supplier_name') || undefined,
+  }));
+}
+
+// ── Previsão de pagamentos ──
+
+export interface ParcelaPrevista {
+  purchase_order_code: number; order_number: number; supplier_code?: number; numero: number;
+  vencimento: string; valor: number; estimada: boolean; condicao: string; descricao?: string; entrega_prevista: string;
+}
+export interface PrevisaoPagamentos { parcelas: ParcelaPrevista[]; total: number; avisos: string[] }
+function parsePrevisao(raw: unknown): PrevisaoPagamentos {
+  const o = unwrapObject(raw);
+  return {
+    total: parseNum(o, 'total'),
+    avisos: unwrapArray(o['avisos']).map((a) => String(a)),
+    parcelas: unwrapArray(o['parcelas']).map(unwrapObject).map((p) => ({
+      purchase_order_code: parseNum(p, 'purchase_order_code'), order_number: parseNum(p, 'order_number'),
+      supplier_code: optN(p, 'supplier_code'), numero: parseNum(p, 'numero'), vencimento: parseStr(p, 'vencimento').slice(0, 10),
+      valor: parseNum(p, 'valor'), estimada: p['estimada'] === true, condicao: parseStr(p, 'condicao'),
+      descricao: parseStr(p, 'descricao') || undefined, entrega_prevista: parseStr(p, 'entrega_prevista').slice(0, 10),
+    })),
+  };
+}
+export async function getOrderPaymentForecast(code: number): Promise<PrevisaoPagamentos> {
+  const { data } = await httpClient.get(`${BASE}/${code}/previsao-pagamentos`);
+  return parsePrevisao(data);
+}
+/** Pagamentos previstos dos pedidos aprovados (ainda não faturados) com vencimento no período. */
+export async function getPaymentForecast(de: string, ate: string): Promise<PrevisaoPagamentos> {
+  const { data } = await httpClient.get(`${BASE}/previsao-pagamentos`, { params: { de, ate } });
+  return parsePrevisao(data);
+}
+
+/**
+ * Resume o resultado de "gerar pedidos" (requisição ou cotação). Os pedidos
+ * gerados passam pela alçada: podem sair aprovados, aguardando autorização ou
+ * em rascunho (linha sem almoxarifado) — e a mensagem precisa dizer qual.
+ */
+export function resumoPedidosGerados(r: Obj): { type: 'success' | 'info'; message: string } {
+  const pedidos = unwrapArray(r['orders'] ?? r['Orders']).map(unwrapObject);
+  const avisos = unwrapArray(r['skipped'] ?? r['Skipped']).map((a) => String(a));
+  const numero = (o: Obj) => parseNum(o, 'order_number', 'OrderNumber') || parseNum(o, 'code', 'Code');
+  const por = (s: string) => pedidos.filter((o) => parseStr(o, 'status', 'Status') === s).map(numero);
+  const aprovados = por('APPROVED');
+  const alcada = por('REQUESTED');
+  const rascunho = por('DRAFT');
+  const partes: string[] = [];
+  if (pedidos.length === 0) partes.push('Nenhum pedido gerado.');
+  if (aprovados.length) partes.push(`Aprovado(s): nº ${aprovados.join(', ')}.`);
+  if (alcada.length) partes.push(`Aguardando autorização de alçada: nº ${alcada.join(', ')}.`);
+  if (rascunho.length) partes.push(`Em rascunho (complete e aprove em VPDC0200): nº ${rascunho.join(', ')}.`);
+  if (avisos.length) partes.push(`Atenção: ${avisos.join(' · ')}`);
+  return { type: alcada.length || rascunho.length || avisos.length || pedidos.length === 0 ? 'info' : 'success', message: partes.join(' ') };
 }

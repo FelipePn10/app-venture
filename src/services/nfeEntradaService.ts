@@ -20,7 +20,8 @@ export type EntradaStatus = 'PENDING' | 'CONFERRED' | 'APPROVED' | 'WRITTEN_OFF'
 export interface EntradaItem {
   id: number;
   sequence: number;
-  item_code?: number;
+  /** Código PÚBLICO (comercial) do item — o backend traduz para a chave interna. */
+  item_code?: string;
   item_name?: string;
   item_uom?: string;
   item_supplier_id?: number;
@@ -210,7 +211,7 @@ function parseItem(raw: unknown): EntradaItem {
   return {
     id: parseNum(o, 'id'),
     sequence: parseNum(o, 'sequence'),
-    item_code: optNum(o, 'item_code'),
+    item_code: optStr(o, 'item_code'),
     item_name: optStr(o, 'item_name'),
     item_uom: optStr(o, 'item_uom'),
     item_supplier_id: optNum(o, 'item_supplier_id'),
@@ -434,7 +435,8 @@ export async function importarEntradaPorChave(chave: string): Promise<EntradaDoc
 
 export interface ConciliacaoItemPayload {
   id: number;
-  item_code?: number;
+  /** Código comercial, como texto: número aqui seria lido como chave interna. */
+  item_code?: string;
   plano_contas_id?: number;
   centro_custo_id?: number;
   lembrar_vinculo?: boolean;
@@ -487,7 +489,7 @@ export interface LinhaPedidoCompra {
   purchase_order_code: number;
   order_number: number;
   sequence: number;
-  item_code: number;
+  item_code: string;
   status: string;
   requested_qty: number;
   received_qty: number;
@@ -499,14 +501,14 @@ export interface LinhaPedidoCompra {
 }
 
 /** Linhas de pedido de compra em aberto do fornecedor para o item da nota. */
-export async function listarPedidosDoItem(entradaId: number, itemId: number, itemCode?: number): Promise<LinhaPedidoCompra[]> {
+export async function listarPedidosDoItem(entradaId: number, itemId: number, itemCode?: string): Promise<LinhaPedidoCompra[]> {
   const { data } = await httpClient.get(`${BASE}/${entradaId}/itens/${itemId}/pedidos`, { params: itemCode ? { item_code: itemCode } : undefined });
   return unwrapArray(data).map(unwrapObject).map((l) => ({
     code: parseNum(l, 'code'),
     purchase_order_code: parseNum(l, 'purchase_order_code'),
     order_number: parseNum(l, 'order_number'),
     sequence: parseNum(l, 'sequence'),
-    item_code: parseNum(l, 'item_code'),
+    item_code: parseStr(l, 'item_code'),
     status: parseStr(l, 'status'),
     requested_qty: parseNum(l, 'requested_qty'),
     received_qty: parseNum(l, 'received_qty'),
@@ -519,7 +521,7 @@ export async function listarPedidosDoItem(entradaId: number, itemId: number, ite
 }
 
 export interface SugestaoItem {
-  item_code: number;
+  item_code: string;
   name: string;
   uom?: string;
   ncm?: string;
@@ -531,7 +533,7 @@ export interface SugestaoItem {
 export async function sugerirItens(entradaId: number, itemId: number, q = ''): Promise<SugestaoItem[]> {
   const { data } = await httpClient.get(`${BASE}/${entradaId}/itens/${itemId}/sugestoes`, { params: q ? { q } : undefined });
   return unwrapArray(data).map(unwrapObject).map((s) => ({
-    item_code: parseNum(s, 'item_code'),
+    item_code: parseStr(s, 'item_code'),
     name: parseStr(s, 'name'),
     uom: optStr(s, 'uom'),
     ncm: optStr(s, 'ncm'),
@@ -658,7 +660,7 @@ export async function importarRecebida(chave: string): Promise<EntradaDocumento>
 
 export interface EntradaManualItem {
   sequence: number;
-  item_code?: number;
+  item_code?: string;
   description?: string;
   ncm: string;
   cfop: string;
@@ -766,13 +768,13 @@ export interface ItemDaNotaPayload {
   revenda?: boolean;
 }
 
-export interface ItemDaNotaCriado { item_code: number; codigo: string; nome: string; unidade: string; aviso: string }
+export interface ItemDaNotaCriado { item_code: string; codigo: string; nome: string; unidade: string; aviso: string }
 
 /** Cadastra o item que a linha da nota descreve (o que ainda não existe no cadastro). */
 export async function cadastrarItemDaNota(id: number, itemId: number, p: ItemDaNotaPayload): Promise<ItemDaNotaCriado> {
   const { data } = await httpClient.post(`${BASE}/${id}/itens/${itemId}/cadastrar-item`, p);
   const o = unwrapObject(data);
-  return { item_code: parseNum(o, 'item_code'), codigo: parseStr(o, 'codigo'), nome: parseStr(o, 'nome'), unidade: parseStr(o, 'unidade'), aviso: parseStr(o, 'aviso') };
+  return { item_code: parseStr(o, 'codigo') || parseStr(o, 'item_code'), codigo: parseStr(o, 'codigo'), nome: parseStr(o, 'nome'), unidade: parseStr(o, 'unidade'), aviso: parseStr(o, 'aviso') };
 }
 
 /** Unidade da nota → unidade do cadastro (a mesma tradução do backend); vazio sem equivalente. */

@@ -615,7 +615,7 @@ export function Vcus0100Page(): JSX.Element {
                       <label className="erp-label">Só no item</label>
                       <LookupField value={regraForm.item_code ?? undefined} loader={loadItems}
                         entityLabel="item" placeholder="Todos os itens" clearable
-                        onChange={(c) => setRegraForm((p) => ({ ...p, item_code: c ? Number(c) : null }))} />
+                        onChange={(c) => setRegraForm((p) => ({ ...p, item_code: c ? String(c) : null }))} />
                     </div>
                     <div className="erp-field erp-c3">
                       <label className="erp-label">Conta contábil do indireto</label>

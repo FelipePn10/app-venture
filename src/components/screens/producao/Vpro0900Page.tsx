@@ -214,7 +214,7 @@ export function Vpro0900Page(): JSX.Element {
       production_order_id: id, kind: "DEMAND", item_code: matForm.item_code.trim(), quantity: matForm.quantity,
       warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined,
       automatic_issue: matForm.automatic_issue,
-      substituted_item_code: matForm.substituted_item_code ? Number(matForm.substituted_item_code) : undefined,
+      substituted_item_code: matForm.substituted_item_code || undefined,
     });
     setMatForm({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true, substituted_item_code: "" });
     setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: "Material incluído na OF." });
@@ -534,7 +534,7 @@ export function Vpro0900Page(): JSX.Element {
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={matForm.quantity} onChange={(e) => setMatForm((m) => ({ ...m, quantity: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><LookupField value={matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setMatForm((m) => ({ ...m, warehouse_id: code ? String(code) : "" }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Substitui o item</label>
-                  <LookupField value={Number(matForm.substituted_item_code) || undefined} loader={loadItems} entityLabel="item" placeholder="Nenhum — está na estrutura" clearable
+                  <LookupField value={matForm.substituted_item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Nenhum — está na estrutura" clearable
                     onChange={(code) => setMatForm((m) => ({ ...m, substituted_item_code: code ? String(code) : "" }))} />
                   <span className="erp-hint">Preencha quando a fábrica trocar um componente da BOM por outro.</span></div>
                 <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>

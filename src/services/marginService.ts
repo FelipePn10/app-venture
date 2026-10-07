@@ -118,7 +118,7 @@ export async function generateMargin(de: string, ate: string, base: string): Pro
 
 export async function getMarginReport(
   de: string, ate: string, ordem: 'FATURAMENTO' | 'MARGEM',
-  filtros: { item_code?: number; customer_code?: number } = {},
+  filtros: { item_code?: string; customer_code?: number } = {},
 ): Promise<MarginLine[]> {
   const { data } = await httpClient.get(`${BASE}/report`, { params: { de, ate, ordem, ...filtros } });
   return unwrapArray(data).map((raw) => {

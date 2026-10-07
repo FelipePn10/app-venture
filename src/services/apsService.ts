@@ -61,8 +61,9 @@ export async function sequenceAps(direction: string = 'FORWARD'): Promise<Sequen
 export interface SetupTransitionDTO {
   id?: number;
   work_center_id: number;
-  from_item_code?: number | null;
-  to_item_code?: number | null;
+  /** Códigos comerciais (texto): o backend traduz para a chave interna. */
+  from_item_code?: string | null;
+  to_item_code?: string | null;
   from_family?: string | null;
   to_family?: string | null;
   setup_minutes: number;
@@ -77,8 +78,8 @@ export async function listSetupMatrix(workCenterID: number): Promise<SetupTransi
     return {
       id: parseNum(o, 'id', 'ID') || undefined,
       work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID'),
-      from_item_code: parseNum(o, 'from_item_code', 'FromItemCode') || null,
-      to_item_code: parseNum(o, 'to_item_code', 'ToItemCode') || null,
+      from_item_code: parseStr(o, 'from_item_code', 'FromItemCode') || null,
+      to_item_code: parseStr(o, 'to_item_code', 'ToItemCode') || null,
       from_family: parseStr(o, 'from_family', 'FromFamily') || null,
       to_family: parseStr(o, 'to_family', 'ToFamily') || null,
       setup_minutes: parseNum(o, 'setup_minutes', 'SetupMinutes'),
@@ -257,7 +258,7 @@ export async function listSetupFamilyItems(family: string): Promise<string[]> {
 }
 
 /** Família em branco desfaz o agrupamento dos itens informados. */
-export async function assignSetupFamily(family: string, itemCodes: number[]): Promise<number> {
+export async function assignSetupFamily(family: string, itemCodes: string[]): Promise<number> {
   const { data } = await httpClient.put<unknown>(`${BASE}/setup-families`, { family, item_codes: itemCodes });
   return Number((data as Record<string, unknown>)?.updated ?? 0);
 }

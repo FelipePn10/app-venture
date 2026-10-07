@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## Novidades
+- **O pedido de compra vira um documento que você envia ao fornecedor.** Gere o PDF do pedido e mande por e-mail direto da tela: o sistema sugere os contatos do fornecedor, guarda o histórico de cada envio e só deixa enviar pedido já aprovado.
+- **Acompanhamento de entregas em uma tela só.** Veja o que está atrasado, o que chega nos próximos sete dias e o que o fornecedor ainda não prometeu. A cada ligação você registra o contato e a nova data, e ela passa a valer como a data prevista da linha.
+- **Histórico de preço do item na hora de comprar.** Ao escolher o item, o sistema mostra as últimas compras, o preço médio, o mínimo e o máximo do ano, e quanto foi pago no último pedido — para você perceber na hora quando o preço subiu.
+- **As notas que atenderam o pedido, linha por linha.** Dá para ver quanto de cada item já chegou com nota fiscal, de qual nota veio e quanto ainda falta.
+- **Previsão de pagamentos da compra.** O sistema projeta as parcelas de cada pedido pela condição de pagamento e pela data prevista de entrega, e o total aparece também no Contas a Pagar.
+- **Comparar as cotações dos fornecedores no mesmo mapa.** O mapa destaca o melhor preço de cada item, calcula a economia contra o segundo colocado, mostra quem não cotou tudo e compara dividir a compra entre fornecedores ou concentrar em um só — e gera os pedidos dos escolhidos.
+
+## Melhorias
+- **Os totais do pedido de compra passam a ser somados.** Antes ficavam em zero, e por isso a aprovação por valor nunca barrava nada: agora o pedido acima do limite do comprador fica aguardando autorização, e quem autoriza encontra o pedido na lista.
+- **Corrigir o pedido antes de aprovar, e cortar o que não vem depois.** Enquanto o pedido não foi aprovado você altera ou remove linhas. Depois de aprovado, o combinado não muda: você elimina o saldo que não vai mais receber, informando o motivo, que fica registrado na linha.
+- **O almoxarifado de entrada vem do cadastro do item.** Não é mais preciso preenchê-lo a cada linha; e, quando o cadastro do item não tem um, o aviso diz exatamente onde cadastrar.
+- **As sugestões de compra do MRP ficam na própria tela de pedidos**, com a escolha do fornecedor em lista. O pedido gerado por sugestão, requisição ou cotação passa pela mesma aprovação por valor que o pedido digitado.
+
+## Correções
+- **Relacionar a linha da nota de compra ao item cadastrado voltou a funcionar.** A tela dizia "o item não existe" quando o código mostrado era diferente do código interno; o mesmo acontecia no lançamento manual da nota.
+- **O item escolhido na tela é o item que o sistema grava.** Em plano de corte, substituição de item na ordem de produção, regras de custo indireto, relatório de margem e matriz de preparação de máquina, o código da tela era gravado como se fosse outro item.
+- **Pedido com material já recebido não é mais cancelado por inteiro** — o que chegou continua no estoque e na nota, e você elimina apenas o saldo em aberto.
+- **O fornecedor do pedido tem de ser da sua empresa e estar ativo.** Informar o código de um fornecedor de outra empresa gravava o pedido, que depois saía sem fornecedor no documento e sem e-mail para enviar.
+
 ## [v1.5.0] — 2026-10-07
 
 ## Novidades

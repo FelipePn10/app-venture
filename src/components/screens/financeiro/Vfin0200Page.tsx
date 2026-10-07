@@ -1,3 +1,4 @@
+import { PrevisaoPagamentosPanel } from "@/components/screens/suprimento/pedido/PrevisaoPagamentosPanel";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type ContaPagar, saldoContaPagar, type ContaPagarDTO, type AgingBucket, type BaixaPagamentoDTO, type ListFilters,
@@ -85,7 +86,7 @@ function celulaDeVencimento(c: ContaPagar): JSX.Element {
 }
 
 export function Vfin0200Page(): JSX.Element {
-  const [mode, setMode] = useState<"list" | "create" | "plano">("list");
+  const [mode, setMode] = useState<"list" | "create" | "plano" | "previsto">("list");
   const [filtrosAplicados, setFiltrosAplicados] = useState<ListFilters>({});
   /**
    * Rateio do título por plano de contas. Ligado, o título vai para vários
@@ -247,7 +248,7 @@ export function Vfin0200Page(): JSX.Element {
           <span className="erp-crumb-code">VFIN0200</span>
         </nav>
         <div className="erp-titlebar-spacer" />
-        <span className="erp-titlebar-meta">{mode === "list" ? "Carteira" : mode === "plano" ? "Por plano de contas" : "Novo título"}</span>
+        <span className="erp-titlebar-meta">{mode === "list" ? "Carteira" : mode === "plano" ? "Por plano de contas" : mode === "previsto" ? "Previsto por pedidos de compra" : "Novo título"}</span>
       </header>
 
       <div className="erp-toolbar">
@@ -290,6 +291,8 @@ export function Vfin0200Page(): JSX.Element {
               onClick={() => { setMode("list"); void reload(filtros); }}>Carteira</button>
             <button role="tab" aria-selected={mode === "plano"} className={`erp-tab${mode === "plano" ? " active" : ""}`}
               onClick={() => { setMode("plano"); setFeedback(null); }}>Por plano de contas</button>
+            <button role="tab" aria-selected={mode === "previsto"} className={`erp-tab${mode === "previsto" ? " active" : ""}`}
+              onClick={() => { setMode("previsto"); setFeedback(null); }}>Previsto por pedidos de compra</button>
             <button role="tab" aria-selected={mode === "create"} className={`erp-tab${mode === "create" ? " active" : ""}`}
               onClick={() => { setForm(EMPTY); setRatear(false); setRateios([]); setMode("create"); setFeedback(null); }}>Novo título</button>
           </div>
@@ -308,7 +311,8 @@ export function Vfin0200Page(): JSX.Element {
                 <ContasPagarPorPlanoView filtros={filtrosAplicados} />
               </>
             )}
-            {mode === "plano" ? null : mode === "list" ? (
+            {mode === "previsto" && <PrevisaoPagamentosPanel />}
+            {mode === "plano" || mode === "previsto" ? null : mode === "list" ? (
               <>
                 {aging.length > 0 && (
                   <div className="erp-fieldset">
