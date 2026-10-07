@@ -209,7 +209,7 @@ export function Vcut0100Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label">Altura</label><input className="erp-input num" type="number" value={partForm.height_mm || ""} onChange={(e) => setPartForm((s) => ({ ...s, height_mm: Number(e.target.value) }))} /></div>
                       </> : <div className="erp-field erp-c6"><label className="erp-label">Comprimento (mm)</label><input className="erp-input num" type="number" value={partForm.length_mm || ""} onChange={(e) => setPartForm((s) => ({ ...s, length_mm: Number(e.target.value) }))} /></div>}
                       <div className="erp-field erp-c2"><label className="erp-label">Qtd</label><input className="erp-input num" type="number" value={partForm.quantity || ""} onChange={(e) => setPartForm((s) => ({ ...s, quantity: Number(e.target.value) }))} /></div>
-                      <div className="erp-field erp-c4"><label className="erp-label">Item da peça</label><LookupField value={partForm.item_code} loader={loadItems} entityLabel="item" placeholder="Opcional" clearable onChange={(c) => setPartForm((s) => ({ ...s, item_code: c ? Number(c) : undefined }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Item da peça</label><LookupField value={partForm.item_code} loader={loadItems} entityLabel="item" placeholder="Opcional" clearable onChange={(c) => setPartForm((s) => ({ ...s, item_code: c ? String(c) : undefined }))} /></div>
                       <div className="erp-field erp-c4"><label className="erp-label">Origem</label><input className="erp-input" value={partForm.source_ref ?? ""} placeholder="Pedido, ordem ou projeto" onChange={(e) => setPartForm((s) => ({ ...s, source_ref: e.target.value || undefined }))} /></div>
 
                       {formaReal && (
@@ -255,7 +255,7 @@ export function Vcut0100Page(): JSX.Element {
                           <label className="erp-check"><input type="checkbox" checked={!!partForm.edge_right} onChange={(e) => setPartForm((s) => ({ ...s, edge_right: e.target.checked }))} /> Direito</label>
                         </div>
                       </div>
-                      <div className="erp-field erp-c4"><label className="erp-label">Fita utilizada</label><LookupField value={partForm.band_item_code} loader={loadItems} entityLabel="item" placeholder="Item da fita" clearable onChange={(c) => setPartForm((s) => ({ ...s, band_item_code: c ? Number(c) : undefined }))} /></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Fita utilizada</label><LookupField value={partForm.band_item_code} loader={loadItems} entityLabel="item" placeholder="Item da fita" clearable onChange={(c) => setPartForm((s) => ({ ...s, band_item_code: c ? String(c) : undefined }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Custo por metro</label><input className="erp-input num" type="number" step="0.0001" value={partForm.band_cost_per_m ?? ""} onChange={(e) => setPartForm((s) => ({ ...s, band_cost_per_m: Number(e.target.value) }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Fita a aplicar</label>
                         <input className="erp-input num" readOnly disabled value={metrosDeFita(partForm).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} />

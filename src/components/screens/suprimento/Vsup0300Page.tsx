@@ -1,3 +1,4 @@
+import { resumoPedidosGerados } from "@/services/purchaseOrderService";
 import { useState, useCallback, useEffect } from "react";
 import {
   type RequisitionDTO, type RequisitionItemDTO, type GenerateSelection,
@@ -66,7 +67,7 @@ export function Vsup0300Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       const r = await generateOrders(selections);
-      setFeedback({ type: "success", message: `Pedidos gerados. ${JSON.stringify(r).slice(0, 160)}` });
+      setFeedback(resumoPedidosGerados(r));
       if (detail.code) await abrir(detail.code); await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }

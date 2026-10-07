@@ -3229,56 +3229,67 @@ de um contrato.
 
 ##### Objetivo
 
-Emitir pedidos de compra para fornecedores. Possui 4 abas (Dados Gerais, Transporte, Vencimento, Itens) e status inicial Pendente. Os itens são adicionados via modal de seleção.
+Comprar do começo ao fim numa tela só: montar o pedido, passá-lo pela alçada de valores,
+enviá-lo ao fornecedor (PDF por e-mail), acompanhar as entregas, ver quais notas atenderam
+cada linha e quanto ainda falta pagar. Também é aqui que se aprovam as **sugestões de
+compra do MRP** (a antiga VSUP0200 foi incorporada a esta tela).
 
 ##### Pré-requisitos
 
-- Fornecedor cadastrado em VSUP0500.
-- Itens comprados cadastrados em VENT0200.
-- (Opcional) Contrato vigente em VCON0200.
+- Fornecedor cadastrado em VSUP0500 (com e-mail e, de preferência, um contato marcado
+  como "de pedido de compra").
+- Itens cadastrados em VENT0200, com **almoxarifado de suprimentos** na pasta Suprimentos.
+- Condição de pagamento com parcelas (VCLI0530) para a previsão de pagamentos.
+- (Opcional) Política de alçada em Suprimentos.
+
+##### Visões (barra de ferramentas)
+
+| Visão | Para quê |
+|-------|----------|
+| Pedidos | Lista e manutenção dos pedidos |
+| Sugestões do MRP | Aprovar (escolhendo fornecedor e preço) ou rejeitar o que o MRP sugeriu |
+| Acompanhamento de entregas | Linhas atrasadas, que chegam em 7 dias ou sem data confirmada; registrar o contato com o fornecedor |
+| Previsão de pagamentos | O que os pedidos aprovados ainda vão custar, por vencimento |
 
 ##### Passo a passo
 
-1. Acesse **VPDC0200** pelo menu _Suprimento > Pedido de Compra_.
-2. Na aba **Dados Gerais**, preencha: fornecedor, data, condições de pagamento, contato.
-3. Na aba **Transporte**, defina: transportadora, tipo de frete, dados de entrega.
-4. Na aba **Vencimento**, configure as datas de vencimento e valores.
-5. Na aba **Itens**, clique em **Adicionar Item** (abre modal de seleção).
-6. No modal, pesquise e selecione os itens, informe quantidades e valores.
-7. O status inicial do pedido é **Pendente**.
-8. Clique em **Salvar** (F9).
+1. **Capa**: fornecedor, emissão, entrega prevista. Em **Transporte e pagamento**: condição de
+   pagamento (em branco, vale a do fornecedor), frete (CIF/FOB…), transportadora.
+2. **Criar pedido** → aba **Itens**: escolha o item; o **histórico de preço** aparece na hora
+   (última compra, custo médio de 12 meses por unidade de estoque, último pedido). Informe
+   quantidade e preço. **Almoxarifado em branco usa o do cadastro do item.**
+3. Antes da aprovação, cada linha pode ser **editada** ou **removida**.
+4. **Aprovar**: o total (mercadoria − desconto + IPI + frete FOB) é avaliado pela alçada.
+   Acima do limite, o pedido fica aguardando **Autorizar alçada** (administrador).
+5. Aprovado, aba **Enviar ao fornecedor**: baixe o PDF ou envie por e-mail. Os envios — inclusive
+   os que falharam, com o motivo — ficam registrados.
+6. Durante a espera: **Acompanhar** na linha (ou a visão Acompanhamento) para registrar a data
+   que o fornecedor prometeu, com quem se falou e o que foi dito.
+7. Aba **Notas e recebimentos**: as notas de entrada que atenderam cada linha.
+8. Aba **Pagamentos previstos**: parcelas pela condição de pagamento, contadas da data prevista
+   de chegada; somem quando a nota chega e vira título em Contas a Pagar.
+9. Material que não virá: **Eliminar saldo** na linha (motivo obrigatório). Pedido com material
+   recebido não se cancela inteiro.
 
-##### Campos
+##### Regras
 
-| Campo | Aba | Tipo | Obrigatório | Descrição |
-|-------|-----|------|-------------|-----------|
-| Fornecedor | Dados Gerais | Select | Sim | Fornecedor do pedido |
-| Data | Dados Gerais | Date | Sim | Data de emissão |
-| Contrato | Dados Gerais | Select | Não | Contrato de referência (opcional) |
-| Cond. Pagamento | Dados Gerais | Texto | Não | Condições negociadas |
-| Transportadora | Transporte | Select | Não | Responsável pelo frete |
-| Tipo Frete | Transporte | Select | Não | CIF / FOB / etc. |
-| Vencimentos | Vencimento | Grid | Não | Datas e valores de parcelas |
-| Item | Itens | Modal | Sim | Item sendo comprado |
-| Quantidade | Itens | Number | Sim | Quantidade pedida |
-| Valor Unitário | Itens | Number | Sim | Preço unitário negociado |
-| Status | (sistema) | Read-only | — | Pendente (inicial) |
-
-##### Observações importantes
-
-- O status inicial é sempre **Pendente**. O workflow posterior (aprovação, envio ao fornecedor, recebimento) é tratado em outras telas.
-- O **modal de itens** permite busca por código, nome ou descrição, com filtros por fornecedor e tipo.
-- Pedidos de compra alimentam o **Aviso de Recebimento** e a **Inspeção de Recebimento**.
+- Capa e linhas só mudam em rascunho ou aguardando alçada; alterar um pedido parado na alçada o
+  devolve para rascunho.
+- Só **pedido aprovado** recebe material — pela nota de entrada ou pelo recebimento direto — e
+  só ele vai ao fornecedor por e-mail.
+- Pedidos gerados pela requisição (VSUP0300), pela cotação (VSUP0400) e pelas sugestões do MRP
+  também passam pela alçada.
 
 ##### Telas relacionadas
 
 | Tela | Relação |
 |------|---------|
-| VENT0200 | Cadastro de Itens — itens disponíveis para compra |
-| VSUP0500 | Cadastro de Fornecedor — fornecedor do pedido |
+| VENT0200 | Cadastro de Itens — almoxarifado de suprimentos usado nas linhas |
+| VSUP0500 | Cadastro de Fornecedor — e-mails e contato de pedido de compra |
+| VSUP0300 / VSUP0400 | Requisição e cotação — geram pedidos que passam pela alçada |
+| VFIS0210 | NF-e de Entrada — liga a nota à linha do pedido aprovado |
+| VFIN0200 | Contas a Pagar — aba "Previsto por pedidos de compra" |
 | VCON0200 | Contratos Fornecedores — contrato de referência |
-| VINS0200 | Roteiro Inspeção — inspeção dos itens no recebimento |
-| VVOR0202 | Itens por Fornecedor — fornecedores habilitados por item |
 
 ---
 
@@ -9036,7 +9047,7 @@ o pedido com dados automáticos (condição de pagamento, preço, %IPI, UM inter
 Cadastro de Fornecedor (VSUP0500)  +  Mestres de compra (VSUP0110/0120/0130)
         │
         ▼
-MRP → Sugestão de Compra ─────────────►  Pedido de Compra (VSUP0200)  ──► Fornecedor
+MRP → Sugestão de Compra ─────────────►  Pedido de Compra (VPDC0200)  ──► Fornecedor
         │                                        ▲
 Solicitação (VSUP0300) ── gerar pedidos ─────────┤
         │                                        │
@@ -9094,7 +9105,7 @@ Cliente. Alimenta o Pedido de Compra e a NF de entrada com defaults automáticos
 ##### Telas relacionadas
 
 - **VSUP0510 (Apoio de Fornecedores)**: tipos e parâmetros.
-- **VSUP0200 (Pedido de Compra)**: usa os defaults do fornecedor.
+- **VPDC0200 (Pedido de Compra)**: usa os defaults do fornecedor.
 - **VFIS0210 (NF-e de Entrada)**: casa o CNPJ do emitente ao fornecedor.
 
 ---
@@ -9248,38 +9259,10 @@ como informação, não como erro.
 
 ---
 
-#### VSUP0200 — Pedido de Compra
+#### VSUP0200 — Pedido de Compra (incorporada à VPDC0200)
 
-##### Objetivo
-
-Gerir o **pedido de compra** (capa + itens) enviado ao fornecedor, e **aprovar/rejeitar
-as sugestões de compra** geradas pelo MRP. Ao adicionar um item, o backend resolve
-automaticamente **preço** (tabela), **%IPI** (classificação fiscal) e **UM interna**
-(conversões).
-
-##### Pré-requisitos
-
-- **Fornecedor** cadastrado (VSUP0500); itens (VENT0200).
-
-##### Passo a passo
-
-1. Aba **Pedidos**: crie a capa (empresa, **fornecedor**, moeda, tipo de frete). Se não
-   informar a condição de pagamento, ela vem dos **defaults do fornecedor**.
-2. Abra o pedido e **adicione itens** (item, quantidade, preço). Preço/IPI/UM são
-   resolvidos pelo sistema.
-3. **Cancele** o pedido quando necessário.
-4. Aba **Sugestões**: veja as sugestões do MRP e **Aprove** (informando fornecedor e
-   preço → gera um pedido de compra firme) ou **Rejeite**.
-
-##### Observações importantes
-
-- Aprovar uma sugestão gera um `purchase_order` (origem MRP) e torna a ordem planejada
-  firme — só suprimentos firmes entram no *netting* do MRP.
-
-##### Telas relacionadas
-
-- **VMRP0100 (MRP)**: origem das sugestões de compra.
-- **VSUP0500 (Fornecedor)**: defaults de condição/frete/conta.
+A antiga VSUP0200 foi incorporada à **VPDC0200 — Pedido de Compra**. O código VSUP0200
+continua abrindo a VPDC0200, já na visão **Sugestões do MRP**.
 
 ---
 
@@ -9304,7 +9287,7 @@ Parcial → Atendido.
 ##### Telas relacionadas
 
 - **VSUP0130 (Fornecedor Preferencial)**: resolve o fornecedor de cada item.
-- **VSUP0200 (Pedido de Compra)**: destino da geração.
+- **VPDC0200 (Pedido de Compra)**: destino da geração (o pedido passa pela alçada).
 
 ---
 
@@ -9330,7 +9313,7 @@ vencedor** por item e **gerar os pedidos** a partir das seleções.
 ##### Telas relacionadas
 
 - **VSUP0300 (Solicitação)**: origem dos itens de cotação.
-- **VSUP0200 (Pedido de Compra)**: resultado da cotação.
+- **VPDC0200 (Pedido de Compra)**: resultado da cotação (o pedido passa pela alçada).
 
 ---
 
@@ -9350,8 +9333,8 @@ processo de comparar preços de vários fornecedores antes de comprar. Ambas ger
 **pedidos de compra** ao final.
 
 **A sugestão do MRP virou pedido sozinha?**
-Não — o MRP **sugere**; o comprador **aprova** na aba Sugestões da VSUP0200 (informando
-fornecedor e preço). Só então vira pedido firme.
+Não — o MRP **sugere**; o comprador **aprova** na visão Sugestões do MRP da VPDC0200
+(escolhendo fornecedor e preço). Só então vira pedido firme, que passa pela alçada.
 
 ---
 

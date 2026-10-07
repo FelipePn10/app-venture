@@ -106,7 +106,7 @@ export interface OverheadRule {
   /** Fração no método percentual (0,12 = 12%); reais nos outros. */
   rate: number;
   work_center_id?: number | null;
-  item_code?: number | null;
+  item_code?: string | null;
   plano_contas_id?: number | null;
   centro_custo_id?: number | null;
   valid_from: string;
@@ -122,7 +122,7 @@ export interface OverheadRuleDTO {
   method: OverheadMethod;
   rate: number;
   work_center_id?: number | null;
-  item_code?: number | null;
+  item_code?: string | null;
   plano_contas_id?: number | null;
   centro_custo_id?: number | null;
   valid_from: string;
@@ -233,7 +233,7 @@ function parseOverheadRule(raw: unknown): OverheadRule {
     method: (parseStr(o, 'method', 'Method') || 'PERCENTUAL') as OverheadMethod,
     rate: parseNum(o, 'rate', 'Rate'),
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || null,
-    item_code: parseNum(o, 'item_code', 'ItemCode') || null,
+    item_code: parseStr(o, 'item_code', 'ItemCode') || null,
     plano_contas_id: parseNum(o, 'plano_contas_id', 'PlanoContasID') || null,
     centro_custo_id: parseNum(o, 'centro_custo_id', 'CentroCustoID') || null,
     valid_from: parseStr(o, 'valid_from', 'ValidFrom'),

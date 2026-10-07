@@ -21,7 +21,8 @@ type Aba = "itens" | "financeiro" | "divergencias" | "nota";
 
 interface ItemEdit {
   id: number;
-  item_code?: number;
+  /** Código comercial do item (texto). */
+  item_code?: string;
   plano?: number;
   cc?: number;
   lembrar: boolean;
@@ -164,7 +165,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
     setDirty(true);
   }
 
-  function escolherItem(idx: number, code?: number) {
+  function escolherItem(idx: number, code?: string) {
     const original = doc.itens[idx];
     const mudou = code !== original.item_code;
     setItem(idx, {
@@ -527,7 +528,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                             {editavel ? (
                               <>
                                 <LookupField value={e.item_code} loader={loadItems} entityLabel="item" allowManualCode={false}
-                                  onChange={(c) => escolherItem(idx, c ? Number(c) : undefined)} />
+                                  onChange={(c) => escolherItem(idx, c ? String(c) : undefined)} />
                                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
                                   <span className={`erp-badge ${e.item_code ? "erp-badge-green" : "erp-badge-amber"}`}>{ROTULO_ESTRATEGIA[est ?? ""] ?? est ?? "—"}</span>
                                   <button className="erp-btn erp-btn-sm" onClick={() => (aberta ? setSug(null) : void abrirSugestoes(it.id))}>{aberta ? "Fechar sugestões" : "Sugestões"}</button>

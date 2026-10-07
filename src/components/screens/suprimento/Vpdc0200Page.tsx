@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   type PurchaseOrderDTO, type PurchaseOrderItemDTO,
   FREIGHT_TYPES, FREIGHT_VALUE_TYPES, FREIGHT_VALUE_MODES, UTILIZATION_TYPES, DEMAND_TYPES,
-  listOrders, getOrder, createOrder, updateOrder, cancelOrder, addOrderItem,
-  approveOrder, authorizeOrder,
+  listOrders, getOrderDetail, createOrder, updateOrder, cancelOrder, addOrderItem,
+  approveOrder, authorizeOrder, updateOrderItem, cancelOrderItem,
 } from "@/services/purchaseOrderService";
-import { errMessage, parseNum, unwrapArray, unwrapObject } from "@/services/fiscalShared";
+import { errMessage, unwrapObject } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { enumLabel } from "@/utils/enumLabels";
@@ -17,6 +17,13 @@ import {
   loadPlannedOrders, loadProductionOrders,
 } from "@/services/lookups";
 import { getRequisition, type RequisitionItemDTO } from "@/services/purchaseRequisitionService";
+import { HistoricoPrecoPanel } from "./pedido/HistoricoPrecoPanel";
+import { PedidoNotasPanel } from "./pedido/PedidoNotasPanel";
+import { PrevisaoPagamentosPanel } from "./pedido/PrevisaoPagamentosPanel";
+import { PedidoEnvioPanel } from "./pedido/PedidoEnvioPanel";
+import { FollowupLinha } from "./pedido/FollowupLinha";
+import { AcompanhamentoEntregas } from "./pedido/AcompanhamentoEntregas";
+import { SugestoesMRP } from "./pedido/SugestoesMRP";
 
 /**
  * VPDC0200 — Pedido de Compra.
@@ -31,7 +38,9 @@ import { getRequisition, type RequisitionItemDTO } from "@/services/purchaseRequ
  * de compra vive de entregas parciais.
  */
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type Aba = "capa" | "itens" | "transporte";
+type Aba = "capa" | "itens" | "transporte" | "notas" | "pagamentos" | "envio";
+/** Visões da tela: os pedidos e as rotinas de compras que cruzam pedidos. */
+export type VisaoCompras = "pedidos" | "sugestoes" | "acompanhamento" | "previsao";
 
 const CAPA_INICIAL: PurchaseOrderDTO = {
   currency_code: "BRL",
@@ -80,10 +89,22 @@ const ALCADA_ROTULO: Record<string, string> = {
  * ligado e devolver 422 depois do clique é jogar o erro na cara de quem só
  * queria seguir o fluxo.
  */
-const PODE_APROVAR = new Set(["", "DRAFT", "PENDING", "BLOCKED"]);
+const PODE_APROVAR = new Set(["", "DRAFT", "REQUESTED"]);
 
-export function Vpdc0200Page(): JSX.Element {
+/** Capa e linhas só mudam antes da aprovação; depois, só se elimina saldo. */
+const EDITAVEL = new Set(["", "DRAFT", "REQUESTED"]);
+const PODE_ELIMINAR_SALDO = new Set(["APPROVED", "PARTIAL"]);
+
+const SITUACAO_LINHA: Record<string, string> = {
+  OPEN: "Aberta", PARTIAL: "Em parte", RECEIVED: "Atendida", CANCELLED: "Cancelada",
+};
+
+type EdicaoLinha = { code: number; qtd: string; preco: string; desc: string; ipi: string; entrega: string; almox: string };
+
+export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: VisaoCompras } = {}): JSX.Element {
+  const [visao, setVisao] = useState<VisaoCompras>(visaoInicial);
   const [aba, setAba] = useState<Aba>("capa");
+  const [acompanhando, setAcompanhando] = useState<number | null>(null);
   const [pedidos, setPedidos] = useState<PurchaseOrderDTO[]>([]);
   const [capa, setCapa] = useState<PurchaseOrderDTO>({ ...CAPA_INICIAL });
   const [itens, setItens] = useState<PurchaseOrderItemDTO[]>([]);
@@ -92,6 +113,22 @@ export function Vpdc0200Page(): JSX.Element {
   const [aberto, setAberto] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [edicao, setEdicao] = useState<EdicaoLinha | null>(null);
+  const [eliminando, setEliminando] = useState<{ code: number; motivo: string } | null>(null);
+  // Nomes para a grade e a lista (o pedido guarda só os códigos).
+  const [nomeItem, setNomeItem] = useState<Record<string, string>>({});
+  const [nomeAlmox, setNomeAlmox] = useState<Record<string, string>>({});
+  const [nomeFornecedor, setNomeFornecedor] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const mapa = (opts: Array<{ code: string | number; label: string }>) =>
+      Object.fromEntries(opts.map((o) => [String(o.code), o.label]));
+    void loadItems().then((o) => setNomeItem(mapa(o))).catch(() => undefined);
+    void loadWarehouses().then((o) => setNomeAlmox(mapa(o))).catch(() => undefined);
+    void loadSuppliers().then((o) => setNomeFornecedor(mapa(o))).catch(() => undefined);
+  }, []);
+
+  const situacao = (capa.status ?? "").toUpperCase();
+  const editavel = !aberto || EDITAVEL.has(situacao);
 
   const setC = <K extends keyof PurchaseOrderDTO>(k: K, v: PurchaseOrderDTO[K]) =>
     setCapa((c) => ({ ...c, [k]: v }));
@@ -115,50 +152,88 @@ export function Vpdc0200Page(): JSX.Element {
     setFeedback(null);
   }
 
-  const abrir = useCallback((code: number) => executar(async () => {
-    const bruto = await getOrder(code);
-    const o = unwrapObject(bruto);
-    const dados = unwrapObject(o["data"] ?? o);
+  const abrir = useCallback((code: number, aviso?: Feedback) => executar(async () => {
+    const { items, ...dados } = await getOrderDetail(code);
     setCapa({
-      code: parseNum(dados, "code", "Code"),
-      supplier_code: parseNum(dados, "supplier_code", "SupplierCode") || undefined,
-      status: String(dados["status"] ?? dados["Status"] ?? ""),
-      currency_code: String(dados["currency_code"] ?? dados["CurrencyCode"] ?? "BRL"),
-      emission_date: String(dados["emission_date"] ?? dados["EmissionDate"] ?? "").slice(0, 10),
-      delivery_date: String(dados["delivery_date"] ?? dados["DeliveryDate"] ?? "").slice(0, 10) || undefined,
-      payment_term_code: parseNum(dados, "payment_term_code", "PaymentTermCode") || undefined,
-      freight_type: String(dados["freight_type"] ?? dados["FreightType"] ?? "CIF"),
-      freight_value: parseNum(dados, "freight_value", "FreightValue"),
-      carrier_code: parseNum(dados, "carrier_code", "CarrierCode") || undefined,
-      total_gross: parseNum(dados, "total_gross", "TotalGross"),
-      total_net: parseNum(dados, "total_net", "TotalNet"),
-      notes: String(dados["notes"] ?? dados["Notes"] ?? "") || undefined,
-      alcada_status: String(dados["alcada_status"] ?? dados["AlcadaStatus"] ?? "") || undefined,
+      ...dados,
+      emission_date: (dados.emission_date ?? "").slice(0, 10),
+      delivery_date: dados.delivery_date?.slice(0, 10) || undefined,
+      advance_date: dados.advance_date?.slice(0, 10) || undefined,
+      shipment_date: dados.shipment_date?.slice(0, 10) || undefined,
+      currency_date: dados.currency_date?.slice(0, 10) || undefined,
     });
-    setItens(unwrapArray(dados["items"] ?? dados["Items"]).map((raw) => {
-      const i = unwrapObject(raw);
-      return {
-        code: parseNum(i, "code", "Code") || undefined,
-        sequence: parseNum(i, "sequence", "Sequence") || undefined,
-        item_code: String(i["item_code"] ?? i["ItemCode"] ?? ""),
-        requested_qty: parseNum(i, "requested_qty", "RequestedQty"),
-        received_qty: parseNum(i, "received_qty", "ReceivedQty"),
-        cancelled_qty: parseNum(i, "cancelled_qty", "CancelledQty"),
-        unit_price: parseNum(i, "unit_price", "UnitPrice"),
-        discount_pct: parseNum(i, "discount_pct", "DiscountPct"),
-        ipi_pct: parseNum(i, "ipi_pct", "IpiPct"),
-        icms_pct: parseNum(i, "icms_pct", "IcmsPct"),
-        tolerance_pct: parseNum(i, "tolerance_pct", "TolerancePct"),
-        purchase_uom: String(i["purchase_uom"] ?? i["PurchaseUOM"] ?? "") || undefined,
-        delivery_date: String(i["delivery_date"] ?? i["DeliveryDate"] ?? "").slice(0, 10) || undefined,
-        total_price: parseNum(i, "total_price", "TotalPrice"),
-        status: String(i["status"] ?? i["Status"] ?? "") || undefined,
-      } as PurchaseOrderItemDTO;
-    }));
+    setItens(items ?? []);
+    setEdicao(null);
+    setEliminando(null);
     setAberto(code);
+    setAcompanhando(null);
+    setVisao("pedidos");
     setAba("itens");
-    setFeedback({ type: "success", message: `Pedido ${code} aberto.` });
+    setFeedback(aviso ?? { type: "success", message: `Pedido nº ${dados.order_number || code} aberto.` });
   }), [executar]);
+
+  /** Depois de mexer numa linha o backend devolve o pedido inteiro, com totais. */
+  function aplicarPedido(p: PurchaseOrderDTO) {
+    const { items, ...dados } = p;
+    setCapa((c) => ({ ...c, status: dados.status, alcada_status: dados.alcada_status,
+      total_gross: dados.total_gross, total_discount: dados.total_discount, total_net: dados.total_net }));
+    setItens(items ?? []);
+  }
+
+  function editarLinha(i: PurchaseOrderItemDTO) {
+    setEliminando(null);
+    setEdicao({
+      code: i.code ?? 0, qtd: String(i.requested_qty), preco: String(i.unit_price),
+      desc: String(i.discount_pct ?? 0), ipi: String(i.ipi_pct ?? 0),
+      entrega: i.delivery_date?.slice(0, 10) ?? "", almox: i.warehouse_id ? String(i.warehouse_id) : "",
+    });
+  }
+
+  function gravarLinha() {
+    if (!aberto || !edicao) return;
+    const qtd = Number(edicao.qtd);
+    if (!(qtd > 0)) { setFeedback({ type: "error", message: "A quantidade deve ser maior que zero." }); return; }
+    void executar(async () => {
+      const p = await updateOrderItem(aberto, edicao.code, {
+        requested_qty: qtd,
+        unit_price: Number(edicao.preco) || 0,
+        discount_pct: Number(edicao.desc) || 0,
+        ipi_pct: Number(edicao.ipi) || 0,
+        delivery_date: edicao.entrega,
+        warehouse_id: edicao.almox ? Number(edicao.almox) : undefined,
+      });
+      aplicarPedido(p);
+      setEdicao(null);
+      await carregarLista();
+      setFeedback({ type: "success", message: p.status === "DRAFT" && capa.status === "REQUESTED"
+        ? "Linha alterada. O valor mudou: o pedido voltou para rascunho e precisa ser aprovado de novo."
+        : "Linha alterada." });
+    });
+  }
+
+  function removerLinha(i: PurchaseOrderItemDTO) {
+    if (!aberto || !i.code) return;
+    if (!window.confirm(`Remover a linha ${i.sequence} (item ${i.item_code}) do pedido?`)) return;
+    void executar(async () => {
+      aplicarPedido(await cancelOrderItem(aberto, i.code!));
+      await carregarLista();
+      setFeedback({ type: "success", message: `Linha ${i.sequence} removida.` });
+    });
+  }
+
+  function eliminarSaldo() {
+    if (!aberto || !eliminando) return;
+    if (!eliminando.motivo.trim()) { setFeedback({ type: "error", message: "Informe o motivo da eliminação do saldo." }); return; }
+    void executar(async () => {
+      const p = await cancelOrderItem(aberto, eliminando.code, eliminando.motivo.trim());
+      aplicarPedido(p);
+      setEliminando(null);
+      setFeedback({ type: "success", message: p.status === "RECEIVED"
+        ? "Saldo eliminado. Nada mais a receber: o pedido foi encerrado como recebido."
+        : p.status === "CANCELLED" ? "Saldo eliminado. Nada foi recebido: o pedido foi encerrado como cancelado." : "Saldo eliminado." });
+      await carregarLista();
+    });
+  }
 
   function gravarCapa() {
     if (!capa.supplier_code) { setFeedback({ type: "error", message: "Escolha o fornecedor." }); return; }
@@ -170,10 +245,10 @@ export function Vpdc0200Page(): JSX.Element {
       } else {
         const criado = await createOrder(capa);
         const code = criado.code ?? 0;
-        setAberto(code || null);
-        setCapa((c) => ({ ...c, code }));
-        setAba("itens");
-        setFeedback({ type: "success", message: `Pedido ${code} criado. Inclua os itens.` });
+        // Recarrega do backend: número, situação e os padrões do fornecedor
+        // (condição, frete) que a criação preencheu.
+        if (code) await abrir(code);
+        setFeedback({ type: "success", message: `Pedido nº ${criado.order_number || code} criado. Inclua os itens.` });
       }
       await carregarLista();
     });
@@ -210,7 +285,6 @@ export function Vpdc0200Page(): JSX.Element {
     if (!itemForm.item_code) { setFeedback({ type: "error", message: "Escolha o item." }); return; }
     const qtd = Number(itemForm.requested_qty);
     if (!(qtd > 0)) { setFeedback({ type: "error", message: "A quantidade deve ser maior que zero." }); return; }
-    if (!itemForm.warehouse_id) { setFeedback({ type: "error", message: "Informe o almoxarifado de entrada do material." }); return; }
     void executar(async () => {
       const opcional = (v: string) => (v.trim() === "" ? undefined : Number(v));
       await addOrderItem(aberto, {
@@ -242,25 +316,16 @@ export function Vpdc0200Page(): JSX.Element {
       } as PurchaseOrderItemDTO);
       setItemForm({ ...ITEM_INICIAL });
       setItensDaRequisicao([]);
-      setFeedback({ type: "success", message: "Item incluído." });
-      await abrir(aberto);
+      await abrir(aberto, { type: "success", message: "Item incluído." });
+      await carregarLista();
     });
   }
 
-  const totais = useMemo(() => itens.reduce((acc, i) => {
-    const bruto = (i.total_price ?? i.requested_qty * i.unit_price);
-    const desconto = bruto * ((i.discount_pct ?? 0) / 100);
-    const ipi = (bruto - desconto) * ((i.ipi_pct ?? 0) / 100);
-    return {
-      bruto: acc.bruto + bruto,
-      desconto: acc.desconto + desconto,
-      ipi: acc.ipi + ipi,
-      liquido: acc.liquido + bruto - desconto + ipi,
-      pendente: acc.pendente + Math.max(0, i.requested_qty - (i.received_qty ?? 0) - (i.cancelled_qty ?? 0)),
-    };
-  }, { bruto: 0, desconto: 0, ipi: 0, liquido: 0, pendente: 0 }), [itens]);
-
-  const totalComFrete = totais.liquido + (capa.freight_value ?? 0);
+  // Valores do backend (mesma regra da alçada): líquido = mercadoria com
+  // desconto + IPI + frete quando a empresa paga (FOB).
+  const pendente = useMemo(() => itens.reduce((acc, i) =>
+    acc + (i.status === "CANCELLED" ? 0 : Math.max(0, i.requested_qty - (i.received_qty ?? 0) - (i.cancelled_qty ?? 0))), 0), [itens]);
+  const totalComFrete = capa.total_net ?? 0;
 
   return (
     <div className="erp-screen">
@@ -275,7 +340,7 @@ export function Vpdc0200Page(): JSX.Element {
         <div className="erp-titlebar-spacer" />
         <span className="erp-titlebar-meta">
           {aberto
-            ? `pedido ${aberto} · ${SITUACAO_ROTULO[capa.status ?? ""] ?? capa.status ?? "—"}${
+            ? `pedido nº ${capa.order_number ?? aberto} · ${SITUACAO_ROTULO[capa.status ?? ""] ?? capa.status ?? "—"}${
                 capa.alcada_status && capa.alcada_status !== "N" ? ` · alçada ${ALCADA_ROTULO[capa.alcada_status] ?? capa.alcada_status}` : ""}`
             : "novo pedido"}
         </span>
@@ -283,8 +348,17 @@ export function Vpdc0200Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Visão</span>
+          <button className={`erp-btn${visao === "pedidos" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("pedidos")}>Pedidos</button>
+          <button className={`erp-btn${visao === "sugestoes" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("sugestoes")}>Sugestões do MRP</button>
+          <button className={`erp-btn${visao === "acompanhamento" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("acompanhamento")}>Acompanhamento de entregas</button>
+          <button className={`erp-btn${visao === "previsao" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("previsao")}>Previsão de pagamentos</button>
+        </div>
+        {visao === "pedidos" && (<>
+        <div className="erp-tgroup">
           <span className="erp-tgroup-label">Pedido</span>
-          <button className="erp-btn erp-btn-primary" onClick={gravarCapa} disabled={busy}>
+          <button className="erp-btn erp-btn-primary" onClick={gravarCapa} disabled={busy || !editavel}
+            title={editavel ? undefined : "Pedido aprovado não se altera; elimine o saldo das linhas que não virão"}>
             {aberto ? "Gravar alterações" : "Criar pedido"}
           </button>
           <button className="erp-btn" onClick={novo} disabled={busy}>Novo</button>
@@ -301,6 +375,7 @@ export function Vpdc0200Page(): JSX.Element {
                 const r = unwrapObject(await approveOrder(aberto));
                 const alcada = String(r["alcada_status"] ?? r["AlcadaStatus"] ?? "").toUpperCase();
                 await abrir(aberto);
+                await carregarLista();
                 // Depois de recarregar, porque `abrir` emite o próprio aviso.
                 setFeedback(
                   alcada === "B"
@@ -325,6 +400,7 @@ export function Vpdc0200Page(): JSX.Element {
               }); }}>Cancelar pedido</button>
           </div>
         )}
+        </>)}
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VPDC0200 — Pedido de Compra" filename="vpdc0200" /></div>
       </div>
@@ -337,19 +413,30 @@ export function Vpdc0200Page(): JSX.Element {
           </div>
         )}
 
-        {capa.alcada_status === "R" && (
+        {visao === "sugestoes" && <SugestoesMRP onFeedback={setFeedback} onPedidoGerado={(c, aviso) => { void carregarLista(); void abrir(c, aviso); }} />}
+        {visao === "acompanhamento" && <AcompanhamentoEntregas onAbrirPedido={(c) => void abrir(c)} />}
+        {visao === "previsao" && <div className="erp-detail-body"><PrevisaoPagamentosPanel onAbrirPedido={(c) => void abrir(c)} /></div>}
+
+        {visao === "pedidos" && aberto && !editavel && (
+          <div className="erp-feedback info">
+            Pedido {SITUACAO_ROTULO[situacao]?.toLowerCase() ?? situacao}: capa e linhas não mudam mais.
+            {PODE_ELIMINAR_SALDO.has(situacao) && <> Para deixar de esperar o que falta, use <b>Eliminar saldo</b> na linha.</>}
+          </div>
+        )}
+        {visao === "pedidos" && capa.alcada_status === "R" && (
           <div className="erp-feedback error">
             Este pedido está acima do teto absoluto da política de alçada — nem a autorização
             superior o libera. Reduza o valor, divida o pedido ou revise a política em Suprimentos.
           </div>
         )}
-        {capa.alcada_status === "B" && (
+        {visao === "pedidos" && capa.alcada_status === "B" && (
           <div className="erp-feedback info">
             Valor acima da alçada do comprador. O pedido só segue ao fornecedor depois de
             <b> Autorizar alçada</b>, que exige perfil de administrador.
           </div>
         )}
 
+        {visao === "pedidos" && (
         <div className="erp-main">
           <aside className="erp-list-panel">
             <div className="erp-panel-head">
@@ -364,9 +451,9 @@ export function Vpdc0200Page(): JSX.Element {
               {pedidos.map((p) => (
                 <div key={p.code} className={`erp-list-row${aberto === p.code ? " erp-row-sel" : ""}`}
                   onClick={() => p.code && void abrir(p.code)}>
-                  <span className="erp-list-code">#{p.code}</span>
+                  <span className="erp-list-code">Nº {p.order_number || p.code}</span>
                   <span className="erp-list-sub">
-                    Fornecedor {p.supplier_code ?? "—"} · {SITUACAO_ROTULO[p.status ?? ""] ?? p.status ?? "—"}
+                    {nomeFornecedor[String(p.supplier_code)] ?? `Fornecedor ${p.supplier_code ?? "—"}`} · {SITUACAO_ROTULO[p.status ?? ""] ?? p.status ?? "—"}
                   </span>
                   <div className="erp-list-meta">{brl(p.total_net)}</div>
                 </div>
@@ -381,6 +468,11 @@ export function Vpdc0200Page(): JSX.Element {
                 Itens {itens.length > 0 && <span className="erp-count">{itens.length}</span>}
               </button>
               <button className={`erp-tab${aba === "transporte" ? " active" : ""}`} onClick={() => setAba("transporte")}>Transporte e pagamento</button>
+              {aberto && <>
+                <button className={`erp-tab${aba === "notas" ? " active" : ""}`} onClick={() => setAba("notas")}>Notas e recebimentos</button>
+                <button className={`erp-tab${aba === "pagamentos" ? " active" : ""}`} onClick={() => setAba("pagamentos")}>Pagamentos previstos</button>
+                <button className={`erp-tab${aba === "envio" ? " active" : ""}`} onClick={() => setAba("envio")}>Enviar ao fornecedor</button>
+              </>}
             </div>
 
             <div className="erp-detail-body">
@@ -518,6 +610,12 @@ export function Vpdc0200Page(): JSX.Element {
                 </div>
               )}
 
+              {aba === "notas" && aberto && <PedidoNotasPanel code={aberto} itens={itens} nomeItem={nomeItem} />}
+              {aba === "pagamentos" && aberto && <PrevisaoPagamentosPanel code={aberto} />}
+              {aba === "envio" && aberto && (
+                <PedidoEnvioPanel code={aberto} numero={capa.order_number} situacao={situacao} onFeedback={setFeedback} />
+              )}
+
               {aba === "itens" && (
                 <>
                   <div className="erp-fieldset">
@@ -547,11 +645,11 @@ export function Vpdc0200Page(): JSX.Element {
                           onChange={(e) => setItemForm((f) => ({ ...f, delivery_date: e.target.value }))} />
                       </div>
                       <div className="erp-field erp-c3">
-                        <label className="erp-label erp-req">Almoxarifado</label>
+                        <label className="erp-label">Almoxarifado</label>
                         <LookupField value={Number(itemForm.warehouse_id) || undefined}
                           onChange={(c) => setItemForm((f) => ({ ...f, warehouse_id: c ? String(c) : "" }))}
-                          loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Onde o material entra" />
-                        <span className="pdc-hint">Define onde o recebimento vai lançar o estoque.</span>
+                          loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Do cadastro do item" clearable />
+                        <span className="pdc-hint">Onde o recebimento lança o estoque. Em branco usa o almoxarifado de suprimentos do item.</span>
                       </div>
 
                       <div className="erp-field erp-c2">
@@ -611,7 +709,11 @@ export function Vpdc0200Page(): JSX.Element {
                       </div>
                       <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
                         <button className="erp-btn erp-btn-primary" style={{ width: "100%" }}
-                          onClick={incluirItem} disabled={busy || !aberto}>+ Item</button>
+                          onClick={incluirItem} disabled={busy || !aberto || !editavel}>+ Item</button>
+                      </div>
+                      <div className="erp-field erp-c12">
+                        <HistoricoPrecoPanel itemCode={itemForm.item_code || undefined}
+                          precoAtual={itemForm.unit_price.trim() ? Number(itemForm.unit_price) : undefined} />
                       </div>
                     </div>
                   </div>
@@ -702,57 +804,138 @@ export function Vpdc0200Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Itens do pedido ({itens.length})</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c12">
+                      <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
                         <table className="erp-grid">
                           <thead>
                             <tr>
-                              <th>Seq.</th><th>Item</th><th className="num">Pedido</th><th className="num">Recebido</th>
+                              <th>Seq.</th><th>Item</th><th>Almoxarifado</th><th className="num">Pedido</th><th className="num">Recebido</th>
                               <th className="num">Cancelado</th><th className="num">Saldo</th>
                               <th className="num">Preço</th><th className="num">Desc.</th><th className="num">IPI</th>
-                              <th>Entrega</th><th className="num">Total</th>
+                              <th>Entrega</th><th>Prometida</th><th className="num">Total</th><th>Situação</th><th />
                             </tr>
                           </thead>
                           <tbody>
                             {itens.length === 0 && (
-                              <tr><td colSpan={11} className="erp-grid-empty">
+                              <tr><td colSpan={15} className="erp-grid-empty">
                                 {aberto ? "Pedido sem itens. Inclua o primeiro acima." : "Grave a capa para incluir itens."}
                               </td></tr>
                             )}
                             {itens.map((i) => {
-                              const saldo = Math.max(0, i.requested_qty - (i.received_qty ?? 0) - (i.cancelled_qty ?? 0));
+                              const saldo = i.status === "CANCELLED" ? 0 : Math.max(0, i.requested_qty - (i.received_qty ?? 0) - (i.cancelled_qty ?? 0));
+                              const le = edicao && edicao.code === i.code ? edicao : null;
+                              const emEdicao = le !== null;
+                              const ed = (k: keyof EdicaoLinha, v: string) => setEdicao((e) => (e ? { ...e, [k]: v } : e));
+                              const podeEditar = editavel && !(i.received_qty ?? 0) && i.status !== "CANCELLED";
+                              const podeEliminar = PODE_ELIMINAR_SALDO.has(situacao) && saldo > 0;
                               return (
-                                <tr key={i.code ?? i.sequence}>
+                                <Fragment key={i.code ?? i.sequence}>
+                                <tr className={emEdicao ? "erp-row-sel" : undefined}>
                                   <td>{i.sequence ?? "—"}</td>
-                                  <td style={{ fontWeight: 600 }}>{i.item_code}</td>
-                                  <td className="num">{num(i.requested_qty)}</td>
+                                  <td>
+                                    <strong>{i.item_code}</strong>
+                                    {nomeItem[i.item_code] && <><br /><small>{nomeItem[i.item_code]}</small></>}
+                                    {i.notes && <><br /><small className="pdc-hint">{i.notes}</small></>}
+                                  </td>
+                                  <td>{emEdicao
+                                    ? <LookupField value={Number(le!.almox) || undefined} loader={loadWarehouses} entityLabel="almoxarifado"
+                                        onChange={(c) => ed("almox", c ? String(c) : "")} />
+                                    : (i.warehouse_id ? nomeAlmox[String(i.warehouse_id)] ?? `#${i.warehouse_id}` : <span className="pdc-falta">sem almoxarifado</span>)}</td>
+                                  <td className="num">{emEdicao
+                                    ? <input className="erp-input num pdc-mini" type="number" step="0.001" value={le!.qtd} onChange={(e) => ed("qtd", e.target.value)} />
+                                    : num(i.requested_qty)}</td>
                                   <td className="num">{num(i.received_qty)}</td>
                                   <td className="num">{num(i.cancelled_qty)}</td>
                                   <td className={`num${saldo === 0 ? " pdc-quitado" : ""}`}>{num(saldo)}</td>
-                                  <td className="num">{brl(i.unit_price)}</td>
-                                  <td className="num">{(i.discount_pct ?? 0)}%</td>
-                                  <td className="num">{(i.ipi_pct ?? 0)}%</td>
-                                  <td>{i.delivery_date?.slice(0, 10) ?? "—"}</td>
+                                  <td className="num">{emEdicao
+                                    ? <input className="erp-input num pdc-mini" type="number" step="0.0001" value={le!.preco} onChange={(e) => ed("preco", e.target.value)} />
+                                    : brl(i.unit_price)}</td>
+                                  <td className="num">{emEdicao
+                                    ? <input className="erp-input num pdc-mini" type="number" step="0.01" value={le!.desc} onChange={(e) => ed("desc", e.target.value)} />
+                                    : `${i.discount_pct ?? 0}%`}</td>
+                                  <td className="num">{emEdicao
+                                    ? <input className="erp-input num pdc-mini" type="number" step="0.01" value={le!.ipi} onChange={(e) => ed("ipi", e.target.value)} />
+                                    : `${i.ipi_pct ?? 0}%`}</td>
+                                  <td>{emEdicao
+                                    ? <input className="erp-input" type="date" value={le!.entrega} onChange={(e) => ed("entrega", e.target.value)} />
+                                    : (i.delivery_date ? i.delivery_date.slice(0, 10).split("-").reverse().join("/") : "—")}</td>
+                                  <td>{i.promised_date ? i.promised_date.slice(0, 10).split("-").reverse().join("/") : "—"}</td>
                                   <td className="num">{brl(i.total_price ?? i.requested_qty * i.unit_price)}</td>
+                                  <td><span className={`erp-badge ${i.status === "CANCELLED" ? "erp-badge-red" : i.status === "RECEIVED" ? "erp-badge-green" : "erp-badge-amber"}`}>
+                                    {SITUACAO_LINHA[i.status ?? ""] ?? i.status ?? "—"}</span></td>
+                                  <td style={{ whiteSpace: "nowrap" }}>
+                                    {emEdicao ? (
+                                      <>
+                                        <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy} onClick={gravarLinha}>Gravar</button>{" "}
+                                        <button className="erp-btn erp-btn-sm" onClick={() => setEdicao(null)}>Desistir</button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {podeEditar && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => editarLinha(i)}>Editar</button>}{" "}
+                                        {podeEditar && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => removerLinha(i)}>Remover</button>}
+                                        {podeEliminar && (
+                                          <button className="erp-btn erp-btn-sm" disabled={busy}
+                                            title="Registrar o contato com o fornecedor e a data prometida"
+                                            onClick={() => { setEliminando(null); setAcompanhando(acompanhando === i.code ? null : i.code ?? null); }}>
+                                            {acompanhando === i.code ? "Fechar" : "Acompanhar"}</button>
+                                        )}{" "}
+                                        {podeEliminar && (
+                                          <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy}
+                                            title="Deixa de esperar o que falta: o recebido fica, o saldo é cancelado"
+                                            onClick={() => { setEdicao(null); setEliminando({ code: i.code ?? 0, motivo: "" }); }}>Eliminar saldo</button>
+                                        )}
+                                      </>
+                                    )}
+                                  </td>
                                 </tr>
+                                {acompanhando !== null && acompanhando === i.code && aberto && (
+                                  <tr><td colSpan={15}>
+                                    <FollowupLinha code={aberto} lineCode={i.code ?? 0} promessaAtual={i.promised_date}
+                                      onFechar={() => setAcompanhando(null)}
+                                      onSalvo={(f) => {
+                                        void abrir(aberto, { type: "success", message: `Contato registrado${f.data_prometida ? `; entrega prometida para ${f.data_prometida.split("-").reverse().join("/")}` : ""}.` });
+                                      }} />
+                                  </td></tr>
+                                )}
+                                {eliminando && eliminando.code === i.code && (
+                                  <tr>
+                                    <td colSpan={15}>
+                                      <div className="pdc-inline" style={{ alignItems: "center" }}>
+                                        <span>Eliminar o saldo de <strong>{num(saldo)}</strong> da linha {i.sequence}. Motivo:</span>
+                                        <input className="erp-input" style={{ flex: 1 }} value={eliminando.motivo} autoFocus
+                                          placeholder="Ex.: fornecedor não tem mais o item; comprado de outro fornecedor"
+                                          onChange={(e) => setEliminando({ code: eliminando.code, motivo: e.target.value })} />
+                                        <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={eliminarSaldo}>Confirmar</button>
+                                        <button className="erp-btn erp-btn-sm" onClick={() => setEliminando(null)}>Desistir</button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                                </Fragment>
                               );
                             })}
                           </tbody>
                           {itens.length > 0 && (
                             <tfoot>
                               <tr>
-                                <th colSpan={5} style={{ textAlign: "left" }}>Total do pedido</th>
-                                <th className="num">{num(totais.pendente)}</th>
-                                <th colSpan={4} style={{ textAlign: "right" }}>
-                                  bruto {brl(totais.bruto)} · desconto {brl(totais.desconto)} · IPI {brl(totais.ipi)}
-                                  {capa.freight_value ? ` · frete ${brl(capa.freight_value)}` : ""}
+                                <th colSpan={6} style={{ textAlign: "left" }}>Total do pedido</th>
+                                <th className="num">{num(pendente)}</th>
+                                <th colSpan={6} style={{ textAlign: "right" }}>
+                                  mercadoria {brl(capa.total_gross)} · desconto {brl(capa.total_discount)}
+                                  {capa.freight_type === "FOB" && capa.freight_value ? " · com frete FOB" : ""}
                                 </th>
-                                <th className="num">{brl(totalComFrete)}</th>
+                                <th className="num" colSpan={2}>{brl(totalComFrete)}</th>
                               </tr>
                             </tfoot>
                           )}
                         </table>
                       </div>
-                      {totais.pendente === 0 && itens.length > 0 && (
+                      <div className="erp-field erp-c12">
+                        <span className="pdc-hint">
+                          O total é o que a empresa vai pagar: mercadoria com desconto, mais IPI, mais o frete quando é FOB.
+                          É esse valor que a alçada avalia na aprovação.
+                        </span>
+                      </div>
+                      {pendente === 0 && itens.length > 0 && situacao !== "CANCELLED" && (
                         <div className="erp-field erp-c12">
                           <div className="erp-feedback success">
                             Todos os itens estão atendidos — o pedido não tem mais saldo pendente.
@@ -766,11 +949,12 @@ export function Vpdc0200Page(): JSX.Element {
             </div>
           </section>
         </div>
+        )}
       </div>
 
       <footer className="erp-statusbar">
         <div className="erp-status-item">Itens: <strong>{itens.length}</strong></div>
-        <div className="erp-status-item">Saldo pendente: <strong>{num(totais.pendente)}</strong></div>
+        <div className="erp-status-item">Saldo pendente: <strong>{num(pendente)}</strong></div>
         <div className="erp-status-item">Total: <strong>{brl(totalComFrete)}</strong></div>
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
@@ -784,4 +968,10 @@ const PDC_STYLES = `
 .pdc-hint { display: block; font-size: 10.5px; color: #7a9a84; line-height: 1.4; margin-top: 3px; }
 .erp-grid .num { text-align: right; }
 .pdc-quitado { color: #2f7d47; font-weight: 700; }
+.pdc-mini { width: 86px; height: 28px; }
+.pdc-falta { color: #b45309; font-weight: 600; }
+.pdc-hist { border: 1px solid #d8e6dc; background: #f6faf7; border-radius: 6px; padding: 8px 10px; font-size: 12px; }
+.pdc-hist-linha { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.pdc-followup { border: 1px solid #d8e6dc; background: #fbfdfb; border-radius: 6px; }
+.pdc-cancelada { text-decoration: line-through; color: #9aa59d; }
 `;

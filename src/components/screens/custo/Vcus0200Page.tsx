@@ -60,7 +60,7 @@ export function Vcus0200Page(): JSX.Element {
   const [ate, setAte] = useState(hojeISO());
   const [base, setBase] = useState("PADRAO");
   const [ordem, setOrdem] = useState<"FATURAMENTO" | "MARGEM">("MARGEM");
-  const [itemFiltro, setItemFiltro] = useState<number | undefined>(undefined);
+  const [itemFiltro, setItemFiltro] = useState<string | undefined>(undefined);
   const [clienteFiltro, setClienteFiltro] = useState<number | undefined>(undefined);
   const [linhas, setLinhas] = useState<MarginLine[]>([]);
   const [resumo, setResumo] = useState<MarginSummary | null>(null);
@@ -395,7 +395,7 @@ export function Vcus0200Page(): JSX.Element {
                       </select></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Item</label>
                       <LookupField value={itemFiltro} loader={loadItems} entityLabel="item" placeholder="Todos" clearable
-                        onChange={(c) => setItemFiltro(c ? Number(c) : undefined)} /></div>
+                        onChange={(c) => setItemFiltro(c ? String(c) : undefined)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Cliente</label>
                       <LookupField value={clienteFiltro} loader={loadCustomers} entityLabel="cliente" placeholder="Todos" clearable
                         onChange={(c) => setClienteFiltro(c ? Number(c) : undefined)} /></div>

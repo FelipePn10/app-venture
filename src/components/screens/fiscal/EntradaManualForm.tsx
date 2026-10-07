@@ -219,7 +219,7 @@ export function EntradaManualForm({ onCriada, onFeedback, onCancelar }: Props): 
                 <tr key={idx}>
                   <td>{idx + 1}</td>
                   <td><LookupField value={it.item_code} loader={loadItems} entityLabel="item" allowManualCode={false}
-                    onChange={(c, o) => setItem(idx, { item_code: c ? Number(c) : undefined, description: o?.label, uom: o?.sub })} /></td>
+                    onChange={(c, o) => setItem(idx, { item_code: c ? String(c) : undefined, description: o?.label, uom: o?.sub })} /></td>
                   <td><input className="erp-input" style={{ height: 30, width: 90 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
                   <td><input className="erp-input" style={{ height: 30, width: 60 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
                   <td><input className="erp-input num" style={{ height: 30, width: 70 }} type="number" value={it.quantity} onChange={(e) => setItem(idx, { quantity: Number(e.target.value) })} /></td>
