@@ -1,48 +1,64 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { type FiscalEntry, listEntries } from "@/services/nfeService";
 import {
-  type FiscalEntry, type CreateEntryDTO, type EntryItemDTO,
-  listEntries, createEntry, importNfeByKey, approveEntry, uploadNfeXml,
-} from "@/services/nfeService";
+  type EntradaDocumento, type UploadXmlResultado,
+  getEntradaDocumento, uploadEntradaXml, importarEntradaPorChave, aprovarEntrada, statusRecebidas, type StatusRecebidas,
+  ROTULO_STATUS_ENTRADA,
+} from "@/services/nfeEntradaService";
 import { errMessage } from "@/services/fiscalShared";
-import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { EntradaDocumentoView } from "./EntradaDocumentoView";
+import { EntradaManualForm } from "./EntradaManualForm";
+import { NotasRecebidasPanel } from "./NotasRecebidasPanel";
+import { FretesCompraPanel } from "./FretesCompraPanel";
+
+/**
+ * VFIS0210 — NF-e de Entrada.
+ *
+ * O fluxo segue o dos ERPs de mercado (Importador XML do Protheus, IntegraNF-e
+ * do Focco, Fiscal Document Capture da Oracle):
+ *   1. o ARQUIVO XML do fornecedor é importado (um ou vários de uma vez) e vira
+ *      uma pré-nota com tudo o que a nota diz — itens, impostos, duplicatas;
+ *   2. cada item é conciliado com o cadastro (o vínculo produto × fornecedor
+ *      concilia sozinho; os demais vêm com sugestões) e recebe o plano de
+ *      contas;
+ *   3. as parcelas são distribuídas por plano de contas;
+ *   4. a aprovação gera um título no contas a pagar por duplicata, com o rateio,
+ *      dá entrada no estoque (descontado o que o pedido já recebeu) e contabiliza.
+ * As notas emitidas contra o CNPJ também chegam pela SEFAZ (aba "Recebidas").
+ * O CT-e do frete dessas compras entra na aba "Fretes (CT-e)" e vai ao custo.
+ */
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Mode = "list" | "manual" | "import" | "xml";
+type Mode = "list" | "doc" | "manual" | "chave" | "recebidas" | "fretes";
 
-const today = () => new Date().toISOString().slice(0, 10);
-const round = (n: number) => Number(n.toFixed(2));
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
+const cnpjFmt = (d: string) => (d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : d);
 
-const EMPTY_ITEM: EntryItemDTO = {
-  sequence: 1, item_code: "", ncm: "", cfop: "1101", quantity: 1, unit_price: 0, total_price: 0,
-  base_icms: 0, aliq_icms: 0, valor_icms: 0, base_ipi: 0, aliq_ipi: 0, valor_ipi: 0,
-  valor_pis: 0, valor_cofins: 0, cst_icms: "00", cst_ipi: "50", cst_pis: "01", cst_cofins: "01",
-  gera_credito_icms: true, gera_credito_ipi: true, gera_credito_pis: true, gera_credito_cofins: true,
-};
-
-const EMPTY_FORM: CreateEntryDTO = {
-  numero_nf: 0, serie: "001", modelo: "55", data_emissao: today(), data_entrada: today(),
-  cnpj_emitente: "", razao_social_emitente: "", ie_emitente: "", uf_emitente: "",
-  valor_produtos: 0, valor_frete: 0, valor_seguro: 0, valor_desconto: 0,
-  valor_ipi: 0, valor_icms: 0, valor_pis: 0, valor_cofins: 0, valor_total: 0,
-  tipo_documento: "NF-e", itens: [{ ...EMPTY_ITEM }],
-};
-
-function statusPill(status: string): JSX.Element {
-  const s = status.toLowerCase();
-  const cls = s.includes("aprovad") ? "erp-badge-green" : s.includes("pendente") ? "erp-badge-amber" : "erp-badge-gray";
-  return <span className={`erp-badge ${cls}`}>{status || "—"}</span>;
+function statusEntradaPill(status: string): JSX.Element {
+  const s = (status || "").toUpperCase();
+  const cls = s === "APPROVED" ? "erp-badge-green" : s === "CONFERRED" ? "erp-badge-blue"
+    : s === "PENDING" ? "erp-badge-amber" : s === "CANCELLED" ? "erp-badge-red" : "erp-badge-gray";
+  return <span className={`erp-badge ${cls}`}>{ROTULO_STATUS_ENTRADA[s] ?? (status || "—")}</span>;
 }
 
 export function Vfis0210Page(): JSX.Element {
   const [mode, setMode] = useState<Mode>("list");
   const [list, setList] = useState<FiscalEntry[]>([]);
-  const [form, setForm] = useState<CreateEntryDTO>(EMPTY_FORM);
+  const [doc, setDoc] = useState<EntradaDocumento | null>(null);
+  const [resultados, setResultados] = useState<UploadXmlResultado[]>([]);
   const [accessKey, setAccessKey] = useState("");
-  const [xmlContent, setXmlContent] = useState("");
+  const [filtro, setFiltro] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  const [arrastando, setArrastando] = useState(false);
+  const [statusSefaz, setStatusSefaz] = useState<StatusRecebidas | null>(null);
+  // Alerta de prazo de manifestação na aba, já ao abrir a tela.
+  useEffect(() => { statusRecebidas().then(setStatusSefaz).catch(() => undefined); }, []);
+  const alertasPrazo = (statusSefaz?.prazo_vencido ?? 0) + (statusSefaz?.prazo_proximo ?? 0);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -53,75 +69,76 @@ export function Vfis0210Page(): JSX.Element {
 
   useEffect(() => { void reload(); }, [reload]);
 
-  const setF = <K extends keyof CreateEntryDTO>(k: K, v: CreateEntryDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
-
-  // Recalcula todos os totais a partir do form informado (função pura, sem closure stale).
-  function withTotals(b: CreateEntryDTO): CreateEntryDTO {
-    const valor_produtos = round(b.itens.reduce((s, it) => s + it.total_price, 0));
-    const valor_ipi = round(b.itens.reduce((s, it) => s + (it.valor_ipi ?? 0), 0));
-    const valor_icms = round(b.itens.reduce((s, it) => s + (it.valor_icms ?? 0), 0));
-    const valor_pis = round(b.itens.reduce((s, it) => s + (it.valor_pis ?? 0), 0));
-    const valor_cofins = round(b.itens.reduce((s, it) => s + (it.valor_cofins ?? 0), 0));
-    const valor_total = round(valor_produtos + valor_ipi + b.valor_frete + b.valor_seguro - b.valor_desconto);
-    return { ...b, valor_produtos, valor_ipi, valor_icms, valor_pis, valor_cofins, valor_total };
+  async function abrir(id: number) {
+    setBusy(true); setFeedback(null);
+    try { setDoc(await getEntradaDocumento(id)); setMode("doc"); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); }
   }
 
-  function setItem(idx: number, patch: Partial<EntryItemDTO>) {
-    setForm((p) => withTotals({
-      ...p,
-      itens: p.itens.map((it, i) => {
-        if (i !== idx) return it;
-        const m = { ...it, ...patch };
-        m.total_price = round(m.quantity * m.unit_price);
-        return m;
-      }),
-    }));
-  }
-  function addItem() { setForm((p) => withTotals({ ...p, itens: [...p.itens, { ...EMPTY_ITEM, sequence: p.itens.length + 1 }] })); }
-  function removeItem(idx: number) { setForm((p) => withTotals({ ...p, itens: p.itens.filter((_, i) => i !== idx).map((it, i) => ({ ...it, sequence: i + 1 })) })); }
-
-  function novoManual() { setForm({ ...EMPTY_FORM, itens: [{ ...EMPTY_ITEM }] }); setMode("manual"); setFeedback(null); }
-
-  async function salvarManual() {
-    if (!form.numero_nf || !form.cnpj_emitente.trim() || !form.uf_emitente.trim()) {
-      setFeedback({ type: "error", message: "Número da NF, CNPJ e UF do emitente são obrigatórios." }); return;
+  async function enviarArquivos(files: FileList | File[] | null) {
+    const arquivos = Array.from(files ?? []);
+    if (!arquivos.length) return;
+    const naoXml = arquivos.filter((f) => !/\.xml$/i.test(f.name));
+    if (naoXml.length === arquivos.length) {
+      setFeedback({ type: "error", message: "Selecione arquivos .xml (o DANFE em PDF não serve para importar a nota)." });
+      return;
     }
-    if (!validateCNPJOrCPF(form.cnpj_emitente)) {
-      setFeedback({ type: "error", message: "CNPJ/CPF do emitente inválido (dígito verificador não confere)." }); return;
-    }
-    setBusy(true); setFeedback(null);
+    setBusy(true); setFeedback(null); setResultados([]);
     try {
-      const created = await createEntry(form);
-      setFeedback({ type: "success", message: `Entrada ${created?.numero_nf ?? form.numero_nf} lançada (pendente).` });
-      setMode("list"); await reload();
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+      const res = await uploadEntradaXml(arquivos);
+      setResultados(res);
+      const ok = res.filter((r) => r.entrada);
+      const erros = res.length - ok.length;
+      if (ok.length === 1 && erros === 0 && ok[0].entrada) {
+        setDoc(ok[0].entrada); setMode("doc");
+        setFeedback({ type: "success", message: `NF-e ${ok[0].entrada.numero_nf} importada do arquivo ${ok[0].arquivo}. Confira a conciliação, o plano de contas e as parcelas.` });
+      } else {
+        setMode("list");
+        setFeedback({
+          type: erros ? (ok.length ? "info" : "error") : "success",
+          message: `${ok.length} nota(s) importada(s)${erros ? `, ${erros} arquivo(s) com problema — veja abaixo` : ""}.`,
+        });
+      }
+      await reload();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); if (fileRef.current) fileRef.current.value = ""; }
   }
 
-  async function importar() {
-    if (accessKey.trim().length !== 44) { setFeedback({ type: "error", message: "A chave de acesso deve ter exatamente 44 dígitos." }); return; }
+  async function importarChave() {
+    const chave = accessKey.replace(/\D/g, "");
+    if (chave.length !== 44) { setFeedback({ type: "error", message: "A chave de acesso deve ter exatamente 44 dígitos." }); return; }
     setBusy(true); setFeedback(null);
     try {
-      const e = await importNfeByKey(accessKey.trim());
-      setFeedback({ type: "success", message: `NF-e ${e?.numero_nf ?? ""} importada e estoque movimentado.` });
-      setAccessKey(""); setMode("list"); await reload();
-    } catch (err) { setFeedback({ type: "error", message: errMessage(err) }); } finally { setBusy(false); }
+      const d = await importarEntradaPorChave(chave);
+      setAccessKey(""); setDoc(d); setMode("doc");
+      setFeedback({ type: "success", message: `NF-e ${d.numero_nf} baixada pela chave. Confira a conciliação e as parcelas.` });
+      await reload();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); }
   }
 
-  async function enviarXml() {
-    if (!xmlContent.trim()) { setFeedback({ type: "error", message: "Cole o conteúdo do XML da NF-e." }); return; }
+  async function aprovarDaLista(id: number) {
     setBusy(true); setFeedback(null);
     try {
-      const e = await uploadNfeXml(xmlContent.trim());
-      setFeedback({ type: "success", message: `NF-e ${e?.numero_nf ?? ""} importada a partir do XML.` });
-      setXmlContent(""); setMode("list"); await reload();
-    } catch (err) { setFeedback({ type: "error", message: errMessage(err) }); } finally { setBusy(false); }
+      const d = await aprovarEntrada(id);
+      setFeedback({ type: "success", message: `Nota ${d.numero_nf} aprovada: ${d.parcelas.length} título(s) gerado(s) no contas a pagar.` });
+      await reload();
+    } catch (e) {
+      setFeedback({ type: "error", message: errMessage(e) });
+    } finally { setBusy(false); }
   }
 
-  async function aprovar(id: number) {
-    setBusy(true); setFeedback(null);
-    try { await approveEntry(id); setFeedback({ type: "success", message: `Entrada ${id} aprovada. Conta a pagar gerada.` }); await reload(); }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
+  const filtrada = useMemo(() => {
+    const q = filtro.trim().toLowerCase();
+    return list.filter((nf) => {
+      if (filtroStatus && (nf.status || "").toUpperCase() !== filtroStatus) return false;
+      if (!q) return true;
+      return String(nf.numero_nf).includes(q) || nf.razao_social_emitente.toLowerCase().includes(q) || nf.cnpj_emitente.includes(q.replace(/\D/g, "") || "§");
+    });
+  }, [list, filtro, filtroStatus]);
+
+  const pendentes = list.filter((n) => ["PENDING", "CONFERRED"].includes((n.status || "").toUpperCase())).length;
 
   return (
     <div className="erp-screen">
@@ -133,31 +150,26 @@ export function Vfis0210Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Importar</span>
+          <button className="erp-btn erp-btn-primary" onClick={() => fileRef.current?.click()} disabled={busy}>Arquivo(s) XML…</button>
+          <input ref={fileRef} type="file" accept=".xml,application/xml,text/xml" multiple hidden
+            onChange={(e) => void enviarArquivos(e.target.files)} />
+          <button className="erp-btn" onClick={() => { setMode("chave"); setFeedback(null); }} disabled={busy}>Pela chave</button>
+          <button className="erp-btn" onClick={() => { setMode("recebidas"); setDoc(null); setFeedback(null); }} disabled={busy}>Recebidas na SEFAZ</button>
+          <button className="erp-btn" onClick={() => { setMode("fretes"); setDoc(null); setFeedback(null); }} disabled={busy}>CT-e de frete</button>
+        </div>
+        <div className="erp-tgroup">
           <span className="erp-tgroup-label">Cadastro</span>
-          <button className="erp-btn erp-btn-new" onClick={novoManual} disabled={busy}>+ Lançamento manual</button>
-          <button className="erp-btn" onClick={() => { setMode("import"); setFeedback(null); }} disabled={busy}>Importar por chave</button>
-          <button className="erp-btn" onClick={() => { setMode("xml"); setFeedback(null); }} disabled={busy}>Importar XML</button>
+          <button className="erp-btn erp-btn-new" onClick={() => { setMode("manual"); setFeedback(null); }} disabled={busy}>+ Lançamento manual</button>
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Visão</span>
-          <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
+          <button className="erp-btn" onClick={() => { setMode("list"); setDoc(null); void reload(); }} disabled={busy}>Listagem</button>
         </div>
-        {mode === "manual" && (
+        {mode === "chave" && (
           <div className="erp-tgroup">
             <span className="erp-tgroup-label">Ações</span>
-            <button className="erp-btn erp-btn-primary" onClick={() => void salvarManual()} disabled={busy}>{busy ? "Salvando..." : "Lançar Entrada"}</button>
-          </div>
-        )}
-        {mode === "import" && (
-          <div className="erp-tgroup">
-            <span className="erp-tgroup-label">Ações</span>
-            <button className="erp-btn erp-btn-primary" onClick={() => void importar()} disabled={busy}>{busy ? "Importando..." : "Importar NF-e"}</button>
-          </div>
-        )}
-        {mode === "xml" && (
-          <div className="erp-tgroup">
-            <span className="erp-tgroup-label">Ações</span>
-            <button className="erp-btn erp-btn-primary" onClick={() => void enviarXml()} disabled={busy}>{busy ? "Enviando..." : "Enviar XML"}</button>
+            <button className="erp-btn erp-btn-primary" onClick={() => void importarChave()} disabled={busy}>{busy ? "Baixando..." : "Baixar NF-e"}</button>
           </div>
         )}
         <div className="erp-tgroup">
@@ -168,150 +180,154 @@ export function Vfis0210Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">NF-e de Entrada</button></div>
+          <div className="erp-tabs">
+            <button className={`erp-tab ${mode !== "recebidas" && mode !== "fretes" ? "active" : ""}`} onClick={() => { setMode("list"); setDoc(null); void reload(); }}>NF-e de Entrada</button>
+            <button className={`erp-tab ${mode === "recebidas" ? "active" : ""}`} onClick={() => { setMode("recebidas"); setDoc(null); setFeedback(null); }}
+              title={alertasPrazo ? `${alertasPrazo} nota(s) com o prazo de manifestação vencendo ou vencido` : undefined}>
+              Recebidas na SEFAZ{alertasPrazo > 0 && <span className="erp-badge erp-badge-red" style={{ marginLeft: 6 }}>⚠ {alertasPrazo}</span>}
+            </button>
+            <button className={`erp-tab ${mode === "fretes" ? "active" : ""}`} onClick={() => { setMode("fretes"); setDoc(null); setFeedback(null); }}>Fretes (CT-e)</button>
+          </div>
           <div className="erp-detail-body">
-        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+            {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        {mode === "list" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Entradas   — <span style={{fontWeight:400,opacity:0.65}}>{list.length} NF-e</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-                <table className="erp-grid">
-                  <thead><tr><th>#</th><th>Emitente</th><th>Status</th><th>Total</th><th>Entrada</th><th style={{ width: 120 }}>Ações</th></tr></thead>
-                  <tbody>
-                    {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma NF-e de entrada.</td></tr>}
-                    {list.map((nf) => (
-                      <tr key={nf.id}>
-                        <td style={{ fontWeight: 600 }}>{nf.numero_nf}</td>
-                        <td>{nf.razao_social_emitente}<br /><small style={{ color: "var(--v-text-muted)" }}>{nf.cnpj_emitente}</small></td>
-                        <td>{statusPill(nf.status)}</td>
-                        <td>{money(nf.valor_total)}</td>
-                        <td>{nf.data_entrada?.slice(0, 10) || "—"}</td>
-                        <td>{nf.status.toLowerCase().includes("pendente") && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void aprovar(nf.id)}>Aprovar</button>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            </div>
-          </>
-        )}
-
-        {mode === "import" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Importar por chave   — <span style={{fontWeight:400,opacity:0.65}}>Consulta a Focus NF-e, baixa o XML e movimenta o estoque</span></div><div className="erp-fieldset-body">
-                
-                  <div className="erp-field erp-c12">
-                    <label className="erp-label erp-req">Chave de Acesso (44 dígitos)</label>
-                    <input className="erp-input" value={accessKey} maxLength={44}
-                      placeholder="35260512345678000100550010000012341123456789"
-                      onChange={(e) => setAccessKey(e.target.value.replace(/\D/g, ""))} />
-                    <span className="erp-field-hint">{accessKey.length}/44 dígitos. Requer token Focus NF-e configurado em VFIS0100.</span>
+            {mode === "list" && (
+              <>
+                <div
+                  className="erp-fieldset"
+                  onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
+                  onDragLeave={() => setArrastando(false)}
+                  onDrop={(e) => { e.preventDefault(); setArrastando(false); void enviarArquivos(e.dataTransfer.files); }}
+                  style={{ borderStyle: "dashed", borderWidth: 2, borderColor: arrastando ? "var(--v-primary, #2563eb)" : undefined, cursor: "pointer" }}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c12" style={{ textAlign: "center", padding: "10px 0", display: "block" }}>
+                      <strong>Arraste aqui os arquivos XML das notas</strong> ou clique para escolher.
+                      <div className="erp-field-hint">Pode enviar várias notas de uma vez. Os dados fiscais, itens, impostos e duplicatas são lidos do próprio XML.</div>
+                    </div>
                   </div>
-                
-              </div>
-            </div>
-          </>
-        )}
+                </div>
 
-        {mode === "xml" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Importar XML   — <span style={{fontWeight:400,opacity:0.65}}>Cole o XML (nfeProc) recebido da SEFAZ — os campos são extraídos automaticamente</span></div><div className="erp-fieldset-body">
-                
-                  <div className="erp-field erp-c12">
-                    <label className="erp-label erp-req">Conteúdo do XML</label>
-                    <textarea className="erp-textarea" rows={12} value={xmlContent}
-                      placeholder={'<?xml version="1.0" encoding="UTF-8"?><nfeProc>...</nfeProc>'}
-                      onChange={(e) => { setXmlContent(e.target.value); setFeedback(null); }} />
-                    <span className="erp-field-hint">{xmlContent.length} caracteres.</span>
+                {resultados.length > 0 && (
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Resultado da importação</div>
+                    <div className="erp-fieldset-body"><div className="erp-field erp-c12">
+                      <table className="erp-grid">
+                        <thead><tr><th>Arquivo</th><th>Nota</th><th>Situação</th><th style={{ width: 90 }}></th></tr></thead>
+                        <tbody>
+                          {resultados.map((r, i) => (
+                            <tr key={i}>
+                              <td>{r.arquivo}</td>
+                              <td>{r.entrada ? `${r.entrada.numero_nf}/${r.entrada.serie} — ${r.entrada.razao_social_emitente}` : "—"}</td>
+                              <td>{r.entrada
+                                ? <>{statusEntradaPill(r.entrada.status)} <small>{r.entrada.itens_conciliados}/{r.entrada.itens.length} itens conciliados</small></>
+                                : <span style={{ color: "#b91c1c" }}>{r.erro}</span>}</td>
+                              <td>{r.entrada && <button className="erp-btn erp-btn-sm" onClick={() => void abrir(r.entrada!.id)}>Abrir</button>}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div></div>
                   </div>
-                
-              </div>
-            </div>
-          </>
-        )}
+                )}
 
-        {mode === "manual" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Cabeçalho   — <span style={{fontWeight:400,opacity:0.65}}>Impostos informados pelo emitente</span></div><div className="erp-fieldset-body">
-                
-                  <div className="erp-field erp-c2"><label className="erp-label erp-req">Número NF</label>
-                    <input className="erp-input num" type="number" value={form.numero_nf || ""} onChange={(e) => setF("numero_nf", Number(e.target.value))} /></div>
-                  <div className="erp-field erp-c1"><label className="erp-label">Série</label>
-                    <input className="erp-input" value={form.serie} onChange={(e) => setF("serie", e.target.value)} /></div>
-                  <div className="erp-field erp-c1"><label className="erp-label">Modelo</label>
-                    <input className="erp-input" value={form.modelo} onChange={(e) => setF("modelo", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>
-                    <input className="erp-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Entrada</label>
-                    <input className="erp-input" type="date" value={form.data_entrada} onChange={(e) => setF("data_entrada", e.target.value)} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label">Tipo Doc.</label>
-                    <input className="erp-input" value={form.tipo_documento} onChange={(e) => setF("tipo_documento", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ Emitente</label>
-                    <input className="erp-input" value={form.cnpj_emitente} onChange={(e) => setF("cnpj_emitente", e.target.value)} />
-                    {form.cnpj_emitente.trim() && (
-                      <span className="erp-field-hint" style={{ color: validateCNPJOrCPF(form.cnpj_emitente) ? "#1e6030" : "#b91c1c" }}>
-                        {validateCNPJOrCPF(form.cnpj_emitente) ? "✓ válido" : "✗ inválido"}
-                      </span>
-                    )}</div>
-                  <div className="erp-field erp-c5"><label className="erp-label">Razão Social Emitente</label>
-                    <input className="erp-input" value={form.razao_social_emitente} onChange={(e) => setF("razao_social_emitente", e.target.value)} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label">IE Emitente</label>
-                    <input className="erp-input" value={form.ie_emitente ?? ""} onChange={(e) => setF("ie_emitente", e.target.value)} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label erp-req">UF Emitente</label>
-                    <input className="erp-input" maxLength={2} value={form.uf_emitente} onChange={(e) => setF("uf_emitente", e.target.value.toUpperCase())} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Frete</label>
-                    <input className="erp-input num" type="number" step="0.01" value={form.valor_frete}
-                      onChange={(e) => setForm((p) => withTotals({ ...p, valor_frete: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Seguro</label>
-                    <input className="erp-input num" type="number" step="0.01" value={form.valor_seguro}
-                      onChange={(e) => setForm((p) => withTotals({ ...p, valor_seguro: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Desconto</label>
-                    <input className="erp-input num" type="number" step="0.01" value={form.valor_desconto}
-                      onChange={(e) => setForm((p) => withTotals({ ...p, valor_desconto: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">CT-e do transporte</label>
-                    <input className="erp-input num" type="number" value={form.cte_code ?? ""}
-                      onChange={(e) => setForm((p) => ({ ...p, cte_code: e.target.value ? Number(e.target.value) : undefined }))} />
-                    <span className="erp-hint">Amarra o frete desta entrada ao conhecimento — sem isso o custo do transporte não entra no custo do material.</span></div>
-                
-              </div>
-            </div>
+                <div className="erp-fieldset">
+                  <div className="erp-fieldset-head">Entradas — <span style={{ fontWeight: 400, opacity: 0.65 }}>{filtrada.length} de {list.length} NF-e</span></div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c6"><label className="erp-label">Buscar</label>
+                      <input className="erp-input" value={filtro} placeholder="Número, emitente ou CNPJ" onChange={(e) => setFiltro(e.target.value)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Situação</label>
+                      <select className="erp-input" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+                        <option value="">Todas</option>
+                        {Object.entries(ROTULO_STATUS_ENTRADA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select></div>
+                    <div className="erp-field erp-c12">
+                      <table className="erp-grid">
+                        <thead><tr><th>Nº</th><th>Emitente</th><th>Emissão</th><th>Entrada</th><th style={{ textAlign: "right" }}>Total</th><th>Situação</th><th style={{ width: 170 }}>Ações</th></tr></thead>
+                        <tbody>
+                          {filtrada.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma NF-e de entrada.</td></tr>}
+                          {filtrada.map((nf) => {
+                            const st = (nf.status || "").toUpperCase();
+                            return (
+                              <tr key={nf.id} onDoubleClick={() => void abrir(nf.id)}>
+                                <td style={{ fontWeight: 600 }}>{nf.numero_nf}{nf.serie ? `/${nf.serie}` : ""}</td>
+                                <td>{nf.razao_social_emitente}<br /><small style={{ color: "var(--v-text-muted)" }}>{cnpjFmt(nf.cnpj_emitente)}</small></td>
+                                <td>{dataBR(nf.data_emissao)}</td>
+                                <td>{dataBR(nf.data_entrada)}</td>
+                                <td style={{ textAlign: "right" }}>{money(nf.valor_total)}</td>
+                                <td>{statusEntradaPill(nf.status)}</td>
+                                <td>
+                                  <button className="erp-btn erp-btn-sm" onClick={() => void abrir(nf.id)}>{st === "PENDING" || st === "CONFERRED" ? "Conferir" : "Abrir"}</button>
+                                  {st === "CONFERRED" && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void aprovarDaLista(nf.id)}>Aprovar</button>}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Itens   — <span style={{fontWeight:400,opacity:0.65}}>Total NF: R$ {money(form.valor_total)}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-                <table className="erp-grid">
-                  <thead><tr><th>Seq</th><th>Item</th><th>NCM</th><th>CFOP</th><th>Qtd</th><th>Unit.</th>
-                    <th>Total</th><th>ICMS</th><th>IPI</th><th style={{ width: 50 }}></th></tr></thead>
-                  <tbody>
-                    {form.itens.map((it, idx) => (
-                      <tr key={idx}>
-                        <td>{it.sequence}</td>
-                        <td><input className="erp-input" style={{ height: 30, width: 70 }}  value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: e.target.value })} /></td>
-                        <td><input className="erp-input" style={{ height: 30, width: 100 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
-                        <td><input className="erp-input" style={{ height: 30, width: 70 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
-                        <td><input className="erp-input num" style={{ height: 30, width: 60 }} type="number" value={it.quantity} onChange={(e) => setItem(idx, { quantity: Number(e.target.value) })} /></td>
-                        <td><input className="erp-input num" style={{ height: 30, width: 80 }} type="number" step="0.01" value={it.unit_price} onChange={(e) => setItem(idx, { unit_price: Number(e.target.value) })} /></td>
-                        <td>{money(it.total_price)}</td>
-                        <td><input className="erp-input num" style={{ height: 30, width: 70 }} type="number" step="0.01" value={it.valor_icms} onChange={(e) => setItem(idx, { valor_icms: Number(e.target.value) })} /></td>
-                        <td><input className="erp-input num" style={{ height: 30, width: 70 }} type="number" step="0.01" value={it.valor_ipi} onChange={(e) => setItem(idx, { valor_ipi: Number(e.target.value) })} /></td>
-                        <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeItem(idx)} disabled={form.itens.length === 1}>✕</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {mode === "chave" && (
+              <div className="erp-fieldset">
+                <div className="erp-fieldset-head">Importar pela chave — <span style={{ fontWeight: 400, opacity: 0.65 }}>baixa o XML da nota recebida na Focus NF-e e segue o mesmo fluxo da importação do arquivo</span></div>
+                <div className="erp-fieldset-body">
+                  <div className="erp-field erp-c12">
+                    <label className="erp-label erp-req">Chave de acesso (44 dígitos)</label>
+                    <input className="erp-input" value={accessKey} maxLength={54}
+                      placeholder="4126 1012 3456 7800 0190 5500 1000 0123 4510 0012 3459"
+                      onChange={(e) => setAccessKey(e.target.value.replace(/[^\d ]/g, ""))}
+                      onKeyDown={(e) => { if (e.key === "Enter") void importarChave(); }} />
+                    <span className="erp-field-hint">{accessKey.replace(/\D/g, "").length}/44 dígitos. Requer o token da Focus NF-e (VFIS0100) e a manifestação do destinatário ativa.</span>
+                  </div>
+                </div>
               </div>
-              <div className="erp-fieldset-body" style={{ paddingTop: 12 }}>
-                <button className="erp-btn" onClick={addItem}>+ Adicionar item</button>
-              </div>
-            </div>
-            </div>
-          </>
-        )}
-      </div></section></div>
+            )}
+
+            {mode === "recebidas" && (
+              <NotasRecebidasPanel
+                onAbrirEntrada={(id) => void abrir(id)}
+                onImportada={(d) => {
+                  setDoc(d); setMode("doc"); void reload();
+                  setFeedback({ type: "success", message: `NF-e ${d.numero_nf} importada da SEFAZ. Confira a conciliação, o plano de contas e as parcelas.` });
+                }}
+                onFeedback={setFeedback}
+                onStatus={setStatusSefaz}
+              />
+            )}
+
+            {mode === "fretes" && (
+              <FretesCompraPanel entradas={list} onFeedback={setFeedback} onAbrirEntrada={(id) => void abrir(id)} />
+            )}
+
+            {mode === "doc" && doc && (
+              <EntradaDocumentoView
+                doc={doc}
+                onChange={(d) => { setDoc(d); void reload(); }}
+                onFeedback={setFeedback}
+                onFechar={() => { setMode("list"); setDoc(null); void reload(); }}
+              />
+            )}
+
+            {mode === "manual" && (
+              <EntradaManualForm
+                onCriada={(d) => { setDoc(d); setMode("doc"); void reload(); setFeedback({ type: "success", message: `Entrada ${d.numero_nf} lançada. Confira a conciliação e as parcelas antes de aprovar.` }); }}
+                onFeedback={setFeedback}
+                onCancelar={() => setMode("list")}
+              />
+            )}
+          </div>
+        </section>
+      </div>
 
       <footer className="erp-statusbar">
-        <div style={{display:"contents"}}>
+        <div style={{ display: "contents" }}>
           <div className="erp-status-item">Entradas: <strong>{list.length}</strong></div>
-          <div className="erp-status-item">Pendentes: <strong>{list.filter((n) => n.status.toLowerCase().includes("pendente")).length}</strong></div>
+          <div className="erp-status-item">A conferir/aprovar: <strong>{pendentes}</strong></div>
         </div>
         <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>

@@ -236,6 +236,60 @@ VFIN0200 → + Nova Conta     │         • Data Pagamento
                                             VFIN0500 (Relatórios)
 ```
 
+### 3.1.1 NF-e de Entrada → Contas a Pagar por plano de contas (VFIS0210)
+
+```
+Arquivo(s) XML ou chave ─► pré-nota (tudo lido do XML: itens, impostos, duplicatas)
+        │
+        ▼
+Conciliação item da nota × item do cadastro
+  • vínculo do fornecedor (código / código de barras) concilia sozinho
+  • "Sugestões" por descrição + NCM; "Lembrar vínculo" memoriza o de/para
+        │
+        ▼
+Plano de contas (e centro de custo) por item  ─► totais por plano
+        │
+        ▼
+Operação de entrada (VFIS0360), almoxarifado e pedido de compra por item
+  • a operação define CFOP de entrada, estoque, financeiro e créditos (TES)
+  • o pedido vem do xPed da nota ou do botão "Escolher" (3-way)
+        │
+        ▼
+Parcelas × plano de contas (ex.: 1ª toda EPI, 2ª toda MP, 3ª dividida)
+  • com imposto retido (IRRF, PIS/COFINS/CSLL, INSS, ISS) as parcelas fecham
+    no valor a pagar (total − retenções)
+        │
+        ▼
+Aba "Conferência fiscal e pedido": divergências de imposto, NCM, preço e
+quantidade × pedido (as marcadas "Bloqueia" impedem a aprovação)
+        │
+        ▼
+Aprovar ─► 1 título por parcela no VFIN0200, com o rateio por plano
+           + 1 título "Imposto retido a recolher" por retenção
+           + entrada no estoque (o que o pedido já recebeu não entra de novo)
+           + créditos fiscais e lançamentos contábeis (VCTB0200 › NF de entrada)
+           (aba "Por plano de contas" mostra total, pago, aberto e vencido)
+Cancelar nota ─► estorna títulos, estoque, pedido, créditos e contabilidade
+```
+
+**Recebidas na SEFAZ** (aba do VFIS0210): "Buscar na SEFAZ" traz as NF-e emitidas
+contra o CNPJ da empresa; daqui se manifesta (ciência, confirmação,
+desconhecimento, operação não realizada) e se importa a nota sem esperar o XML
+do fornecedor. Exige o token da Focus NF-e no VFIS0100.
+
+**Contabilização da NF de entrada** (VCTB0200 › aba "NF de entrada"): escolha o
+plano contábil, a conta de Fornecedores, as contas de impostos a recuperar e de
+retenções a recolher, e ligue cada plano de contas financeiro à sua conta
+contábil. Com "Contabilizar automaticamente" marcado, a aprovação da nota lança
+débito no estoque/despesa e nos impostos a recuperar contra Fornecedores.
+
+### 3.1.2 Pedido de Venda → NF-e de Saída (VFIS0200 › "Faturar pedido de venda")
+
+Escolha o pedido: cliente, endereço, itens, preço com desconto, frete,
+condição de pagamento e representante vêm do pedido. Fature tudo ou só parte
+(quantidade por linha); o restante continua pendente para a próxima nota. A nota
+nasce em rascunho e abre a prévia de conferência antes da autorização.
+
 ### 3.2 Fluxo Financeiro (Contas a Receber)
 
 ```
@@ -590,6 +644,7 @@ Gerenciar o ciclo de vida completo dos títulos a pagar: criação, aprovação/
 |-------|------|-------------|--------|--------|
 | Conta Bancária | seleção | Sim | Contas de VFIN0100 | Conta bancária do pagamento |
 | Valor Pago | número | Sim | — | Valor a pagar. Menor que o saldo = baixa parcial. |
+| Desconto obtido | número | Não | — | Abate a dívida sem sair do caixa. Valor pago + desconto não passa do saldo (bruto − pago − desconto já dado − adiantamento). Contabilizado em Descontos obtidos. |
 | Data Pagamento | data | Sim | — | Data do pagamento (padrão: hoje) |
 | Observação | texto | Não | — | Anotação sobre a baixa |
 
@@ -689,6 +744,12 @@ Gerenciar o ciclo de vida dos títulos a receber: criação, baixa (recebimento 
 |-------|------|-------------|--------|--------|
 | Conta Bancária | seleção | Sim | Contas de VFIN0100 | Conta onde o valor será depositado |
 | Valor Recebido | número | Sim | — | Valor a receber. Menor que o saldo = recebimento parcial. |
+| Desconto concedido | número | Não | — | Abate o que o cliente deve sem entrar no caixa. Valor recebido + desconto não passa do saldo. |
+
+Título com a etiqueta **Fornecedor** na coluna do parceiro é um **crédito a
+receber de fornecedor**: nasce da devolução de compra (VFIS0210) quando o valor
+devolvido passa do que havia em aberto na nota. Recebê-lo baixa Fornecedores
+na contabilidade.
 | Data Recebimento | data | Sim | — | Data do recebimento (padrão: hoje) |
 | Observação | texto | Não | — | Anotação sobre o recebimento |
 
@@ -1005,6 +1066,27 @@ Gerenciar a contabilidade completa da empresa em conformidade com o SPED ECD (Es
    - **Histórico**: descrição da operação.
    - **Data**: data efetiva do lançamento.
 6. O sistema valida que o total de débitos seja igual ao total de créditos (partidas dobradas).
+
+##### Contabilização automática
+
+A aba **Contabilização automática** define o plano contábil e as contas que as
+operações usam para se lançar sozinhas, cada uma na mesma transação da operação:
+
+- **Aprovação da NF de entrada (e frete)**: custo × Fornecedores, créditos de
+  imposto, retenções.
+- **Pagamento de fornecedor e recolhimento de retenções**: Fornecedores (ou o
+  imposto retido) × Banco; juros e multa em despesa; desconto obtido em receita.
+- **Recebimento de cliente**: Banco × Clientes; juros recebidos; desconto
+  concedido.
+- **NF-e de saída**: Clientes × Receita; impostos sobre a venda × impostos a
+  recolher; CMV × Estoque pelo custo médio.
+
+Ligue cada interruptor só depois de preencher as contas do grupo — a gravação
+recusa listando o que falta. Os cancelamentos lançam o estorno.
+
+As tabelas no fim da aba ligam o **plano de contas financeiro** à conta de débito
+da entrada e cada **conta bancária** à sua conta contábil (o "Banco" do
+pagamento e do recebimento; sem vínculo, vale o banco padrão).
 
 ##### Balancete
 
@@ -5971,6 +6053,9 @@ Realizar o ciclo completo de emissão de Nota Fiscal Eletrônica de saída: cria
 
 ##### Observações importantes
 
+- **Nota rejeitada pela SEFAZ:** veja o motivo em Status, corrija (cadastro do cliente, dados da nota) e clique **Reenviar** — a nota é transmitida de novo com o número que a SEFAZ atribuir na autorização.
+- **Cancelamento:** a justificativa precisa ter de 15 a 255 caracteres; se a SEFAZ recusar (por exemplo, fora do prazo), a nota continua autorizada no ERP e a mensagem da SEFAZ aparece.
+- **IBS/CBS (reforma tributária):** em 2026 cada item sai com o grupo IBS/CBS nas alíquotas de teste (CBS 0,9%, IBS 0,1%), exigido pela SEFAZ do regime normal; não há recolhimento.
 - O cálculo automático de impostos ocorre no momento em que a NF-e é salva como rascunho. O sistema consulta a seguinte hierarquia para cada alíquota: VFIS0350 (Classificações Fiscais — precedência máxima) → VFIS0320 (Parâmetros ICMS/IPI) → VFIS0330 (Regras de redução/diferimento) → VFIS0110 (Tabelas Tributárias — fallback).
 - O CNPJ do destinatário é validado em tempo real (algoritmo módulo 11). Um indicador verde ou vermelho aparece abaixo do campo.
 - A UF de Destino é crítica: se for igual à UF do emitente (VFIS0100), a operação é interna e utiliza a alíquota de ICMS interno. Se for diferente, é interestadual e utiliza a alíquota da tabela interestadual (VFIS0110) + DIFAL quando aplicável.
@@ -6102,6 +6187,48 @@ Registrar notas fiscais de entrada de mercadorias em três modos flexíveis: ent
 - As flags de creditamento (Credita ICMS/IPI/PIS/COFINS) são pré-selecionadas com base no CFOP e no regime tributário da VFIS0100, mas podem ser alteradas manualmente. Empresas do Lucro Real geralmente podem creditar PIS/COFINS (não-cumulativo); empresas do Simples Nacional e Lucro Presumido geralmente não.
 - A conta a pagar gerada automaticamente no VFIN0200 é vinculada ao fornecedor emitente. Se o fornecedor não estiver cadastrado no VSUP0500, a geração da conta a pagar pode falhar.
 - Os totais de impostos (ICMS, IPI, PIS, COFINS) e valor total da nota são recalculados automaticamente como somatório dos itens + frete + seguro - desconto.
+
+##### Fornecedor ou item que não estão no cadastro
+
+- Emitente sem cadastro aparece como **não cadastrado** e **impede a aprovação**.
+  Clique **Cadastrar da nota**: o fornecedor nasce com CNPJ, razão social,
+  fantasia, inscrição estadual e endereço do XML, e todas as notas pendentes do
+  mesmo CNPJ passam a ser dele. Se o fornecedor for cadastrado em VSUP0500, a nota
+  se liga sozinha ao ser aberta. Fornecedor bloqueado ou inativo também impede.
+- Item sem cadastro: em **Sugestões**, use **Cadastrar este item a partir da
+  nota** — nome, unidade de estoque (a da nota já vem traduzida), almoxarifado e
+  uso (industrialização, uso e consumo ou imobilizado, sugerido pelo CFOP). O item
+  nasce com origem, CEST e unidade de compra da nota e a linha já fica conciliada;
+  grupo PDM, classificação fiscal e engenharia se completam em VENT0200.
+- Nota com CT-e de frete lançado ou com NF-e de devolução não se cancela: cancele
+  antes o frete (aba Fretes) ou a devolução (VFIS0200).
+
+##### Frete sobre compras (aba Fretes (CT-e))
+
+1. Clique **Importar XML do CT-e…** (escolha antes o vencimento do título e o
+   rateio: valor, quantidade ou peso). As notas citadas no CT-e que já estão
+   aprovadas vêm ligadas; as outras se ligam na lista abaixo do formulário.
+   Sem XML, use **+ CT-e manual**.
+2. Confira valor, ICMS e se a empresa **credita o ICMS** do frete — sem crédito,
+   o imposto vai para o custo. "Vai ao custo" mostra o que será rateado.
+3. **Lançar frete**: o custo é rateado entre os itens; a parte do que ainda está
+   em estoque complementa o custo médio, a do que já foi consumido vai para
+   despesa; o título da transportadora vai para VFIN0200 e o lançamento é
+   contabilizado. O rateio fica visível no frete.
+4. **Cancelar CT-e** (motivo com pelo menos 10 caracteres) desfaz custo, título e
+   contabilização — recusado se o título já foi pago.
+
+##### Devolução ao fornecedor
+
+Na nota aprovada, **Devolver ao fornecedor** mostra, por item, o comprado, o já
+devolvido e o disponível. Informe as quantidades (ou **Devolver tudo o que
+resta**) e clique **Criar NF-e de devolução**: sai em rascunho, com o CFOP
+de devolução de cada item (compra para industrialização 1101 → 5201, para
+revenda 1102 → 5202; fora do estado, 6201/6202) e esta nota referenciada. **Autorizar na SEFAZ** (aqui ou em VFIS0200,
+onde aparece com a etiqueta "Devolução") efetiva: a mercadoria sai do estoque
+pelo custo médio, o valor abate os títulos em aberto da nota e o que sobrar vira
+crédito a receber do fornecedor (VFIN0210). Cancelar a NF-e de devolução em
+VFIS0200 desfaz tudo enquanto o crédito não foi recebido.
 
 ##### Telas relacionadas
 
@@ -10234,22 +10361,59 @@ significa que ainda não há motivo persistido para a empresa autenticada.
 
 ### VFIS0600 — SPED EFD ICMS/IPI
 
-#### Pré-requisitos
+Gera a EFD ICMS/IPI do mês **a partir das próprias notas do sistema** — nada é
+digitado registro a registro.
 
-Cadastro fiscal da empresa, participante, unidades, itens, documentos e inventário
-conferidos; período fiscal fechado; contabilista e regime tributário validados.
+#### O que entra no arquivo
+
+- **NF-e de entrada aprovadas** (VFIS0210), pela data de entrada: C100, C170 e
+  C190, com o CFOP de entrada e só o ICMS que a empresa credita. Item sem crédito
+  (uso e consumo, por exemplo) vai com base e ICMS zerados. Nota pendente ou
+  cancelada não entra.
+- **NF-e emitidas** (VFIS0200), pela data de emissão: autorizadas com C100 e C190
+  (NF-e própria não leva C170); canceladas só com a identificação (situação 02).
+  A devolução de compra entra aqui, como saída, debitando o ICMS.
+- **CT-e de frete sobre compras lançados**: D100 e D190, com o crédito de ICMS
+  quando houver.
+- **Apuração do ICMS** (E110/E116) somando os próprios registros analíticos, e
+  **do IPI** (E500/E510/E520) para o contribuinte.
+- **Cadastros referenciados**: participantes (0150), unidades (0190), itens (0200)
+  e conversões de unidade (0220) quando a nota do fornecedor usa outra unidade.
+
+Empresa (CNPJ, IE, UF, município) vem de VFIS0100. Sem eles a geração é recusada
+dizendo o que falta.
 
 #### Geração
 
-1. Informe CNPJ, nome, UF, inscrições, município e regime tributário.
-2. Informe início/fim do período e indicador de situação do arquivo.
-3. Informe dados do contabilista.
-4. Revise participantes, unidades, itens, documentos fiscais e inventário enviados.
-5. Clique em **Gerar EFD**. A rotina baixa `SPED_EFD_ICMS_IPI.txt`.
-6. Valide o arquivo no PVA antes de transmitir. A geração não equivale à entrega à Receita.
+1. Escolha a competência (o padrão é o mês anterior).
+2. Confira finalidade (original ou substituta), perfil da UF e atividade. O IPI
+   é apurado para atividade industrial; troque em "Apuração do IPI" se for o caso.
+3. Informe o contabilista (nome e CPF são obrigatórios). Esses dados, o perfil e o
+   código de receita ficam lembrados neste navegador.
+4. Informe o **saldo credor anterior** de ICMS e IPI (o "a transportar" da EFD do
+   mês anterior) e o **código de receita do ICMS** da UF. O vencimento, em branco,
+   usa o dia da configuração fiscal no mês seguinte.
+5. Clique **Gerar EFD**: o resumo mostra quantas notas entraram e a apuração
+   (débitos, créditos, ICMS a recolher ou saldo credor a transportar).
+6. Leia os **avisos**: participante sem código de município, item sem NCM, CT-e
+   sem os municípios de origem/destino, ICMS a recolher sem código de receita.
+   O PVA cobra cada um deles; corrija o cadastro e gere de novo.
+7. Clique **Baixar arquivo** e valide no PVA da Receita. O arquivo sai em
+   ISO-8859-1, a codificação que o PVA lê.
 
-Datas invertidas, CNPJ/município inválidos ou documentos inconsistentes impedem a geração.
-Nunca transmita arquivo sem validação fiscal e autorização do responsável.
+#### Inventário (bloco H) e ajustes (E111)
+
+- Marque **Incluir o inventário do estoque** (vem marcado na competência de
+  fevereiro, com a data de 31/12): quantidade e custo de cada item somados dos
+  movimentos de estoque até a data. A conta contábil (COD_CTA) é a de Estoque dos
+  parâmetros de VCTB0200.
+- Os **ajustes da apuração** vêm das notas especiais de ajuste emitidas no mês
+  (VFIS0560): o código de ajuste diz se é débito, crédito, estorno, dedução ou
+  débito especial.
+
+#### Observações
+
+- Mudou uma nota depois de gerar? Gere de novo; o arquivo não fica guardado.
 
 ### VFIS0610 — Importação de NF-e de Compra por Chave
 

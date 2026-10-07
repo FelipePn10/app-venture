@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## Novidades
+- **Nota fiscal de compra conferida de ponta a ponta.** Importe o arquivo da nota (ou baixe da Receita pela chave) e o sistema confere cada item com o cadastro, sugere o item certo, separa o valor por plano de contas e monta as parcelas do contas a pagar. Se o fornecedor ou um item ainda não estiver cadastrado, você cadastra ali mesmo, com os dados que vieram na nota.
+- **Notas emitidas contra a sua empresa chegam sozinhas.** O sistema busca na Receita, de hora em hora, as notas que fornecedores emitiram para você, e avisa quando o prazo para confirmar ou recusar uma delas está acabando.
+- **Frete da compra no custo do produto.** Lance o conhecimento de transporte da transportadora e o valor do frete é distribuído entre os itens da compra, entra no custo do estoque e gera a conta a pagar da transportadora.
+- **Devolução ao fornecedor a partir da nota de compra.** Escolha o que vai voltar e o sistema emite a nota de devolução, tira do estoque e abate o valor do que você ainda deve ao fornecedor — o que sobrar fica como crédito a receber dele.
+- **Arquivo do SPED Fiscal pronto a partir das suas notas.** O arquivo mensal para a Receita sai montado com as notas de compra, de venda, os fretes, a apuração do ICMS e do IPI e, quando precisar, o inventário do estoque — e a tela avisa o que falta no cadastro antes de você enviar.
+
+## Melhorias
+- **Contabilidade do dia a dia sem digitação.** Pagamentos, recebimentos e notas de venda passam a gerar os lançamentos contábeis sozinhos, inclusive juros, multas e descontos.
+- **Desconto na hora de pagar ou receber.** A baixa de um título aceita o desconto negociado, e o saldo mostrado passa a considerar descontos e adiantamentos já abatidos.
+
+## Correções
+- **A emissão de notas fiscais de venda foi ajustada ao padrão atual da Receita**, incluindo os novos campos da reforma tributária exigidos em 2026. Uma nota recusada pela Receita agora pode ser corrigida e reenviada, e o cancelamento pela tela voltou a funcionar.
+
 ## [v1.4.1] — 2026-10-01
 
 ## Correções

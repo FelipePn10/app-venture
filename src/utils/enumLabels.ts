@@ -21,6 +21,7 @@ const LABELS: Record<string, string> = {
   IN: 'Entrada', OUT: 'Saída', INBOUND: 'Entrada', OUTBOUND: 'Saída',
   SHIPMENT: 'Remessa', RETURN: 'Retorno', RECEIPT: 'Recebimento', ADJUSTMENT: 'Ajuste',
   TRANSFER_IN: 'Transferência (entrada)', TRANSFER_OUT: 'Transferência (saída)',
+  AJUSTE_CUSTO: 'Ajuste de custo', EP: 'Entrada de produção', TRANSF_ENDERECO: 'Transferência entre endereços',
 
   // Fornecedores / contratos / avisos
   NORMAL: 'Normal', TRANSPORTADORA: 'Transportadora', TRANSP_REDESP: 'Transportadora/Redespacho',

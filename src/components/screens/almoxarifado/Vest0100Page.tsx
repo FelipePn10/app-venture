@@ -26,8 +26,9 @@ const MOVEMENT_LABEL: Record<string, string> = {
   ADJUSTMENT: "Ajuste", TRANSF_ENDERECO: "Transferência entre endereços",
   EP: "Entrada de produção", EPP: "Entrada de produção planejada", EPE: "Excedente de produção",
   REP: "Requisição planejada", ENTRADA: "Entrada", SAIDA: "Saída",
+  AJUSTE_CUSTO: "Ajuste de custo (frete sobre compras)",
 };
-const REFERENCE_LABEL: Record<string, string> = { MANUAL: "Manual", SALES_ORDER: "Pedido de venda", PURCHASE_ORDER: "Pedido de compra", PRODUCTION_ORDER: "Ordem de produção", SHIPMENT: "Expedição" };
+const REFERENCE_LABEL: Record<string, string> = { FRETE_COMPRA: "CT-e de frete", FRETE_COMPRA_ESTORNO: "Estorno de frete", NFE_DEVOLUCAO: "Devolução de compra", MANUAL: "Manual", SALES_ORDER: "Pedido de venda", PURCHASE_ORDER: "Pedido de compra", PRODUCTION_ORDER: "Ordem de produção", SHIPMENT: "Expedição" };
 
 const EMPTY_MOV: MovementDTO = { item_code: "", warehouse_id: 0, movement_type: "IN", quantity: 0, unit_price: 0, lot: "" };
 

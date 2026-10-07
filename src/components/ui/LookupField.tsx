@@ -38,6 +38,15 @@ interface LookupFieldProps<T extends string | number> {
  * "escolha da lista de registros cadastrados". Mostra `#código — rótulo`, abre
  * um popover com busca e resolve o rótulo do código atual automaticamente.
  */
+/**
+ * Mesmo código, seja número ou texto: o cadastro de itens devolve o código como
+ * texto ("77101") e várias telas guardam número (77101). Com `===` o campo não
+ * achava a opção e mostrava "#77101" em vez do nome.
+ */
+function mesmoCodigo(a: string | number, b: string | number | undefined | null): boolean {
+  return b !== undefined && b !== null && b !== "" && String(a) === String(b);
+}
+
 export function LookupField<T extends string | number = number>({
   value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true, allowManualCode = true,
   includeInactive = false,
@@ -113,7 +122,7 @@ export function LookupField<T extends string | number = number>({
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); window.removeEventListener("resize", position); window.removeEventListener("scroll", position, true); };
   }, [open]);
 
-  const selected = useMemo(() => options.find((o) => o.code === value), [options, value]);
+  const selected = useMemo(() => options.find((o) => mesmoCodigo(o.code, value)), [options, value]);
 
   /**
    * O que a lista oferece. O registro inativo continua **carregado** — é assim
@@ -123,7 +132,7 @@ export function LookupField<T extends string | number = number>({
    * esconder o próprio valor faria o campo parecer vazio.
    */
   const disponiveis = useMemo(
-    () => (includeInactive ? options : options.filter((o) => !o.inactive || o.code === value)),
+    () => (includeInactive ? options : options.filter((o) => !o.inactive || mesmoCodigo(o.code, value))),
     [options, includeInactive, value],
   );
 
@@ -211,7 +220,7 @@ export function LookupField<T extends string | number = number>({
               <div className="erp-lookup-msg">{disponiveis.length === 0 ? (options.length === 0 ? `Nenhum ${entityLabel} cadastrado.` : `Nenhum ${entityLabel} ativo.`) : "Nenhum resultado."}</div>
             )}
             {filtered.map((o) => (
-              <button type="button" key={o.code} className={`erp-lookup-item${o.code === value ? " sel" : ""}`} onClick={() => choose(o)}>
+              <button type="button" key={o.code} className={`erp-lookup-item${mesmoCodigo(o.code, value) ? " sel" : ""}`} onClick={() => choose(o)}>
                 <span className="erp-lookup-item-code">{o.code}</span>
                 <span className="erp-lookup-item-main">
                   <span className="erp-lookup-item-label">{o.label}{o.inactive && <span className="erp-lookup-item-off">inativo</span>}</span>

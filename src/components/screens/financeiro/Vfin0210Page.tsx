@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  type ContaReceber, type ContaReceberDTO, type AgingBucket, type BaixaRecebimentoDTO, type ListFilters,
+  type ContaReceber, saldoContaReceber, type ContaReceberDTO, type AgingBucket, type BaixaRecebimentoDTO, type ListFilters,
   listContasReceber, createContaReceber, baixarContaReceber, cancelContaReceber, agingReceber, agingTotal,
   STATUS_TITULO_RECEBER, FORMAS_DE_PAGAMENTO, FORMA_PAGAMENTO_LABELS, diasDeAtraso, estaEmAberto,
   temFiltroAtivo,
@@ -9,7 +9,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadCustomers, loadSalesOrders, loadBankAccounts, loadFiscalExits } from "@/services/lookups";
+import { loadCustomers, loadSuppliers, loadSalesOrders, loadBankAccounts, loadFiscalExits } from "@/services/lookups";
 import { CarteiraFiltros } from "./CarteiraFiltros";
 
 /**
@@ -114,7 +114,7 @@ export function Vfin0210Page(): JSX.Element {
       bruto, recebido, saldo: bruto - recebido,
       emAberto: emAberto.length,
       vencidos: vencidos.length,
-      valorVencido: vencidos.reduce((s, c) => s + (c.valor_bruto - (c.valor_recebido ?? 0)), 0),
+      valorVencido: vencidos.reduce((s, c) => s + (saldoContaReceber(c)), 0),
     };
   }, [list]);
 
@@ -142,12 +142,12 @@ export function Vfin0210Page(): JSX.Element {
   }
 
   function abrirBaixa(c: ContaReceber) {
-    const saldo = c.valor_bruto - (c.valor_recebido ?? 0);
+    const saldo = saldoContaReceber(c);
     setBaixa({
       alvo: c,
       // A conta bancária NÃO vem pré-escolhida: antes assumia a primeira da lista, e
       // confirmar sem olhar creditava o recebimento na conta errada.
-      dto: { conta_bancaria_id: 0, valor_recebido: Number(saldo.toFixed(2)), data_recebimento: today(), observacao: "" },
+      dto: { conta_bancaria_id: 0, valor_recebido: Number(saldo.toFixed(2)), desconto: 0, data_recebimento: today(), observacao: "" },
     });
     setFeedback(null);
   }
@@ -158,19 +158,22 @@ export function Vfin0210Page(): JSX.Element {
     if (!baixa) return;
     if (!baixa.dto.conta_bancaria_id) { setFeedback({ type: "error", message: "Escolha a conta bancária que recebeu o valor." }); return; }
     if (!baixa.dto.valor_recebido || baixa.dto.valor_recebido <= 0) { setFeedback({ type: "error", message: "Informe o valor recebido." }); return; }
-    const saldo = baixa.alvo.valor_bruto - (baixa.alvo.valor_recebido ?? 0);
-    if (baixa.dto.valor_recebido > saldo + 0.005) {
-      setFeedback({ type: "error", message: `O valor recebido (${money(baixa.dto.valor_recebido)}) passa do saldo do título (${money(saldo)}).` });
+    const saldo = saldoContaReceber(baixa.alvo);
+    const desconto = baixa.dto.desconto ?? 0;
+    if (desconto < 0) { setFeedback({ type: "error", message: "O desconto não pode ser negativo." }); return; }
+    if (baixa.dto.valor_recebido + desconto > saldo + 0.005) {
+      setFeedback({ type: "error", message: `Valor recebido + desconto (${money(baixa.dto.valor_recebido + desconto)}) passa do saldo do título (${money(saldo)}).` });
       return;
     }
+
     setBusy(true); setFeedback(null);
     try {
       await baixarContaReceber(baixa.alvo.id, baixa.dto);
-      const parcial = baixa.dto.valor_recebido < saldo - 0.005;
+      const parcial = baixa.dto.valor_recebido + desconto < saldo - 0.005;
       setFeedback({
         type: "success",
         message: parcial
-          ? `Recebimento parcial do título ${baixa.alvo.numero_documento} registrado. Saldo restante: ${money(saldo - baixa.dto.valor_recebido)}.`
+          ? `Recebimento parcial do título ${baixa.alvo.numero_documento} registrado. Saldo restante: ${money(saldo - baixa.dto.valor_recebido - desconto)}.`
           : `Título ${baixa.alvo.numero_documento} quitado.`,
       });
       setBaixa(null); await reload(filtros);
@@ -280,23 +283,29 @@ export function Vfin0210Page(): JSX.Element {
                     <div className="erp-fieldset-head">
                       Baixar o título {baixa.alvo.numero_documento}
                       <span style={{ fontWeight: 400, opacity: 0.65 }}>
-                        {` — saldo ${money(baixa.alvo.valor_bruto - (baixa.alvo.valor_recebido ?? 0))}`}
+                        {` — saldo ${money(saldoContaReceber(baixa.alvo))}`}
                       </span>
                     </div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c4">
+                      <div className="erp-field erp-c3">
                         <label className="erp-label erp-req">Conta bancária que recebeu</label>
                         <LookupField value={baixa.dto.conta_bancaria_id || undefined} loader={loadBankAccounts}
                           entityLabel="conta bancária" placeholder="Escolher a conta" allowManualCode={false}
                           onChange={(c) => setBaixaF("conta_bancaria_id", c ? Number(c) : 0)} />
                         <span className="erp-hint">O crédito entra no saldo desta conta e no fluxo de caixa.</span>
                       </div>
-                      <div className="erp-field erp-c3">
+                      <div className="erp-field erp-c2">
                         <label className="erp-label erp-req">Valor recebido</label>
                         <input className="erp-input num" type="number" step="0.01" min="0"
                           value={baixa.dto.valor_recebido}
                           onChange={(e) => setBaixaF("valor_recebido", Number(e.target.value))} />
                         <span className="erp-hint">Menor que o saldo registra recebimento parcial.</span>
+                      </div>
+                      <div className="erp-field erp-c2">
+                        <label className="erp-label">Desconto concedido</label>
+                        <input className="erp-input num" type="number" step="0.01" min="0" value={baixa.dto.desconto ?? 0}
+                          onChange={(e) => setBaixaF("desconto", Number(e.target.value))} />
+                        <span className="erp-hint">Abate o que o cliente deve; não entra no caixa.</span>
                       </div>
                       <div className="erp-field erp-c2">
                         <label className="erp-label erp-req">Data do recebimento</label>
@@ -346,7 +355,7 @@ export function Vfin0210Page(): JSX.Element {
                             </td></tr>
                           )}
                           {list.map((c) => {
-                            const saldo = c.valor_bruto - (c.valor_recebido ?? 0);
+                            const saldo = saldoContaReceber(c);
                             const aberto = estaEmAberto(c.status);
                             return (
                               <tr key={c.id}>
@@ -360,7 +369,9 @@ export function Vfin0210Page(): JSX.Element {
                                 </td>
                                 <td>{c.cliente_id
                                   ? <EntityName code={c.cliente_id} loader={loadCustomers} />
-                                  : "—"}</td>
+                                  : c.fornecedor_id
+                                    ? <span title="Crédito a receber do fornecedor (devolução de compra)"><span className="erp-badge erp-badge-amber" style={{ marginRight: 4 }}>Fornecedor</span><EntityName code={c.fornecedor_id} loader={loadSuppliers} /></span>
+                                    : "—"}</td>
                                 <td>{c.data_emissao?.slice(0, 10) || "—"}</td>
                                 {celulaDeVencimento(c)}
                                 <td className="num">{money(c.valor_bruto)}</td>
