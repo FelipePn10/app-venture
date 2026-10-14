@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.6.0] — 2026-10-14
+
 ## Novidades
 - **Cenários de simulação no planejamento.** Crie um cenário sobre um plano, simule mudanças de demanda (pedido maior, data nova, pedido novo), de estoque, de prazo de compra/fabricação e de capacidade de máquina (outro turno, parada), calcule sem tocar no plano real e veja lado a lado o que muda: ordens, itens críticos, carga dos centros e pedidos com falta. Gostou? Aplique a demanda ao plano real com um clique.
 - **Rastreamento no MRP.** Veja, para cada pedido ou demanda, a cadeia inteira até as compras dos componentes — o que sai do estoque, o que vem de ordem e onde falta. E, de qualquer sugestão ou ordem, "para quem é": até o pedido que depende dela.
