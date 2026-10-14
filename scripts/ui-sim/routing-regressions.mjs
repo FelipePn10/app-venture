@@ -44,19 +44,22 @@ await page.route('**/*',async route=>{
 });
 try {
  await page.goto(`${APP}/#/screen/VCUS0100`);
- await page.getByRole('tab',{name:'Custo padrão',exact:true}).waitFor();
- assert.equal(await page.getByRole('tab').count(),5);
- assert.equal(await page.getByRole('tabpanel').count(),1);
+ await page.getByRole('tab',{name:'Apuração do custo',exact:true}).waitFor();
+ assert.equal(await page.getByRole('tab').count(),6);
+ const corpo=page.locator('.erp-detail-body');
  await page.getByRole('tab',{name:'Centros de trabalho',exact:true}).click();
- assert.equal(await page.getByRole('tabpanel').count(),1);
- await page.getByRole('tabpanel').locator('.erp-lookup-control').click();
+ // Só o conteúdo da aba ativa aparece.
+ assert.equal(await corpo.locator('.erp-fieldset-head').filter({hasText:'Taxa por hora do centro de trabalho'}).count(),1);
+ assert.equal(await corpo.getByText('Nenhuma regra de indireto está vigente').count(),0);
+ await corpo.locator('.erp-lookup-control').first().click();
  await page.locator('.erp-lookup-item').filter({hasText:'Laser Calfran'}).click();
- await page.getByRole('tabpanel').locator('input[type=number]').fill('75');
- await page.getByRole('tab',{name:'Custo padrão',exact:true}).click();
+ await corpo.locator('input[type=number]').first().fill('75');
+ // Trocar de aba e voltar não perde o que foi digitado.
+ await page.getByRole('tab',{name:'Apuração do custo',exact:true}).click();
  await page.getByRole('tab',{name:'Centros de trabalho',exact:true}).click();
- assert.equal(await page.getByRole('tabpanel').locator('input[type=number]').inputValue(),'75');
- await page.getByRole('button',{name:'Salvar custo/hora',exact:true}).click();
- await page.waitForFunction(()=>document.querySelector('.erp-feedback')?.textContent.includes('atualizado'));
+ assert.equal(await corpo.locator('input[type=number]').first().inputValue(),'75');
+ await corpo.getByRole('button',{name:'Salvar',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.erp-feedback')?.textContent.includes('atualizadas'));
  assert.equal(writes.find(w=>w.p.endsWith('/work-center-costs')).body.work_center_id,8);
  await page.goto(`${APP}/#/screen/VSUP0110`);
  const de=page.getByRole('combobox',{name:'De (UM)',exact:true});await de.waitFor();
@@ -89,34 +92,42 @@ try {
  assert.deepEqual(writes.find(w=>w.p==='/api/routing/routes/42/edges').body,{predecessor_id:1001,successor_id:1002,overlap_pct:0});
  await page.goto(`${APP}/#/screen/VPRO0900`);
  console.log('Checking production execution');
- await page.getByRole('button',{name:'Listar',exact:true}).click();
- await page.getByRole('button',{name:'Abrir',exact:true}).click();
- await page.getByRole('button',{name:'Iniciar etapa',exact:true}).click();
- await page.getByRole('button',{name:'Pausar',exact:true}).click();
- await page.getByText('Informe o motivo da pausa ou interrupção.',{exact:true}).waitFor();
- await page.locator('#operation-reason').fill('Intervalo');
- await page.getByRole('button',{name:'Pausar',exact:true}).click();
- await page.getByRole('button',{name:'Retomar',exact:true}).click();
- await page.locator('#operation-reason').fill('Manutenção');
- await page.getByRole('button',{name:'Interromper',exact:true}).click();
- await page.getByRole('button',{name:'Retomar',exact:true}).click();
+ // A lista carrega sozinha; a ordem abre ao clicar e as etapas ficam na aba própria.
+ await page.locator('.erp-list-row').first().click();
+ await page.locator('.erp-tab',{hasText:'Etapas'}).first().click();
+ const linha=(seq)=>page.locator('.erp-grid tbody tr').filter({hasText:seq});
+ await linha('Cortar').getByRole('button',{name:'Iniciar',exact:true}).click();
+ await linha('Cortar').getByRole('button',{name:'Pausar',exact:true}).click();
+ await page.getByText('Informe o motivo da pausa ou da interrupção.',{exact:true}).waitFor();
+ await page.locator('#et-motivo').fill('Intervalo');
+ await linha('Cortar').getByRole('button',{name:'Pausar',exact:true}).click();
+ await linha('Cortar').getByRole('button',{name:'Retomar',exact:true}).click();
+ // A tela limpa os dados da etapa quando a resposta chega: preencher antes disso
+ // perderia o motivo. Espera a etapa voltar a "em andamento".
+ await linha('Cortar').getByRole('button',{name:'Interromper',exact:true}).waitFor();
+ await page.waitForFunction(()=>!document.querySelector('.erp-grid button[disabled]'));
+ await page.locator('#et-motivo').fill('Manutenção');
+ await linha('Cortar').getByRole('button',{name:'Interromper',exact:true}).click();
+ await linha('Cortar').getByRole('button',{name:'Retomar',exact:true}).click();
+ await linha('Cortar').getByRole('button',{name:'Concluir',exact:true}).waitFor();
+ await page.waitForFunction(()=>!document.querySelector('.erp-grid button[disabled]'));
  // Concluir sem apontar nada não pode passar: horas e peças são o que gasta a
  // vida útil da ferramenta, e o backend ignora o consumo quando os dois são zero.
- await page.getByRole('button',{name:'Concluir etapa',exact:true}).click();
+ await linha('Cortar').getByRole('button',{name:'Concluir',exact:true}).click();
  await page.getByText(/desconta a vida útil da ferramenta/).waitFor();
  assert.equal(orderOps[0].status,'IN_PROGRESS','etapa foi concluída sem apontamento');
- await page.locator('#operation-qty').fill('120');
- await page.locator('#operation-hours').fill('1.5');
- await page.getByRole('button',{name:'Concluir etapa',exact:true}).click();
- await page.getByRole('button',{name:'Iniciar etapa',exact:true}).waitFor();
+ await page.locator('#et-pecas').fill('120');
+ await page.locator('#et-horas').fill('1.5');
+ await linha('Cortar').getByRole('button',{name:'Concluir',exact:true}).click();
+ await linha('Montar').getByRole('button',{name:'Iniciar',exact:true}).waitFor();
  assert.equal(orderOps[0].status,'DONE');assert.equal(orderOps[1].status,'PENDING');
  const avancos=writes.filter(w=>w.p.endsWith('/operations/advance'));
  assert.deepEqual(avancos.map(w=>w.body.status),['IN_PROGRESS','PAUSED','IN_PROGRESS','INTERRUPTED','IN_PROGRESS','DONE']);
  const conclusao=avancos.at(-1).body;
  assert.equal(conclusao.produced_qty,120,'a conclusão precisa levar as peças produzidas');
  assert.equal(conclusao.actual_hours,1.5,'a conclusão precisa levar as horas apontadas');
- await page.getByText('Histórico da execução',{exact:true}).click();
- assert.equal(await page.locator('details li').filter({hasText:'Operador da simulação'}).count(),6);
+ await linha('Cortar').locator('summary',{hasText:'Histórico'}).click();
+ assert.equal(await linha('Cortar').locator('details li').filter({hasText:'Operador da simulação'}).count(),6);
  assert.deepEqual(errors,[]);
  await page.screenshot({path:'/tmp/venture-unidades.png',fullPage:true});
  console.log('PASS: abas, campos preservados, código/ID, unidades, payloads das abas 2 e 5, ciclo de execução e ausência de erros JS.');

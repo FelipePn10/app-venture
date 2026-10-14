@@ -92,3 +92,52 @@ export async function reportReorderPoint(params: ReportParams = {}): Promise<Mrp
   const { data } = await httpClient.get('/api/mrp-reports/reorder-point', { params: clean(params) });
   return toReport(data);
 }
+
+/** Situação de cobertura: CRITICO (vermelho), ATENCAO (amarelo) ou OK. */
+export type CoverageStatus = 'CRITICO' | 'ATENCAO' | 'OK';
+/**
+ * Linha do monitor de cobertura de materiais (`/api/mrp-reports/coverage`):
+ * até quando o estoque cobre (`days_of_supply`), até quando estoque + ordens
+ * firmes cobrem (`receipt_days_of_supply`) e o farol do item. Vazio nos dias =
+ * cobre todo o horizonte do plano.
+ */
+export interface CoverageRow {
+  item_code: string;
+  description: string;
+  uom?: string;
+  item_type: string;
+  planner_code?: number;
+  planner_name?: string;
+  status: CoverageStatus;
+  reason: string;
+  stock: number;
+  safety_stock: number;
+  demand: number;
+  firm_supply: number;
+  planned_supply: number;
+  first_need_date?: string;
+  stock_shortage_date?: string;
+  days_of_supply?: number;
+  firm_shortage_date?: string;
+  receipt_days_of_supply?: number;
+  firm_shortage_qty: number;
+  min_projected: number;
+  planned_orders: number;
+  first_planned_start?: string;
+}
+const numOu = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : Number(v));
+export async function getCoverage(planCode: number, params: ReportParams = {}): Promise<CoverageRow[]> {
+  const { data } = await httpClient.get('/api/mrp-reports/coverage', { params: clean({ plan_code: planCode, ...params }) });
+  return toReport(data).rows.map((o) => ({
+    item_code: String(o['item_code'] ?? ''), description: String(o['description'] ?? ''), uom: (o['uom'] as string) || undefined,
+    item_type: String(o['item_type'] ?? ''), planner_code: numOu(o['planner_code']), planner_name: (o['planner_name'] as string) || undefined,
+    status: (String(o['status'] ?? 'OK') as CoverageStatus), reason: String(o['reason'] ?? ''),
+    stock: Number(o['stock'] ?? 0), safety_stock: Number(o['safety_stock'] ?? 0), demand: Number(o['demand'] ?? 0),
+    firm_supply: Number(o['firm_supply'] ?? 0), planned_supply: Number(o['planned_supply'] ?? 0),
+    first_need_date: (o['first_need_date'] as string) || undefined,
+    stock_shortage_date: (o['stock_shortage_date'] as string) || undefined, days_of_supply: numOu(o['days_of_supply']),
+    firm_shortage_date: (o['firm_shortage_date'] as string) || undefined, receipt_days_of_supply: numOu(o['receipt_days_of_supply']),
+    firm_shortage_qty: Number(o['firm_shortage_qty'] ?? 0), min_projected: Number(o['min_projected'] ?? 0),
+    planned_orders: Number(o['planned_orders'] ?? 0), first_planned_start: (o['first_planned_start'] as string) || undefined,
+  }));
+}

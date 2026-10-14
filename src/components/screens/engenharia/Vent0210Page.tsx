@@ -26,6 +26,7 @@ import {
 import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
 import { StructureFormulaTester } from './StructureFormulaTester';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
+import { hojeLocal } from "@/utils/dataLocal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -282,7 +283,7 @@ function formatarDia(iso?: string | null): string {
 
 /** Vigência do componente em relação a hoje. */
 function vigencia(row: LocalRow): 'futuro' | 'expirado' | 'vigente' {
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeLocal();
   if (row.startDate && row.startDate > hoje) return 'futuro';
   if (row.endDate && row.endDate < hoje) return 'expirado';
   return 'vigente';

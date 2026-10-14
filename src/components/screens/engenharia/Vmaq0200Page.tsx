@@ -61,7 +61,8 @@ import { errMessage } from "@/services/fiscalShared";
 import { useAuthStore } from "@/store/authStore";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadWorkCenters, loadMaintenanceResponsibles, resetLookups } from "@/services/lookups";
+import { loadItems, loadItemMasks, loadMachines, loadCostCenters, loadSuppliers, loadWorkCenters, loadMaintenanceResponsiblesById, resetLookups } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -138,7 +139,7 @@ const ABAS = [
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
 
-const HOJE = () => new Date().toISOString().slice(0, 10);
+const HOJE = () => hojeLocal();
 
 export function Vmaq0200Page(): JSX.Element {
   const user = useAuthStore((s) => s.user);
@@ -857,7 +858,7 @@ export function Vmaq0200Page(): JSX.Element {
               <input className="erp-input" type="date" value={mForm.acquired_on}
                 onChange={(e) => setMForm((p) => ({ ...p, acquired_on: e.target.value }))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Responsável pela manutenção</label>
-              <LookupField value={mForm.maintenance_responsible_employee_id || undefined} loader={loadMaintenanceResponsibles}
+              <LookupField value={mForm.maintenance_responsible_employee_id || undefined} loader={loadMaintenanceResponsiblesById}
                 entityLabel="mecânico" placeholder="Quem cuida do recurso" clearable
                 onChange={(c) => setMForm((p) => ({ ...p, maintenance_responsible_employee_id: c ? Number(c) : 0 }))} /></div>
 

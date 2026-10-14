@@ -22,6 +22,10 @@ export const RULE_TYPES: RuleType[] = ['EQUAL', 'DIFFERENT', 'RANGE'];
 
 export interface MrpSuggestion {
   code: number;
+  /** Número que a ordem planejada recebe ao firmar a sugestão. */
+  order_number?: number;
+  /** Ordem planejada gerada ao firmar; vazio enquanto a sugestão está pendente. */
+  planned_order_code?: number;
   machine_code?: number;
   production_time?: number;
   estimated_end_at?: string;
@@ -58,10 +62,27 @@ export interface ConfiguredRule {
 }
 
 export interface MrpException {
+  code?: number;
   item_code: string;
   message_type: string;
   description: string;
+  /** Data em que o cálculo precisa do suprimento (destino de "Reprogramar"). */
+  suggested_date?: string;
+  source_type?: string;
+  /** Código interno da ordem planejada de origem (para o rastreamento). */
+  source_code?: number;
+  /** Pedidos/demandas de origem que dependem da ordem da exceção. */
+  affected_demands?: string[];
+  source_order_number?: number;
+  source_need_date?: string;
+  /** REPROGRAMADA, CANCELADA ou TRATADA; vazio = pendente. */
+  handling_action?: string;
+  handling_note?: string;
+  handled_at?: string;
+  handled_by_name?: string;
 }
+/** Ação do planejador sobre a exceção. */
+export type MrpExceptionAction = 'REPROGRAMAR' | 'CANCELAR' | 'TRATAR';
 
 export interface PlannedOrder {
   code?: number;
@@ -73,9 +94,13 @@ export interface PlannedOrder {
   demand_type?: string;
   need_date?: string;
   start_date?: string;
+  end_date?: string;
   status?: string;
   is_firm?: boolean;
   plan_code?: number;
+  machine_code?: number;
+  /** Minutos de máquina reservados pelo MRP. */
+  production_time?: number;
 }
 
 export interface MrpRunResult {
@@ -91,6 +116,8 @@ function parseSuggestion(raw: unknown): MrpSuggestion {
   const o = unwrapObject(raw);
   return {
     code: parseNum(o, 'code', 'Code'),
+    order_number: parseNum(o, 'order_number', 'OrderNumber') || undefined,
+    planned_order_code: parseNum(o, 'planned_order_code', 'PlannedOrderCode') || undefined,
     machine_code: parseNum(o, 'machine_code') || undefined,
     production_time: parseNum(o, 'production_time') || undefined,
     estimated_end_at: parseStr(o, 'estimated_end_at') || undefined,
@@ -111,7 +138,9 @@ function parseProfile(raw: unknown): MrpProfileRow {
   const o = unwrapObject(raw);
   return {
     item_code: parseStr(o, 'item_code', 'ItemCode') || undefined,
-    date: parseStr(o, 'date', 'Date', 'period') || undefined,
+    // O backend devolve a data do balde como `need_date`; `date`/`period` ficaram
+    // por compatibilidade. Lendo só os antigos, a coluna Data saía sempre "—".
+    date: parseStr(o, 'need_date', 'NeedDate', 'date', 'Date', 'period') || undefined,
     demand: parseNum(o, 'demand', 'Demand'),
     planned_orders: parseNum(o, 'orders_planned', 'OrdersPlanned'),
     firm_orders: parseNum(o, 'orders_firm', 'OrdersFirm'),
@@ -136,6 +165,17 @@ function parseException(raw: unknown): MrpException {
     item_code: parseStr(o, 'item_code', 'ItemCode'),
     message_type: parseStr(o, 'message_type', 'MessageType'),
     description: parseStr(o, 'description', 'Description'),
+    code: parseNum(o, 'code', 'Code') || undefined,
+    suggested_date: parseStr(o, 'suggested_date') || undefined,
+    source_type: parseStr(o, 'source_type') || undefined,
+    source_code: parseNum(o, 'source_code') || undefined,
+    affected_demands: unwrapArray(o['affected_demands']).map((x) => String(x)).filter(Boolean),
+    source_order_number: parseNum(o, 'source_order_number') || undefined,
+    source_need_date: parseStr(o, 'source_need_date') || undefined,
+    handling_action: parseStr(o, 'handling_action') || undefined,
+    handling_note: parseStr(o, 'handling_note') || undefined,
+    handled_at: parseStr(o, 'handled_at') || undefined,
+    handled_by_name: parseStr(o, 'handled_by_name') || undefined,
   };
 }
 function parsePlanned(raw: unknown): PlannedOrder {
@@ -150,9 +190,12 @@ function parsePlanned(raw: unknown): PlannedOrder {
     demand_type: parseStr(o, 'demand_type', 'DemandType') || undefined,
     need_date: parseStr(o, 'need_date', 'NeedDate') || undefined,
     start_date: parseStr(o, 'start_date', 'StartDate') || undefined,
+    end_date: parseStr(o, 'end_date', 'EndDate') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,
     is_firm: parseBool(o, 'is_firm', 'IsFirm'),
     plan_code: parseNum(o, 'plan_code', 'PlanCode') || undefined,
+    machine_code: parseNum(o, 'machine_code', 'MachineCode') || undefined,
+    production_time: parseNum(o, 'production_time', 'ProductionTime') || undefined,
   };
 }
 
@@ -181,6 +224,19 @@ export async function getMrpProfileOperational(itemCode: string, planCode: numbe
 export async function getExceptions(planCode: number): Promise<MrpException[]> {
   const { data } = await httpClient.get(`/api/mrp-calculation/exceptions/${planCode}`);
   return unwrapArray(data).map(parseException);
+}
+
+/**
+ * Trata a exceção direto da mensagem: REPROGRAMAR leva a ordem planejada à data
+ * sugerida (ou a `newDate`), CANCELAR cancela a ordem sem demanda e TRATAR só
+ * registra o que foi feito (exige `note`).
+ */
+export async function handleException(code: number, action: MrpExceptionAction, opts: { newDate?: string; note?: string } = {}): Promise<MrpException> {
+  const body: Obj = { action };
+  if (opts.newDate) body.new_date = opts.newDate;
+  if (opts.note?.trim()) body.note = opts.note.trim();
+  const { data } = await httpClient.post(`/api/mrp-calculation/exceptions/${code}/handle`, body);
+  return parseException(data);
 }
 
 // ── Sugestões / ponte para ordens ──
@@ -227,4 +283,114 @@ export async function transitionPlannedOrders(orderCodes: number[], target: Plan
   if (target !== 'FIRM') { if (startDate) body.start_date = startDate; if (endDate) body.end_date = endDate; }
   const { data } = await httpClient.post('/api/planned-order/transition', body);
   return unwrapObject(data);
+}
+
+// ── Pegging (rastreamento da necessidade) ──
+/** Ponta do vínculo: a necessidade (pedido, demanda, ordem do pai…) ou o suprimento (estoque, ordem firme, sugestão, falta). */
+export interface PeggingEnd {
+  kind: string;
+  code?: number;
+  label: string;
+  order_number?: number;
+  order_type?: string;
+  date?: string;
+}
+export interface PeggingNode {
+  item_code: string;
+  item_description: string;
+  uom?: string;
+  need_date: string;
+  quantity: number;
+  demand: PeggingEnd;
+  supply: PeggingEnd;
+  /** O suprimento deste elo termina depois da necessidade (ou já devia ter começado). */
+  late: boolean;
+  late_reason?: string;
+  children: PeggingNode[];
+}
+export interface PeggingRoot {
+  item_code: string;
+  item_description: string;
+  uom?: string;
+  need_date: string;
+  quantity: number;
+  demand: PeggingEnd;
+  from_stock: number;
+  from_firm: number;
+  from_suggestions: number;
+  shortage: number;
+  chain_shortage: boolean;
+  /** Algum elo da cadeia chega atrasado; late_reason diz qual. */
+  chain_late: boolean;
+  late_reason?: string;
+  latest_supply?: string;
+}
+function parseEnd(raw: unknown): PeggingEnd {
+  const o = unwrapObject(raw);
+  return {
+    kind: parseStr(o, 'kind'), code: parseNum(o, 'code') || undefined, label: parseStr(o, 'label'),
+    order_number: parseNum(o, 'order_number') || undefined, order_type: parseStr(o, 'order_type') || undefined,
+    date: parseStr(o, 'date') || undefined,
+  };
+}
+function parseNode(raw: unknown): PeggingNode {
+  const o = unwrapObject(raw);
+  return {
+    item_code: parseStr(o, 'item_code'), item_description: parseStr(o, 'item_description'), uom: parseStr(o, 'uom') || undefined,
+    need_date: parseStr(o, 'need_date'), quantity: parseNum(o, 'quantity'),
+    demand: parseEnd(o['demand']), supply: parseEnd(o['supply']), late: o['late'] === true,
+    late_reason: parseStr(o, 'late_reason') || undefined,
+    children: unwrapArray(o['children']).map(parseNode),
+  };
+}
+/** Necessidades de origem do plano (pedidos, demandas, previsões…) com o resumo da cadeia. */
+export async function getPeggingRoots(planCode: number): Promise<PeggingRoot[]> {
+  const { data } = await httpClient.get(`/api/mrp-calculation/pegging/${planCode}/roots`);
+  return unwrapArray(data).map(parseRoot);
+}
+function parseRoot(raw: unknown): PeggingRoot {
+  const o = unwrapObject(raw);
+  return {
+    item_code: parseStr(o, 'item_code'), item_description: parseStr(o, 'item_description'), uom: parseStr(o, 'uom') || undefined,
+    need_date: parseStr(o, 'need_date'), quantity: parseNum(o, 'quantity'), demand: parseEnd(o['demand']),
+    from_stock: parseNum(o, 'from_stock'), from_firm: parseNum(o, 'from_firm'), from_suggestions: parseNum(o, 'from_suggestions'),
+    shortage: parseNum(o, 'shortage'), chain_shortage: o['chain_shortage'] === true,
+    chain_late: o['chain_late'] === true, late_reason: parseStr(o, 'late_reason') || undefined,
+    latest_supply: parseStr(o, 'latest_supply') || undefined,
+  };
+}
+/** Cadeia de uma necessidade de origem até as compras dos componentes. */
+export async function getPeggingDown(planCode: number, root: { kind: string; code?: number; item_code?: string; need_date?: string }): Promise<PeggingNode[]> {
+  const params: Obj = { demand_kind: root.kind };
+  if (root.code) params.demand_code = root.code;
+  if (root.item_code) params.item_code = root.item_code;
+  if (root.need_date) params.need_date = root.need_date.slice(0, 10);
+  const { data } = await httpClient.get(`/api/mrp-calculation/pegging/${planCode}/down`, { params });
+  return unwrapArray(data).map(parseNode);
+}
+/** De uma ordem (sugestão ou ordem firme) até os pedidos/demandas que dependem dela. */
+export async function getPeggingUp(planCode: number, supplyKind: 'SUGESTAO' | 'ORDEM_FIRME', supplyCode: number): Promise<PeggingNode[]> {
+  const { data } = await httpClient.get(`/api/mrp-calculation/pegging/${planCode}/up`, { params: { supply_kind: supplyKind, supply_code: supplyCode } });
+  return unwrapArray(data).map(parseNode);
+}
+/** Atendimento de um pedido de venda num plano: as linhas do pedido e a cadeia de cada uma. */
+export interface SalesOrderChain {
+  plan_code: number;
+  plan_name: string;
+  calculated_at?: string;
+  roots: PeggingRoot[];
+  /** trees[i] é a cadeia de roots[i]. */
+  trees: PeggingNode[][];
+}
+/** Como cada plano ativo atende o pedido de venda, segundo o último cálculo do MRP. */
+export async function getSalesOrderPegging(orderCode: number): Promise<SalesOrderChain[]> {
+  const { data } = await httpClient.get(`/api/mrp-calculation/pegging/sales-order/${orderCode}`);
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    return {
+      plan_code: parseNum(o, 'plan_code'), plan_name: parseStr(o, 'plan_name'), calculated_at: parseStr(o, 'calculated_at') || undefined,
+      roots: unwrapArray(o['roots']).map(parseRoot),
+      trees: unwrapArray(o['trees']).map((t) => unwrapArray(t).map(parseNode)),
+    };
+  });
 }

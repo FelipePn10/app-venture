@@ -1,0 +1,157 @@
+/* ══ Planejamento e produção (MRP, ordens planejadas, CRP, APS, OF) ══════════
+   Peças de layout das telas de planejamento. Status e superfícies usam os
+   tokens --v-* do design system; a escala do mapa de carga usa o mesmo teal do
+   gráfico de carga do CRP (par validado para daltonismo). Prefixo vpl- para não
+   colidir com as classes erp- compartilhadas. */
+
+/* O selo fixo com o código da rotina fica no canto direito da barra de
+   ferramentas; a barra destas telas reserva o espaço para ele não cobrir o
+   último botão (era o que acontecia com "Exportar"). */
+.vpl-toolbar { padding-right: 104px; }
+
+/* ── Indicadores ── */
+.vpl-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.vpl-kpi {
+  background: var(--v-surface); border: 1px solid var(--v-border); border-radius: var(--v-r-lg);
+  padding: 11px 14px 12px; box-shadow: var(--v-shadow-sm); position: relative; overflow: hidden; min-width: 0;
+}
+.vpl-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--v-green); }
+.vpl-kpi.warn::before { background: var(--v-warn); }
+.vpl-kpi.danger::before { background: var(--v-err); }
+.vpl-kpi.info::before { background: var(--v-info); }
+.vpl-kpi.muted::before { background: var(--v-border-strong); }
+.vpl-kpi-label { font-size: 10px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--v-text-muted); }
+.vpl-kpi-value { font-size: 22px; font-weight: 700; color: var(--v-text); line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vpl-kpi.warn .vpl-kpi-value { color: var(--v-warn); }
+.vpl-kpi.danger .vpl-kpi-value { color: var(--v-err); }
+.vpl-kpi-hint { font-size: 11px; color: var(--v-text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button.vpl-kpi { text-align: left; cursor: pointer; font-family: var(--v-font); }
+button.vpl-kpi:hover { border-color: var(--v-green-border); background: var(--v-green-soft); }
+button.vpl-kpi:focus-visible { outline: none; box-shadow: var(--v-focus); }
+
+/* ── Abas com contador ── */
+.vpl-tab-count {
+  display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 6px; border-radius: 9px;
+  font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; font-variant-numeric: tabular-nums;
+  color: var(--v-text-2); background: var(--v-surface-3); border: 1px solid var(--v-border);
+}
+.erp-tab.active .vpl-tab-count { color: var(--v-green); background: var(--v-green-soft); border-color: var(--v-green-border); }
+.vpl-tab-count.alerta { color: var(--v-err); background: var(--v-err-bg); border-color: var(--v-err-bd); }
+.erp-tab:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Painel (fieldset com ações no cabeçalho) ── */
+.vpl-panel-head { display: flex; align-items: center; gap: 10px; }
+.vpl-panel-head-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.vpl-panel-head-sub { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--v-text-3); font-size: 12px; }
+.vpl-panel-head-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.vpl-panel-body { padding: 14px; }
+.vpl-panel-body.flush { padding: 0; }
+.vpl-panel-body.flush .erp-grid thead th:first-child,
+.vpl-panel-body.flush .erp-grid tbody td:first-child { padding-left: 14px; }
+
+/* ── Barra de filtros ── */
+.vpl-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
+.vpl-filters .erp-field { min-width: 140px; }
+.vpl-filters .vpl-grow { flex: 1 1 220px; }
+.vpl-filters .erp-check { height: 34px; }
+
+/* ── Seleção em lote ── */
+.vpl-bulk {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px;
+  border: 1px solid var(--v-green-border); background: var(--v-green-soft); border-radius: var(--v-r-md);
+  font-size: 12.5px; color: var(--v-text);
+}
+.vpl-bulk strong { font-variant-numeric: tabular-nums; }
+.vpl-bulk .vpl-bulk-spacer { flex: 1; }
+
+/* ── Grade com seleção e linha clicável ── */
+.vpl-grid-scroll { overflow: auto; max-height: calc(100vh - 360px); min-height: 160px; }
+.vpl-grid-scroll .erp-grid thead th { position: sticky; top: 0; z-index: 1; }
+.vpl-grid-scroll.tall { max-height: calc(100vh - 290px); }
+.erp-grid tbody tr.vpl-click { cursor: pointer; }
+.erp-grid th.vpl-check, .erp-grid td.vpl-check { width: 34px; text-align: center; padding-left: 10px !important; padding-right: 4px; }
+.erp-grid td.vpl-check input, .erp-grid th.vpl-check input { width: 15px; height: 15px; accent-color: var(--v-green); cursor: pointer; vertical-align: middle; }
+.erp-grid td.vpl-strong { font-weight: 600; color: var(--v-ink); }
+.erp-grid td .vpl-sub { display: block; font-size: 11px; color: var(--v-text-3); margin-top: 1px; }
+.erp-grid td.vpl-actions { white-space: nowrap; text-align: right; }
+.erp-grid td.vpl-actions .erp-btn + .erp-btn { margin-left: 6px; }
+.erp-grid tr.vpl-late td:first-child { box-shadow: inset 3px 0 0 var(--v-err); }
+.erp-grid tr.vpl-atraso td:first-child { box-shadow: inset 3px 0 0 var(--v-warn); }
+
+/* ── Detalhe chave-valor ── */
+.vpl-kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px 18px; }
+.vpl-kv-item { min-width: 0; }
+.vpl-kv-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--v-text-muted); }
+.vpl-kv-value { font-size: 13.5px; color: var(--v-text); margin-top: 3px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vpl-kv-value.strong { font-weight: 700; color: var(--v-ink); }
+
+/* ── Cabeçalho do registro aberto (OF, ordem planejada) ── */
+.vpl-record {
+  display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; padding: 14px 16px;
+  background: var(--v-surface); border: 1px solid var(--v-border-strong); border-radius: var(--v-r-md); box-shadow: var(--v-shadow-sm);
+}
+.vpl-record-main { min-width: 220px; flex: 1; }
+.vpl-record-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; font-weight: 700; color: var(--v-ink); }
+.vpl-record-sub { font-size: 12.5px; color: var(--v-text-2); margin-top: 3px; }
+.vpl-record-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* ── Progresso (produzido × planejado, carga) ── */
+.vpl-progress { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.vpl-progress-track { flex: 1; height: 7px; border-radius: 4px; background: var(--v-surface-3); border: 1px solid var(--v-border); overflow: hidden; }
+.vpl-progress-fill { height: 100%; background: var(--v-green); border-radius: 4px; }
+.vpl-progress-fill.warn { background: var(--v-warn); }
+.vpl-progress-fill.danger { background: var(--v-err); }
+.vpl-progress-label { font-size: 11.5px; color: var(--v-text-2); font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; }
+
+/* ── Passos do ciclo (pipeline, status da OF) ── */
+.vpl-steps { display: flex; gap: 0; flex-wrap: wrap; }
+.vpl-step {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 12px; font-size: 12.5px; color: var(--v-text-3);
+  background: var(--v-surface-2); border: 1px solid var(--v-border); margin-right: -1px;
+}
+.vpl-step:first-child { border-radius: var(--v-r-md) 0 0 var(--v-r-md); }
+.vpl-step:last-child { border-radius: 0 var(--v-r-md) var(--v-r-md) 0; }
+.vpl-step-dot {
+  width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; background: var(--v-surface); border: 1px solid var(--v-border-strong); color: var(--v-text-3);
+}
+.vpl-step.done { color: var(--v-ok); background: var(--v-ok-bg); border-color: var(--v-ok-bd); }
+.vpl-step.done .vpl-step-dot { background: var(--v-green); border-color: var(--v-green); color: #fff; }
+.vpl-step.current { color: var(--v-ink); font-weight: 600; background: var(--v-surface); border-color: var(--v-green); position: relative; z-index: 1; }
+.vpl-step.current .vpl-step-dot { border-color: var(--v-green); color: var(--v-green); }
+.vpl-step.fail { color: var(--v-err); background: var(--v-err-bg); border-color: var(--v-err-bd); }
+.vpl-step.fail .vpl-step-dot { background: var(--v-err); border-color: var(--v-err); color: #fff; }
+
+/* ── Duas colunas que empilham em tela estreita ── */
+.vpl-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.vpl-cols.wide-left { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .vpl-cols, .vpl-cols.wide-left { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Lista lateral com status ── */
+.vpl-list-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--v-border); background: var(--v-surface); }
+.vpl-list-filters .erp-chip { font-size: 11.5px; padding: 3px 9px; }
+.vpl-list-row-right { text-align: right; }
+
+/* ── Mapa de calor de carga (centro × dia) ── */
+.vpl-heat { border-collapse: separate; border-spacing: 2px; font-size: 11px; }
+.vpl-heat th { font-weight: 600; color: var(--v-text-3); padding: 2px 4px; white-space: nowrap; text-align: center; }
+.vpl-heat th.row { text-align: left; color: var(--v-text); padding-right: 10px; position: sticky; left: 0; background: var(--v-surface); z-index: 1; }
+.vpl-heat td { min-width: 38px; height: 26px; text-align: center; border-radius: 4px; font-variant-numeric: tabular-nums; color: var(--v-text); background: var(--v-surface-2); }
+.vpl-heat td.l1 { background: #e3f0f4; }
+.vpl-heat td.l2 { background: #bfdde8; }
+.vpl-heat td.l3 { background: #8cc3d6; }
+.vpl-heat td.l4 { background: #f3d0cd; color: var(--v-err); font-weight: 700; }
+.vpl-heat td.l5 { background: var(--v-err); color: #fff; font-weight: 700; }
+.vpl-heat-wrap { overflow-x: auto; }
+.vpl-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--v-text-3); margin-top: 8px; align-items: center; }
+.vpl-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.vpl-legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+/* Texto com tom do farol (dias de cobertura). */
+.vpl-tom-danger { color: var(--v-err); font-weight: 600; }
+.vpl-tom-warn { color: var(--v-warn); font-weight: 600; }
+/* Linha de confirmação aberta abaixo da exceção (reprogramar/cancelar/tratar). */
+.erp-grid tr.vpl-inline-edit > td { background: var(--v-surface-2, #f6f8f7); padding: 12px 16px; }
+/* Árvore do rastreamento (pegging). */
+.vpl-tree-toggle { display: inline-block; width: 18px; margin-right: 4px; border: 0; background: none; padding: 0; color: var(--v-text-3); cursor: pointer; font-size: 12px; text-align: center; }
+span.vpl-tree-toggle { cursor: default; }
+.vpl-tom-ok { color: var(--v-ok, #2e7d32); font-weight: 600; }

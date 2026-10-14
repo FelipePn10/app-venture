@@ -1,411 +1,254 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  type MrpSuggestion, type MrpProfileRow, type ConfiguredRule, type MrpException, type PlannedOrder, type MrpRunResult,
-  RULE_TYPES,
-  runMrp, getMrpProfile, getExceptions,
-  listSuggestions, firmSuggestion,
-  listConfiguredRules, createConfiguredRule,
-  listPlannedOrders, firmPlannedOrder,
+  type MrpException, type MrpExceptionAction, type MrpRunResult, type MrpSuggestion, type PlannedOrder, type PlannedTarget,
+  firmSuggestion, getExceptions, handleException, listPlannedOrders, listSuggestions, runMrp, transitionPlannedOrders,
 } from "@/services/mrpService";
-import { type ProductionPlanDTO, type InterFactoryDTO, listProductionPlans, createProductionPlan, getInterFactories, setInterFactories } from "@/services/productionPlanService";
-import { type MrpReport, type ReportParams, reportProfile, reportAvailability, reportGroupedNeeds, reportExplosion, reportReorderPoint } from "@/services/mrpReportsService";
+import { type ProductionPlanDTO, listProductionPlans } from "@/services/productionPlanService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
-import { enumLabel } from "@/utils/enumLabels";
-
-type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const d10 = (s?: string) => s?.slice(0, 10) ?? "—";
-
-type ReportKind = "profile" | "availability" | "grouped-needs" | "explosion" | "reorder-point";
-const REPORT_LABELS: Record<ReportKind, string> = {
-  profile: "Perfil",
-  availability: "Disponibilidade",
-  "grouped-needs": "Necessidades agrupadas",
-  explosion: "Explosão (multinível)",
-  "reorder-point": "Ponto de reposição",
-};
-const fmtCell = (v: unknown): string => {
-  if (v === null || v === undefined) return "—";
-  if (typeof v === "boolean") return v ? "Sim" : "Não";
-  if (typeof v === "object") return JSON.stringify(v);
-  const s = String(v);
-  return /^\d{4}-\d{2}-\d{2}T/.test(s) ? s.slice(0, 10) : s;
-};
+import { type Aba, Abas, Aviso, Cabecalho, Detalhe, Kpis, Painel, Rodape, Selo, Vazio } from "./planUi";
+import { dataHora, ehCompra, ehFabricacao, num } from "./planFormat";
+import { useAcao } from "./planHooks";
+import { SugestoesTab } from "./mrp/SugestoesTab";
+import { PlanejadasTab } from "./mrp/PlanejadasTab";
+import { ExcecoesTab } from "./mrp/ExcecoesTab";
+import { PerfilTab } from "./mrp/PerfilTab";
+import { PlanosTab } from "./mrp/PlanosTab";
+import { abrangenciaDo, demandasIndependentes } from "./mrp/planos";
+import { RelatoriosTab } from "./mrp/RelatoriosTab";
+import { CoberturaTab } from "./mrp/CoberturaTab";
+import { type AlvoRastreamento, RastreamentoTab } from "./mrp/RastreamentoTab";
 
 /**
- * A tela juntava numa rolagem só o cadastro do plano, o resultado do cálculo, o
- * perfil do item e cinco relatórios. Quem ia olhar as exceções do MRP rolava por
- * tudo. Cada etapa do ciclo virou uma aba, na ordem em que o planejador trabalha:
- * monta o plano → roda → olha o resultado → investiga o item → tira relatório.
+ * MRP — Planejamento das Necessidades de Materiais.
+ *
+ * O plano se escolhe uma vez, na barra, e vale para a tela inteira; cada aba é
+ * um passo do trabalho do planejador: ver o quadro geral → revisar e firmar
+ * sugestões → acompanhar as ordens planejadas → tratar exceções → investigar o
+ * item. Planos, inter-fábrica e relatórios ficam nas últimas abas, porque são
+ * cadastro e consulta, não a rotina diária.
  */
-type AbaMrp = "plano" | "resultado" | "item" | "relatorios";
+type AbaMrp = "geral" | "cobertura" | "sugestoes" | "planejadas" | "excecoes" | "rastreamento" | "perfil" | "planos" | "relatorios";
+const CHAVE_PLANO = "vmrp0100.plano";
+
+function planoLembrado(): number | undefined {
+  try { return Number(localStorage.getItem(CHAVE_PLANO)) || undefined; } catch { return undefined; }
+}
 
 export function Vmrp0100Page(): JSX.Element {
-  const [aba, setAba] = useState<AbaMrp>("plano");
-  const [planCode, setPlanCode] = useState("1");
-  const [initialOrder, setInitialOrder] = useState("10000");
-  const [plans, setPlans] = useState<ProductionPlanDTO[]>([]);
-  const [newPlan, setNewPlan] = useState({
-    code: "", name: "",
-    abrangencia: "todos" as "todos" | "classificacao" | "ordem",
-    classification: "", class_item_codes: "", order_item_code: "",
-  });
-  const [runResult, setRunResult] = useState<MrpRunResult | null>(null);
-  const [suggestions, setSuggestions] = useState<MrpSuggestion[]>([]);
-  const [planned, setPlanned] = useState<PlannedOrder[]>([]);
-  const [exceptions, setExceptions] = useState<MrpException[]>([]);
-  const [profileItem, setProfileItem] = useState("");
-  const [profile, setProfile] = useState<MrpProfileRow[]>([]);
-  const [ruleItem, setRuleItem] = useState("");
-  const [rules, setRules] = useState<ConfiguredRule[]>([]);
-  const [ruleForm, setRuleForm] = useState<ConfiguredRule>({ item_code: "", table_type: "PLANNING_DATA", field_name: "lead_time", rule_type: "EQUAL", rule_value: "", sequence: 1 });
-  const [feedback, setFeedback] = useState<Feedback>(null);
-  const [busy, setBusy] = useState(false);
-  // Inter-fábrica (empresas de origem cujas ordens INTER_FACTORY entram no cálculo)
-  const [interFactories, setInterFactoriesState] = useState<InterFactoryDTO[]>([]);
-  const [ifForm, setIfForm] = useState({ code: "", autoRelease: false });
-  // Relatórios operacionais (/api/mrp-reports)
-  const [reportKind, setReportKind] = useState<ReportKind>("profile");
-  const [repItem, setRepItem] = useState("");
-  const [repFrom, setRepFrom] = useState("");
-  const [repTo, setRepTo] = useState("");
-  const [repQty, setRepQty] = useState("1");
-  const [report, setReport] = useState<MrpReport | null>(null);
+  const { busy, feedback, setFeedback, run } = useAcao();
+  const [aba, setAba] = useState<AbaMrp>("geral");
+  const [planos, setPlanos] = useState<ProductionPlanDTO[]>([]);
+  const [plano, setPlano] = useState<number | undefined>(planoLembrado);
+  const [ordemInicial, setOrdemInicial] = useState("");
+  const [ultimaRodada, setUltimaRodada] = useState<MrpRunResult | null>(null);
+  const [sugestoes, setSugestoes] = useState<MrpSuggestion[]>([]);
+  const [excecoes, setExcecoes] = useState<MrpException[]>([]);
+  const [planejadas, setPlanejadas] = useState<PlannedOrder[]>([]);
+  const [itemPerfil, setItemPerfil] = useState<string | undefined>();
+  // Sobe a cada releitura do resultado: a aba de cobertura relê junto.
+  const [versao, setVersao] = useState(0);
+  const [alvo, setAlvo] = useState<AlvoRastreamento | undefined>();
+  const [carregado, setCarregado] = useState(false);
 
-  const run = useCallback(async (fn: () => Promise<void>) => {
-    setBusy(true); setFeedback(null);
-    try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  const planoAtual = planos.find((p) => p.code === plano);
+
+  const carregarPlanos = useCallback(async () => {
+    const l = await listProductionPlans();
+    setPlanos(l);
+    // Sem plano lembrado (ou lembrado e apagado), começa pelo primeiro ativo.
+    setPlano((atual) => (atual && l.some((p) => p.code === atual) ? atual : (l.find((p) => p.is_active) ?? l[0])?.code));
   }, []);
 
-  const pc = () => Number(planCode);
+  const carregarResultado = useCallback(async (p?: number) => {
+    if (!p) { setSugestoes([]); setExcecoes([]); return; }
+    const [sg, ex, po] = await Promise.all([listSuggestions(p), getExceptions(p), listPlannedOrders()]);
+    setSugestoes(sg); setExcecoes(ex); setPlanejadas(po);
+    setCarregado(true);
+    setVersao((v) => v + 1);
+  }, []);
 
-  const carregarPlanos = () => run(async () => { setPlans(await listProductionPlans()); });
-  const criarPlano = () => run(async () => {
-    const code = Number(newPlan.code);
-    if (!code) { setFeedback({ type: "error", message: "Informe um código de plano positivo." }); return; }
-    if (!newPlan.name.trim()) { setFeedback({ type: "error", message: "Nome do plano é obrigatório." }); return; }
-    if (newPlan.abrangencia === "classificacao" && !newPlan.classification.trim()) {
-      setFeedback({ type: "error", message: "Informe a classificação a que o plano se aplica." }); return;
+  useEffect(() => { void run(carregarPlanos); }, [run, carregarPlanos]);
+  useEffect(() => {
+    if (!plano) return;
+    try { localStorage.setItem(CHAVE_PLANO, String(plano)); } catch { /* preferência local, opcional */ }
+    setCarregado(false);
+    void run(() => carregarResultado(plano));
+  }, [plano, run, carregarResultado]);
+
+  // Número inicial sugerido: depois da maior ordem planejada que já existe —
+  // repetir 10000 a cada rodada gerava números que já estavam em uso.
+  const proximaOrdem = useMemo(() => {
+    const maior = Math.max(9999, ...planejadas.map((o) => o.order_number ?? 0), ...sugestoes.map((s) => s.order_number ?? 0));
+    return maior + 1;
+  }, [planejadas, sugestoes]);
+
+  const rodar = () => run(async () => {
+    if (!plano) { setFeedback({ type: "error", message: "Escolha o plano." }); return; }
+    const inicial = Number(ordemInicial) || proximaOrdem;
+    if (inicial <= 0) { setFeedback({ type: "error", message: "O número inicial das ordens deve ser positivo." }); return; }
+    const r = await runMrp(plano, inicial);
+    setUltimaRodada(r);
+    setOrdemInicial("");
+    await Promise.all([carregarResultado(plano), carregarPlanos()]);
+    setFeedback({ type: "success", message: `MRP calculado: ${num(r.items_processed ?? 0, 0)} item(ns) processado(s), ${num(r.orders_generated ?? 0, 0)} sugestão(ões) gerada(s).` });
+    setAba("geral");
+  });
+
+  const firmar = async (codes: number[]) => run(async () => {
+    const falhas: string[] = [];
+    let ok = 0, ofs = 0;
+    // O backend firma uma sugestão por chamada; o lote segue e diz o que falhou.
+    for (const c of codes) {
+      try { const po = await firmSuggestion(c); ok += 1; if (po.order_type === "PRODUCTION") ofs += 1; }
+      catch (e) { falhas.push(`sugestão ${c}: ${errMessage(e)}`); }
     }
-    if (newPlan.abrangencia === "ordem" && !Number(newPlan.order_item_code)) {
-      setFeedback({ type: "error", message: "Informe o item da ordem." }); return;
-    }
-    await createProductionPlan({
-      code,
-      name: newPlan.name.trim(),
-      planning_types: ["MRP"],
-      classification: newPlan.abrangencia === "classificacao" ? newPlan.classification.trim() : undefined,
-      class_item_codes: newPlan.abrangencia === "classificacao" && newPlan.class_item_codes.trim()
-        ? newPlan.class_item_codes.trim() : undefined,
-      order_item_code: newPlan.abrangencia === "ordem" ? Number(newPlan.order_item_code) : undefined,
+    await carregarResultado(plano);
+    const base = `${ok} sugestão(ões) firmada(s)${ofs ? ` — ${ofs} ordem(ns) de produção criada(s)` : ""}.`;
+    setFeedback(falhas.length ? { type: "error", message: `${base} Não firmadas: ${falhas.join("; ")}` } : { type: "success", message: base });
+  });
+
+  const transicionar = async (codes: number[], alvo: PlannedTarget) => run(async () => {
+    await transitionPlannedOrders(codes, alvo);
+    await carregarResultado(plano);
+    const verbo = alvo === "FIRM" ? "firmada(s)" : alvo === "RELEASED" ? "liberada(s)" : "devolvida(s) para planejada";
+    setFeedback({ type: "success", message: `${codes.length} ordem(ns) ${verbo}.` });
+  });
+
+  const tratarExcecao = async (code: number, acao: MrpExceptionAction, opts: { newDate?: string; note?: string }) => {
+    let ok = false;
+    await run(async () => {
+      const numero = excecoes.find((e) => e.code === code)?.source_order_number;
+      await handleException(code, acao, opts);
+      await carregarResultado(plano);
+      ok = true;
+      const feito = acao === "REPROGRAMAR" ? `reprogramada${opts.newDate ? ` para ${opts.newDate.split("-").reverse().join("/")}` : ""}` : acao === "CANCELAR" ? "cancelada" : "marcada como tratada";
+      setFeedback({ type: "success", message: acao === "TRATAR" ? `Exceção ${feito}.` : `Ordem planejada ${numero ?? ""} ${feito}.` });
     });
-    setNewPlan({ code: "", name: "", abrangencia: "todos", classification: "", class_item_codes: "", order_item_code: "" });
-    setPlans(await listProductionPlans());
-    setPlanCode(String(code));
-    setFeedback({ type: "success", message: `Plano ${code} criado — selecionado para rodar o MRP.` });
-  });
+    return ok;
+  };
 
-  const rodarMrp = () => run(async () => {
-    const c = pc(); if (!c) { setFeedback({ type: "error", message: "Informe o código do plano." }); return; }
-    const ion = Number(initialOrder); if (!ion || ion <= 0) { setFeedback({ type: "error", message: "Nº inicial de ordem deve ser positivo." }); return; }
-    const r = await runMrp(c, ion); setRunResult(r);
-    setFeedback({ type: "success", message: `MRP executado (${r.status ?? "OK"}) — ${r.items_processed ?? 0} itens, ${r.orders_generated ?? 0} ordens.` });
-    await carregar();
-  });
-  const carregar = useCallback(async () => {
-    const c = Number(planCode); if (!c) return;
-    const [sg, ex, po] = await Promise.all([listSuggestions(c), getExceptions(c), listPlannedOrders()]);
-    setSuggestions(sg); setExceptions(ex); setPlanned(po);
-  }, [planCode]);
-  const consultar = () => run(async () => { await carregar(); setFeedback({ type: "info", message: "Sugestões, exceções e ordens carregadas." }); });
+  const verOrigem = (a: AlvoRastreamento) => { setAlvo(a); setAba("rastreamento"); };
+  const verPerfil = (item: string) => { setItemPerfil(item); setAba("perfil"); };
 
-  const firmar = (code: number) => run(async () => {
-    const po = await firmSuggestion(code);
-    setFeedback({ type: "success", message: `Sugestão ${code} firmada → Ordem Planejada ${po.order_number ?? po.planned_code}${po.order_type === "PRODUCTION" ? " (+ OF criada)" : ""}.` });
-    await carregar();
-  });
-  const firmarPlanejada = (code?: number) => { if (!code) return; void run(async () => { await firmPlannedOrder(code); setFeedback({ type: "success", message: `Ordem planejada ${code} firmada.` }); await carregar(); }); };
+  // Sugestão firmada continua na lista do plano (firmar de novo devolve a mesma
+  // ordem), mas não é mais trabalho pendente: os números contam só as abertas.
+  const pendentes = sugestoes.filter((s) => !s.planned_order_code);
+  const atrasadas = pendentes.filter((s) => s.capacity_late).length;
+  const fab = pendentes.filter((s) => ehFabricacao(s.order_type)).length;
+  const compra = pendentes.filter((s) => ehCompra(s.order_type)).length;
+  const planejadasDoPlano = planejadas.filter((o) => !plano || o.plan_code === plano);
+  const aguardando = planejadasDoPlano.filter((o) => o.status === "PLANNED").length;
+  const itensDoPlano = useMemo(() => [...new Set(sugestoes.map((s) => s.item_code))].sort(), [sugestoes]);
 
-  const verPerfil = () => run(async () => {
-    const it = profileItem.trim(), c = pc();
-    if (!it || !c) { setFeedback({ type: "error", message: "Informe item e plano." }); return; }
-    setProfile(await getMrpProfile(it, c));
-  });
-
-  const verRegras = () => run(async () => { const it = ruleItem.trim(); if (!it) { setFeedback({ type: "error", message: "Informe o item." }); return; } setRules(await listConfiguredRules(it)); setRuleForm((s) => ({ ...s, item_code: it })); });
-  const criarRegra = () => run(async () => {
-    if (!ruleForm.item_code || !ruleForm.field_name.trim()) { setFeedback({ type: "error", message: "Item e campo são obrigatórios." }); return; }
-    await createConfiguredRule(ruleForm);
-    setFeedback({ type: "success", message: "Regra configurada criada." });
-    setRules(await listConfiguredRules(ruleForm.item_code));
-  });
-
-  // ── Inter-fábrica ──
-  const listarInter = () => run(async () => { const c = pc(); if (!c) { setFeedback({ type: "error", message: "Informe o plano." }); return; } setInterFactoriesState(await getInterFactories(c)); });
-  const addInter = () => run(async () => {
-    const c = pc(); if (!c) { setFeedback({ type: "error", message: "Informe o plano." }); return; }
-    const code = Number(ifForm.code);
-    if (!code) { setFeedback({ type: "error", message: "Informe o código da empresa de origem." }); return; }
-    if (interFactories.some((f) => f.source_enterprise_code === code)) { setFeedback({ type: "error", message: "Empresa já associada." }); return; }
-    const next = [...interFactories, { source_enterprise_code: code, auto_release: ifForm.autoRelease }];
-    setInterFactoriesState(await setInterFactories(c, next));
-    setIfForm({ code: "", autoRelease: false });
-    setFeedback({ type: "success", message: `Empresa ${code} associada ao plano ${c}.` });
-  });
-  const removeInter = (code: number) => run(async () => {
-    const c = pc(); if (!c) return;
-    const next = interFactories.filter((f) => f.source_enterprise_code !== code);
-    setInterFactoriesState(await setInterFactories(c, next));
-    setFeedback({ type: "success", message: `Empresa ${code} removida${next.length === 0 ? " (lista esvaziada)" : ""}.` });
-  });
-
-  // ── Relatórios operacionais ──
-  const gerarRelatorio = () => run(async () => {
-    const c = pc(); const it = repItem.trim();
-    if ((reportKind === "profile" || reportKind === "grouped-needs") && !c) {
-      setFeedback({ type: "error", message: `O relatório "${REPORT_LABELS[reportKind]}" exige o código do plano MRP.` });
-      return;
-    }
-    const common: ReportParams = {};
-    if (c) common.plan_code = c;
-    if (it) common.item_code = it;
-    if (repFrom) common.from = repFrom;
-    if (repTo) common.to = repTo;
-    let r: MrpReport;
-    switch (reportKind) {
-      case "profile": r = await reportProfile({ ...common, plan_code: c, layout: "SINTETICO", position: "CURRENT" }); break;
-      case "availability":
-        if (!it) { setFeedback({ type: "error", message: "Disponibilidade exige item (+ quantidade) ou pedidos de venda." }); return; }
-        r = await reportAvailability({ ...common, quantity: Number(repQty) || 1, layout: "AMBOS" }); break;
-      case "grouped-needs": r = await reportGroupedNeeds({ ...common, plan_code: c }); break;
-      case "explosion":
-        if (!it) { setFeedback({ type: "error", message: "Explosão exige o item a explodir." }); return; }
-        r = await reportExplosion(it, { quantity: Number(repQty) || 1, at: repTo || repFrom || undefined, list_mode: "TODOS", explosion_option: "SIMPLES" }); break;
-      case "reorder-point": r = await reportReorderPoint({ ...common, planning_type: "REORDER_POINT" }); break;
-      default: return;
-    }
-    setReport(r);
-    setFeedback({ type: "info", message: `Relatório "${REPORT_LABELS[reportKind]}": ${r.rows.length} linha(s).` });
-  });
-  const reportCols = report && report.rows.length > 0 ? Array.from(report.rows.reduce((set, row) => { Object.keys(row).forEach((k) => set.add(k)); return set; }, new Set<string>())) : [];
-
-  const ABAS: { id: AbaMrp; label: string; hint: string; contador?: number }[] = [
-    { id: "plano", label: "Plano", hint: "Criar o plano, escolher a abrangência e as empresas inter-fábrica" },
-    { id: "resultado", label: "Resultado", hint: "Sugestões, exceções e ordens planejadas do cálculo", contador: suggestions.length },
-    { id: "item", label: "Item", hint: "Perfil time-phased e regras de planejamento do item" },
+  const ABAS: Aba<AbaMrp>[] = [
+    { id: "geral", label: "Visão geral", hint: "Resumo do plano e do último cálculo" },
+    { id: "cobertura", label: "Cobertura", hint: "Até quando o estoque e as ordens firmes cobrem cada item, com o farol" },
+    { id: "sugestoes", label: "Sugestões", contador: pendentes.length, hint: "Revisar e firmar as ordens sugeridas" },
+    { id: "planejadas", label: "Ordens planejadas", contador: planejadasDoPlano.length, hint: "Firmar, liberar ou voltar ordens planejadas" },
+    { id: "excecoes", label: "Exceções", contador: excecoes.filter((e) => !e.handling_action).length, alerta: true, hint: "Atrasos, excessos e reprogramações apontados pelo cálculo" },
+    { id: "rastreamento", label: "Rastreamento", hint: "De cada pedido/demanda até as compras dos componentes, e de uma ordem até quem depende dela" },
+    { id: "perfil", label: "Perfil do item", hint: "Demanda e estoque projetado do item no tempo, e as regras dele" },
+    { id: "planos", label: "Planos", contador: planos.length, hint: "Cadastro de planos e empresas inter-fábrica" },
     { id: "relatorios", label: "Relatórios", hint: "Perfil, disponibilidade, necessidades, explosão e ponto de reposição" },
   ];
 
   return (
     <div className="erp-screen">
-      <header className="erp-titlebar">
-        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Planejamento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">MRP (Planejamento de Materiais)</span><span className="erp-crumb-code">VMRP0100</span></nav>
-        <div className="erp-titlebar-spacer" />
-      </header>
+      <Cabecalho modulo="Planejamento" titulo="MRP (Planejamento de Materiais)" codigo="VMRP0100"
+        meta={planoAtual?.last_calculated_at ? `Calculado em ${dataHora(planoAtual.last_calculated_at)}` : undefined} />
 
-      <div className="erp-toolbar">
+      <div className="erp-toolbar vpl-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Plano</span>
-          <input className="erp-input num" style={{ width: 80, height: 32 }} type="number" value={planCode} onChange={(e) => setPlanCode(e.target.value)} />
-          <span className="erp-tgroup-label">Nº ordem inicial</span>
-          <input className="erp-input num" style={{ width: 90, height: 32 }} type="number" value={initialOrder} onChange={(e) => setInitialOrder(e.target.value)} title="initial_order_number — obrigatório e positivo" />
-          <button className="erp-btn erp-btn-primary" onClick={rodarMrp} disabled={busy}>Rodar MRP</button>
-          <button className="erp-btn" onClick={consultar} disabled={busy}>Consultar</button></div>
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
-          <ExportButton title="VMRP0100 — MRP" filename="vmrp0100" /></div>
+          <select className="erp-tselect" style={{ width: 240 }} aria-label="Plano" value={plano ?? ""} onChange={(e) => setPlano(Number(e.target.value) || undefined)} disabled={busy && planos.length === 0}>
+            {planos.length === 0 && <option value="">Nenhum plano — crie na aba Planos</option>}
+            {planos.map((p) => <option key={p.code} value={p.code}>{p.code} · {p.name}{p.is_active ? "" : " (inativo)"}</option>)}
+          </select>
+        </div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cálculo</span>
+          <input className="erp-tinput" style={{ width: 110 }} type="number" min={1} aria-label="Número inicial das ordens"
+            title="Número da primeira ordem que o cálculo vai gerar" placeholder={String(proximaOrdem)} value={ordemInicial} onChange={(e) => setOrdemInicial(e.target.value)} />
+          <button className="erp-btn erp-btn-primary" onClick={() => void rodar()} disabled={busy || !plano}>{busy && <span className="erp-spin" />}Rodar MRP</button>
+          <button className="erp-btn" onClick={() => void run(async () => { await Promise.all([carregarPlanos(), carregarResultado(plano)]); })} disabled={busy || !plano}>Atualizar</button>
+        </div>
+        <div className="erp-tspacer" />
+        <div className="erp-tgroup"><ExportButton title="VMRP0100 — MRP" filename="vmrp0100" /></div>
       </div>
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs">
-            {ABAS.map((a) => (
-              <button key={a.id} className={`erp-tab${aba === a.id ? " active" : ""}`} onClick={() => setAba(a.id)} title={a.hint}>
-                {a.label}{a.contador !== undefined ? ` (${a.contador})` : ""}
-              </button>
-            ))}
-          </div>
+          <Abas abas={ABAS} ativa={aba} onChange={setAba} />
           <div className="erp-detail-body">
-        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+            <Aviso feedback={feedback} busy={busy} />
 
-        {aba === "plano" && (<>
-        {/* Planos MRP (o plano que o cálculo roda) */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Planos de produção (MRP)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label">Novo — código</label><input className="erp-input num" type="number" value={newPlan.code} onChange={(e) => setNewPlan((p) => ({ ...p, code: e.target.value }))} /></div>
-          <div className="erp-field erp-c4"><label className="erp-label">Nome</label><input className="erp-input" value={newPlan.name} onChange={(e) => setNewPlan((p) => ({ ...p, name: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Abrangência</label>
-            <select className="erp-input" value={newPlan.abrangencia}
-              onChange={(e) => setNewPlan((p) => ({ ...p, abrangencia: e.target.value as typeof p.abrangencia }))}>
-              <option value="todos">Todos os itens</option>
-              <option value="classificacao">Uma classificação</option>
-              <option value="ordem">Um item de ordem</option>
-            </select></div>
-          {newPlan.abrangencia === "classificacao" && (<>
-            <div className="erp-field erp-c2"><label className="erp-label erp-req">Classificação</label>
-              <input className="erp-input" value={newPlan.classification}
-                onChange={(e) => setNewPlan((p) => ({ ...p, classification: e.target.value }))} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Itens da classificação</label>
-              <input className="erp-input" value={newPlan.class_item_codes} placeholder="Ex.: 100,101,102 — vazio pega todos"
-                onChange={(e) => setNewPlan((p) => ({ ...p, class_item_codes: e.target.value }))} /></div>
-          </>)}
-          {newPlan.abrangencia === "ordem" && (
-            <div className="erp-field erp-c3"><label className="erp-label erp-req">Item da ordem</label>
-              <input className="erp-input num" type="number" value={newPlan.order_item_code}
-                onChange={(e) => setNewPlan((p) => ({ ...p, order_item_code: e.target.value }))} />
-              <span className="erp-hint">Não pode ser combinado com filtro de classificação.</span></div>
-          )}
-          <div className="erp-field erp-c3" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
-            <button className="erp-btn erp-btn-primary" onClick={criarPlano} disabled={busy}>Criar plano</button>
-            <button className="erp-btn" onClick={carregarPlanos} disabled={busy}>Listar planos</button></div>
-        
-        {plans.length > 0 && (
-          <table className="erp-grid" style={{ marginTop: 10 }}>
-            <thead><tr><th>Código</th><th>Nome</th><th>Modos</th><th>Ativo</th><th></th></tr></thead>
-            <tbody>{plans.map((pl) => <tr key={pl.code} className={Number(planCode) === pl.code ? "erp-row-sel" : ""}><td>{pl.code}</td><td>{pl.name}</td><td>{(pl.planning_types ?? []).join(", ")}</td><td>{pl.is_active ? "Sim" : "Não"}</td><td><button className="erp-btn" onClick={() => setPlanCode(String(pl.code))} disabled={busy}>Selecionar</button></td></tr>)}</tbody>
-          </table>
-        )}
-        </div></div>
+            {aba === "geral" && (!planoAtual ? (
+              <Painel titulo="Plano"><Vazio titulo={planos.length ? "Escolha um plano na barra acima" : "Nenhum plano cadastrado"}
+                acao={<button className="erp-btn erp-btn-primary" onClick={() => setAba("planos")}>Ir para Planos</button>} /></Painel>
+            ) : (<>
+              <Kpis itens={[
+                { label: "Sugestões a firmar", value: num(pendentes.length, 0), hint: `${fab} fabricação · ${compra} compra`, onClick: () => setAba("sugestoes"), title: "Abrir sugestões" },
+                { label: "Terminam atrasadas", value: num(atrasadas, 0), hint: "pela capacidade das máquinas", tom: atrasadas ? "danger" : "ok", onClick: () => setAba("sugestoes") },
+                { label: "Exceções", value: num(excecoes.length, 0), hint: "apontadas pelo cálculo", tom: excecoes.length ? "warn" : "ok", onClick: () => setAba("excecoes") },
+                { label: "Ordens planejadas", value: num(planejadasDoPlano.length, 0), hint: `${aguardando} aguardando liberação`, tom: "info", onClick: () => setAba("planejadas") },
+              ]} />
 
-        {/* Empresas inter-fábrica do plano */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Empresas inter-fábrica ({interFactories.length}) — <span style={{fontWeight:400,opacity:0.65}}>Origens cujas ordens INTER_FACTORY entram como demanda DIF no plano {planCode}</span></div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c3"><label className="erp-label">Empresa origem (código)</label><input className="erp-input num" type="number" value={ifForm.code} onChange={(e) => setIfForm((s) => ({ ...s, code: e.target.value }))} /></div>
-          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><label className="erp-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={ifForm.autoRelease} onChange={(e) => setIfForm((s) => ({ ...s, autoRelease: e.target.checked }))} />Liberação automática</label></div>
-          <div className="erp-field erp-c4" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
-            <button className="erp-btn erp-btn-primary" onClick={addInter} disabled={busy}>Associar</button>
-            <button className="erp-btn" onClick={listarInter} disabled={busy}>Listar</button></div>
-        
-        {interFactories.length > 0 && (
-          <table className="erp-grid" style={{ marginTop: 10 }}>
-            <thead><tr><th>Empresa origem</th><th>Liberação automática</th><th></th></tr></thead>
-            <tbody>{interFactories.map((f) => <tr key={f.source_enterprise_code}><td>{f.source_enterprise_code}</td><td>{f.auto_release ? "Sim" : "Não"}</td><td><button className="erp-btn" onClick={() => removeInter(f.source_enterprise_code)} disabled={busy}>Remover</button></td></tr>)}</tbody>
-          </table>
-        )}
-        </div></div>
+              <div className="vpl-cols wide-left">
+                <Painel titulo={`Plano ${planoAtual.code} · ${planoAtual.name}`} sub={planoAtual.is_active ? undefined : "inativo"}>
+                  <Detalhe itens={[
+                    { label: "Abrangência", value: abrangenciaDo(planoAtual) },
+                    { label: "Demandas independentes", value: demandasIndependentes(planoAtual.independent_demands) },
+                    { label: "Modos", value: (planoAtual.planning_types ?? []).join(", ") || "—" },
+                    { label: "Agrupa ordens do mesmo dia", value: planoAtual.group_same_date_orders ? "Sim" : "Não" },
+                    { label: "Último cálculo", value: planoAtual.last_calculated_at ? dataHora(planoAtual.last_calculated_at) : "Nunca calculado", forte: true },
+                    { label: "Itens no último cálculo", value: ultimaRodada?.items_processed !== undefined ? num(ultimaRodada.items_processed, 0) : num(itensDoPlano.length, 0) },
+                  ]} />
+                </Painel>
 
-        {runResult && (
-          <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
-            <div className="erp-field erp-c3"><label className="erp-label">Status</label><input className="erp-input" value={runResult.status ?? "—"} readOnly /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Itens processados</label><input className="erp-input num" value={runResult.items_processed ?? 0} readOnly /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Ordens geradas</label><input className="erp-input num" value={runResult.orders_generated ?? 0} readOnly /></div>
-          </div></div>
-        )}
+                <Painel titulo="Próximos passos">
+                  {!carregado ? <p className="erp-hint">Carregando o plano…</p> : !planoAtual.last_calculated_at ? (
+                    <p className="erp-note">Este plano ainda não foi calculado. Clique em <strong>Rodar MRP</strong> na barra acima.</p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {atrasadas > 0 && <Passo tom="danger" texto={`${atrasadas} sugestão(ões) terminam depois da necessidade.`} botao="Ver atrasadas" onClick={() => setAba("sugestoes")} />}
+                      {pendentes.length > 0 && <Passo tom="info" texto={`${pendentes.length} sugestão(ões) aguardando revisão.`} botao="Revisar sugestões" onClick={() => setAba("sugestoes")} />}
+                      {excecoes.length > 0 && <Passo tom="warn" texto={`${excecoes.length} exceção(ões) para tratar.`} botao="Ver exceções" onClick={() => setAba("excecoes")} />}
+                      {aguardando > 0 && <Passo tom="info" texto={`${aguardando} ordem(ns) planejada(s) ainda não liberada(s).`} botao="Ver ordens" onClick={() => setAba("planejadas")} />}
+                      {atrasadas + pendentes.length + excecoes.length + aguardando === 0 && <p className="erp-note">Nada pendente: o plano está em dia. Rode o MRP de novo quando a demanda, o estoque ou a estrutura mudarem.</p>}
+                    </div>
+                  )}
+                </Painel>
+              </div>
+            </>))}
 
-        {/* Sugestões */}
-        </>)}
+            {aba === "cobertura" && <CoberturaTab plano={plano} versao={versao} sugestoes={sugestoes} busy={busy} onFirmar={firmar} onVerPerfil={verPerfil} />}
+            {aba === "sugestoes" && <SugestoesTab sugestoes={sugestoes} busy={busy} onFirmar={firmar} onVerPerfil={verPerfil}
+              onVerOrigem={(s) => verOrigem({ kind: "SUGESTAO", code: s.code, rotulo: `a sugestão ${s.order_number ?? s.code} (${s.item_code})` })} />}
+            {aba === "rastreamento" && <RastreamentoTab plano={plano} versao={versao} alvo={alvo} onLimparAlvo={() => setAlvo(undefined)} />}
+            {aba === "planejadas" && <PlanejadasTab ordens={planejadas} plano={plano} busy={busy} onTransicionar={transicionar}
+              onVerOrigem={(o) => { const c = o.code ?? o.planned_code; if (c) verOrigem({ kind: "ORDEM_FIRME", code: c, rotulo: `a ordem ${o.order_number ?? c} (${o.item_code})` }); }} />}
+            {aba === "excecoes" && <ExcecoesTab excecoes={excecoes} busy={busy} onVerPerfil={verPerfil} onTratar={tratarExcecao}
+              onVerOrigem={(e) => e.source_code && verOrigem({ kind: "ORDEM_FIRME", code: e.source_code, rotulo: `a ordem ${e.source_order_number ?? e.source_code} (${e.item_code})` })} />}
+            {aba === "perfil" && <PerfilTab plano={plano} itensDoPlano={itensDoPlano} itemInicial={itemPerfil} />}
+            {aba === "planos" && <PlanosTab planos={planos} plano={plano} onEscolher={(c) => setPlano(c)} onRecarregar={carregarPlanos} />}
+            {aba === "relatorios" && <RelatoriosTab plano={plano} />}
+          </div>
+        </section>
+      </div>
 
-        {aba === "resultado" && (<>
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Sugestões de ordens ({suggestions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-          <table className="erp-grid">
-            <thead><tr><th>Código</th><th>Item</th><th>Qtd</th><th>Tipo ordem</th><th>Demanda</th><th>Necessidade</th><th>Início previsto</th><th>Término previsto</th><th>Máquina</th><th>Capacidade</th><th>LLC</th><th></th></tr></thead>
-            <tbody>
-              {suggestions.length === 0 && <tr><td colSpan={12} className="erp-grid-empty">Nenhuma sugestão. Rode o MRP e clique em Consultar.</td></tr>}
-              {suggestions.map((s) => (
-                <tr key={s.code}>
-                  <td>{s.code}</td><td>{s.item_code}</td><td>{s.quantity}</td>
-                  <td>{s.order_type === "PRODUCTION" ? "Fabricação" : s.order_type === "PURCHASE" ? "Compra" : s.order_type}</td>
-                  <td>{s.demand_type === "INDEPENDENT" ? "Independente" : s.demand_type === "DEPENDENT" ? "Dependente" : s.demand_type}</td>
-                  <td>{d10(s.need_date)}</td><td>{d10(s.start_date)}</td><td>{d10(s.estimated_end_at)}</td>
-                  <td>{s.machine_code ? <>{s.machine_code}{s.production_time ? <><br /><small style={{ color: "var(--v-text-muted)" }}>{Math.round(s.production_time)} min</small></> : null}</> : "—"}</td>
-                  <td>{s.estimated_end_at ? (s.capacity_late ? "Após o prazo" : "Dentro do prazo") : "Sem programação"}</td><td>{s.llc}</td>
-                  <td><button className="erp-btn erp-btn-primary" onClick={() => firmar(s.code)} disabled={busy}>Firmar</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div></div></div>
+      <Rodape>
+        <div className="erp-status-item">Plano: <strong>{planoAtual ? `${planoAtual.code} · ${planoAtual.name}` : "—"}</strong></div>
+        <div className="erp-status-item">Sugestões a firmar: <strong>{pendentes.length}</strong></div>
+        <div className="erp-status-item">Ordens planejadas: <strong>{planejadasDoPlano.length}</strong></div>
+      </Rodape>
+    </div>
+  );
+}
 
-        {/* Exceções */}
-        {exceptions.length > 0 && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Exceções / alertas ({exceptions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-              <table className="erp-grid"><thead><tr><th>Item</th><th>Tipo</th><th>Descrição</th></tr></thead>
-                <tbody>{exceptions.map((e, i) => <tr key={i}><td>{e.item_code}</td><td>{e.message_type}</td><td>{e.description}</td></tr>)}</tbody>
-              </table>
-            </div></div></div>
-          </>
-        )}
-
-        {/* Ordens Planejadas */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Ordens planejadas ({planned.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-          <table className="erp-grid">
-            <thead><tr><th>Nº ordem</th><th>Item</th><th>Qtd</th><th>Tipo</th><th>Status</th><th>Firme?</th><th></th></tr></thead>
-            <tbody>
-              {planned.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma ordem planejada.</td></tr>}
-              {planned.map((o, i) => (
-                <tr key={i}>
-                  <td>{o.order_number ?? o.code}</td><td>{o.item_code}</td><td>{o.quantity}</td>
-                  <td>{enumLabel(o.order_type)}</td><td>{enumLabel(o.status)}</td><td>{o.is_firm ? "Sim" : "Não"}</td>
-                  <td>{!o.is_firm && <button className="erp-btn" onClick={() => firmarPlanejada(o.code ?? o.planned_code)} disabled={busy}>Firmar</button>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div></div></div>
-
-        {/* Perfil do item */}
-        </>)}
-
-        {aba === "item" && (<>
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Perfil MRP do item (tabela time-phased)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c3"><label className="erp-label">Item</label><input className="erp-input" maxLength={60} value={profileItem} onChange={(e) => setProfileItem(e.target.value)} placeholder="Ex.: TEA452-0" /></div>
-          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={verPerfil} disabled={busy}>Ver perfil</button></div>
-        
-        {profile.length > 0 && (
-          <table className="erp-grid" style={{ marginTop: 10 }}>
-            <thead><tr><th>Data</th><th>Demanda</th><th>Planejadas</th><th>Firmes</th><th>Estoque proj.</th></tr></thead>
-            <tbody>{profile.map((r, i) => <tr key={i}><td>{d10(r.date)}</td><td>{r.demand ?? 0}</td><td>{r.planned_orders ?? 0}</td><td>{r.firm_orders ?? 0}</td><td>{r.projected_stock ?? 0}</td></tr>)}</tbody>
-          </table>
-        )}
-        </div></div>
-
-        {/* Regras configuradas */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Regras configuradas por item</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input" maxLength={60} value={ruleItem} onChange={(e) => setRuleItem(e.target.value)} placeholder="Ex.: TEA452-0" /></div>
-          <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn" onClick={verRegras} disabled={busy}>Listar</button></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Tabela</label>
-            <select className="erp-input" value={ruleForm.table_type} onChange={(e) => setRuleForm((s) => ({ ...s, table_type: e.target.value }))}><option value="PLANNING_DATA">{enumLabel("PLANNING_DATA")}</option><option value="PLANNER_DATA">{enumLabel("PLANNER_DATA")}</option></select></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Campo</label><input className="erp-input" value={ruleForm.field_name} onChange={(e) => setRuleForm((s) => ({ ...s, field_name: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Regra</label>
-            <select className="erp-input" value={ruleForm.rule_type} onChange={(e) => setRuleForm((s) => ({ ...s, rule_type: e.target.value as ConfiguredRule["rule_type"] }))}>{RULE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Valor</label><input className="erp-input" value={ruleForm.rule_value} onChange={(e) => setRuleForm((s) => ({ ...s, rule_value: e.target.value }))} /></div>
-          <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={criarRegra} disabled={busy}>Criar regra</button></div>
-        
-        {rules.length > 0 && (
-          <table className="erp-grid" style={{ marginTop: 10 }}>
-            <thead><tr><th>Item</th><th>Tabela</th><th>Campo</th><th>Regra</th><th>Valor</th><th>Seq</th></tr></thead>
-            <tbody>{rules.map((r, i) => <tr key={i}><td>{r.item_code}</td><td>{enumLabel(r.table_type)}</td><td>{r.field_name}</td><td>{enumLabel(r.rule_type)}</td><td>{r.rule_value}</td><td>{r.sequence ?? "—"}</td></tr>)}</tbody>
-          </table>
-        )}
-        </div></div>
-
-        </>)}
-
-        {aba === "relatorios" && (<>
-        {/* Relatórios operacionais (/api/mrp-reports) */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Relatórios operacionais — <span style={{fontWeight:400,opacity:0.65}}>perfil · disponibilidade · necessidades agrupadas · explosão · ponto de reposição</span></div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c3"><label className="erp-label">Relatório</label>
-            <select className="erp-input" value={reportKind} onChange={(e) => setReportKind(e.target.value as ReportKind)}>{(Object.keys(REPORT_LABELS) as ReportKind[]).map((k) => <option key={k} value={k}>{REPORT_LABELS[k]}</option>)}</select></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Item{reportKind === "explosion" ? " *" : ""}</label><input className="erp-input" value={repItem} onChange={(e) => setRepItem(e.target.value)} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">{reportKind === "explosion" ? "Quantidade" : "De"}</label>{reportKind === "explosion" || reportKind === "availability" ? <input className="erp-input num" type="number" value={repQty} onChange={(e) => setRepQty(e.target.value)} /> : <input className="erp-input" type="date" value={repFrom} onChange={(e) => setRepFrom(e.target.value)} />}</div>
-          <div className="erp-field erp-c2"><label className="erp-label">{reportKind === "explosion" ? "Data (at)" : "Até"}</label><input className="erp-input" type="date" value={repTo} onChange={(e) => setRepTo(e.target.value)} /></div>
-          <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={gerarRelatorio} disabled={busy}>Gerar relatório</button></div>
-        
-        {report && (
-          report.rows.length === 0
-            ? <div className="erp-grid-empty" style={{ marginTop: 10 }}>Sem linhas para os filtros informados.</div>
-            : <div className="erp-fieldset-body" style={{ marginTop: 10 }}><table className="erp-grid">
-                <thead><tr>{reportCols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>{report.rows.map((row, i) => <tr key={i}>{reportCols.map((c) => <td key={c}>{fmtCell(row[c])}</td>)}</tr>)}</tbody>
-                {report.totals && <tfoot><tr>{reportCols.map((c, i) => <td key={c} style={{ fontWeight: 600 }}>{i === 0 ? "Totais" : fmtCell(report.totals?.[c])}</td>)}</tr></tfoot>}
-              </table></div>
-        )}
-        </div></div>
-        </>)}
-      </div></section></div>
-
-      <footer className="erp-statusbar">
-        <div style={{display:"contents"}}><div className="erp-status-item">Sugestões: <strong>{suggestions.length}</strong></div><div className="erp-status-item">Ordens: <strong>{planned.length}</strong></div></div>
-        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
-      </footer>
+function Passo({ tom, texto, botao, onClick }: { tom: "danger" | "warn" | "info"; texto: string; botao: string; onClick: () => void }): JSX.Element {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", flexWrap: "wrap" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Selo tom={tom}>{tom === "danger" ? "Urgente" : tom === "warn" ? "Atenção" : "Pendente"}</Selo>{texto}</span>
+      <button className="erp-btn erp-btn-sm" onClick={onClick}>{botao}</button>
     </div>
   );
 }

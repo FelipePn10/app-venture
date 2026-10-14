@@ -4,6 +4,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadCustomers } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VBEN0200 — Estoque de terceiros: o que é do cliente e está aqui.
@@ -33,7 +34,7 @@ function diasAte(data: string | null | undefined): number | null {
   if (!data) return null;
   const alvo = Date.parse(`${data}T00:00:00Z`);
   if (Number.isNaN(alvo)) return null;
-  const hojeUTC = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+  const hojeUTC = Date.parse(`${hojeLocal()}T00:00:00Z`);
   return Math.round((alvo - hojeUTC) / 86400000);
 }
 

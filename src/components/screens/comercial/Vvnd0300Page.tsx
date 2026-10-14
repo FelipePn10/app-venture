@@ -66,6 +66,7 @@ import {
   loadCarriers, loadPaymentConditions, loadSalesDivisions,
   type LookupOption,
 } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type DetailTab = "dados" | "itens" | "pagamento" | "comissao" | "anexos" | "historico";
@@ -92,7 +93,7 @@ type PendingAction =
   | { kind: "release"; target: string }
   | null;
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const qty = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 const dateTime = (s?: string) => (s ? new Date(s).toLocaleString("pt-BR") : "—");

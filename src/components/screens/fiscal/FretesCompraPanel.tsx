@@ -4,6 +4,7 @@ import {
   listarFretes, obterFrete, criarFrete, atualizarFrete, importarFreteXml, lancarFrete, cancelarFrete, payloadDoFrete,
 } from "@/services/freteCompraService";
 import { errMessage } from "@/services/fiscalShared";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * Frete sobre compras (VFIS0210 › Fretes). O CT-e da transportadora entra pelo
@@ -18,7 +19,7 @@ export interface EntradaParaFrete { id: number; numero_nf: number; serie: string
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => hojeLocal();
 const em30dias = () => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10); };
 const ROTULO_STATUS: Record<string, string> = { PENDENTE: "Pendente", LANCADO: "Lançado", CANCELADO: "Cancelado" };
 

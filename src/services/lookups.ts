@@ -91,6 +91,63 @@ async function loadEndpoint(
 }
 
 /**
+ * Mesmo que `loadEndpoint`, mas a chave da opção é o `id` interno do registro.
+ *
+ * Para os campos `*_id` cuja coluna aponta para o id (dispositivo legal, tipo de
+ * nota, CFOP, segmento…). O `loadEndpoint` prefere o `code`, e em catálogo que
+ * tem os dois a tela mandava o código onde o banco espera o id: o CFOP 5102 ia
+ * como id 5102 e o lançamento era gravado sem CFOP. Enquanto código e id
+ * coincidiam (empresa única, catálogo sem exclusões) ninguém percebia.
+ */
+async function loadEndpointById(
+  path: string,
+  labelKeys: string[],
+  subKeys: string[] = [],
+  comCodigo = true,
+): Promise<LookupOption[]> {
+  const { data } = await httpClient.get<unknown>(path);
+  const out: LookupOption[] = [];
+  for (const raw of unwrapArray(data)) {
+    const o = unwrapObject(raw);
+    if (!o) continue;
+    const id = parseNum(o, 'id', 'ID');
+    if (!id) continue;
+    const code = parseStr(o, 'code', 'Code', 'codigo');
+    const nome = parseStr(o, ...labelKeys);
+    const label = comCodigo && code ? `${code} — ${nome || 'sem descrição'}` : nome || `#${code || id}`;
+    const sub = subKeys.length ? parseStr(o, ...subKeys) || undefined : undefined;
+    out.push({ code: id, label, sub, inactive: o['is_active'] === false || o['IsActive'] === false });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+}
+
+/** Catálogos fiscais e de cadastro pela chave interna — ver `loadEndpointById`. */
+export const loadCfopsById = cached(() => loadEndpointById('/api/fiscal/support/cfops/', ['description', 'Description'], ['utilization']));
+export const loadLegalDevicesById = cached(() => loadEndpointById('/api/fiscal/support/dispositivos-legais/', ['description', 'Description'], ['type', 'Type']));
+export const loadInvoiceTypesById = cached(() => loadEndpointById('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']));
+export const loadMarketSegmentsById = cached(() => loadEndpointById('/api/customers/support/market-segments', ['description', 'Description', 'name', 'Name']));
+export const loadIcmsApuracaoLinesById = cached(() => loadEndpointById('/api/fiscal/support/linhas-apuracao-icms/', ['description', 'Description'], ['line_type']));
+export const loadIcmsAdjustmentCodesById = cached(() => loadEndpointById('/api/fiscal/support/codigos-ajuste-apuracao-icms/', ['description', 'Description'], ['uf']));
+export const loadCostCentersById = cached(() => loadEndpointById('/api/cost-center/list', ['description', 'Description', 'name', 'Name']));
+export const loadCustomersById = cached(() => loadEndpointById('/api/customers/', ['name', 'Name', 'trade_name'], ['document_number']));
+export const loadItemsById = cached(async () =>
+  (await listItems()).filter((i) => i.id).map((i) => ({
+    code: i.id!,
+    label: `${i.code} — ${i.description || 'sem descrição'}`,
+    sub: i.uom || undefined,
+    inactive: i.health === 'INATIVO',
+  })),
+);
+export const loadSuppliersById = cached(async () =>
+  (await listSuppliers()).filter((s) => s.id).map((s) => ({
+    code: s.id!,
+    label: `${s.code} — ${s.name || s.trade_name || 'sem nome'}`,
+    sub: s.document_number || undefined,
+    inactive: s.is_active === false,
+  })),
+);
+
+/**
  * Clientes. O bloqueado é o que não pode receber pedido novo — inadimplência,
  * cadastro irregular, decisão comercial. Oferecê-lo na busca convida a montar
  * um pedido inteiro que o sistema recusa no fim; ele sai da escolha e continua
@@ -116,6 +173,19 @@ export const loadConsumers = cached(async () =>
 export const loadEmployees = cached(async () =>
   (await listEmployees()).filter((employee) => employee.situation !== 'INACTIVE').map((employee) => ({
     code: employee.code,
+    label: employee.name || `Funcionário ${employee.code}`,
+    sub: employee.role || undefined,
+  })),
+);
+
+/**
+ * Funcionários pela chave interna, para EXIBIR registros já gravados. A escolha
+ * continua pelo código (`loadEmployees`), que o backend converte; o apontamento
+ * devolve o id, e procurá-lo entre os códigos mostrava "Funcionário 1".
+ */
+export const loadEmployeesById = cached(async () =>
+  (await listEmployees()).filter((employee) => employee.id).map((employee) => ({
+    code: employee.id!,
     label: employee.name || `Funcionário ${employee.code}`,
     sub: employee.role || undefined,
   })),
@@ -247,6 +317,20 @@ export const loadMachines = cached(async () =>
     sub: m.is_active ? 'Ativa' : 'Inativa',
     inactive: !m.is_active,
   })).filter((o) => o.code),
+);
+
+/**
+ * Máquinas pela chave interna (`machines.id`). A ordem de produção e o
+ * apontamento gravam o id; o `loadMachines` devolve o código da máquina, e
+ * escolher "Bancada 8301" mandava 8301 onde o banco espera o id 3.
+ */
+export const loadMachinesById = cached(async () =>
+  (await listMachines()).filter((m) => m.id).map((m) => ({
+    code: m.id,
+    label: `${m.code} · ${m.name || `Máquina ${m.code}`}`,
+    sub: m.is_active ? 'Ativa' : 'Inativa',
+    inactive: !m.is_active,
+  })),
 );
 
 /** Operações da biblioteca de roteiro de fabricação. */
@@ -588,6 +672,20 @@ export function loadEmployeesByRole(role: string): LookupLoader {
 
 /** Mecânicos — responsáveis por manutenção de recurso. */
 export const loadMaintenanceResponsibles = loadEmployeesByRole('MECANICO');
+
+/**
+ * Mecânicos pela chave interna. `machines.maintenance_responsible_employee_id`
+ * aponta para `employees.id`, e o backend grava o valor como veio: escolher o
+ * mecânico de código 503 gravava o funcionário de id 503 (ou falhava). Na base
+ * da Tecnofer os códigos vão de 1 a 28 e os ids de 31 a 58.
+ */
+export const loadMaintenanceResponsiblesById = cached(async () =>
+  (await listEmployeesByRole('MECANICO')).filter((e) => e.id).map((e) => ({
+    code: e.id!,
+    label: e.name || `Funcionário ${e.code}`,
+    sub: e.role || undefined,
+  })),
+);
 
 // ─── Financeiro e fiscal: o que a pessoa não sabe de cabeça ──────────────────
 //

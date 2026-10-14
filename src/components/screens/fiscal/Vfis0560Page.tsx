@@ -8,13 +8,14 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import {
-  loadEstablishments, loadCfops, loadIcmsApuracaoLines, loadIcmsAdjustmentCodes,
+  loadEstablishments, loadCfopsById, loadIcmsApuracaoLinesById, loadIcmsAdjustmentCodesById,
 } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentPeriod = () => new Date().toISOString().slice(0, 7);
-const todayIso = () => new Date().toISOString();
+const currentPeriod = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const PURPOSES: NotaEspecialPurpose[] = ["COMPLEMENTAR", "AJUSTE"];
 
 const EMPTY: NotaEspecialDTO = {
@@ -136,22 +137,22 @@ export function Vfis0560Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label erp-req">Período</label>
               <input className="erp-input" value={form.period} placeholder="2024-01" onChange={(e) => setF("period", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>
-              <input className="erp-input" type="date" value={(form.issue_date || "").slice(0, 10)} onChange={(e) => setF("issue_date", new Date(e.target.value).toISOString())} /></div>
+              <input className="erp-input" type="date" value={(form.issue_date || "").slice(0, 10)} onChange={(e) => setF("issue_date", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Gera resumo automático</label>
               <div className="erp-toggle-row">
                 <label className="erp-toggle"><input type="checkbox" checked={!!form.auto_generate_summary} onChange={(e) => setF("auto_generate_summary", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>
                 <span className="erp-toggle-label">{form.auto_generate_summary ? "Sim" : "Não"}</span></div></div>
             <div className="erp-field erp-c3"><label className="erp-label">CFOP</label>
-              <LookupField value={form.cfop_id ?? undefined} loader={loadCfops}
+              <LookupField value={form.cfop_id ?? undefined} loader={loadCfopsById}
                 entityLabel="CFOP" placeholder="Buscar pelo código" allowManualCode={false} clearable
                 onChange={(c) => setF("cfop_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Linha da apuração de ICMS</label>
-              <LookupField value={form.icms_apuracao_line_id ?? undefined} loader={loadIcmsApuracaoLines}
+              <LookupField value={form.icms_apuracao_line_id ?? undefined} loader={loadIcmsApuracaoLinesById}
                 entityLabel="linha da apuração" placeholder="Buscar a linha" allowManualCode={false} clearable
                 onChange={(c) => setF("icms_apuracao_line_id", c ? Number(c) : undefined)} />
               <span className="erp-hint">Registro E110 do SPED Fiscal.</span></div>
             <div className="erp-field erp-c3"><label className="erp-label">Código de ajuste</label>
-              <LookupField value={form.adjustment_code_id ?? undefined} loader={loadIcmsAdjustmentCodes}
+              <LookupField value={form.adjustment_code_id ?? undefined} loader={loadIcmsAdjustmentCodesById}
                 entityLabel="código de ajuste" placeholder="Buscar o código" allowManualCode={false} clearable
                 onChange={(c) => setF("adjustment_code_id", c ? Number(c) : undefined)} />
               <span className="erp-hint">Registro E111 do SPED Fiscal.</span></div>

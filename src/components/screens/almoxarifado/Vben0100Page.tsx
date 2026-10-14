@@ -14,6 +14,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VBEN0100 — Beneficiamento: remessas do cliente e retorno fiscal.
@@ -37,7 +38,7 @@ const LINHA_VAZIA: NewRemittanceItem = {
 
 /** Hoje em AAAA-MM-DD, para pré-preencher datas sem depender de biblioteca. */
 function hoje(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hojeLocal();
 }
 
 /** Traduz o prazo em texto que diz o que fazer, não só o número. */

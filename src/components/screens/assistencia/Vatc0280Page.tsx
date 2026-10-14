@@ -9,10 +9,11 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadCustomers, loadEstablishments, loadPaymentConditions, loadSalesDivisions, loadSalesTables, loadWarehouses } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "calls" | "aux";
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 
 const STATUS_META: Record<string, { label: string; badge: string }> = {
   PENDING: { label: "Pendente", badge: "draft" },

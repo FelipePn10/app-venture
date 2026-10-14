@@ -106,6 +106,8 @@ export interface ExitStatus {
   chave_nfe?: string;
   protocolo?: string;
   motivo?: string;
+  /** Efeitos (títulos, estoque, pedido) que ficaram pendentes ao autorizar. */
+  avisos?: string[];
 }
 
 export function parseExit(raw: unknown): FiscalExit {
@@ -153,6 +155,43 @@ export async function cartaCorrecaoExit(code: number, textoCorrecao: string): Pr
   const { data } = await httpClient.post(`${BASE}/exits/${code}/carta-correcao`, { texto_correcao: textoCorrecao });
   return unwrapObject(data);
 }
+// ─── Pendências de efeitos da NF-e ──────────────────────────────────────────
+// Nota autorizada (ou cancelada) cujos títulos, baixa de estoque ou faturamento
+// do pedido não entraram: o backend reprocessa sozinho e aqui dá para conferir
+// e forçar o reprocesso.
+
+export interface PendenciaNFe {
+  fiscal_exit_id: number;
+  etapa: 'AUTORIZACAO' | 'CANCELAMENTO' | string;
+  situacao: 'PENDENTE' | 'RESOLVIDA' | string;
+  tentativas: number;
+  ultimo_erro: string;
+  proxima_tentativa: string;
+  criado_em: string;
+  resolvido_em: string;
+}
+
+function parsePendencia(o: Obj): PendenciaNFe {
+  return {
+    fiscal_exit_id: parseNum(o, 'fiscal_exit_id'),
+    etapa: parseStr(o, 'etapa'),
+    situacao: parseStr(o, 'situacao'),
+    tentativas: parseNum(o, 'tentativas'),
+    ultimo_erro: parseStr(o, 'ultimo_erro'),
+    proxima_tentativa: parseStr(o, 'proxima_tentativa'),
+    criado_em: parseStr(o, 'criado_em'),
+    resolvido_em: parseStr(o, 'resolvido_em'),
+  };
+}
+
+export async function getExitPendencias(code: number): Promise<PendenciaNFe[]> {
+  const { data } = await httpClient.get(`${BASE}/exits/${code}/pendencias`);
+  return unwrapArray(data).map((o) => parsePendencia(o as Obj));
+}
+export async function reprocessarEfeitos(code: number): Promise<PendenciaNFe[]> {
+  const { data } = await httpClient.post(`${BASE}/exits/${code}/reprocessar-efeitos`, {});
+  return unwrapArray(data).map((o) => parsePendencia(o as Obj));
+}
 export async function getExitStatus(id: number): Promise<ExitStatus> {
   const { data } = await httpClient.get(`${BASE}/exits/${id}/status`);
   const o = unwrapObject(data);
@@ -163,6 +202,7 @@ export async function getExitStatus(id: number): Promise<ExitStatus> {
     chave_nfe: parseStr(o, 'chave_nfe', 'ChaveNfe'),
     protocolo: parseStr(o, 'protocolo', 'Protocolo'),
     motivo: parseStr(o, 'motivo', 'Motivo'),
+    avisos: Array.isArray(o.avisos) ? (o.avisos as unknown[]).map(String) : [],
   };
 }
 /**

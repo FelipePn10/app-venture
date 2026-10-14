@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { previaDevolucao, criarDevolucao, type DevolucaoPrevia, type EnderecoDevolucao } from "@/services/devolucaoCompraService";
 import { authorizeExit, type FiscalExit } from "@/services/nfeService";
 import { errMessage } from "@/services/fiscalShared";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * Devolução de compra a partir da nota de entrada aprovada. Cria a NF-e de
@@ -15,7 +16,7 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const qtd = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => hojeLocal();
 const ROTULO_SITUACAO: Record<string, string> = {
   DRAFT: "rascunho", AGUARDANDO_AUTORIZACAO: "aguardando a SEFAZ", AUTHORIZED: "autorizada", REJECTED: "rejeitada", CANCELLED: "cancelada",
 };

@@ -1,572 +1,429 @@
-import { useState, useCallback } from "react";
-import {
-  type ProductionOrderDTO,
-  type AppointmentDTO,
-  type ConsumptionDTO,
-  type CostDTO,
-  listProductionOrders,
-  getProductionOrder,
-  createProductionOrder,
-  startProductionOrder,
-  completeProductionOrder,
-  closeProductionOrder,
-  cancelProductionOrder,
-  appointProduction,
-  addConsumption,
-  listAppointments,
-  listConsumptions,
-  explodeOperations,
-  listOperations,
-  advanceOperation,
-  settleCost,
-  getCost,
-  scrapReturn,
-  type OperationDTO,
-  type MaterialDTO,
-  listMaterials,
-  addMaterial,
-  allocateLots,
-  addScrapDestination,
-  createProductionScanToken,
-  scanProductionOrder,
-  type ProductionScanAction,
-  type ProductionScanToken,
-} from "@/services/productionOrderService";
 import { errMessage } from "@/services/fiscalShared";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ehNaoEncontrado } from "@/utils/erroHttp";
+import {
+  type AppointmentDTO, type ConsumptionDTO, type CostDTO, type MaterialAvailability, type MaterialDTO, type OperationDTO, type ProductionOrderDTO, type ProductionScanToken,
+  addConsumption, addMaterial, addScrapDestination, advanceOperation, allocateLots, appointProduction, cancelProductionOrder, closeProductionOrder,
+  completeProductionOrder, createProductionOrder, createProductionScanToken, explodeOperations, getCost, getMaterialAvailability, getMaterialAvailabilitySummary,
+  getProductionOrder, listAppointments,
+  listConsumptions, listMaterials, listOperations, listProductionOrders, scanProductionOrder, scrapReturn, settleCost, startProductionOrder,
+} from "@/services/productionOrderService";
 import { ExportButton } from "@/components/ui/ExportButton";
-import { Code128Barcode } from "@/components/ui/Code128Barcode";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadMachines, loadWarehouses, loadEmployees } from "@/services/lookups";
-
-type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-
-const STATUS_LABEL: Record<string, string> = {
-  OPEN: "Aberta", IN_PROGRESS: "Em produção", COMPLETED: "Concluída", CLOSED: "Encerrada", CANCELLED: "Cancelada",
-};
-const statusLabel = (s?: string) => (s ? STATUS_LABEL[s] ?? s : "—");
-const OPERATION_LABEL: Record<string, string> = { PENDING: "Pendente", IN_PROGRESS: "Em andamento", PAUSED: "Pausada", INTERRUPTED: "Interrompida", DONE: "Concluída", SKIPPED: "Dispensada" };
-const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-
-const EMPTY_OF: ProductionOrderDTO = { item_code: "", planned_qty: 1, priority: "NORMAL" };
-const EMPTY_APP: AppointmentDTO = { production_order_id: 0, produced_qty: 0, scrapped_qty: 0 };
-const EMPTY_CONS: ConsumptionDTO = { production_order_id: 0, item_code: "", consumed_qty: 0, warehouse_id: 0 };
-
-/** Uma linha da análise de variação: real, padrão e o desvio entre os dois. */
-function linhasDeCusto(c: CostDTO) {
-  const linha = (rotulo: string, real?: number, padrao?: number, total = false) => ({
-    rotulo, real: real ?? 0, padrao: padrao ?? 0, desvio: (real ?? 0) - (padrao ?? 0), total,
-  });
-  return [
-    linha("Material", c.material_cost_real, c.material_cost_std),
-    linha("Mão de obra", c.labor_cost_real, c.labor_cost_std),
-    linha("Indiretos", c.overhead_cost_real, c.overhead_cost_std),
-    linha("Total", c.total_cost_real, c.total_cost_std, true),
-  ];
-}
-
-/** Verde economizou, vermelho estourou, neutro quando não há desvio relevante. */
-function corDoDesvio(desvio: number): string {
-  if (Math.abs(desvio) < 0.005) return "inherit";
-  return desvio > 0 ? "var(--v-err)" : "var(--v-primary)";
-}
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { loadItems, loadMachinesById, loadWarehouses } from "@/services/lookups";
+import { type Aba, Abas, Aviso, Cabecalho, Progresso, Rodape, Selo, Vazio } from "../planejamento/planUi";
+import { data, normalizar, num, situacaoOF } from "../planejamento/planFormat";
+import { useAcao } from "../planejamento/planHooks";
+import {
+  ApontamentoTab, ConsumosTab, CustoTab, EtapasTab, MateriaisTab, ResumoTab, type EntregaForm, type LeituraForm, type MaterialForm,
+} from "./of/OfTabs";
+import { OPERACAO, SITUACAO_FALTA } from "./of/operacao";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
- * Traduz o desvio para uma frase. Um número sozinho não diz se é bom ou ruim —
- * e a faixa de 2% evita transformar arredondamento em alarme.
+ * Ordem de Produção (OF).
+ *
+ * A tela era uma lista que só aparecia depois de "Listar" e uma capa que
+ * repetia em toda aba. Agora é o padrão das outras telas de cadastro: a lista
+ * fica à esquerda (com busca, situação e o quanto já foi produzido), a ordem
+ * aberta à direita, e as abas seguem o trabalho com a ordem: resumo → apontar
+ * → etapas do roteiro → materiais → consumos → custo.
  */
-function leituraDoDesvio(desvio: number, padrao: number): string {
-  if (padrao === 0) return desvio === 0 ? "—" : "sem padrão para comparar";
-  const pct = (desvio / padrao) * 100;
-  if (Math.abs(pct) < 2) return "dentro do padrão";
-  return pct > 0 ? `estourou ${pct.toFixed(1)}%` : `economizou ${Math.abs(pct).toFixed(1)}%`;
-}
+type AbaOF = "resumo" | "apontamento" | "etapas" | "materiais" | "consumos" | "custo";
+type FiltroSituacao = "ativas" | "OPEN" | "IN_PROGRESS" | "COMPLETED" | "todas";
+const FILTROS: { id: FiltroSituacao; rotulo: string }[] = [
+  { id: "ativas", rotulo: "Em aberto" }, { id: "OPEN", rotulo: "Abertas" }, { id: "IN_PROGRESS", rotulo: "Em produção" },
+  { id: "COMPLETED", rotulo: "Concluídas" }, { id: "todas", rotulo: "Todas" },
+];
+const CICLO = [
+  { status: "OPEN", rotulo: "Aberta" }, { status: "IN_PROGRESS", rotulo: "Em produção" },
+  { status: "COMPLETED", rotulo: "Concluída" }, { status: "CLOSED", rotulo: "Encerrada" },
+];
 
-/**
- * A tela empilhava numa rolagem só a criação da OF, a lista, o apontamento, o
- * consumo, a conclusão, o custo, as etapas, a leitura por código de barras e os
- * materiais. Quem estava apontando produção rolava por tudo a cada lançamento.
- * As abas seguem o que a pessoa está fazendo: escolher a ordem → apontar →
- * acompanhar as etapas → cuidar do material.
- */
-type AbaOF = "ordens" | "apontamento" | "etapas" | "materiais";
+const NOVA_OF: ProductionOrderDTO = { item_code: "", planned_qty: 0, priority: "NORMAL" };
+const APONTAMENTO_VAZIO: AppointmentDTO = { production_order_id: 0, produced_qty: 0, scrapped_qty: 0 };
+const CONSUMO_VAZIO: ConsumptionDTO = { production_order_id: 0, item_code: "", consumed_qty: 0 };
+const MATERIAL_VAZIO: MaterialForm = { item_code: "", quantity: "", automatic_issue: true, substituted_item_code: "" };
+const LEITURA_VAZIA: LeituraForm = { token: "", action: "RESOLVER", device_id: "terminal-producao", employee_id: "", good_quantity: "", scrap_quantity: "", hours: "", scrap_reason: "", complete_operation: false };
 
 export function Vpro0900Page(): JSX.Element {
-  const [aba, setAba] = useState<AbaOF>("ordens");
-  const [orders, setOrders] = useState<ProductionOrderDTO[]>([]);
-  const [selected, setSelected] = useState<ProductionOrderDTO | null>(null);
-  const [appointments, setAppointments] = useState<AppointmentDTO[]>([]);
-  const [consumptions, setConsumptions] = useState<ConsumptionDTO[]>([]);
-  const [operationReason, setOperationReason] = useState("");
-  /**
-   * Horas e peças da etapa que está sendo concluída. Não é enfeite: é o que
-   * gasta a vida útil da ferramenta no backend. Enquanto a tela mandava zero
-   * nos dois, nenhuma ferramenta chegava ao limite de troca.
-   */
-  const [operationHours, setOperationHours] = useState("");
-  const [operationQty, setOperationQty] = useState("");
-  const [operations, setOperations] = useState<OperationDTO[]>([]);
-  const [cost, setCost] = useState<CostDTO | null>(null);
-  const [materials, setMaterials] = useState<MaterialDTO[]>([]);
-  const [matForm, setMatForm] = useState({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true, substituted_item_code: "" });
-  const [newOf, setNewOf] = useState<ProductionOrderDTO>(EMPTY_OF);
-  const [app, setApp] = useState<AppointmentDTO>(EMPTY_APP);
-  const [cons, setCons] = useState<ConsumptionDTO>(EMPTY_CONS);
-  const [completeWh, setCompleteWh] = useState("2");
-  const [completeLot, setCompleteLot] = useState("");
-  const [scanToken, setScanToken] = useState<ProductionScanToken | null>(null);
-  const [scanner, setScanner] = useState({ token: "", action: "RESOLVER" as ProductionScanAction, device_id: "terminal-producao", employee_id: "", good_quantity: "", scrap_quantity: "", hours: "", scrap_reason: "", complete_operation: false });
-  const [feedback, setFeedback] = useState<Feedback>(null);
-  const [busy, setBusy] = useState(false);
+  const { busy, feedback, setFeedback, run } = useAcao();
+  const [ordens, setOrdens] = useState<ProductionOrderDTO[]>([]);
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<FiltroSituacao>("ativas");
+  const [of, setOf] = useState<ProductionOrderDTO | null>(null);
+  const [aba, setAba] = useState<AbaOF>("resumo");
+  const [apontamentos, setApontamentos] = useState<AppointmentDTO[]>([]);
+  const [consumos, setConsumos] = useState<ConsumptionDTO[]>([]);
+  const [operacoes, setOperacoes] = useState<OperationDTO[]>([]);
+  const [materiais, setMateriais] = useState<MaterialDTO[]>([]);
+  const [custo, setCusto] = useState<CostDTO | null>(null);
+  const [app, setApp] = useState<AppointmentDTO>(APONTAMENTO_VAZIO);
+  const [cons, setCons] = useState<ConsumptionDTO>(CONSUMO_VAZIO);
+  const [conclusao, setConclusao] = useState<EntregaForm>({ lote: "", quantidade: "", final: true });
+  const [etapa, setEtapa] = useState({ horas: "", pecas: "", motivo: "" });
+  const [matForm, setMatForm] = useState<MaterialForm>(MATERIAL_VAZIO);
+  const [token, setToken] = useState<ProductionScanToken | null>(null);
+  const [leitura, setLeitura] = useState<LeituraForm>(LEITURA_VAZIA);
+  const [novaAberta, setNovaAberta] = useState(false);
+  const [nova, setNova] = useState<ProductionOrderDTO>(NOVA_OF);
+  const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
+  const [sucata, setSucata] = useState<{ material: MaterialDTO; quantidade: string; deposito?: number } | null>(null);
 
-  const run = useCallback(async (fn: () => Promise<void>) => {
-    setBusy(true); setFeedback(null);
-    try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }, []);
+  const [faltas, setFaltas] = useState<MaterialAvailability | null>(null);
+  const [faltasLista, setFaltasLista] = useState<Record<number, MaterialAvailability>>({});
+  const [confirmarInicio, setConfirmarInicio] = useState(false);
 
-  const loadDetails = useCallback(async (id: number) => {
-    const [of, ap, co, ops] = await Promise.all([
-      getProductionOrder(id), listAppointments(id), listConsumptions(id), listOperations(id),
-    ]);
-    setSelected(of); setAppointments(ap); setConsumptions(co); setOperations(ops);
-    setApp({ ...EMPTY_APP, production_order_id: id }); setCons({ ...EMPTY_CONS, production_order_id: id });
-    try { setCost(await getCost(id)); } catch { setCost(null); }
-    try { setMaterials(await listMaterials(id)); } catch { setMaterials([]); }
-  }, []);
-
-  const alterarEtapa = (id: number, status: string) => run(async () => {
-    if ((status === "PAUSED" || status === "INTERRUPTED") && !operationReason.trim()) {
-      setFeedback({ type: "error", message: "Informe o motivo da pausa ou interrupção." }); return;
+  const listar = useCallback(async () => {
+    const l = await listProductionOrders();
+    setOrdens(l);
+    // Selo de falta só para as ordens que ainda vão consumir material. Se a
+    // conferência falhar, a lista abre sem o selo — e a tela diz isso, para
+    // ninguém achar que "sem selo" quer dizer "sem falta".
+    const ativas = l.filter((o) => o.id && (o.status === "OPEN" || o.status === "IN_PROGRESS")).map((o) => o.id as number).slice(0, 500);
+    try { setFaltasLista(await getMaterialAvailabilitySummary(ativas)); }
+    catch (e) {
+      setFaltasLista({});
+      setFeedback({ type: "error", message: `Lista carregada, mas não foi possível conferir as faltas de material: ${errMessage(e)}` });
     }
-    const horas = Number(operationHours) || 0;
-    const pecas = Number(operationQty) || 0;
-    if (status === "DONE" && horas <= 0 && pecas <= 0) {
-      setFeedback({ type: "error", message: "Informe as horas trabalhadas ou as peças produzidas para concluir a etapa — é o que desconta a vida útil da ferramenta." });
-      return;
+  }, [setFeedback]);
+  useEffect(() => { void run(listar); }, [run, listar]);
+
+  const carregarOF = useCallback(async (id: number) => {
+    const [o, ap, co, ops] = await Promise.all([getProductionOrder(id), listAppointments(id), listConsumptions(id), listOperations(id)]);
+    setOf(o); setApontamentos(ap); setConsumos(co); setOperacoes(ops);
+    setApp({ ...APONTAMENTO_VAZIO, production_order_id: id }); setCons({ ...CONSUMO_VAZIO, production_order_id: id });
+    // Custo e materiais podem não existir ainda (404): a falta deles não impede
+    // abrir a ordem. Qualquer outra falha abre a ordem e avisa o que não carregou.
+    const naoCarregou: string[] = [];
+    const parte = async <T,>(nome: string, f: () => Promise<T>, vazio: T): Promise<T> => {
+      try { return await f(); }
+      catch (e) { if (!ehNaoEncontrado(e)) naoCarregou.push(`${nome} (${errMessage(e)})`); return vazio; }
+    };
+    setCusto(await parte("custo", () => getCost(id), null));
+    setMateriais(await parte("materiais", () => listMaterials(id), [] as MaterialDTO[]));
+    setFaltas(await parte("faltas de material", () => getMaterialAvailability(id), null));
+    if (naoCarregou.length) setFeedback({ type: "error", message: `Ordem aberta, mas não foi possível carregar: ${naoCarregou.join("; ")}.` });
+  }, [setFeedback]);
+
+  const abrir = (id?: number) => { if (id) void run(async () => { setToken(null); await carregarOF(id); }); };
+  const recarregar = async () => { if (of?.id) { await carregarOF(of.id); await listar(); } };
+
+  const contagem = useMemo(() => {
+    const c: Record<FiltroSituacao, number> = { ativas: 0, OPEN: 0, IN_PROGRESS: 0, COMPLETED: 0, todas: ordens.length };
+    for (const o of ordens) {
+      if (o.status === "OPEN" || o.status === "IN_PROGRESS") c.ativas += 1;
+      if (o.status === "OPEN" || o.status === "IN_PROGRESS" || o.status === "COMPLETED") c[o.status as "OPEN"] += 1;
     }
-    const result = await advanceOperation(id, status, horas, operationReason.trim(), pecas);
-    setOperationReason(""); setOperationHours(""); setOperationQty("");
-    if (selected?.id) await loadDetails(selected.id);
-    // Ferramenta no limite não é notícia boa: sai como aviso, não como sucesso
-    // verde — senão o operador fecha a mensagem sem ler e a peça sai fora de
-    // medida. Ao INICIAR a etapa o alerta ainda dá tempo de trocar.
-    const alerts = Array.isArray(result.tool_alerts) ? result.tool_alerts.join(" · ") : "";
-    setFeedback({
-      type: alerts ? "error" : "success",
-      message: `Etapa ${OPERATION_LABEL[status]?.toLowerCase() ?? status}.${alerts ? ` Atenção: ${alerts}` : ""}`,
-    });
-  });
+    return c;
+  }, [ordens]);
+  const visiveis = useMemo(() => {
+    const q = normalizar(busca.trim());
+    return ordens
+      .filter((o) => filtro === "todas" || (filtro === "ativas" ? o.status === "OPEN" || o.status === "IN_PROGRESS" : o.status === filtro))
+      .filter((o) => !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""}`).includes(q))
+      .sort((a, b) => (a.start_date ?? "9999").localeCompare(b.start_date ?? "9999") || (a.id ?? 0) - (b.id ?? 0));
+  }, [ordens, busca, filtro]);
 
-  const listar = () => run(async () => { setOrders(await listProductionOrders()); });
-  /** Abrir uma ordem leva para o apontamento: é o que se faz com a OF aberta. */
-  const abrir = (id?: number) => { if (id) void run(async () => { await loadDetails(id); setAba("apontamento"); }); };
-
+  // ── Ações da ordem ──
   const criar = () => run(async () => {
-    if (!newOf.item_code) { setFeedback({ type: "error", message: "Item é obrigatório." }); return; }
-    if (!newOf.planned_qty) { setFeedback({ type: "error", message: "Quantidade planejada é obrigatória." }); return; }
-    const of = await createProductionOrder(newOf);
-    setNewOf(EMPTY_OF);
-    setFeedback({ type: "success", message: `OF ${of.id} criada (${statusLabel(of.status)}).` });
-    setOrders(await listProductionOrders());
-    if (of.id) await loadDetails(of.id);
+    if (!nova.item_code) { setFeedback({ type: "error", message: "Escolha o item." }); return; }
+    if (!(nova.planned_qty > 0)) { setFeedback({ type: "error", message: "Informe a quantidade a produzir." }); return; }
+    const criada = await createProductionOrder(nova);
+    setNovaAberta(false); setNova(NOVA_OF);
+    await listar();
+    if (criada.id) { await carregarOF(criada.id); setAba("resumo"); }
+    setFeedback({ type: "success", message: `OF ${criada.id} criada.` });
   });
+  const transicao = (rotulo: string, fn: (id: number) => Promise<unknown>) => { const id = of?.id; if (!id) return; void run(async () => {
+    await fn(id); await recarregar(); setFeedback({ type: "success", message: `OF ${id}: ${rotulo}.` });
+  }); };
+  // O encerramento vale mesmo se a apuração do custo falhar: aí a OF fica com
+  // "custo pendente" e a tela diz o motivo.
+  const encerrar = () => { const id = of?.id; if (!id) return; void run(async () => {
+    const r = await closeProductionOrder(id); await recarregar();
+    setFeedback(r.cost_pending
+      ? { type: "error", message: `OF ${id} encerrada, mas ${r.cost_pending}. Use "Apurar custo" depois de corrigir.` }
+      : { type: "success", message: `OF ${id}: encerrada.` });
+  }); };
+  const explodir = () => { const id = of?.id; if (!id) return; void run(async () => {
+    const ops = await explodeOperations(id); setOperacoes(ops);
+    setFeedback({ type: ops.length ? "success" : "info", message: ops.length ? `${ops.length} etapa(s) criada(s) a partir do roteiro.` : "O item não tem roteiro padrão: nenhuma etapa criada." });
+    if (ops.length) setAba("etapas");
+  }); };
+  const apurarCusto = () => { const id = of?.id; if (!id) return; void run(async () => { setCusto(await settleCost(id)); await recarregar(); setFeedback({ type: "success", message: "Custo real apurado." }); setAba("custo"); }); };
 
-  const transicao = (label: string, fn: (id: number) => Promise<unknown>) => {
-    const id = selected?.id; if (!id) return;
-    void run(async () => { await fn(id); await loadDetails(id); setOrders(await listProductionOrders()); setFeedback({ type: "success", message: `${label} — OF ${id}.` }); });
-  };
-
-  const apontar = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    if (!app.produced_qty && !app.scrapped_qty) { setFeedback({ type: "error", message: "Informe qtd produzida e/ou refugada." }); return; }
+  const apontar = () => { const id = of?.id; if (!id) return; void run(async () => {
+    if (!app.produced_qty && !app.scrapped_qty) { setFeedback({ type: "error", message: "Informe a quantidade boa e/ou o refugo." }); return; }
+    if (!app.employee_id) { setFeedback({ type: "error", message: "Informe o operador que produziu." }); return; }
     await appointProduction({ ...app, production_order_id: id });
-    await loadDetails(id); setFeedback({ type: "success", message: "Apontamento registrado." });
+    await recarregar(); setFeedback({ type: "success", message: "Apontamento registrado." });
   }); };
-
-  const consumir = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    if (!cons.item_code || !cons.consumed_qty) { setFeedback({ type: "error", message: "Item e quantidade consumida são obrigatórios." }); return; }
+  const consumir = () => { const id = of?.id; if (!id) return; void run(async () => {
+    if (!cons.item_code || !cons.consumed_qty) { setFeedback({ type: "error", message: "Escolha o insumo e a quantidade." }); return; }
+    if (!cons.warehouse_id) { setFeedback({ type: "error", message: "Escolha o depósito de onde o insumo sai." }); return; }
     await addConsumption({ ...cons, production_order_id: id });
-    await loadDetails(id); setFeedback({ type: "success", message: "Consumo registrado (saída do estoque)." });
+    await recarregar(); setFeedback({ type: "success", message: "Consumo registrado: saída do estoque para a ordem." });
+  }); };
+  // Antes caía no depósito 2 quando nenhum era escolhido — sucata entrava num
+  // depósito que a pessoa nem viu. Agora o depósito é obrigatório.
+  const retornarSucata = () => { const id = of?.id; if (!id) return; void run(async () => {
+    if (!cons.item_code || !cons.consumed_qty || !cons.warehouse_id) { setFeedback({ type: "error", message: "Para retornar sucata, preencha insumo, quantidade e depósito no bloco de consumo." }); return; }
+    await scrapReturn(id, { scrap_item_code: cons.item_code, warehouse_id: cons.warehouse_id, quantity: cons.consumed_qty, unit_value: 0, notes: "Retorno de sucata" });
+    setFeedback({ type: "success", message: "Sucata devolvida ao estoque." });
+  }); };
+  const concluir = () => { const id = of?.id; if (!id || !of) return; void run(async () => {
+    if (!conclusao.deposito) { setFeedback({ type: "error", message: "Escolha o depósito de entrada do produto acabado." }); return; }
+    const saldo = Math.max(0, (of.planned_qty || 0) - (of.produced_qty || 0));
+    const qtd = conclusao.quantidade.trim() ? Number(conclusao.quantidade) : saldo;
+    if (!(qtd >= 0) || (!conclusao.final && qtd <= 0)) { setFeedback({ type: "error", message: "Informe a quantidade entregue." }); return; }
+    await completeProductionOrder(id, { warehouseId: conclusao.deposito, lot: conclusao.lote || undefined, quantity: qtd, final: conclusao.final });
+    setConclusao((c) => ({ ...c, lote: "", quantidade: "" })); await recarregar();
+    const lote = conclusao.lote ? ` no lote ${conclusao.lote}` : "";
+    setFeedback({ type: "success", message: conclusao.final
+      ? `OF ${id} concluída: ${num(qtd)} peça(s) entraram no estoque${lote}.`
+      : `Entrega parcial registrada: ${num(qtd)} peça(s) entraram no estoque${lote}.` });
   }); };
 
-  const concluir = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    await completeProductionOrder(id, Number(completeWh) || undefined, completeLot || undefined);
-    setCompleteLot(""); await loadDetails(id); setOrders(await listProductionOrders());
-    setFeedback({ type: "success", message: `OF ${id} concluída (entrada do acabado${completeLot ? ` · lote ${completeLot}` : ""}).` });
+  const alterarEtapa = (opId: number, status: string) => run(async () => {
+    if ((status === "PAUSED" || status === "INTERRUPTED") && !etapa.motivo.trim()) { setFeedback({ type: "error", message: "Informe o motivo da pausa ou da interrupção." }); return; }
+    const horas = Number(etapa.horas) || 0, pecas = Number(etapa.pecas) || 0;
+    if (status === "DONE" && horas <= 0 && pecas <= 0) { setFeedback({ type: "error", message: "Informe as horas trabalhadas ou as peças produzidas para concluir a etapa — é o que desconta a vida útil da ferramenta." }); return; }
+    const enviado = etapa;
+    const r = await advanceOperation(opId, status, horas, etapa.motivo.trim(), pecas);
+    // Limpa só o que foi enviado: o operador pode ter digitado o próximo motivo
+    // enquanto esta etapa salvava, e esse texto não pode sumir.
+    setEtapa((s) => ({
+      horas: s.horas === enviado.horas ? "" : s.horas,
+      pecas: s.pecas === enviado.pecas ? "" : s.pecas,
+      motivo: s.motivo === enviado.motivo ? "" : s.motivo,
+    }));
+    await recarregar();
+    // Ferramenta no limite não é notícia boa: sai como aviso, não como sucesso.
+    const alertas = Array.isArray(r.tool_alerts) ? r.tool_alerts.join(" · ") : "";
+    setFeedback({ type: alertas ? "error" : "success", message: `Etapa ${OPERACAO[status]?.rotulo.toLowerCase() ?? status}.${alertas ? ` Atenção: ${alertas}` : ""}` });
+  });
+  const gerarCodigo = (opId?: number) => { const id = of?.id; if (!id) return; void run(async () => {
+    const t = await createProductionScanToken({ production_order_id: id, operation_id: opId });
+    setToken(t); setLeitura((s) => ({ ...s, token: t.token }));
+    setFeedback({ type: "success", message: "Código de barras gerado para a etapa." });
   }); };
-
-  const explodir = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    const ops = await explodeOperations(id); setOperations(ops);
-    setFeedback({ type: ops.length ? "success" : "info", message: ops.length ? `${ops.length} operação(ões) explodida(s).` : "Nenhuma operação — item sem roteiro definido." });
-  }); };
-
-  const apurarCusto = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    setCost(await settleCost(id)); setFeedback({ type: "success", message: "Custo real apurado." });
-  }); };
-
-  const retornarSucata = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    if (!cons.item_code || !cons.consumed_qty) { setFeedback({ type: "error", message: "Use Item/Qtd do bloco de consumo para a sucata." }); return; }
-    await scrapReturn(id, { scrap_item_code: cons.item_code, warehouse_id: cons.warehouse_id || 2, quantity: cons.consumed_qty, unit_value: 0, notes: "Retorno de sucata" });
-    setFeedback({ type: "success", message: "Sucata retornada como subproduto (IN valorizado)." });
-  }); };
-
-  const incluirMaterial = () => { const id = selected?.id; if (!id) return; void run(async () => {
-    if (!matForm.item_code || !matForm.quantity) { setFeedback({ type: "error", message: "Item e quantidade do material são obrigatórios." }); return; }
-    await addMaterial({
-      production_order_id: id, kind: "DEMAND", item_code: matForm.item_code.trim(), quantity: matForm.quantity,
-      warehouse_id: matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined,
-      automatic_issue: matForm.automatic_issue,
-      substituted_item_code: matForm.substituted_item_code || undefined,
+  const ler = () => run(async () => {
+    if (!leitura.token.trim() || !leitura.device_id.trim()) { setFeedback({ type: "error", message: "Leia o código de barras e informe o dispositivo." }); return; }
+    const r = await scanProductionOrder({
+      token: leitura.token.trim(), action: leitura.action, idempotency_key: `${leitura.device_id}-${crypto.randomUUID()}`, device_id: leitura.device_id.trim(),
+      employee_id: leitura.employee_id ? Number(leitura.employee_id) : undefined, good_quantity: leitura.good_quantity || undefined,
+      scrap_quantity: leitura.scrap_quantity || undefined, hours: leitura.hours || undefined, scrap_reason: leitura.scrap_reason || undefined,
+      complete_operation: leitura.complete_operation,
     });
-    setMatForm({ item_code: "", quantity: "", warehouse_id: "", automatic_issue: true, substituted_item_code: "" });
-    setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: "Material incluído na OF." });
-  }); };
-  const alocarLotes = (m: MaterialDTO) => { const id = selected?.id; if (!id || !m.id) return; void run(async () => {
-    await allocateLots(m.id!, "REQUISITION", []); // [] = seleção automática por data/código do lote
-    setMaterials(await listMaterials(id)); setFeedback({ type: "success", message: `Lotes alocados automaticamente ao material ${m.id}.` });
-  }); };
-  const destinarSucata = (m: MaterialDTO) => { const id = selected?.id; if (!id) return; void run(async () => {
-    await addScrapDestination({ production_order_id: id, destination_kind: "DEMAND", production_order_material_id: m.id, scrap_item_code: m.item_code, warehouse_id: m.warehouse_id || 2, scrap_quantity: 1, destination_date: new Date().toISOString().slice(0, 10) });
-    setFeedback({ type: "success", message: "Destino de sucata registrado." });
-  }); };
-
-  const gerarCodigoBarras = (operationId?: number) => { const id = selected?.id; if (!id) return; void run(async () => {
-    const token = await createProductionScanToken({ production_order_id: id, operation_id: operationId });
-    setScanToken(token); setScanner((s) => ({ ...s, token: token.token }));
-    setFeedback({ type: "success", message: "Código de barras seguro gerado para a operação." });
-  }); };
-  const lerCodigoBarras = () => run(async () => {
-    if (!scanner.token.trim() || !scanner.device_id.trim()) { setFeedback({ type: "error", message: "Leia o código de barras e informe o dispositivo." }); return; }
-    const result = await scanProductionOrder({
-      token: scanner.token.trim(), action: scanner.action,
-      idempotency_key: `${scanner.device_id}-${crypto.randomUUID()}`, device_id: scanner.device_id.trim(),
-      employee_id: scanner.employee_id ? Number(scanner.employee_id) : undefined,
-      good_quantity: scanner.good_quantity || undefined, scrap_quantity: scanner.scrap_quantity || undefined,
-      hours: scanner.hours || undefined, scrap_reason: scanner.scrap_reason || undefined,
-      complete_operation: scanner.complete_operation,
-    });
-    if (result.production_order_id) await loadDetails(result.production_order_id);
-    setFeedback({ type: "success", message: result.message || (result.replayed ? "Leitura já processada anteriormente." : "Leitura registrada com sucesso.") });
+    if (r.production_order_id) { await carregarOF(r.production_order_id); await listar(); }
+    setFeedback({ type: "success", message: r.message || (r.replayed ? "Leitura já processada antes." : "Leitura registrada.") });
   });
 
-  const st = selected?.status;
+  const incluirMaterial = () => { const id = of?.id; if (!id) return; void run(async () => {
+    if (!matForm.item_code || !(Number(matForm.quantity) > 0)) { setFeedback({ type: "error", message: "Escolha o item e a quantidade do material." }); return; }
+    await addMaterial({ production_order_id: id, kind: "DEMAND", item_code: matForm.item_code.trim(), quantity: matForm.quantity, warehouse_id: matForm.warehouse_id, automatic_issue: matForm.automatic_issue, substituted_item_code: matForm.substituted_item_code || undefined });
+    setMatForm(MATERIAL_VAZIO); setMateriais(await listMaterials(id)); setFeedback({ type: "success", message: "Material incluído na ordem." });
+  }); };
+  const alocar = (m: MaterialDTO) => { const id = of?.id; if (!id || !m.id) return; void run(async () => {
+    await allocateLots(m.id!, "REQUISITION", []); // lista vazia = seleção automática por data e código do lote
+    setMateriais(await listMaterials(id)); setFeedback({ type: "success", message: `Lotes alocados para ${m.item_code}.` });
+  }); };
+  const destinarSucata = () => { const id = of?.id; if (!id || !sucata) return; void run(async () => {
+    const qtd = Number(sucata.quantidade);
+    if (!(qtd > 0) || !sucata.deposito) { setFeedback({ type: "error", message: "Informe a quantidade de sucata e o depósito." }); return; }
+    await addScrapDestination({ production_order_id: id, destination_kind: "DEMAND", production_order_material_id: sucata.material.id, scrap_item_code: sucata.material.item_code, warehouse_id: sucata.deposito, scrap_quantity: qtd, destination_date: hojeLocal() });
+    setSucata(null); setFeedback({ type: "success", message: `Destino de sucata registrado para ${sucata.material.item_code}.` });
+  }); };
 
-  const ABAS: { id: AbaOF; label: string; hint: string; contador?: number; exigeOrdem?: boolean }[] = [
-    { id: "ordens", label: "Ordens", hint: "Criar a OF e escolher a ordem de trabalho", contador: orders.length },
-    { id: "apontamento", label: "Apontamento", hint: "Produção, refugo, consumo de insumo, conclusão e custo da ordem", exigeOrdem: true },
-    { id: "etapas", label: "Etapas", hint: "Apontamento por etapa do roteiro, operações, apontamentos e leitura por código de barras", contador: operations.length, exigeOrdem: true },
-    { id: "materiais", label: "Materiais", hint: "Materiais da ordem, alocação de lotes e destino de sucata", contador: materials.length, exigeOrdem: true },
+  const st = of?.status;
+  const pendentes = operacoes.filter((op) => op.status !== "DONE" && op.status !== "SKIPPED").length;
+  const ABAS: Aba<AbaOF>[] = [
+    { id: "resumo", label: "Resumo" },
+    { id: "apontamento", label: "Apontamento", contador: apontamentos.length, hint: "Produção, refugo, consumo de insumo e conclusão" },
+    { id: "etapas", label: "Etapas", contador: operacoes.length, hint: "Etapas do roteiro e leitura por código de barras" },
+    { id: "materiais", label: "Materiais", contador: materiais.length, alerta: !!faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO"), hint: "Materiais da ordem, lotes e sucata" },
+    { id: "consumos", label: "Consumos", contador: consumos.length },
+    { id: "custo", label: "Custo", hint: "Custo real × padrão" },
   ];
+  const sit = situacaoOF(st);
+  const passo = CICLO.findIndex((c) => c.status === st);
 
   return (
     <div className="erp-screen">
-      <header className="erp-titlebar">
-        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Ordem de Produção</span><span className="erp-crumb-code">VPRO0900</span></nav>
-        <div className="erp-titlebar-spacer" />
-      </header>
+      <Cabecalho modulo="Produção" titulo="Ordem de Produção" codigo="VPRO0900" />
 
-      <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Ordens</span>
-          <button className="erp-btn" onClick={listar} disabled={busy}>Listar</button></div>
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
-          <ExportButton title="VPRO0900 — Ordem de Produção" filename="vpro0900" /></div>
+      <div className="erp-toolbar vpl-toolbar">
+        <button className="erp-btn erp-btn-new" onClick={() => { setNova(NOVA_OF); setNovaAberta(true); }} disabled={busy}>+ Nova OF</button>
+        <div className="erp-tgroup"><button className="erp-btn" onClick={() => void run(async () => { await listar(); if (of?.id) await carregarOF(of.id); })} disabled={busy}>Atualizar</button></div>
+        <div className="erp-tspacer" />
+        <div className="erp-tgroup"><ExportButton title="VPRO0900 — Ordem de Produção" filename="vpro0900" build={() => ({
+          columns: ["OF", "Item", "Planejada", "Produzida", "Refugo", "Situação", "Início", "Término"],
+          rows: visiveis.map((o) => [String(o.id), o.item_code, num(o.planned_qty), num(o.produced_qty ?? 0), num(o.scrapped_qty ?? 0), situacaoOF(o.status).rotulo, data(o.start_date), data(o.end_date)]),
+        })} /></div>
       </div>
 
       <div className="erp-content">
-        <section className="erp-detail-panel">
-          <div className="erp-tabs">
-            {ABAS.map((a) => (
-              <button key={a.id} className={`erp-tab${aba === a.id ? " active" : ""}`}
-                onClick={() => setAba(a.id)} title={a.hint}
-                disabled={a.exigeOrdem && !selected}>
-                {a.label}{a.contador !== undefined ? ` (${a.contador})` : ""}
-              </button>
-            ))}
-          </div>
-          <div className="erp-detail-body">
-        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-main">
+          <aside className="erp-list-panel">
+            <div className="erp-panel-head">
+              <span className="erp-panel-title">Ordens</span><span className="erp-count">{visiveis.length}</span>
+              <div className="erp-panel-head-spacer" />
+              <input className="erp-search" placeholder="OF ou item…" aria-label="Buscar ordem" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            </div>
+            <div className="vpl-list-filters">
+              {FILTROS.map((f) => <button key={f.id} type="button" className={`erp-chip${filtro === f.id ? " active" : ""}`} onClick={() => setFiltro(f.id)}>{f.rotulo} · {contagem[f.id]}</button>)}
+            </div>
+            <div className="erp-list">
+              {visiveis.length === 0 && <div className="erp-list-empty">{ordens.length ? "Nenhuma ordem com esse filtro." : "Nenhuma ordem de produção ainda."}</div>}
+              {visiveis.map((o) => {
+                const s = situacaoOF(o.status);
+                const f = o.id ? faltasLista[o.id] : undefined;
+                const comFalta = f && (f.status === "PARCIAL" || f.status === "SEM_SALDO");
+                return (
+                  <div key={o.id} className={`erp-list-row${of?.id === o.id ? " sel" : ""}`} onClick={() => abrir(o.id)} role="button" tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter") abrir(o.id); }}>
+                    <span className="erp-list-code">OF {o.id}</span>
+                    <span className="erp-list-sub">{o.item_code}</span>
+                    <span className="vpl-list-row-right">
+                      {comFalta && <Selo tom={SITUACAO_FALTA[f.status].tom} title={`${f.missing_items} de ${f.items} material(is) sem saldo suficiente`}>Falta material</Selo>}
+                      <Selo tom={s.tom}>{s.rotulo}</Selo></span>
+                    <div className="erp-list-meta" style={{ width: "100%" }}>
+                      <span className="erp-text-muted" style={{ fontSize: 11.5, whiteSpace: "nowrap" }}>{data(o.start_date)} → {data(o.end_date)}</span>
+                      <div style={{ flex: 1 }} title="Entregue ao estoque"><Progresso valor={o.produced_qty ?? 0} total={o.planned_qty || 0} /></div>
+                      <span className="erp-list-money">{num(o.produced_qty ?? 0)}/{num(o.planned_qty)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
 
-        {aba === "ordens" && (<>
-        {/* Nova OF */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Nova ordem (Aberto)</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={newOf.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setNewOf((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd planejada</label><input className="erp-input num" type="number" value={newOf.planned_qty || ""} onChange={(e) => setNewOf((p) => ({ ...p, planned_qty: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Máquina</label><LookupField value={newOf.machine_id || undefined} loader={loadMachines} entityLabel="máquina" onChange={(code) => setNewOf((p) => ({ ...p, machine_id: code }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Centro custo</label><input className="erp-input num" type="number" value={newOf.cost_center_id || ""} onChange={(e) => setNewOf((p) => ({ ...p, cost_center_id: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Prioridade</label><input className="erp-input" value={newOf.priority ?? ""} onChange={(e) => setNewOf((p) => ({ ...p, priority: e.target.value }))} /></div>
-          <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar OF</button></div>
-        </div></div>
-
-        {/* Lista */}
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Ordens ({orders.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-          <table className="erp-grid">
-            <thead><tr><th>OF</th><th>Item</th><th>Planej.</th><th>Produz.</th><th>Refugo</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {orders.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma ordem. Clique em Listar.</td></tr>}
-              {orders.map((o) => (
-                <tr key={o.id} className={selected?.id === o.id ? "erp-row-sel" : ""}>
-                  <td>{o.id}</td><td>{o.item_code}</td>
-                  <td>{o.planned_qty}</td><td>{o.produced_qty}</td><td>{o.scrapped_qty}</td>
-                  <td>{statusLabel(o.status)}</td>
-                  <td><button className="erp-btn" onClick={() => abrir(o.id)} disabled={busy}>Abrir</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div></div>
+          <section className="erp-detail-panel">
+            {!of ? (
+              <div className="erp-detail-body"><Aviso feedback={feedback} busy={busy} />
+                <Vazio titulo="Escolha uma ordem na lista" texto="Ou crie uma ordem nova. As ordens geradas pelo MRP já aparecem aqui ao serem firmadas."
+                  acao={<button className="erp-btn erp-btn-primary" onClick={() => setNovaAberta(true)}>+ Nova OF</button>} />
+              </div>
+            ) : (<>
+              <div style={{ padding: "14px 16px 0" }}>
+                <div className="vpl-record">
+                  <div className="vpl-record-main">
+                    <div className="vpl-record-title">OF {of.id} <Selo tom={sit.tom}>{sit.rotulo}</Selo></div>
+                    <div className="vpl-record-sub">{of.item_code}{of.mask ? ` · ${of.mask}` : ""} · {num(of.planned_qty)} a produzir · {data(of.start_date)} → {data(of.end_date)}</div>
+                    {of.cost_pending && <div style={{ marginTop: 6 }}><Selo tom="danger">Custo não apurado</Selo> <span className="erp-hint">{of.cost_pending}</span></div>}
+                  </div>
+                  <div className="vpl-record-actions">
+                    {st === "OPEN" && <button className="erp-btn erp-btn-primary" disabled={busy}
+                      onClick={() => (faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO") ? setConfirmarInicio(true) : transicao("produção iniciada", startProductionOrder))}>Iniciar produção</button>}
+                    {operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>}
+                    <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>
+                    {st === "COMPLETED" && <button className="erp-btn erp-btn-primary" onClick={encerrar} disabled={busy}>Encerrar</button>}
+                    {st !== "CLOSED" && st !== "CANCELLED" && <button className="erp-btn erp-btn-danger" onClick={() => setConfirmarCancelamento(true)} disabled={busy}>Cancelar OF</button>}
+                  </div>
+                </div>
+                {(st === "OPEN" || st === "IN_PROGRESS") && faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO") && (
+                  <div className="erp-feedback info" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span>Falta material: {faltas.missing_items} de {faltas.items} item(ns) sem saldo suficiente no depósito, contando as ordens que estão na frente.</span>
+                    <button className="erp-btn erp-btn-sm" onClick={() => setAba("materiais")}>Ver faltas</button>
+                  </div>
+                )}
+                {st !== "CANCELLED" && (
+                  <div className="vpl-steps" style={{ marginTop: 10 }}>
+                    {CICLO.map((c, i) => (
+                      <div key={c.status} className={`vpl-step${i < passo ? " done" : i === passo ? " current" : ""}`}>
+                        <span className="vpl-step-dot">{i < passo ? "✓" : i + 1}</span>{c.rotulo}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: 10 }}><Abas abas={ABAS} ativa={aba} onChange={setAba} /></div>
+              <div className="erp-detail-body">
+                <Aviso feedback={feedback} busy={busy} />
+                {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} />}
+                {aba === "apontamento" && <ApontamentoTab of={of} busy={busy} app={app} setApp={setApp} cons={cons} setCons={setCons} apontamentos={apontamentos}
+                  operacoesPendentes={pendentes} conclusao={conclusao} setConclusao={setConclusao}
+                  onApontar={apontar} onConsumir={consumir} onRetornarSucata={retornarSucata} onConcluir={concluir} />}
+                {aba === "etapas" && <EtapasTab of={of} busy={busy} operacoes={operacoes} etapa={etapa} setEtapa={setEtapa} onAlterar={(i, s) => void alterarEtapa(i, s)}
+                  onGerarCodigo={gerarCodigo} token={token} leitura={leitura} setLeitura={setLeitura} onLer={() => void ler()} onExplodir={explodir} />}
+                {aba === "materiais" && <MateriaisTab busy={busy} materiais={materiais} disponibilidade={faltas} form={matForm} setForm={setMatForm} onIncluir={incluirMaterial} onAlocar={alocar}
+                  onSucata={(m) => setSucata({ material: m, quantidade: "", deposito: m.warehouse_id })} />}
+                {aba === "consumos" && <ConsumosTab consumos={consumos} />}
+                {aba === "custo" && <CustoTab custo={custo} busy={busy} onApurar={apurarCusto} />}
+              </div>
+            </>)}
+          </section>
         </div>
+      </div>
 
-        </>)}
+      <Rodape>
+        <div className="erp-status-item">Ordens: <strong>{ordens.length}</strong></div>
+        <div className="erp-status-item">Em produção: <strong>{contagem.IN_PROGRESS}</strong></div>
+        {of && <div className="erp-status-item">Aberta: <strong>OF {of.id}</strong></div>}
+      </Rodape>
 
-        {selected && (
-          <>
-            {/* A capa da OF e os botões de transição valem em todas as abas: é
-                o contexto do que está sendo apontado. */}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">OF {selected.id} — {statusLabel(selected.status)} · item {selected.item_code}</div><div className="erp-fieldset-body">
-              <div className="erp-tgroup" style={{ flexWrap: "wrap", gap: 8 }}>
-                <button className="erp-btn erp-btn-primary" onClick={() => transicao("Iniciada", startProductionOrder)} disabled={busy || st !== "OPEN"}>Iniciar (→ Em produção)</button>
-                <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>
-                <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>
-                <button className="erp-btn" onClick={() => transicao("Encerrada", closeProductionOrder)} disabled={busy || st !== "COMPLETED"}>Encerrar</button>
-                <button className="erp-btn erp-btn-danger" onClick={() => transicao("Cancelada", cancelProductionOrder)} disabled={busy || st === "CLOSED" || st === "CANCELLED"}>Cancelar</button>
-              </div>
-            </div></div>
-
-            {aba === "apontamento" && (<>
-            {/* Apontamento + Consumo */}
-            <div className="erp-fieldset-body" style={{ gap: 0 }}>
-              <div className="erp-c6">
-                <div className="erp-fieldset"><div className="erp-fieldset-head">Apontamento</div><div className="erp-fieldset-body">
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Qtd produzida</label><input className="erp-input num" type="number" value={app.produced_qty || ""} onChange={(e) => setApp((p) => ({ ...p, produced_qty: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Qtd refugada</label><input className="erp-input num" type="number" value={app.scrapped_qty || ""} onChange={(e) => setApp((p) => ({ ...p, scrapped_qty: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Backflush depósito</label><input className="erp-input num" type="number" value={app.backflush_warehouse_id || ""} onChange={(e) => setApp((p) => ({ ...p, backflush_warehouse_id: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Data do apontamento</label>
-                    <input className="erp-input" type="date" value={app.appointment_date ?? ""}
-                      onChange={(e) => setApp((p) => ({ ...p, appointment_date: e.target.value }))} />
-                    <span className="erp-hint">Vazio = hoje. Use para lançar o turno da noite na manhã seguinte.</span></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Máquina</label>
-                    <LookupField value={app.machine_id || undefined} loader={loadMachines} entityLabel="máquina" clearable
-                      onChange={(code) => setApp((p) => ({ ...p, machine_id: code ? Number(code) : undefined }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Operador</label>
-                    <LookupField value={app.employee_id || undefined} loader={loadEmployees} entityLabel="funcionário" clearable
-                      onChange={(code) => setApp((p) => ({ ...p, employee_id: code ? Number(code) : undefined }))} /></div>
-                  <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={apontar} disabled={busy || st !== "IN_PROGRESS"}>Apontar</button></div>
-                </div></div>
-              </div>
-              <div className="erp-c6">
-                <div className="erp-fieldset"><div className="erp-fieldset-head">Consumo de insumo</div><div className="erp-fieldset-body">
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Item insumo</label><LookupField value={cons.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setCons((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label erp-req">Qtd consumida</label><input className="erp-input num" type="number" value={cons.consumed_qty || ""} onChange={(e) => setCons((p) => ({ ...p, consumed_qty: Number(e.target.value) }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Depósito</label><LookupField value={cons.warehouse_id || undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setCons((p) => ({ ...p, warehouse_id: code }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Data do consumo</label>
-                    <input className="erp-input" type="date" value={cons.consumption_date ?? ""}
-                      onChange={(e) => setCons((p) => ({ ...p, consumption_date: e.target.value }))} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Apontamento</label>
-                    <select className="erp-input" value={cons.appointment_id ?? ""}
-                      onChange={(e) => setCons((p) => ({ ...p, appointment_id: e.target.value ? Number(e.target.value) : undefined }))}>
-                      <option value="">Para a ordem inteira</option>
-                      {appointments.filter((a) => a.id).map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {`#${a.id} · ${(a.produced_qty ?? 0).toLocaleString("pt-BR")} peças${a.appointment_date ? ` · ${a.appointment_date.slice(0, 10)}` : ""}`}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="erp-hint">Amarrar o consumo ao apontamento diz quanto de material foi para cada lote produzido.</span></div>
-                  <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
-                    <button className="erp-btn erp-btn-primary" onClick={consumir} disabled={busy || st !== "IN_PROGRESS"}>Consumir (saída)</button>
-                    <button className="erp-btn" onClick={retornarSucata} disabled={busy}>Retornar sucata (entrada)</button>
-                  </div>
-                </div></div>
+      {novaAberta && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nova-of-titulo" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setNovaAberta(false); }}>
+          <div className="erp-modal" style={{ width: "min(640px, 94vw)" }}>
+            <div className="erp-modal-head"><div><strong id="nova-of-titulo">Nova ordem de produção</strong><div className="erp-field-hint">A ordem nasce aberta; inicie a produção quando for para o chão de fábrica.</div></div>
+              <button className="erp-btn erp-btn-sm" onClick={() => setNovaAberta(false)} disabled={busy}>Fechar</button></div>
+            <div className="erp-modal-body">
+              <div className="erp-fieldset-body" style={{ padding: 0 }}>
+                <div className="erp-field erp-c8"><label className="erp-label erp-req">Item</label>
+                  <LookupField value={nova.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setNova((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label erp-req" htmlFor="nova-qtd">Quantidade</label>
+                  <input id="nova-qtd" className="erp-input num" type="number" min={0} value={nova.planned_qty || ""} onChange={(e) => setNova((p) => ({ ...p, planned_qty: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Máquina</label>
+                  <LookupField value={nova.machine_id || undefined} loader={loadMachinesById} entityLabel="máquina" clearable onChange={(c) => setNova((p) => ({ ...p, machine_id: c ? Number(c) : undefined }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label" htmlFor="nova-prio">Prioridade</label>
+                  <select id="nova-prio" className="erp-input" value={nova.priority ?? "NORMAL"} onChange={(e) => setNova((p) => ({ ...p, priority: e.target.value }))}>
+                    <option value="LOW">Baixa</option><option value="NORMAL">Normal</option><option value="HIGH">Alta</option><option value="URGENTE">Urgente</option>
+                  </select></div>
+                <div className="erp-field erp-c12"><label className="erp-label" htmlFor="nova-obs">Observações</label>
+                  <input id="nova-obs" className="erp-input" value={nova.notes ?? ""} onChange={(e) => setNova((p) => ({ ...p, notes: e.target.value }))} /></div>
               </div>
             </div>
+            <div className="erp-modal-actions">
+              <button className="erp-btn" onClick={() => setNovaAberta(false)} disabled={busy}>Cancelar</button>
+              <button className="erp-btn erp-btn-primary" onClick={() => void criar()} disabled={busy}>{busy && <span className="erp-spin" />}Criar OF</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Conclusão */}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Conclusão (entrada do acabado + lote)</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label">Depósito acabado</label><input className="erp-input num" type="number" value={completeWh} onChange={(e) => setCompleteWh(e.target.value)} /></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Lote (rastreabilidade)</label><input className="erp-input" value={completeLot} onChange={(e) => setCompleteLot(e.target.value)} /></div>
-              <div className="erp-field erp-c6" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={concluir} disabled={busy || st !== "IN_PROGRESS" || operations.some((op) => op.status !== "DONE" && op.status !== "SKIPPED")}>Concluir (→ Concluída)</button></div>
-            </div></div>
-
-            {/* Valorização da ordem — real × padrão, com o desvio por componente */}
-            {cost && (
-              <div className="erp-fieldset">
-                <div className="erp-fieldset-head">
-                  Valorização da ordem
-                  {cost.settled_at && <span style={{ fontWeight: 400, opacity: .65 }}> — apurada em {cost.settled_at.slice(0, 10).split("-").reverse().join("/")}</span>}
-                </div>
-                <div className="erp-fieldset-body">
-                  <div className="erp-field erp-c12">
-                    <p className="erp-note">
-                      O que a ordem <strong>custou de verdade</strong> contra o que deveria ter custado pelo padrão.
-                      O desvio por componente diz onde procurar: material aponta para consumo acima da
-                      estrutura ou preço de compra; mão de obra, para tempo além do roteiro; indiretos,
-                      para o rateio do centro.
-                    </p>
-                  </div>
-                  <div className="erp-field erp-c12">
-                    <table className="erp-grid">
-                      <thead>
-                        <tr>
-                          <th>Componente</th>
-                          <th className="num">Real</th>
-                          <th className="num">Padrão</th>
-                          <th className="num">Desvio</th>
-                          <th>Leitura</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasDeCusto(cost).map((l) => (
-                          <tr key={l.rotulo} className={l.total ? "erp-row-sel" : ""}>
-                            <td style={{ fontWeight: l.total ? 700 : 400 }}>{l.rotulo}</td>
-                            <td className="num">{money(l.real)}</td>
-                            <td className="num">{money(l.padrao)}</td>
-                            <td className="num" style={{ color: corDoDesvio(l.desvio), fontWeight: 600 }}>
-                              {l.desvio > 0 ? "+" : ""}{money(l.desvio)}
-                            </td>
-                            <td>{leituraDoDesvio(l.desvio, l.padrao)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Quantidade produzida</label>
-                    <input className="erp-input num" value={(cost.produced_qty ?? 0).toLocaleString("pt-BR")} readOnly /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Custo unitário real</label>
-                    <input className="erp-input num" value={money(cost.unit_cost_real)} readOnly />
-                    <span className="erp-hint">É este número que alimenta o custo médio do estoque na entrada do acabado.</span></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Desvio total</label>
-                    <input className="erp-input num" readOnly
-                      style={{ color: corDoDesvio(cost.total_variance ?? 0), fontWeight: 600 }}
-                      value={`${(cost.total_variance ?? 0) > 0 ? "+" : ""}${money(cost.total_variance)}`} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Desvio sobre o padrão</label>
-                    <input className="erp-input num" readOnly
-                      style={{ color: corDoDesvio(cost.variance_pct ?? 0), fontWeight: 600 }}
-                      value={`${(cost.variance_pct ?? 0) > 0 ? "+" : ""}${(cost.variance_pct ?? 0).toFixed(1)}%`} />
-                    <span className="erp-hint">R$ 500 pesam diferente numa ordem de R$ 2 mil e numa de R$ 200 mil.</span></div>
-                </div>
+      {sucata && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sucata-titulo" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setSucata(null); }}>
+          <div className="erp-modal" style={{ width: "min(520px, 94vw)" }}>
+            <div className="erp-modal-head"><div><strong id="sucata-titulo">Destinar sucata de {sucata.material.item_code}</strong><div className="erp-field-hint">Registra quanto do material virou sucata e para onde vai.</div></div>
+              <button className="erp-btn erp-btn-sm" onClick={() => setSucata(null)} disabled={busy}>Fechar</button></div>
+            <div className="erp-modal-body">
+              <div className="erp-fieldset-body" style={{ padding: 0 }}>
+                <div className="erp-field erp-c5"><label className="erp-label erp-req" htmlFor="suc-qtd">Quantidade</label>
+                  <input id="suc-qtd" className="erp-input num" type="number" min={0} value={sucata.quantidade} autoFocus onChange={(e) => setSucata((s) => s && ({ ...s, quantidade: e.target.value }))} /></div>
+                <div className="erp-field erp-c7"><label className="erp-label erp-req">Depósito</label>
+                  <LookupField value={sucata.deposito} loader={loadWarehouses} entityLabel="depósito" onChange={(c) => setSucata((s) => s && ({ ...s, deposito: c ? Number(c) : undefined }))} /></div>
               </div>
-            )}
-
-            </>)}
-
-            {aba === "etapas" && (<>
-            {operations.length > 0 && <div className="erp-fieldset">
-              <div className="erp-fieldset-head">Apontamento da etapa</div>
-              <div className="erp-fieldset-body">
-              <div className="erp-field erp-c3"><label className="erp-label" htmlFor="operation-hours">Horas trabalhadas</label>
-                <input id="operation-hours" className="erp-input num" type="number" min="0" step="0.01" value={operationHours} disabled={busy} onChange={(e) => setOperationHours(e.target.value)} />
-                <span className="erp-hint">Desconta a vida de ferramenta medida em horas.</span></div>
-              <div className="erp-field erp-c3"><label className="erp-label" htmlFor="operation-qty">Peças produzidas</label>
-                <input id="operation-qty" className="erp-input num" type="number" min="0" step="1" value={operationQty} disabled={busy} onChange={(e) => setOperationQty(e.target.value)} />
-                <span className="erp-hint">Desconta a vida de ferramenta medida em golpes ou peças.</span></div>
-              <div className="erp-field erp-c6"><label className="erp-label" htmlFor="operation-reason">Motivo da pausa ou interrupção</label>
-                <input id="operation-reason" className="erp-input" value={operationReason} disabled={busy} onChange={(e) => setOperationReason(e.target.value)} /></div>
-              <div className="erp-field erp-c12">
-                <span className="erp-hint">Preencha horas e peças <strong>antes</strong> de concluir a etapa: é esse apontamento que gasta a vida útil da ferramenta e avisa quando ela precisa ser trocada. Concluir uma etapa libera suas sucessoras; depois da última, registre a entrega de produção para entrada no estoque.</span>
-                {operations.every((op) => op.status === "DONE" || op.status === "SKIPPED") && <p>Roteiro concluído. Próximo passo: entrega de produção.</p>}
-              </div></div></div>}
-            {/* Operações / Apontamentos / Consumos */}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Operações ({operations.length}) · Apontamentos ({appointments.length}) · Consumos ({consumptions.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-              <table className="erp-grid">
-                <thead><tr><th>Seq</th><th>Operação</th><th>Status</th><th>Ação</th></tr></thead>
-                <tbody>
-                  {operations.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Sem operações (explodir roteiro).</td></tr>}
-                  {operations.map((op) => <tr key={op.id}>
-                    <td>{op.sequence}</td><td>{op.description || op.operation_code || "—"}
-                      {op.started_at && <div className="erp-hint">Início: {new Date(op.started_at).toLocaleString("pt-BR")}</div>}
-                      {op.completed_at && <div className="erp-hint">Fim: {new Date(op.completed_at).toLocaleString("pt-BR")}</div>}
-                      {op.notes && <div className="erp-hint" style={{ whiteSpace: "pre-line" }}>{op.notes}</div>}
-                      {/* Inspeção marcada sem plano ativo: a ordem existe, a
-                          conferência de qualidade não abre até alguém cadastrar
-                          o plano. Não é erro da ordem — é pendência dela. */}
-                      {op.warnings?.map((aviso) => (
-                        <div key={aviso} className="erp-badge warn" style={{ marginTop: 4, whiteSpace: "normal", display: "block" }}>{aviso}</div>
-                      ))}
-                      {!!op.execution_history?.length && <details><summary>Histórico da execução</summary>
-                        <ul>{op.execution_history.map((event) => <li key={event.id}>
-                          {new Date(event.occurred_at).toLocaleString("pt-BR")} · {OPERATION_LABEL[event.status] ?? event.status} · {event.actor}
-                        </li>)}</ul>
-                      </details>}
-                    </td><td>{OPERATION_LABEL[op.status ?? ""] ?? op.status ?? "—"}</td><td>
-                      {op.can_start && <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "IN_PROGRESS")}>{op.status === "PENDING" ? "Iniciar etapa" : "Retomar"}</button>}
-                      {op.status === "IN_PROGRESS" && <>
-                        <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "PAUSED")}>Pausar</button>
-                        <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "INTERRUPTED")}>Interromper</button>
-                        <button className="erp-btn erp-btn-sm" disabled={busy || st !== "IN_PROGRESS"} onClick={() => op.id && void alterarEtapa(op.id, "DONE")}>Concluir etapa</button>
-                      </>}
-                      <button className="erp-btn erp-btn-sm" onClick={() => gerarCodigoBarras(op.id)} disabled={busy || !op.id}>Gerar código de barras</button>
-                    </td></tr>)}
-                </tbody>
-              </table>
-            </div></div>
             </div>
-
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Leitura de produção por código de barras</div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c5"><label className="erp-label erp-req">Código lido</label><input className="erp-input" autoComplete="off" value={scanner.token} onChange={(e) => setScanner((s) => ({ ...s, token: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Ação</label><select className="erp-input" value={scanner.action} onChange={(e) => setScanner((s) => ({ ...s, action: e.target.value as ProductionScanAction }))}><option value="RESOLVER">Consultar</option><option value="INICIAR">Iniciar</option><option value="APONTAR">Apontar</option><option value="CONCLUIR">Concluir</option></select></div>
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Dispositivo</label><input className="erp-input" value={scanner.device_id} onChange={(e) => setScanner((s) => ({ ...s, device_id: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Funcionário</label><input className="erp-input num" type="number" value={scanner.employee_id} onChange={(e) => setScanner((s) => ({ ...s, employee_id: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Qtd. boa</label><input className="erp-input num" inputMode="decimal" value={scanner.good_quantity} onChange={(e) => setScanner((s) => ({ ...s, good_quantity: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Qtd. refugo</label><input className="erp-input num" inputMode="decimal" value={scanner.scrap_quantity} onChange={(e) => setScanner((s) => ({ ...s, scrap_quantity: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Horas</label><input className="erp-input num" inputMode="decimal" value={scanner.hours} onChange={(e) => setScanner((s) => ({ ...s, hours: e.target.value }))} /></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Motivo do refugo</label><input className="erp-input" value={scanner.scrap_reason} onChange={(e) => setScanner((s) => ({ ...s, scrap_reason: e.target.value }))} /></div>
-              <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={scanner.complete_operation} onChange={(e) => setScanner((s) => ({ ...s, complete_operation: e.target.checked }))} /><span>Concluir operação</span></label></div>
-              <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void lerCodigoBarras()} disabled={busy}>Processar leitura</button></div>
-              {scanToken && <div className="erp-field erp-c12"><Code128Barcode value={scanToken.barcode_value} /><small>Use exatamente este código; os IDs da ordem e da operação não substituem o token.</small></div>}
-            </div></div>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Consumos lançados</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-              <table className="erp-grid">
-                <thead><tr><th>Consumo</th><th>Item</th><th>Qtd</th><th>Depósito</th></tr></thead>
-                <tbody>
-                  {consumptions.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Sem consumos.</td></tr>}
-                  {consumptions.map((c) => <tr key={c.id}><td>{c.id}</td><td>{c.item_code}</td><td>{c.consumed_qty}</td><td>{c.warehouse_id ?? "—"}</td></tr>)}
-                </tbody>
-              </table>
-            </div></div>
+            <div className="erp-modal-actions">
+              <button className="erp-btn" onClick={() => setSucata(null)} disabled={busy}>Cancelar</button>
+              <button className="erp-btn erp-btn-primary" onClick={destinarSucata} disabled={busy}>Registrar destino</button>
             </div>
+          </div>
+        </div>
+      )}
 
-            </>)}
-
-            {aba === "materiais" && (<>
-            {/* Materiais da OF (MRP): demanda, alocação de lotes, destino de sucata */}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Materiais da OF ({materials.length})</div><div className="erp-fieldset-body">
-              
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={matForm.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setMatForm((m) => ({ ...m, item_code: String(code ?? "") }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={matForm.quantity} onChange={(e) => setMatForm((m) => ({ ...m, quantity: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Depósito</label><LookupField value={matForm.warehouse_id ? Number(matForm.warehouse_id) : undefined} loader={loadWarehouses} entityLabel="depósito" onChange={(code) => setMatForm((m) => ({ ...m, warehouse_id: code ? String(code) : "" }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Substitui o item</label>
-                  <LookupField value={matForm.substituted_item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Nenhum — está na estrutura" clearable
-                    onChange={(code) => setMatForm((m) => ({ ...m, substituted_item_code: code ? String(code) : "" }))} />
-                  <span className="erp-hint">Preencha quando a fábrica trocar um componente da BOM por outro.</span></div>
-                <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input type="checkbox" checked={matForm.automatic_issue} onChange={(e) => setMatForm((m) => ({ ...m, automatic_issue: e.target.checked }))} />baixa auto</label>
-                  <button className="erp-btn erp-btn-primary" onClick={incluirMaterial} disabled={busy}>Incluir</button>
-                </div>
-              
-            </div></div>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Materiais lançados na ordem</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-              <table className="erp-grid">
-                <thead><tr><th>ID</th><th>Item</th><th>Qtd</th><th>Alocado</th><th>Depósito</th><th style={{ width: 220 }}>Ações</th></tr></thead>
-                <tbody>
-                  {materials.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem materiais.</td></tr>}
-                  {materials.map((m) => (
-                    <tr key={m.id}>
-                      <td>{m.id}</td><td>{m.item_code}</td><td>{String(m.quantity)}</td><td>{m.allocated_qty ?? 0}</td><td>{m.warehouse_id ?? "—"}</td>
-                      <td><button className="erp-btn" onClick={() => alocarLotes(m)} disabled={busy}>Alocar lotes</button> <button className="erp-btn" onClick={() => destinarSucata(m)} disabled={busy}>Sucata</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div></div>
-            </div>
-            </>)}
-          </>
-        )}
-      </div></section></div>
-
-      <footer className="erp-statusbar">
-        <div style={{display:"contents"}}><div className="erp-status-item">Ordens: <strong>{orders.length}</strong></div>{selected && <div className="erp-status-item">OF: <strong>{selected.id}</strong></div>}</div>
-        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
-      </footer>
+      <ConfirmDialog aberto={confirmarInicio} titulo="Iniciar a produção com falta de material?"
+        mensagem="Há material sem saldo suficiente no depósito para esta ordem (já contando as ordens que estão na frente). A produção pode parar na etapa que consome esse material."
+        assunto={faltas ? `${faltas.missing_items} de ${faltas.items} item(ns) com falta` : undefined} rotuloConfirmar="Iniciar mesmo assim"
+        onCancelar={() => setConfirmarInicio(false)}
+        onConfirmar={() => { setConfirmarInicio(false); transicao("produção iniciada", startProductionOrder); }} />
+      <ConfirmDialog aberto={confirmarCancelamento} titulo="Cancelar a ordem de produção?"
+        mensagem="A ordem deixa de valer para produção e planejamento. Apontamentos e consumos já lançados continuam registrados."
+        assunto={of ? `OF ${of.id} · ${of.item_code} · ${num(of.planned_qty)} peça(s)` : undefined} rotuloConfirmar="Cancelar OF"
+        onCancelar={() => setConfirmarCancelamento(false)}
+        onConfirmar={() => { setConfirmarCancelamento(false); transicao("cancelada", cancelProductionOrder); }} />
     </div>
   );
 }

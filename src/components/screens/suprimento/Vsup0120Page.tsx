@@ -8,10 +8,11 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const EMPTY_TABLE: PriceTableDTO = { description: "", currency: "BRL", valid_from: today(), valid_to: "" };
 const EMPTY_ITEM: PriceTableItemDTO = { item_code: "", price: 0, uom: "UN", min_qty: 0, supplier_code: undefined };
 

@@ -8,7 +8,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCustomers, loadInvoiceTypes, loadLegalDevices } from "@/services/lookups";
+import { loadCustomers, loadInvoiceTypesById, loadLegalDevicesById } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const OPS: OperationType[] = ["AMBAS", "ENTRADA", "SAIDA", "CUSTOS"];
@@ -133,9 +133,9 @@ export function Vfis0320Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento do cliente</label>
               <input className="erp-input num" type="number" value={form.customer_establishment_code ?? ""} onChange={(e) => setF("customer_establishment_code", e.target.value ? Number(e.target.value) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo de NF — saída</label>
-              <LookupField value={form.invoice_type_exit_id} loader={loadInvoiceTypes} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_exit_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.invoice_type_exit_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_exit_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo de NF — entrada</label>
-              <LookupField value={form.invoice_type_entry_id} loader={loadInvoiceTypes} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_entry_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.invoice_type_entry_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_entry_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c6"><label className="erp-label">Descrição</label>
               <input className="erp-input" value={form.description_full ?? ""} placeholder="Para que serve este parâmetro" onChange={(e) => setF("description_full", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}>
@@ -164,9 +164,9 @@ export function Vfis0320Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label">CST devolução Não-Contrib.</label>
               <input className="erp-input" value={form.cst_icms_non_contrib_dev ?? ""} onChange={(e) => setF("cst_icms_non_contrib_dev", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Dispositivo legal Contrib.</label>
-              <LookupField value={form.legal_device_icms_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Disp. legal Não-Contrib.</label>
-              <LookupField value={form.legal_device_icms_non_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_non_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_non_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_non_contrib_id", c ? Number(c) : undefined)} /></div>
 
             <div className="erp-field erp-c12"><div className="fis-sec">Redução</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução Contrib.</label>
@@ -180,9 +180,9 @@ export function Vfis0320Page(): JSX.Element {
               <select className="erp-input" value={form.icms_red_target_non_contrib ?? ""} onChange={(e) => setF("icms_red_target_non_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">Disp. legal redução Contrib.</label>
-              <LookupField value={form.legal_device_icms_red_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_red_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_red_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_red_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Disp. legal redução Não-Contrib.</label>
-              <LookupField value={form.legal_device_icms_red_non_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_red_non_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_red_non_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_red_non_contrib_id", c ? Number(c) : undefined)} /></div>
 
             <div className="erp-field erp-c12"><div className="fis-sec">Diferimento</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% diferimento</label>
@@ -191,7 +191,7 @@ export function Vfis0320Page(): JSX.Element {
               <select className="erp-input" value={form.icms_deferral_target ?? ""} onChange={(e) => setF("icms_deferral_target", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">Dispositivo legal</label>
-              <LookupField value={form.legal_device_icms_deferral_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_deferral_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_deferral_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_deferral_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Código do benefício (RBC)</label>
               <input className="erp-input" value={form.cod_benef_rbc ?? ""} onChange={(e) => setF("cod_benef_rbc", e.target.value || undefined)} /></div>
 
@@ -236,11 +236,11 @@ export function Vfis0320Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label">% FCP-ST partilha</label>
               <input className="erp-input num" type="number" step="0.01" value={form.fcp_st_partilha_pct ?? ""} onChange={(e) => setF("fcp_st_partilha_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Disp. legal ST Contrib.</label>
-              <LookupField value={form.legal_device_icms_subst_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_subst_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Disp. legal ST Não-Contrib.</label>
-              <LookupField value={form.legal_device_icms_subst_non_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_non_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_subst_non_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_non_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Disp. legal redução da ST</label>
-              <LookupField value={form.legal_device_icms_subst_red_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_red_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_icms_subst_red_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_red_id", c ? Number(c) : undefined)} /></div>
 
             <div className="erp-field erp-c12"><div className="fis-sec">Acréscimos da ST</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% acréscimo Contrib.</label>
@@ -289,14 +289,14 @@ export function Vfis0320Page(): JSX.Element {
               <select className="erp-input" value={form.ipi_red_target_contrib ?? ""} onChange={(e) => setF("ipi_red_target_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">Dispositivo legal Contrib.</label>
-              <LookupField value={form.legal_device_ipi_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_ipi_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_ipi_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_ipi_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução Não-Contrib.</label>
               <input className="erp-input num" type="number" step="0.01" value={form.ipi_red_pct_non_contrib ?? ""} onChange={(e) => setF("ipi_red_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Incide sobre</label>
               <select className="erp-input" value={form.ipi_red_target_non_contrib ?? ""} onChange={(e) => setF("ipi_red_target_non_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">Dispositivo legal Não-Contrib.</label>
-              <LookupField value={form.legal_device_ipi_non_contrib_id} loader={loadLegalDevices} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_ipi_non_contrib_id", c ? Number(c) : undefined)} /></div>
+              <LookupField value={form.legal_device_ipi_non_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_ipi_non_contrib_id", c ? Number(c) : undefined)} /></div>
         </div></div>
         )}
 

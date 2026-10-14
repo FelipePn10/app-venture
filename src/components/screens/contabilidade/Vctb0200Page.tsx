@@ -9,12 +9,13 @@ import {
 import { listPlanoContas, listContasBancarias, type PlanoConta, type ContaBancaria } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "plans" | "accounts" | "journal" | "balancete" | "entrada";
 
 const money = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const hojeISO = () => new Date().toISOString().slice(0, 10);
+const hojeISO = () => hojeLocal();
 const ROTULO_STATUS: Record<PlanStatus, string> = { I: "Em montagem", A: "Ativo", X: "Inativo" };
 
 /** Primeiro e último dia da competência AAAA-MM (o último de verdade, não o dia 28). */

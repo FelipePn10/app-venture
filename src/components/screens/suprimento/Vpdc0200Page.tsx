@@ -24,6 +24,7 @@ import { PedidoEnvioPanel } from "./pedido/PedidoEnvioPanel";
 import { FollowupLinha } from "./pedido/FollowupLinha";
 import { AcompanhamentoEntregas } from "./pedido/AcompanhamentoEntregas";
 import { SugestoesMRP } from "./pedido/SugestoesMRP";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VPDC0200 — Pedido de Compra.
@@ -44,7 +45,7 @@ export type VisaoCompras = "pedidos" | "sugestoes" | "acompanhamento" | "previsa
 
 const CAPA_INICIAL: PurchaseOrderDTO = {
   currency_code: "BRL",
-  emission_date: new Date().toISOString().slice(0, 10),
+  emission_date: hojeLocal(),
   freight_type: "CIF",
   is_firm: false,
 };

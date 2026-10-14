@@ -2,6 +2,53 @@
 
 ## Unreleased
 
+## Novidades
+- **Cenários de simulação no planejamento.** Crie um cenário sobre um plano, simule mudanças de demanda (pedido maior, data nova, pedido novo), de estoque, de prazo de compra/fabricação e de capacidade de máquina (outro turno, parada), calcule sem tocar no plano real e veja lado a lado o que muda: ordens, itens críticos, carga dos centros e pedidos com falta. Gostou? Aplique a demanda ao plano real com um clique.
+- **Rastreamento no MRP.** Veja, para cada pedido ou demanda, a cadeia inteira até as compras dos componentes — o que sai do estoque, o que vem de ordem e onde falta. E, de qualquer sugestão ou ordem, "para quem é": até o pedido que depende dela.
+- **Cobertura de materiais no MRP.** Nova aba mostra, para cada item do plano, até quando o estoque cobre, até quando o estoque e as ordens firmes cobrem e quanto falta sem as planejadas, com farol (crítico, atenção, coberto). Filtre pelos itens do seu planejador e firme as planejadas que cobrem a falta sem sair da tela.
+- **Agir direto na exceção do MRP.** Reprograme a ordem para a data que o cálculo pediu, cancele a ordem que não tem mais necessidade ou marque a mensagem como tratada com uma observação. A exceção mostra quem tratou, quando e como, e as pendentes ficam separadas das tratadas.
+- **Faltas de material na ordem de produção.** Antes de iniciar a produção, a ordem mostra o que ainda falta baixar, o saldo livre no depósito e o que as ordens da frente vão consumir. A lista de ordens marca as que estão com falta, e iniciar uma ordem com falta pede confirmação.
+- **Execução automática do planejamento.** Ligue o cálculo noturno do MRP → CRP → APS, escolha o horário e o plano, rode na hora quando precisar e acompanhe o histórico de cada execução: quem disparou, quantas ordens saíram e se o plano ficou viável.
+- **Atendimento do pedido pelo MRP.** No pedido de venda, a nova aba "Atendimento (MRP)" mostra, linha a linha, quanto sai do estoque, de ordens e de sugestões, o que falta, quando fica pronto e a cadeia até as compras — sem abrir o MRP.
+- **Cadeia atrasada no rastreamento.** O rastreamento destaca a ordem que termina depois da necessidade (pela fila das máquinas) ou que já devia ter começado, diz o motivo e conta os pedidos com atraso; dá para filtrar só os atrasados. A comparação de cenário também mostra quantos pedidos ficam com a cadeia atrasada.
+- **Exceção diz a quem afeta.** A mensagem de exceção de uma ordem planejada mostra os pedidos e demandas que dependem dela, e a busca encontra a exceção pelo pedido. As ordens planejadas ganham o botão "Para quem é".
+- **Efeitos da NF-e à vista.** Se a nota foi autorizada (ou cancelada) mas os títulos, a baixa de estoque ou o pedido não entraram, a tela de NF-e avisa na hora e o botão "Efeitos" mostra a pendência, o motivo, quantas tentativas já houve e quando será a próxima. O sistema tenta de novo sozinho, e "Reprocessar agora" resolve na hora quando o problema já foi corrigido.
+- **Custo não apurado na ordem de produção.** A ordem encerrada cujo custo não pôde ser apurado mostra o aviso com o motivo até "Apurar custo" dar certo.
+
+## Melhorias
+- **MRP reorganizado em abas por etapa do trabalho.** Visão geral com os números do plano e os próximos passos, sugestões com filtros e "firmar várias de uma vez", ordens planejadas com firmar, liberar e voltar em lote, exceções por tipo, perfil do item com a primeira data de falta, cadastro de planos e relatórios com colunas em português.
+- **Capacidade (CRP) mais fácil de ler.** O plano vem da lista, a carga aparece ao abrir, cada centro mostra a ocupação e o pico, e um mapa de cores mostra em que dia cada centro aperta.
+- **Sequenciamento (APS) com o quadro do mês na entrada.** Navegue de mês em mês, escolha a ordem e o centro em listas e remaneje uma operação a partir da própria linha do quadro.
+- **Ordem de produção no formato lista e detalhe.** As ordens ficam à esquerda com busca, situação e andamento; a ordem aberta mostra cabeçalho, o caminho até o encerramento e abas de resumo, apontamento, etapas, materiais, consumos e custo. A nova OF é criada numa janela própria.
+- **Pipeline e alertas do MRP.** O resultado do pipeline mostra o que cada etapa fez e se o plano é viável; os parâmetros de planejamento se editam na própria linha. A consulta de exceções não dispara mais o envio de alertas.
+
+## Correções
+- **Remanejar operação no sequenciamento** avisa quando não deu para conferir a capacidade do centro, em vez de dizer que não há conflito.
+- **Rodapé da NF-e de saída** contava zero notas autorizadas mesmo com notas autorizadas na lista.
+- **Datas mal digitadas** em títulos, notas, demandas, reservas e relatórios financeiros passam a ser recusadas com a mensagem do campo, em vez de gravar uma data vazia.
+- **Apontar produção na ordem de produção voltou a funcionar** — a tela recusava todo apontamento. O operador passa a ser obrigatório no apontamento, como o sistema já exigia.
+- **Rodar o pipeline de planejamento voltou a funcionar** — ele recusava a execução quando a data de início ficava em branco.
+- **Concluir a ordem de produção agora conclui.** A entrega ao estoque nunca marcava a ordem como concluída (e por isso ela não podia ser encerrada). Agora dá para fazer entregas parciais e marcar a última, que conclui a ordem.
+- **A máquina escolhida na ordem e no apontamento é a máquina gravada** — antes ia o código no lugar do identificador interno.
+- **Consulta da fila por centro no sequenciamento** voltou a responder, e o percentual concluído das operações deixou de aparecer sempre como zero.
+- **Datas do perfil do MRP e término previsto das sugestões** passam a aparecer, e na hora certa.
+- **Cadastros fiscais da apuração de ICMS voltaram a gravar o que foi digitado.** CFOP, base e valor do lançamento de resumo, a regra de redução e substituição de ICMS, a nota especial de ajuste (com a data certa) e os demais cadastros da apuração perdiam quase todos os campos ao salvar.
+- **Escolher CFOP, dispositivo legal, tipo de nota, linha e código de ajuste da apuração, item, cliente ou fornecedor nos cadastros fiscais grava o registro escolhido** — antes podia gravar outro ou nenhum.
+- **O responsável pela manutenção da máquina e o operador da leitura por código de barras** passam a ser gravados corretamente.
+- **Datas digitadas à noite** deixam de ir com o dia seguinte nas telas fiscais.
+- **A data de hoje sugerida nas telas é a do dia local.** Depois das 21h, cerca de 30 telas (estoque, financeiro, fiscal, comercial, produção, assistência…) preenchiam a data com o dia seguinte.
+- **Validade nos cadastros de apoio do cliente** usa o seletor de data — antes pedia a data num formato técnico.
+- **O quadro mensal do sequenciamento mostra o código e o nome do item** na barra da ordem.
+- **As mensagens de exceção do MRP citam o código do item** que o planejador conhece (RODA-200) e a quantidade como se lê (80 un., 12,5 un.), em vez do código interno e de "80.00".
+- **CFOP só é incluído ou alterado pelo perfil ADMIN** — o cadastro vale para todas as empresas do banco. Os demais perfis consultam e usam normalmente, com o aviso na tela. A confirmação "CFOP cadastrado/atualizado" também voltou a aparecer (sumia na hora).
+- **Dados da etapa da OF não somem mais** quando o operador digita o próximo motivo enquanto a etapa anterior ainda está salvando.
+- **Falhas parciais passam a ser avisadas**: a lista de OFs sem a conferência de faltas, a OF aberta sem custo/materiais e o cenário sem a comparação mostram o que não carregou, em vez de parecer vazio.
+- **"Pronto em" no rastreamento e no atendimento do pedido** passa a ser o dia em que a cadeia fica pronta de fato — o fim programado na máquina quando a fabricação termina depois da necessidade.
+- **Mensagens de erro mais claras.** Muitas validações que apareciam como "erro interno" passam a dizer o que está errado (dado obrigatório, registro não encontrado, situação que não permite a operação).
+- **Apagar o horário da execução automática não salva mais a execução à meia-noite** — a tela pede o horário.
+- **Item com operação externa deixou de pedir componentes em dobro** no MRP, e o perfil do item não mostra mais "ordens planejadas" negativas quando o estoque sobra.
+- **As exceções de atraso do MRP apontam a data certa.** Cada ordem é comparada com a necessidade que ela de fato atende, e ordens atrasadas e excessos de estoque que não apareciam passam a aparecer.
+
 ## [v1.5.1] — 2026-10-07
 
 ## Novidades

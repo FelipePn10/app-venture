@@ -12,12 +12,13 @@ import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShare
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCfops } from "@/services/lookups";
+import { loadCfopsById } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentPeriod = () => new Date().toISOString().slice(0, 7);
-const today = () => new Date().toISOString().slice(0, 10);
+const currentPeriod = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const INDS: ArrecadacaoIndicator[] = ["SEFAZ", "JUSTICA_FEDERAL", "JUSTICA_ESTADUAL", "OUTROS"];
 
 const EMPTY: LancamentoResumoDTO = { period: currentPeriod(), uf: "", cfop_id: 0, icms_base: 0, icms_value: 0 };
@@ -51,7 +52,7 @@ export function Vfis0540Page(): JSX.Element {
 
   async function salvar() {
     if (!/^\d{4}-\d{2}$/.test(form.period)) { setFeedback({ type: "error", message: "Período deve estar no formato YYYY-MM." }); return; }
-    if (!form.uf.trim() || !form.cfop_id) { setFeedback({ type: "error", message: "UF e CFOP (ID) são obrigatórios." }); return; }
+    if (!form.uf.trim() || !form.cfop_id) { setFeedback({ type: "error", message: "Informe a UF e o CFOP." }); return; }
     setBusy(true); setFeedback(null);
     try {
       if (editId !== null) { await updateLancamentoResumoIcms({ ...form, id: editId }); setFeedback({ type: "success", message: "Lançamento atualizado." }); }
@@ -125,7 +126,7 @@ export function Vfis0540Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label erp-req">UF</label>
               <input className="erp-input" maxLength={2} value={form.uf} onChange={(e) => setF("uf", e.target.value.toUpperCase())} /></div>
             <div className="erp-field erp-c4"><label className="erp-label erp-req">CFOP</label>
-              <LookupField value={form.cfop_id || undefined} loader={loadCfops}
+              <LookupField value={form.cfop_id || undefined} loader={loadCfopsById}
                 entityLabel="CFOP" placeholder="Buscar pelo código ou descrição" allowManualCode={false}
                 onChange={(c) => setF("cfop_id", Number(c ?? 0))} />
               <span className="erp-hint">O CFOP é identificado pelo código de quatro dígitos (5102, 5901, 6108).</span></div>

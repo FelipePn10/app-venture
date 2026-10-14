@@ -47,6 +47,7 @@
     "test:commercial-round2": "node scripts/validate-commercial-round2.mjs",
     "sim:comercial-round3": "node scripts/ui-sim/comercial-round3.mjs",
     "sim:abas": "node scripts/ui-sim/telas-em-abas.mjs",
+    "sim:rastreamento": "node scripts/ui-sim/rastreamento-e-atendimento.mjs",
     "sim:login": "node scripts/ui-sim/login-manter-conectado.mjs",
     "sim:real": "node scripts/ui-sim/ponta-a-ponta-real.mjs",
     "sim:rotina": "node scripts/simulacao-rotina-empresa.mjs",

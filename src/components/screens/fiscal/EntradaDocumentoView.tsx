@@ -15,6 +15,7 @@ import {
   conferirMatriz, paraCentavos, deCentavos,
 } from "./entradaRateio";
 import { DevolucaoCompraPanel } from "./DevolucaoCompraPanel";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "itens" | "financeiro" | "divergencias" | "nota";
@@ -289,7 +290,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
     const n = Math.max(1, Math.min(60, qtdParcelas));
     // Parcelas pelo valor a pagar: com retenção, o fornecedor recebe o líquido.
     const valores = parcelasIguais(aPagarCent, n);
-    const base = doc.data_emissao || new Date().toISOString().slice(0, 10);
+    const base = doc.data_emissao || hojeLocal();
     const dist = distribuirProporcional(valores, alvos);
     setParcelas(valores.map((v, i) => ({
       numero: i + 1, vencimento: addDias(base, intervalo * (i + 1)), valorCent: v, forma: "BOLETO", dist: dist[i],

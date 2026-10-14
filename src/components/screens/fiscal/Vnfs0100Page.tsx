@@ -6,7 +6,8 @@ import { ExportButton } from "@/components/ui/ExportButton";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Mode = "list" | "create";
-const today = () => new Date().toISOString().slice(0, 10);
+// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const EMPTY: NfseDTO = {
   numero_rps: 0, serie_rps: "1", tipo_rps: 1, data_emissao: today(), natureza_operacao: 1, optante_simples: false,

@@ -5,9 +5,10 @@ import {
 } from "@/services/salesForecastService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 
 export function Vpre0102Page(): JSX.Element {
   const [rows, setRows] = useState<ForecastBlockDTO[]>([]);

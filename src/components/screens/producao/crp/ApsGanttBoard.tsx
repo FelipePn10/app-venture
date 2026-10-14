@@ -37,6 +37,14 @@ const dataHora = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 };
 
+/**
+ * Identidade da barra. Barra sem sequência (OF ainda não sequenciada) não tem
+ * id próprio: o rótulo é o item, e duas OFs do mesmo item no mesmo dia
+ * colidiam — o React descartava uma delas. A OF desempata.
+ */
+const idDaBarra = (b: GanttBoard["rows"][number]["bars"][number]) =>
+  `${b.sequence_id ?? `of${b.production_order_id ?? ""}-${b.label}`}-${b.start}`;
+
 export function ApsGanttBoard({ board }: Props): JSX.Element {
   const [foco, setFoco] = useState<string | null>(null);
 
@@ -68,7 +76,7 @@ export function ApsGanttBoard({ board }: Props): JSX.Element {
   const altura = TOPO_EIXO + board.rows.length * ALTURA_LINHA + 6;
   const passoRotulo = Math.ceil(dias.length / 16);
   const barraEmFoco = foco
-    ? board.rows.flatMap((r) => r.bars).find((b) => `${b.sequence_id ?? b.label}-${b.start}` === foco)
+    ? board.rows.flatMap((r) => r.bars).find((b) => idDaBarra(b) === foco)
     : undefined;
 
   return (
@@ -114,7 +122,7 @@ export function ApsGanttBoard({ board }: Props): JSX.Element {
                 <line x1={0} x2={LARGURA_ROTULO + escala.largura} y1={y} y2={y} className="aps-separador" />
                 <text x={8} y={y + ALTURA_LINHA / 2 + 4} className="aps-rotulo">{row.label}</text>
                 {row.bars.map((bar) => {
-                  const id = `${bar.sequence_id ?? bar.label}-${bar.start}`;
+                  const id = idDaBarra(bar);
                   const x = LARGURA_ROTULO + escala.x(bar.start);
                   const largura = Math.max(6, LARGURA_ROTULO + escala.x(bar.end) - x - 2);
                   const topo = y + (ALTURA_LINHA - ALTURA_BARRA) / 2;

@@ -30,6 +30,8 @@ export interface ProductionPlanDTO {
   /** Parâmetros livres do plano. `from_date` é obrigatório com demandas a partir de uma data. */
   parameters?: Record<string, unknown>;
   is_active?: boolean;
+  /** Quando o MRP rodou este plano pela última vez. */
+  last_calculated_at?: string;
 }
 
 function parsePlan(raw: unknown): ProductionPlanDTO {
@@ -46,6 +48,7 @@ function parsePlan(raw: unknown): ProductionPlanDTO {
     class_item_codes: parseStr(o, 'class_item_codes', 'ClassItemCodes') || undefined,
     order_item_code: parseNum(o, 'order_item_code', 'OrderItemCode') || undefined,
     is_active: o['is_active'] !== false && o['IsActive'] !== false,
+    last_calculated_at: parseStr(o, 'last_calculated_at', 'LastCalculatedAt') || undefined,
   };
 }
 

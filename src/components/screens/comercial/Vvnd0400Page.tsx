@@ -19,11 +19,12 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers, loadEstablishments, resetLookups } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "reps" | "types";
 type DetailTab = "dados" | "empresas" | "contatos";
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 
 const EMPTY_REP: RepresentativeDTO = { name: "", document_number: "", register_date: today(), device_quantity: 0, is_active: true };
 const EMPTY_TYPE: RepresentativeTypeDTO = { description: "", is_free: false, ignores_direct_billing: false };

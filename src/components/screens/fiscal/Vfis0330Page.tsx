@@ -8,7 +8,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import {
-  loadItems, loadCustomers, loadSuppliers, loadEstablishments, loadMarketSegments,
+  loadItemsById, loadCustomersById, loadSuppliersById, loadEstablishments, loadMarketSegmentsById,
 } from "@/services/lookups";
 
 type FindForm = { uf: string; item_id: string; customer_id: string; op_type: IcmsOpType };
@@ -130,7 +130,7 @@ export function Vfis0330Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label">NCM</label>
               <input className="erp-input" value={form.ncm_code ?? ""} onChange={(e) => setF("ncm_code", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Item</label>
-              <LookupField value={form.item_id ?? undefined} loader={loadItems}
+              <LookupField value={form.item_id ?? undefined} loader={loadItemsById}
                 entityLabel="item" placeholder="Buscar item" clearable allowManualCode={false}
                 onChange={(c) => setF("item_id", c ? Number(c) : undefined)} />
               <span className="erp-hint">Em branco, a regra vale para todos os itens do NCM.</span></div>
@@ -139,11 +139,11 @@ export function Vfis0330Page(): JSX.Element {
                 <label className="erp-toggle"><input type="checkbox" checked={!!form.is_preferential} onChange={(e) => setF("is_preferential", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label>
                 <span className="erp-toggle-label">{form.is_preferential ? "Sim" : "Não"}</span></div></div>
             <div className="erp-field erp-c3"><label className="erp-label">Cliente</label>
-              <LookupField value={form.customer_id ?? undefined} loader={loadCustomers}
+              <LookupField value={form.customer_id ?? undefined} loader={loadCustomersById}
                 entityLabel="cliente" placeholder="Buscar cliente" clearable allowManualCode={false}
                 onChange={(c) => setF("customer_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
-              <LookupField value={form.supplier_id ?? undefined} loader={loadSuppliers}
+              <LookupField value={form.supplier_id ?? undefined} loader={loadSuppliersById}
                 entityLabel="fornecedor" placeholder="Buscar fornecedor" clearable allowManualCode={false}
                 onChange={(c) => setF("supplier_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento</label>
@@ -151,7 +151,7 @@ export function Vfis0330Page(): JSX.Element {
                 entityLabel="estabelecimento" placeholder="Buscar estabelecimento" clearable allowManualCode={false}
                 onChange={(c) => setF("establishment_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Segmento de mercado</label>
-              <LookupField value={form.market_segment_id ?? undefined} loader={loadMarketSegments}
+              <LookupField value={form.market_segment_id ?? undefined} loader={loadMarketSegmentsById}
                 entityLabel="segmento de mercado" placeholder="Buscar segmento de mercado" clearable allowManualCode={false}
                 onChange={(c) => setF("market_segment_id", c ? Number(c) : undefined)} /></div>
           </div>
@@ -185,10 +185,14 @@ export function Vfis0330Page(): JSX.Element {
           
             <div className="erp-field erp-c2"><label className="erp-label erp-req">UF</label>
               <input className="erp-input" maxLength={2} value={findForm.uf} onChange={(e) => setFind("uf", e.target.value.toUpperCase())} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Item (ID)</label>
-              <input className="erp-input num" type="number" value={findForm.item_id} onChange={(e) => setFind("item_id", e.target.value)} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Cliente (ID)</label>
-              <input className="erp-input num" type="number" value={findForm.customer_id} onChange={(e) => setFind("customer_id", e.target.value)} /></div>
+            {/* A busca compara com o id interno gravado na regra: escolher na
+                lista evita a pessoa ter de saber o id ("Item (ID)" pedia isso). */}
+            <div className="erp-field erp-c3"><label className="erp-label">Item</label>
+              <LookupField value={findForm.item_id ? Number(findForm.item_id) : undefined} loader={loadItemsById} entityLabel="item" placeholder="Qualquer item" clearable allowManualCode={false}
+                onChange={(c) => setFind("item_id", c ? String(c) : "")} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Cliente</label>
+              <LookupField value={findForm.customer_id ? Number(findForm.customer_id) : undefined} loader={loadCustomersById} entityLabel="cliente" placeholder="Qualquer cliente" clearable allowManualCode={false}
+                onChange={(c) => setFind("customer_id", c ? String(c) : "")} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Operação</label>
               <select className="erp-input" value={findForm.op_type} onChange={(e) => setFind("op_type", e.target.value as IcmsOpType)}>
                 {OPS.map((o) => <option key={o} value={o}>{enumLabel(o)}</option>)}</select></div>

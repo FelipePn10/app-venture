@@ -5,6 +5,8 @@ const BASE = '/api/employee';
 export type EmployeeSituation = 'ACTIVE' | 'INACTIVE';
 
 export interface EmployeeDTO {
+  /** Chave interna — é ela que o apontamento devolve em `employee_id`. */
+  id?: number;
   code: number;
   name: string;
   role?: string;
@@ -16,6 +18,7 @@ export interface EmployeeDTO {
 function parseEmployee(raw: unknown): EmployeeDTO {
   const o = unwrapObject(raw);
   return {
+    id: parseNum(o, 'id', 'ID') || undefined,
     code: parseNum(o, 'code', 'Code'),
     name: parseStr(o, 'name', 'Name'),
     role: parseStr(o, 'role', 'Role'),

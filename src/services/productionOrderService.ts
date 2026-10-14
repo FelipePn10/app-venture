@@ -32,6 +32,8 @@ export interface ProductionOrderDTO {
   priority?: string | null;
   notes?: string | null;
   is_active?: boolean;
+  /** OF encerrada sem o custo real apurado: o motivo. */
+  cost_pending?: string;
 }
 
 export interface AppointmentDTO {
@@ -146,6 +148,7 @@ function parseOrder(raw: unknown): ProductionOrderDTO {
     priority: parseStr(o, 'priority', 'Priority') || null,
     notes: parseStr(o, 'notes', 'Notes') || null,
     is_active: parseBool(o, 'is_active', 'IsActive'),
+    cost_pending: parseStr(o, 'cost_pending', 'CostPending') || undefined,
   };
 }
 
@@ -242,10 +245,18 @@ export async function startProductionOrder(id: number): Promise<ProductionOrderD
   const { data } = await httpClient.post(`${BASE}/${id}/start`, {});
   return parseOrder(data);
 }
-export async function completeProductionOrder(id: number, warehouseId?: number, lot?: string): Promise<ProductionOrderDTO> {
-  const body: Obj = {};
-  if (warehouseId !== undefined) body.warehouse_id = warehouseId;
-  if (lot) body.lot = lot;
+/**
+ * Entrega de produção: o acabado entra no estoque. Só a entrega com `final`
+ * conclui a ordem — a tela antiga nunca mandava, e nenhuma OF chegava a
+ * "Concluída" (nem podia ser encerrada). A chave de idempotência é por clique:
+ * sem ela o backend deduz uma chave de OF + dia + quantidade, e duas entregas
+ * iguais no mesmo dia viravam uma só.
+ */
+export async function completeProductionOrder(id: number, opts: { warehouseId?: number; lot?: string; quantity?: number; final?: boolean } = {}): Promise<ProductionOrderDTO> {
+  const body: Obj = { final: Boolean(opts.final), idempotency_key: crypto.randomUUID() };
+  if (opts.warehouseId !== undefined) body.warehouse_id = opts.warehouseId;
+  if (opts.lot) body.lot = opts.lot;
+  if (opts.quantity !== undefined) body.quantity = String(opts.quantity);
   const { data } = await httpClient.post(`${BASE}/${id}/complete`, body);
   return parseOrder(data);
 }
@@ -260,8 +271,13 @@ export async function cancelProductionOrder(id: number): Promise<ProductionOrder
 
 // ─── Apontamentos e consumos ─────────────────────────────────────────────────
 
+/**
+ * O backend exige `Idempotency-Key` no apontamento desde a v1.1.12 — é o que
+ * impede o duplo clique do chão de fábrica de virar dois apontamentos. Sem o
+ * cabeçalho a API recusava com 422 e não havia como apontar pela VPRO0900.
+ */
 export async function appointProduction(dto: AppointmentDTO): Promise<AppointmentDTO> {
-  const { data } = await httpClient.post(`${BASE}/appointment`, dto);
+  const { data } = await httpClient.post(`${BASE}/appointment`, dto, { headers: { 'Idempotency-Key': crypto.randomUUID() } });
   return parseAppointment(data);
 }
 export async function addConsumption(dto: ConsumptionDTO): Promise<ConsumptionDTO> {
@@ -387,6 +403,67 @@ function parseMaterial(raw: unknown): MaterialDTO {
 export async function listMaterials(id: number): Promise<MaterialDTO[]> {
   const { data } = await httpClient.get(`${BASE}/${id}/materials`);
   return unwrapArray(data).map(parseMaterial);
+}
+/** COMPLETA, PARCIAL (há saldo, mas não para tudo), SEM_SALDO ou SEM_LISTA. */
+export type MaterialAvailabilityStatus = 'COMPLETA' | 'PARCIAL' | 'SEM_SALDO' | 'SEM_LISTA';
+export interface MaterialAvailabilityLine {
+  material_id: number;
+  item_code: string;
+  description: string;
+  uom?: string;
+  warehouse_id?: number;
+  required: number;
+  issued: number;
+  remaining: number;
+  free_stock: number;
+  /** O que as OFs abertas que estão na frente vão consumir do mesmo saldo. */
+  committed_earlier: number;
+  available: number;
+  shortage: number;
+  status: MaterialAvailabilityStatus;
+}
+export interface MaterialAvailability {
+  production_order_id: number;
+  status: MaterialAvailabilityStatus;
+  items: number;
+  missing_items: number;
+  lines: MaterialAvailabilityLine[];
+}
+function parseAvailability(raw: unknown): MaterialAvailability {
+  const o = unwrapObject(raw);
+  const linhas = Array.isArray(o['lines']) ? (o['lines'] as unknown[]) : [];
+  return {
+    production_order_id: parseNum(o, 'production_order_id'),
+    status: (parseStr(o, 'status') || 'SEM_LISTA') as MaterialAvailabilityStatus,
+    items: parseNum(o, 'items'), missing_items: parseNum(o, 'missing_items'),
+    lines: linhas.map((r) => {
+      const l = unwrapObject(r);
+      return {
+        material_id: parseNum(l, 'material_id'), item_code: parseStr(l, 'item_code'), description: parseStr(l, 'description'),
+        uom: parseStr(l, 'uom') || undefined, warehouse_id: parseNum(l, 'warehouse_id') || undefined,
+        required: parseNum(l, 'required'), issued: parseNum(l, 'issued'), remaining: parseNum(l, 'remaining'),
+        free_stock: parseNum(l, 'free_stock'), committed_earlier: parseNum(l, 'committed_earlier'),
+        available: parseNum(l, 'available'), shortage: parseNum(l, 'shortage'),
+        status: (parseStr(l, 'status') || 'COMPLETA') as MaterialAvailabilityStatus,
+      };
+    }),
+  };
+}
+/**
+ * Faltas de material da OF antes de liberar: para cada material, o que falta
+ * baixar, o saldo livre depois das OFs que estão na frente e quanto falta.
+ */
+export async function getMaterialAvailability(id: number): Promise<MaterialAvailability> {
+  const { data } = await httpClient.get(`${BASE}/${id}/material-availability`);
+  return parseAvailability(data);
+}
+/** Resumo de faltas de várias OFs (selo da lista). */
+export async function getMaterialAvailabilitySummary(ids: number[]): Promise<Record<number, MaterialAvailability>> {
+  if (ids.length === 0) return {};
+  const { data } = await httpClient.get(`${BASE}/material-availability`, { params: { ids: ids.join(',') } });
+  const out: Record<number, MaterialAvailability> = {};
+  for (const r of unwrapArray(data)) { const a = parseAvailability(r); out[a.production_order_id] = a; }
+  return out;
 }
 export async function addMaterial(dto: MaterialDTO): Promise<MaterialDTO> {
   const { data } = await httpClient.post(`${BASE}/materials`, { kind: 'DEMAND', ...dto, created_by: currentUserId() });
