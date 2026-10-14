@@ -1,240 +1,313 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  type GanttEntry, type GanttBoard, type GanttBar, type GanttGroupBy,
-  SEQUENCE_DIRECTIONS, sequenceAps, ganttByOrder, ganttByWorkCenter,
-  ganttMonth, rescheduleGantt, exportGanttMonth,
+  type GanttBar, type GanttBoard, type GanttEntry, type GanttGroupBy, type RescheduleResult,
+  SEQUENCE_DIRECTIONS, exportGanttMonth, ganttByOrder, ganttByWorkCenter, ganttMonth, rescheduleGantt, sequenceAps,
 } from "@/services/apsService";
 import { downloadBlob } from "@/services/fileDownload";
-import { ApsGanttBoard } from "./crp/ApsGanttBoard";
-import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadProductionOrders, loadWorkCenters } from "@/services/lookups";
+import { ApsGanttBoard } from "./crp/ApsGanttBoard";
+import { type Aba, Abas, Aviso, Cabecalho, Kpis, Painel, Rodape, Selo, Vazio } from "../planejamento/planUi";
+import { dataHora, horas, num } from "../planejamento/planFormat";
+import { useAcao } from "../planejamento/planHooks";
 
-type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Mode = "order" | "centro" | "mes";
-const dt = (s?: string) => (s ? s.replace("T", " ").slice(0, 16) : "—");
-const now = new Date();
+/**
+ * APS — sequenciamento das ordens nos centros e o quadro (Gantt).
+ *
+ * A tela antiga misturava três modos num botão da barra e pedia o ID da ordem,
+ * do centro e da sequência digitados. Agora o quadro do mês abre direto, com
+ * navegação de mês; ordem e centro vêm de listas; e o remanejamento escolhe a
+ * operação na lista das barras do quadro, não por um número decorado.
+ */
+type AbaAps = "quadro" | "ordem" | "centro" | "remanejar";
+const nomeMes = (m: number) => MESES[m - 1].charAt(0).toUpperCase() + MESES[m - 1].slice(1);
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
-function statusPill(s: string): JSX.Element {
-  const x = s.toLowerCase();
-  const cls = x.includes("done") || x.includes("conclu") ? "erp-badge-green" : x.includes("progress") ? "erp-badge-blue" : "erp-badge-amber";
-  return <span className={`erp-badge ${cls}`}>{s || "—"}</span>;
+function situacaoOperacao(s?: string): JSX.Element {
+  const x = (s ?? "").toUpperCase();
+  if (x.includes("DONE") || x.includes("COMPLET")) return <Selo tom="ok">Concluída</Selo>;
+  if (x.includes("PROGRESS")) return <Selo tom="warn">Em andamento</Selo>;
+  if (x.includes("SCHEDULED")) return <Selo tom="info">Programada</Selo>;
+  return <Selo tom="muted">{s || "—"}</Selo>;
+}
+
+/** Dia no fuso do usuário — `toISOString` daria o dia anterior a leste de Greenwich. */
+function diaLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** datetime-local espera "AAAA-MM-DDTHH:MM" no fuso do usuário. */
+function paraCampoDataHora(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 export function Vpro0210Page(): JSX.Element {
-  const [mode, setMode] = useState<Mode>("order");
-  const [orderId, setOrderId] = useState("");
-  const [wcId, setWcId] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [rows, setRows] = useState<GanttEntry[]>([]);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [busy, setBusy] = useState(false);
+  const { busy, feedback, setFeedback, run } = useAcao();
+  const hoje = new Date();
+  const [aba, setAba] = useState<AbaAps>("quadro");
   const [sentido, setSentido] = useState("FORWARD");
-  // Quadro mensal (§3.1)
-  const [year, setYear] = useState(String(now.getFullYear()));
-  const [month, setMonth] = useState(String(now.getMonth() + 1));
-  const [groupBy, setGroupBy] = useState<GanttGroupBy>("work_center");
-  const [board, setBoard] = useState<GanttBoard | null>(null);
-  // Reschedule (drag-drop manual)
-  const [resForm, setResForm] = useState({ sequenceId: "", newStart: "", newWc: "", cascade: true });
+  const [ano, setAno] = useState(hoje.getFullYear());
+  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const [agrupar, setAgrupar] = useState<GanttGroupBy>("work_center");
+  const [quadro, setQuadro] = useState<GanttBoard | null>(null);
+  const [ordem, setOrdem] = useState<number | undefined>();
+  const [linhasOrdem, setLinhasOrdem] = useState<GanttEntry[] | null>(null);
+  const [centro, setCentro] = useState<number | undefined>();
+  const [de, setDe] = useState(() => diaLocal(new Date(hoje.getFullYear(), hoje.getMonth(), 1)));
+  const [ate, setAte] = useState(() => diaLocal(new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)));
+  const [linhasCentro, setLinhasCentro] = useState<GanttEntry[] | null>(null);
+  const [rem, setRem] = useState({ sequencia: "", inicio: "", centro: undefined as number | undefined, cascata: true });
+  const [resultadoRem, setResultadoRem] = useState<RescheduleResult | null>(null);
+  const [centros, setCentros] = useState<Map<number, string>>(new Map());
 
-  async function verQuadro() {
-    setBusy(true); setFeedback(null);
-    try {
-      const b = await ganttMonth(Number(year), Number(month), groupBy);
-      setBoard(b);
-      setFeedback({ type: "info", message: `Quadro ${month}/${year}: ${b.rows.length} linha(s), ${b.overloaded_days} dia(s) sobrecarregado(s), ${b.late_bars} barra(s) atrasada(s).` });
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-  async function baixarExport(format: "svg" | "pdf") {
-    setBusy(true); setFeedback(null);
-    try {
-      const blob = await exportGanttMonth(Number(year), Number(month), format, groupBy);
-      downloadBlob(blob, `aps-gantt-${year}-${month}.${format}`);
-      setFeedback({ type: "success", message: `Quadro exportado (${format.toUpperCase()}).` });
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-  async function remanejar() {
-    const sid = Number(resForm.sequenceId);
-    if (!sid || !resForm.newStart) { setFeedback({ type: "error", message: "Informe a sequência e o novo início." }); return; }
-    setBusy(true); setFeedback(null);
-    try {
-      const r = await rescheduleGantt(sid, new Date(resForm.newStart).toISOString(), { newWorkCenterId: Number(resForm.newWc) || undefined, cascade: resForm.cascade });
-      const warn = r.warnings.length ? ` ⚠️ ${r.warnings.length} aviso(s) de capacidade.` : "";
-      setFeedback({ type: r.warnings.length ? "info" : "success", message: `Sequência ${sid} remanejada — ${r.shifted.length} operação(ões) movida(s).${warn}` });
-      await verQuadro();
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
+  const nomeCentro = useCallback((id?: number) => (id ? centros.get(id) ?? `Centro ${id}` : "—"), [centros]);
 
-  const boardBars: (GanttBar & { rowLabel: string })[] = board ? board.rows.flatMap((row) => row.bars.map((b) => ({ ...b, rowLabel: row.label }))) : [];
+  const carregarQuadro = useCallback(async () => { setQuadro(await ganttMonth(ano, mes, agrupar)); }, [ano, mes, agrupar]);
+  useEffect(() => { void run(carregarQuadro); }, [run, carregarQuadro]);
+  useEffect(() => { loadWorkCenters().then((l) => setCentros(new Map(l.map((c) => [Number(c.code), c.label])))).catch(() => { /* sem nome, mostra o código */ }); }, []);
 
-  async function sequenciar() {
-    setBusy(true); setFeedback(null);
-    try {
-      const r = await sequenceAps(sentido);
-      const base = `${r.scheduled_operations} operação(ões) sequenciada(s) em ${r.orders_processed} ordem(ns).`;
-      setFeedback(r.late_orders.length > 0
-        // Programando para trás, ordem que precisaria começar no passado não
-        // cabe no prazo. É a informação que o PCP procura — não pode virar só
-        // uma data no Gantt.
-        ? { type: "info", message: `${base} ${r.late_orders.length} ordem(ns) não cabe(m) no prazo e foram reprogramadas para frente: ${r.late_orders.join(", ")}.` }
-        : { type: "success", message: base });
-    }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-  async function verGantt() {
-    setBusy(true); setFeedback(null);
-    try {
-      if (mode === "order") {
-        if (!orderId) { setFeedback({ type: "error", message: "Informe a ordem." }); setBusy(false); return; }
-        setRows(await ganttByOrder(Number(orderId)));
-      } else {
-        if (!wcId || !from || !to) { setFeedback({ type: "error", message: "Informe centro, de e até." }); setBusy(false); return; }
-        setRows(await ganttByWorkCenter(Number(wcId), from, to));
-      }
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
+  const barras: (GanttBar & { linha: string })[] = useMemo(
+    () => (quadro ? quadro.rows.flatMap((r) => r.bars.map((b) => ({ ...b, linha: r.label }))) : []).sort((a, b) => a.start.localeCompare(b.start)),
+    [quadro],
+  );
+  const sequenciaveis = barras.filter((b) => b.sequence_id);
+
+  const navegar = (delta: number) => {
+    const d = new Date(ano, mes - 1 + delta, 1);
+    setAno(d.getFullYear()); setMes(d.getMonth() + 1);
+  };
+
+  const sequenciar = () => run(async () => {
+    const r = await sequenceAps(sentido);
+    await carregarQuadro();
+    const base = `${r.scheduled_operations} operação(ões) sequenciada(s) em ${r.orders_processed} ordem(ns).`;
+    // Programando para trás, ordem que precisaria começar no passado não cabe
+    // no prazo: é a informação que o PCP procura, não pode virar só uma barra.
+    setFeedback(r.late_orders.length
+      ? { type: "info", message: `${base} ${r.late_orders.length} ordem(ns) não cabe(m) no prazo e foram reprogramadas para frente: OF ${r.late_orders.join(", ")}.` }
+      : { type: "success", message: base });
+  });
+
+  const exportar = (formato: "svg" | "pdf") => run(async () => {
+    downloadBlob(await exportGanttMonth(ano, mes, formato, agrupar), `aps-quadro-${ano}-${String(mes).padStart(2, "0")}.${formato}`);
+    setFeedback({ type: "success", message: `Quadro exportado em ${formato.toUpperCase()}.` });
+  });
+
+  const consultarOrdem = () => run(async () => {
+    if (!ordem) { setFeedback({ type: "error", message: "Escolha a ordem de produção." }); return; }
+    setLinhasOrdem(await ganttByOrder(ordem));
+  });
+  const consultarCentro = () => run(async () => {
+    if (!centro) { setFeedback({ type: "error", message: "Escolha o centro de trabalho." }); return; }
+    if (!de || !ate || ate < de) { setFeedback({ type: "error", message: "Informe um período válido." }); return; }
+    setLinhasCentro(await ganttByWorkCenter(centro, de, ate));
+  });
+
+  const escolherParaRemanejar = (b: GanttBar) => {
+    setRem({ sequencia: String(b.sequence_id ?? ""), inicio: paraCampoDataHora(b.start), centro: b.work_center_id, cascata: true });
+    setResultadoRem(null);
+    setAba("remanejar");
+  };
+  const barraEscolhida = sequenciaveis.find((b) => String(b.sequence_id) === rem.sequencia);
+  const remanejar = () => run(async () => {
+    const id = Number(rem.sequencia);
+    if (!id || !rem.inicio) { setFeedback({ type: "error", message: "Escolha a operação e o novo início." }); return; }
+    const novoCentro = rem.centro && rem.centro !== barraEscolhida?.work_center_id ? rem.centro : undefined;
+    const r = await rescheduleGantt(id, new Date(rem.inicio).toISOString(), { newWorkCenterId: novoCentro, cascade: rem.cascata });
+    setResultadoRem(r);
+    await carregarQuadro();
+    setFeedback(r.capacityCheckError
+      ? { type: "error", message: `${r.capacityCheckError}. Confira a carga do centro no quadro.` }
+      : r.warnings.length
+      ? { type: "info", message: `Operação remanejada; ${r.shifted.length} operação(ões) movida(s). ${r.warnings.length} aviso(s) de capacidade — confira abaixo.` }
+      : { type: "success", message: `Operação remanejada; ${r.shifted.length} operação(ões) movida(s).` });
+  });
+
+  const ABAS: Aba<AbaAps>[] = [
+    { id: "quadro", label: "Quadro do mês", contador: barras.length, hint: "Linha do tempo das operações sequenciadas" },
+    { id: "ordem", label: "Por ordem", hint: "Operações de uma ordem de produção" },
+    { id: "centro", label: "Por centro", hint: "Fila de um centro de trabalho num período" },
+    { id: "remanejar", label: "Remanejar", hint: "Mudar o início ou o centro de uma operação" },
+  ];
+
+  const tabelaOperacoes = (linhas: GanttEntry[]) => (
+    <table className="erp-grid">
+      <thead><tr><th>OF</th><th className="num">Posição</th><th>Centro</th><th>Início</th><th>Fim</th><th className="num">Duração</th><th>Situação</th></tr></thead>
+      <tbody>
+        {linhas.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma operação sequenciada. Rode o sequenciamento na barra acima.</td></tr>}
+        {linhas.map((r) => (
+          <tr key={r.sequence_id}>
+            <td className="vpl-strong">OF {r.production_order_id}</td><td className="num">{r.sequence_position}</td><td>{nomeCentro(r.work_center_id)}</td>
+            <td>{dataHora(r.scheduled_start)}</td><td>{dataHora(r.scheduled_end)}</td><td className="num">{horas(r.duration_hours)}</td><td>{situacaoOperacao(r.status)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <div className="erp-screen">
-      <header className="erp-titlebar">
-        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Produção</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">APS (Sequenciamento / Gantt)</span><span className="erp-crumb-code">VPRO0210</span></nav>
-        <div className="erp-titlebar-spacer" />
-      </header>
+      <Cabecalho modulo="Produção" titulo="APS (Sequenciamento e Gantt)" codigo="VPRO0210" />
 
-      <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Planejamento</span>
-          <select className="erp-input" style={{ width: 230, height: 32 }} value={sentido}
-            title="Para trás parte da data de entrega e revela as ordens que já nascem atrasadas"
-            onChange={(e) => setSentido(e.target.value)}>
+      <div className="erp-toolbar vpl-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Sequenciar</span>
+          <select className="erp-tselect" style={{ width: 250 }} aria-label="Sentido da programação" value={sentido} onChange={(e) => setSentido(e.target.value)}
+            title="Para trás parte da data de entrega e revela as ordens que já nascem atrasadas">
             {SEQUENCE_DIRECTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
           </select>
-          <button className="erp-btn erp-btn-primary" onClick={() => void sequenciar()} disabled={busy}>{busy ? "..." : "Sequenciar ordens"}</button></div>
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Gantt</span>
-          <button className={`erp-btn ${mode === "order" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("order")}>Por ordem</button>
-          <button className={`erp-btn ${mode === "centro" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("centro")}>Por centro</button>
-          <button className={`erp-btn ${mode === "mes" ? "erp-btn-primary" : "erp-btn-ghost"}`} onClick={() => setMode("mes")}>Quadro do mês</button></div>
-        <div className="erp-tgroup">
-          <span className="erp-tgroup-label">Relatório</span>
-          <ExportButton title="VPRO0210 — APS (Sequenciamento / Gantt)" filename="vpro0210" />
+          <button className="erp-btn erp-btn-primary" onClick={() => void sequenciar()} disabled={busy}>{busy && <span className="erp-spin" />}Sequenciar ordens</button>
         </div>
+        <div className="erp-tspacer" />
+        <div className="erp-tgroup"><ExportButton title="VPRO0210 — APS (Sequenciamento e Gantt)" filename="vpro0210" /></div>
       </div>
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">APS</button></div>
+          <Abas abas={ABAS} ativa={aba} onChange={setAba} />
           <div className="erp-detail-body">
-        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+            <Aviso feedback={feedback} busy={busy} />
 
-        {mode !== "mes" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
-              
-                {mode === "order" ? (
-                  <div className="erp-field erp-c3"><label className="erp-label erp-req">Ordem de Produção (ID)</label>
-                    <input className="erp-input num" type="number" value={orderId} onChange={(e) => setOrderId(e.target.value)} /></div>
+            {aba === "quadro" && (<>
+              <Painel titulo="Período">
+                <div className="vpl-filters">
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <button className="erp-btn" onClick={() => navegar(-1)} disabled={busy} aria-label="Mês anterior">‹</button>
+                    <strong style={{ minWidth: 150, textAlign: "center" }}>{nomeMes(mes)} de {ano}</strong>
+                    <button className="erp-btn" onClick={() => navegar(1)} disabled={busy} aria-label="Próximo mês">›</button>
+                    <button className="erp-btn erp-btn-ghost" onClick={() => { setAno(hoje.getFullYear()); setMes(hoje.getMonth() + 1); }} disabled={busy}>Hoje</button>
+                  </div>
+                  <div className="erp-field"><label className="erp-label" htmlFor="aps-agrupar">Linhas do quadro</label>
+                    <select id="aps-agrupar" className="erp-input" value={agrupar} onChange={(e) => setAgrupar(e.target.value as GanttGroupBy)}>
+                      <option value="work_center">Por centro de trabalho</option><option value="order">Por ordem de produção</option>
+                    </select></div>
+                  <span className="vpl-grow" />
+                  <button className="erp-btn" style={{ alignSelf: "flex-end" }} onClick={() => void exportar("pdf")} disabled={busy || !quadro}>Baixar PDF</button>
+                  <button className="erp-btn" style={{ alignSelf: "flex-end" }} onClick={() => void exportar("svg")} disabled={busy || !quadro}>Baixar SVG</button>
+                </div>
+              </Painel>
+
+              {quadro && (<>
+                <Kpis itens={[
+                  { label: "Operações no mês", value: num(barras.length, 0), hint: `${quadro.rows.length} ${agrupar === "order" ? "ordem(ns)" : "centro(s)"}` },
+                  { label: "Atrasadas", value: num(quadro.late_bars, 0), hint: "terminam depois da entrega", tom: quadro.late_bars ? "danger" : "ok" },
+                  { label: "Dias sobrecarregados", value: num(quadro.overloaded_days, 0), hint: "centro acima da capacidade", tom: quadro.overloaded_days ? "warn" : "ok" },
+                  { label: "Dependências", value: num(quadro.dependencies.length, 0), hint: "uma operação espera a outra" },
+                ]} />
+                {barras.length === 0 ? (
+                  <Painel titulo="Quadro"><Vazio titulo={`Nada programado em ${MESES[mes - 1]}`} texto="Sequencie as ordens na barra acima ou navegue para outro mês." /></Painel>
+                ) : (<>
+                  <Painel titulo="Linha do tempo" sub={`${quadro.rows.length} linha(s) · ${quadro.days.length} dia(s)`}><ApsGanttBoard board={quadro} /></Painel>
+                  <Painel titulo="Operações do mês" sub={`${barras.length} operação(ões)`} flush>
+                    <div className="vpl-grid-scroll">
+                      <table className="erp-grid">
+                        <thead><tr><th>OF</th><th>Item · operação</th><th>Centro</th><th>Início</th><th>Fim</th><th className="num">Duração</th><th className="num">Feito</th><th>Situação</th><th /></tr></thead>
+                        <tbody>{barras.map((b, i) => (
+                          <tr key={`${b.sequence_id ?? "f"}-${i}`} className={b.is_late ? "vpl-late" : undefined}>
+                            <td className="vpl-strong">OF {b.order_number ?? b.production_order_id ?? "—"}</td>
+                            <td>{b.item_code ?? b.label}{b.operation_name && <span className="vpl-sub">{b.operation_name}</span>}</td>
+                            <td>{b.work_center_name ?? nomeCentro(b.work_center_id)}</td>
+                            <td>{dataHora(b.start)}</td><td>{dataHora(b.end)}</td>
+                            <td className="num">{horas(b.duration_hours)}</td>
+                            <td className="num">{b.percent_done != null ? `${Math.round(b.percent_done)}%` : "—"}</td>
+                            <td>{b.is_late ? <Selo tom="danger">Atrasada</Selo> : situacaoOperacao(b.status)}</td>
+                            <td className="vpl-actions">{b.sequence_id ? <button className="erp-btn erp-btn-sm" onClick={() => escolherParaRemanejar(b)} disabled={busy}>Remanejar</button> : null}</td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  </Painel>
+                </>)}
+              </>)}
+            </>)}
+
+            {aba === "ordem" && (<>
+              <Painel titulo="Ordem de produção">
+                <div className="vpl-filters">
+                  <div className="erp-field vpl-grow"><label className="erp-label erp-req">Ordem</label>
+                    <LookupField value={ordem} loader={loadProductionOrders} entityLabel="ordem de produção" onChange={(c) => { setOrdem(c ? Number(c) : undefined); setLinhasOrdem(null); }} /></div>
+                  <button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-end" }} onClick={() => void consultarOrdem()} disabled={busy}>Ver operações</button>
+                </div>
+              </Painel>
+              {linhasOrdem && <Painel titulo={`Operações da OF ${ordem}`} sub={`${linhasOrdem.length} operação(ões)`} flush>{tabelaOperacoes(linhasOrdem)}</Painel>}
+            </>)}
+
+            {aba === "centro" && (<>
+              <Painel titulo="Centro e período">
+                <div className="vpl-filters">
+                  <div className="erp-field vpl-grow"><label className="erp-label erp-req" htmlFor="aps-centro">Centro de trabalho</label>
+                    <select id="aps-centro" className="erp-input" value={centro ?? ""} onChange={(e) => { setCentro(Number(e.target.value) || undefined); setLinhasCentro(null); }}>
+                      <option value="">Selecionar…</option>
+                      {[...centros.entries()].map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+                    </select></div>
+                  <div className="erp-field"><label className="erp-label" htmlFor="aps-de">De</label><input id="aps-de" className="erp-input" type="date" value={de} onChange={(e) => setDe(e.target.value)} /></div>
+                  <div className="erp-field"><label className="erp-label" htmlFor="aps-ate">Até</label><input id="aps-ate" className="erp-input" type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
+                  <button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-end" }} onClick={() => void consultarCentro()} disabled={busy}>Ver fila</button>
+                </div>
+              </Painel>
+              {linhasCentro && (
+                <Painel titulo={`Fila de ${nomeCentro(centro)}`} sub={`${linhasCentro.length} operação(ões) · ${horas(linhasCentro.reduce((t, l) => t + (l.duration_hours || 0), 0))}`} flush>
+                  {tabelaOperacoes(linhasCentro)}
+                </Painel>
+              )}
+            </>)}
+
+            {aba === "remanejar" && (<>
+              <Painel titulo="Remanejar operação" sub="muda o início ou o centro, mantendo a duração">
+                {sequenciaveis.length === 0 ? (
+                  <p className="erp-hint">Nenhuma operação sequenciada em {MESES[mes - 1]} de {ano}. Sequencie as ordens ou navegue no quadro até o mês da operação.</p>
                 ) : (
-                  <>
-                    <div className="erp-field erp-c3"><label className="erp-label erp-req">Centro (ID)</label><input className="erp-input num" type="number" value={wcId} onChange={(e) => setWcId(e.target.value)} /></div>
-                    <div className="erp-field erp-c3"><label className="erp-label">De</label><input className="erp-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-                    <div className="erp-field erp-c3"><label className="erp-label">Até</label><input className="erp-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-                  </>
+                  <div className="erp-fieldset-body" style={{ padding: 0 }}>
+                    <div className="erp-field erp-c12"><label className="erp-label erp-req" htmlFor="rem-seq">Operação</label>
+                      <select id="rem-seq" className="erp-input" value={rem.sequencia} onChange={(e) => {
+                        const b = sequenciaveis.find((x) => String(x.sequence_id) === e.target.value);
+                        setRem((s) => ({ ...s, sequencia: e.target.value, inicio: paraCampoDataHora(b?.start), centro: b?.work_center_id }));
+                      }}>
+                        <option value="">Selecionar…</option>
+                        {sequenciaveis.map((b) => (
+                          <option key={b.sequence_id} value={b.sequence_id}>
+                            OF {b.order_number ?? b.production_order_id} · {b.item_code ?? b.label}{b.operation_name ? ` · ${b.operation_name}` : ""} · {b.work_center_name ?? nomeCentro(b.work_center_id)} · {dataHora(b.start)}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="erp-hint">A lista mostra as operações de {MESES[mes - 1]} de {ano}, do quadro.</span></div>
+                    <div className="erp-field erp-c4"><label className="erp-label erp-req" htmlFor="rem-inicio">Novo início</label>
+                      <input id="rem-inicio" className="erp-input" type="datetime-local" value={rem.inicio} onChange={(e) => setRem((s) => ({ ...s, inicio: e.target.value }))} /></div>
+                    <div className="erp-field erp-c4"><label className="erp-label" htmlFor="rem-centro">Centro</label>
+                      <select id="rem-centro" className="erp-input" value={rem.centro ?? ""} onChange={(e) => setRem((s) => ({ ...s, centro: Number(e.target.value) || undefined }))}>
+                        {[...centros.entries()].map(([id, nome]) => <option key={id} value={id}>{nome}{id === barraEscolhida?.work_center_id ? " (atual)" : ""}</option>)}
+                      </select></div>
+                    <div className="erp-field erp-c4" style={{ justifyContent: "flex-end" }}>
+                      <label className="erp-check"><input type="checkbox" checked={rem.cascata} onChange={(e) => setRem((s) => ({ ...s, cascata: e.target.checked }))} />Empurrar as operações seguintes da OF</label></div>
+                    {barraEscolhida && <div className="erp-field erp-c12"><p className="erp-note">Atualmente: {dataHora(barraEscolhida.start)} até {dataHora(barraEscolhida.end)} em {barraEscolhida.work_center_name ?? nomeCentro(barraEscolhida.work_center_id)}. A duração ({horas(barraEscolhida.duration_hours)}) é mantida.</p></div>}
+                    <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void remanejar()} disabled={busy || !rem.sequencia}>Remanejar</button></div>
+                  </div>
                 )}
-                <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void verGantt()} disabled={busy}>Ver Gantt</button></div>
-              
-            </div></div>
+              </Painel>
+              {resultadoRem && (
+                <Painel titulo="Resultado" sub={`${resultadoRem.shifted.length} operação(ões) movida(s)`}>
+                  {resultadoRem.warnings.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                      {resultadoRem.warnings.map((w, i) => <div key={i}><Selo tom="warn">Capacidade</Selo> {w}</div>)}
+                    </div>
+                  )}
+                  <p className="erp-hint">O aviso de capacidade não bloqueia: o planejador pode decidir passar da capacidade do dia.</p>
+                </Painel>
+              )}
+            </>)}
+          </div>
+        </section>
+      </div>
 
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Gantt — <span style={{fontWeight:400,opacity:0.65}}>{rows.length} operação(ões)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-              <table className="erp-grid">
-                <thead><tr><th>Ordem</th><th>Pos.</th><th>Centro</th><th>Início</th><th>Fim</th><th>Horas</th><th>Status</th></tr></thead>
-                <tbody>
-                  {rows.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Sem agendamento. Sequencie e consulte.</td></tr>}
-                  {rows.map((r) => (
-                    <tr key={r.sequence_id}>
-                      <td style={{ fontWeight: 600 }}>{r.production_order_id}</td><td>{r.sequence_position}</td><td>{r.work_center_id}</td>
-                      <td>{dt(r.scheduled_start)}</td><td>{dt(r.scheduled_end)}</td><td>{r.duration_hours}</td><td>{statusPill(r.status)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div></div>
-            </div>
-          </>
-        )}
-
-        {mode === "mes" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
-              
-                <div className="erp-field erp-c2"><label className="erp-label">Ano</label><input className="erp-input num" type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Mês</label><input className="erp-input num" type="number" min={1} max={12} value={month} onChange={(e) => setMonth(e.target.value)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Agrupar por</label>
-                  <select className="erp-input" value={groupBy} onChange={(e) => setGroupBy(e.target.value as GanttGroupBy)}><option value="work_center">Centro de trabalho</option><option value="order">Ordem de produção</option></select></div>
-                <div className="erp-field erp-c5" style={{ alignSelf: "end", display: "flex", gap: 8 }}>
-                  <button className="erp-btn erp-btn-primary" onClick={() => void verQuadro()} disabled={busy}>Ver quadro</button>
-                  <button className="erp-btn" onClick={() => void baixarExport("svg")} disabled={busy}>Export SVG</button>
-                  <button className="erp-btn" onClick={() => void baixarExport("pdf")} disabled={busy}>Export PDF</button>
-                </div>
-              
-            </div></div>
-
-            {board && (
-              <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label">Linhas ({groupBy === "order" ? "OFs" : "centros"})</label><input className="erp-input num" value={board.rows.length} readOnly /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Dias sobrecarregados</label><input className="erp-input num" value={board.overloaded_days} readOnly /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Barras atrasadas</label><input className="erp-input num" value={board.late_bars} readOnly /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Dependências</label><input className="erp-input num" value={board.dependencies.length} readOnly /></div>
-              </div></div>
-            )}
-
-            {/* Linha do tempo primeiro; a grade continua embaixo, porque é dela
-                que sai a leitura exata e a exportação. */}
-            {board && (
-              <div className="erp-fieldset">
-                <div className="erp-fieldset-head">
-                  Quadro — <span style={{ fontWeight: 400, opacity: 0.65 }}>
-                    {board.rows.length} recurso(s) · {board.days.length} dia(s)
-                    {board.late_bars > 0 ? ` · ${board.late_bars} barra(s) atrasada(s)` : ""}
-                  </span>
-                </div>
-                <div className="erp-fieldset-body"><div className="erp-field erp-c12">
-                  <ApsGanttBoard board={board} />
-                </div></div>
-              </div>
-            )}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Barras do quadro — <span style={{fontWeight:400,opacity:0.65}}>{boardBars.length} barra(s)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-              <table className="erp-grid">
-                <thead><tr><th>Linha</th><th>Rótulo</th><th>Seq.</th><th>Centro</th><th>Início</th><th>Fim</th><th>% concl.</th><th>Atrasada</th></tr></thead>
-                <tbody>
-                  {boardBars.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Sem barras. Sequencie (APS) e clique em Ver quadro.</td></tr>}
-                  {boardBars.map((b, i) => (
-                    <tr key={i} style={b.color_hex ? { borderLeft: `3px solid ${b.color_hex}` } : undefined}>
-                      <td>{b.rowLabel}</td><td style={{ fontWeight: 600 }}>{b.label}</td><td>{b.sequence_id ?? "—"}</td><td>{b.work_center_id ?? "—"}</td>
-                      <td>{dt(b.start)}</td><td>{dt(b.end)}</td><td>{b.percent_done != null ? `${Math.round(b.percent_done)}%` : "—"}</td>
-                      <td>{b.is_late ? <span className="erp-badge warn">Atrasada</span> : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div></div>
-            </div>
-
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Remanejar (arraste manual) — <span style={{fontWeight:400,opacity:0.65}}>move a sequência + cascata finish-start</span></div><div className="erp-fieldset-body">
-              <div className="erp-field erp-c2"><label className="erp-label erp-req">Sequência (ID)</label><input className="erp-input num" type="number" value={resForm.sequenceId} onChange={(e) => setResForm((s) => ({ ...s, sequenceId: e.target.value }))} /></div>
-              <div className="erp-field erp-c3"><label className="erp-label erp-req">Novo início</label><input className="erp-input" type="datetime-local" value={resForm.newStart} onChange={(e) => setResForm((s) => ({ ...s, newStart: e.target.value }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Novo centro (ID)</label><input className="erp-input num" type="number" value={resForm.newWc} onChange={(e) => setResForm((s) => ({ ...s, newWc: e.target.value }))} /></div>
-              <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><label className="erp-label" style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={resForm.cascade} onChange={(e) => setResForm((s) => ({ ...s, cascade: e.target.checked }))} />Cascata</label></div>
-              <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={() => void remanejar()} disabled={busy}>Remanejar</button></div>
-            </div></div>
-          </>
-        )}
-      </div></section></div>
-
-      <footer className="erp-statusbar">
-        <div style={{display:"contents"}}><div className="erp-status-item">Operações: <strong>{rows.length}</strong></div></div>
-        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
-      </footer>
+      <Rodape>
+        <div className="erp-status-item">Mês: <strong>{nomeMes(mes)}/{ano}</strong></div>
+        <div className="erp-status-item">Operações: <strong>{barras.length}</strong></div>
+        {quadro && quadro.late_bars > 0 && <div className="erp-status-item">Atrasadas: <strong>{quadro.late_bars}</strong></div>}
+      </Rodape>
     </div>
   );
 }

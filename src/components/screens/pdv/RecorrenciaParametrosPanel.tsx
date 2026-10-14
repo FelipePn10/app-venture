@@ -7,6 +7,7 @@ import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } fro
 import { LookupField } from "@/components/ui/LookupField";
 import { loadCustomers, loadEstablishments, loadItems, loadRepresentatives, loadSalesPlans } from "@/services/lookups";
 import { useEscapeToClose } from "@/hooks/useEscapeToClose";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * Parâmetros e reajustes da venda recorrente.
@@ -24,7 +25,7 @@ import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 type Props = { enterpriseCode: number; onClose: () => void; aviso: (tipo: "success" | "error", msg: string) => void };
 type Aba = "parametros" | "datas" | "reajuste";
 
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => hojeLocal();
 const dinheiro = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Índices de reajuste que o mercado brasileiro usa em contrato. */

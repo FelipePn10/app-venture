@@ -11,7 +11,7 @@ import { loadEstablishments } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentPeriod = () => new Date().toISOString().slice(0, 7);
+const currentPeriod = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 const TIPOS: RestituicaoTipo[] = ["RESTITUICAO", "RESSARCIMENTO", "COMPLEMENTACAO"];
 
 const EMPTY: IcmsStRestituicaoDTO = {

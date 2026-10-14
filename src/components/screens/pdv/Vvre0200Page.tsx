@@ -10,9 +10,10 @@ import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers, loadEstablishments, loadItems, loadRepresentatives, loadSalesTables } from "@/services/lookups";
 import { RecorrenciaParametrosPanel } from "./RecorrenciaParametrosPanel";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const oneYearFromToday = () => { const date = new Date(); date.setFullYear(date.getFullYear() + 1); return date.toISOString().slice(0, 10); };
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

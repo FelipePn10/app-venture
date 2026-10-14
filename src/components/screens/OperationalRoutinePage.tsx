@@ -5,7 +5,7 @@ import { downloadBlob } from "@/services/fileDownload";
 import { fieldLabel } from "@/utils/fieldLabels";
 import { useAuthStore } from "@/store/authStore";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadConsumerServiceCalls, loadCustomers, loadEmployees, loadItems, loadMachines, loadMarketSegments, loadRecurringAdjustments, loadRecurringSales, loadRepresentativeInterestClassifications, loadRepresentatives, loadSalesOrders, loadSalesPlans, loadSalesPricePolicies, loadSalesTables, loadSuppliers, loadTechnicalAssistanceCalls, loadWarehouses, loadPdmGroups, loadCharacteristics, loadOperations, loadCarriers, type LookupLoader } from "@/services/lookups";
+import { loadConsumerServiceCalls, loadCustomers, loadEmployees, loadItems, loadMachines, loadMarketSegments, loadRecurringAdjustments, loadRecurringSales, loadRepresentativeInterestClassifications, loadRepresentatives, loadSalesOrders, loadSalesPlans, loadSalesPricePolicies, loadSalesTables, loadSuppliers, loadTechnicalAssistanceCalls, loadWarehouses, loadPdmGroups, loadCharacteristics, loadOperations, loadCarriers, loadCostCenters, loadCostCentersById, loadMachinesById, loadMarketSegmentsById, type LookupLoader } from "@/services/lookups";
 import { listNotificationUsers } from "@/services/notificationService";
 
 export type RoutineField = {
@@ -148,7 +148,14 @@ function lookupFor(name: string, label = ""): LookupLoader | undefined {
   if (/sales.?price.?polic|política comercial|política de preço/.test(key)) return loadSalesPricePolicies;
   if (/sales.?table|price.?table|tabela de venda|tabela de preço|^table$|^tabela$/.test(key)) return loadSalesTables;
   if (/sales.?order|pedido de venda|^code pedido$/.test(key)) return loadSalesOrders;
-  if (/machine|máquina/.test(key)) return loadMachines;
+  // Centro de custo antes de "machine": `machine_cost_center_id` abria a lista
+  // de máquinas. E tipo de fornecedor não é fornecedor — sem lista própria, o
+  // campo fica numérico em vez de oferecer a entidade errada.
+  if (/cost.?center|centro de custo/.test(key)) return /_id$/.test(name) ? loadCostCentersById : loadCostCenters;
+  if (/supplier.?type|tipo de fornecedor/.test(key)) return undefined;
+  // `machine_id`/`machine_ids` apontam para machines.id; `machine_code`, para o código.
+  if (/machine|máquina/.test(key)) return /machine_ids?$/.test(name) ? loadMachinesById : loadMachines;
+  if (/market.?segment|segmento de mercado/.test(key) && /_id$/.test(name)) return loadMarketSegmentsById;
   if (/operação|operation/.test(key)) return loadOperations;
   if (/grupo pdm|pdm|grupo/.test(key)) return loadPdmGroups;
   if (/característica|characteristic/.test(key)) return loadCharacteristics;

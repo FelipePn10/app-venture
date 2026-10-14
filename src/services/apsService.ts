@@ -99,8 +99,19 @@ export async function ganttByOrder(orderId: number): Promise<GanttEntry[]> {
   const { data } = await httpClient.get(`${BASE}/gantt/order/${orderId}`);
   return unwrapArray(data).map(parseGantt);
 }
+/**
+ * O backend lê `from`/`to` como data e hora (RFC 3339). A tela manda o dia do
+ * campo de data ("2026-10-01") e a consulta voltava 400 sempre: o dia vira o
+ * começo do dia inicial e o fim do dia final, no fuso do usuário.
+ */
+function inicioDoDia(dia: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dia) ? new Date(`${dia}T00:00:00`).toISOString() : dia;
+}
+function fimDoDia(dia: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dia) ? new Date(`${dia}T23:59:59`).toISOString() : dia;
+}
 export async function ganttByWorkCenter(workCenterId: number, from: string, to: string): Promise<GanttEntry[]> {
-  const { data } = await httpClient.post(`${BASE}/gantt/work-center`, { work_center_id: workCenterId, from, to });
+  const { data } = await httpClient.post(`${BASE}/gantt/work-center`, { work_center_id: workCenterId, from: inicioDoDia(from), to: fimDoDia(to) });
   return unwrapArray(data).map(parseGantt);
 }
 
@@ -114,6 +125,11 @@ export interface GanttBar {
   sequence_id?: number;
   production_order_id?: number;
   work_center_id?: number;
+  work_center_name?: string;
+  order_number?: number;
+  item_code?: string;
+  operation_name?: string;
+  duration_hours?: number;
   label: string;
   start: string;
   end: string;
@@ -152,10 +168,19 @@ function parseBar(raw: unknown): GanttBar {
     sequence_id: parseNum(o, 'sequence_id', 'SequenceID') || undefined,
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID', 'order_id') || undefined,
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
-    label: parseStr(o, 'label', 'Label', 'title', 'name') || String(parseNum(o, 'production_order_id', 'order_id') || ''),
+    work_center_name: parseStr(o, 'work_center_name', 'WorkCenterName') || undefined,
+    order_number: parseNum(o, 'order_number', 'OrderNumber') || undefined,
+    item_code: parseStr(o, 'item_code', 'ItemCode') || undefined,
+    operation_name: parseStr(o, 'operation_name', 'OperationName') || undefined,
+    duration_hours: parseNum(o, 'duration_hours', 'DurationHours') || undefined,
+    // O quadro manda a barra sem `label`; sem montar um, a barra ficava muda.
+    label: parseStr(o, 'label', 'Label', 'title', 'name')
+      || [parseStr(o, 'item_code', 'ItemCode'), parseStr(o, 'operation_name', 'OperationName')].filter(Boolean).join(' · ')
+      || String(parseNum(o, 'production_order_id', 'order_id') || ''),
     start: parseStr(o, 'start', 'Start', 'scheduled_start', 'ScheduledStart'),
     end: parseStr(o, 'end', 'End', 'scheduled_end', 'ScheduledEnd'),
-    percent_done: parseNum(o, 'percent_done', 'PercentDone', 'progress'),
+    // O backend chama de `percent_complete`; lendo só `percent_done` a barra mostrava sempre 0%.
+    percent_done: parseNum(o, 'percent_complete', 'PercentComplete', 'percent_done', 'PercentDone', 'progress'),
     is_late: parseBool(o, 'is_late', 'IsLate'),
     color_hex: parseStr(o, 'color_hex', 'ColorHex') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,
@@ -176,7 +201,8 @@ function parseBoard(data: unknown): GanttBoard {
     rows: pickArray(o, ['rows', 'Rows', 'lines', 'Lines']).map(parseRow),
     load: pickArray(o, ['load', 'Load', 'loads', 'Loads']).map((l) => { const x = unwrapObject(l); return { work_center_id: parseNum(x, 'work_center_id', 'WorkCenterID'), date: parseStr(x, 'date', 'Date', 'req_date'), load_pct: parseNum(x, 'load_pct', 'LoadPct') }; }),
     days: pickArray(o, ['days', 'Days']).map((d) => { const x = unwrapObject(d); return { date: parseStr(x, 'date', 'Date'), is_working: parseBool(x, 'IsWorkday', 'is_workday'), is_today: parseBool(x, 'is_today', 'IsToday') }; }),
-    dependencies: pickArray(o, ['dependencies', 'Dependencies']).map((e) => { const x = unwrapObject(e); return { predecessor_id: parseNum(x, 'predecessor_id', 'PredecessorID'), successor_id: parseNum(x, 'successor_id', 'SuccessorID'), overlap_pct: parseNum(x, 'overlap_pct', 'OverlapPct'), implicit: parseBool(x, 'implicit', 'Implicit') }; }),
+    // O quadro manda `from_sequence_id`/`to_sequence_id`; os nomes antigos ficam por compatibilidade.
+    dependencies: pickArray(o, ['dependencies', 'Dependencies']).map((e) => { const x = unwrapObject(e); return { predecessor_id: parseNum(x, 'from_sequence_id', 'FromSequenceID', 'predecessor_id', 'PredecessorID'), successor_id: parseNum(x, 'to_sequence_id', 'ToSequenceID', 'successor_id', 'SuccessorID'), overlap_pct: parseNum(x, 'overlap_pct', 'OverlapPct'), implicit: parseBool(x, 'implicit', 'Implicit') }; }),
     overloaded_days: parseNum(summary, 'overloaded_days', 'OverloadedDays'),
     late_bars: parseNum(summary, 'late_bars', 'LateBars'),
     raw: o,
@@ -198,8 +224,19 @@ export async function ganttBoard(from: string, to?: string, scale: GanttScale = 
 
 export interface RescheduleResult {
   shifted: Obj[];
+  /** Dias que passaram da capacidade do centro, já em texto. */
   warnings: string[];
+  /** O remanejamento foi gravado, mas a conferência de capacidade não rodou. */
+  capacityCheckError?: string;
   raw: Obj;
+}
+const horas = (v: unknown) => Number(v ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+/** Aviso de capacidade vem como objeto: vira a frase que a tela mostra. */
+function avisoDeCapacidade(raw: unknown): string {
+  if (typeof raw === 'string') return raw;
+  const w = unwrapObject(raw);
+  const dia = String(w['date'] ?? '').slice(0, 10).split('-').reverse().join('/');
+  return `Centro ${w['work_center_id'] ?? '?'} em ${dia}: ${horas(w['scheduled_hours'])} h programadas para ${horas(w['available_hours'])} h disponíveis (passa ${horas(w['over_by_hours'])} h)`;
 }
 /**
  * Remaneja (drag-drop) uma sequência, preservando a duração. `cascade` (default true)
@@ -213,7 +250,8 @@ export async function rescheduleGantt(sequenceId: number, newStart: string, opts
   const o = unwrapObject(data);
   return {
     shifted: pickArray(o, ['shifted', 'Shifted']).map((s) => unwrapObject(s)),
-    warnings: pickArray(o, ['warnings', 'Warnings']).map((w) => String(w)),
+    warnings: pickArray(o, ['warnings', 'Warnings']).map(avisoDeCapacidade),
+    capacityCheckError: typeof o['capacity_check_error'] === 'string' && o['capacity_check_error'] ? String(o['capacity_check_error']) : undefined,
     raw: o,
   };
 }

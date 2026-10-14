@@ -16,6 +16,7 @@ import {
 } from "@/services/lookups";
 import { CarteiraFiltros } from "./CarteiraFiltros";
 import { ContasPagarPorPlanoView } from "./ContasPagarPorPlano";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VFIN0200 — Contas a Pagar.
@@ -37,7 +38,7 @@ import { ContasPagarPorPlanoView } from "./ContasPagarPorPlano";
  */
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const EMPTY: ContaPagarDTO = {

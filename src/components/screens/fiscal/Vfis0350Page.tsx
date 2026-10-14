@@ -9,7 +9,8 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const EMPTY_LANG = { language: "", description: "" };
 const EMPTY_ATTR = { ncm: "", code: "", description: "", domain: "", start_date: today(), end_date: "" };
 const INDS: IpiIndicator[] = ["PERCENTUAL", "VALOR"];

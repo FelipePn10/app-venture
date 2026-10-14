@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers, loadOperations } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -35,7 +36,7 @@ const PRECO_VAZIO: ServicePrice = {
   unit_price: "0", preferred: true, freight_type: "FIXED", freight_value: "0", tax_percent: "0",
 };
 
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => hojeLocal();
 const brl = (v: string | number) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 4 });
 const num = (v: string | number, casas = 4) =>

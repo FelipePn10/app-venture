@@ -13,10 +13,11 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadConsumers, loadEstablishments } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "consumers" | "calls" | "support";
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 
 const POSITION_META: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "Pendente", cls: "warn" }, SCHEDULED: { label: "Agendado", cls: "info" }, RESOLVED: { label: "Resolvido", cls: "ok" },

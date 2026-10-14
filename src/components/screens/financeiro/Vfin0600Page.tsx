@@ -13,6 +13,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers, loadSuppliers, loadBankAccounts } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VFIN0600 — Adiantamentos de Clientes e Fornecedores.
@@ -34,7 +35,7 @@ import { loadCustomers, loadSuppliers, loadBankAccounts } from "@/services/looku
  */
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const EMPTY: AdiantamentoDTO = {

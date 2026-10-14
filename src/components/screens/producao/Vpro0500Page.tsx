@@ -7,9 +7,10 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const EMPTY_PLAN: MaintPlanDTO = { machine_id: 0, work_center_id: undefined, frequency: "MONTHLY", frequency_days: 30, estimated_hours: 1 };
 
 function orderPill(s?: string): JSX.Element {

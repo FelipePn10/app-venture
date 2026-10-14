@@ -6,9 +6,10 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadSalesOrders, loadItems } from "@/services/lookups";
 import { EntityName } from "@/components/ui/EntityName";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 type OrderItemPlan = { item: DeliveryReschedulePlanningItemDTO; selected: boolean; newDate: string; reason: string };
 const dateOnly = (value?: string) => value?.slice(0, 10) ?? "";
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `vexr-${Date.now()}-${Math.random().toString(36).slice(2)}`;

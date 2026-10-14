@@ -11,6 +11,7 @@ import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers, loadSuppliers, loadSalesOrders, loadBankAccounts, loadFiscalExits } from "@/services/lookups";
 import { CarteiraFiltros } from "./CarteiraFiltros";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VFIN0210 — Contas a Receber.
@@ -34,7 +35,7 @@ import { CarteiraFiltros } from "./CarteiraFiltros";
  */
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const EMPTY: ContaReceberDTO = {

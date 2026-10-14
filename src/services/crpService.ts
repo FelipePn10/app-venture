@@ -35,6 +35,10 @@ export interface CrpPlanOption {
   name?: string;
   total_entries?: number;
   calculated?: boolean;
+  /** Maior carga de um centro num dia, em % da capacidade. */
+  max_load_pct?: number;
+  overload_count?: number;
+  last_calculated_at?: string;
 }
 
 export async function listCrpPlans(onlyCalculated = false): Promise<CrpPlanOption[]> {
@@ -46,6 +50,9 @@ export async function listCrpPlans(onlyCalculated = false): Promise<CrpPlanOptio
       name: parseStr(o, 'name', 'Name') || undefined,
       total_entries: parseNum(o, 'total_entries', 'TotalEntries'),
       calculated: parseBool(o, 'calculated', 'Calculated'),
+      max_load_pct: parseNum(o, 'max_load_pct', 'MaxLoadPct'),
+      overload_count: parseNum(o, 'overload_count', 'OverloadCount'),
+      last_calculated_at: parseStr(o, 'last_calculated_at', 'LastCalculatedAt') || undefined,
     };
   }).filter((p) => p.plan_code);
 }

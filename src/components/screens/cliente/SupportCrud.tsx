@@ -15,7 +15,8 @@ export interface FieldSpec {
   label: string;
   col?: number;
   required?: boolean;
-  kind?: "text" | "number" | "bool" | "select" | "textarea";
+  /** "date": campo de data; envia o dia como data e hora UTC (AAAA-MM-DDT00:00:00Z), que é o que a API espera nesses cadastros. */
+  kind?: "text" | "number" | "bool" | "select" | "textarea" | "date";
   options?: string[];
   placeholder?: string;
 }
@@ -66,6 +67,7 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
       const v = form[fs.key];
       if (fs.kind === "number") out[fs.key] = v === "" || v === undefined ? undefined : Number(v);
       else if (fs.kind === "bool") out[fs.key] = !!v;
+      else if (fs.kind === "date") out[fs.key] = v ? `${String(v).slice(0, 10)}T00:00:00Z` : undefined;
       else out[fs.key] = v === "" ? undefined : v;
     }
     return out;
@@ -96,6 +98,7 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
       const pascal = fs.key.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
       f[fs.key] = fs.kind === "bool" ? parseBool(rec, fs.key, pascal)
         : fs.kind === "number" ? (parseNum(rec, fs.key, pascal) || "")
+        : fs.kind === "date" ? parseStr(rec, fs.key, pascal).slice(0, 10)
         : parseStr(rec, fs.key, pascal);
     }
     setForm(f);
@@ -130,7 +133,7 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
             ) : (
               <input
                 className={`erp-input ${fs.kind === "number" ? "num" : ""}`}
-                type={fs.kind === "number" ? "number" : "text"}
+                type={fs.kind === "number" ? "number" : fs.kind === "date" ? "date" : "text"}
                 value={String(form[fs.key] ?? "")}
                 placeholder={fs.placeholder}
                 onChange={(e) => set(fs.key, e.target.value)}

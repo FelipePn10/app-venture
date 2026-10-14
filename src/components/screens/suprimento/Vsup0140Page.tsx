@@ -24,13 +24,14 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { loadSuppliers } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type DetailTab = "dados" | "frota" | "regioes" | "ocorrencias";
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => hojeLocal();
 
 const VAZIO: ShippingCarrierDTO = {
   supplier_code: 0, modal: "RODOVIARIO", issues_cte: true, is_active: true,

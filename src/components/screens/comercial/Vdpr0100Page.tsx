@@ -7,10 +7,11 @@ import { errMessage, parseNum, parseStr, unwrapObject, type Obj } from "@/servic
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadCustomers, loadRepresentatives } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "occupation" | "reservation" | "reschedule";
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (n?: number) => `${(n ?? 0).toFixed(1)}%`;

@@ -251,8 +251,8 @@ export function Vcli0520Page(): JSX.Element {
             editable
             fields={[
               { key: "description", label: "Descrição", col: 5, required: true },
-              { key: "validity_start", label: "Vigência início (ISO)", col: 3, placeholder: "2025-01-01T00:00:00Z" },
-              { key: "validity_end", label: "Vigência fim (ISO)", col: 3 },
+              { key: "validity_start", label: "Vigência início", kind: "date", col: 3 },
+              { key: "validity_end", label: "Vigência fim", kind: "date", col: 3 },
               { key: "tolerance_min_pct", label: "Tol. mín %", kind: "number", col: 2 },
               { key: "tolerance_max_pct", label: "Tol. máx %", kind: "number", col: 2 },
               { key: "price_formation", label: "Formação de preço", kind: "select", options: ["INFORMADO", "CUSTO_MEDIO", "CUSTO_STANDARD_TOTAL", "CUSTO_STANDARD_MATERIAL", "INFORMADO_SEM_ICMS", "MAT_OPER", "TABELA_CUSTO", "TRANSFERENCIA_IPI", "TRANSFERENCIA_UF"], col: 4 },

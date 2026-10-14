@@ -7,7 +7,8 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const EMPTY: MotivoDapiDTO = { code: "", reason: "", destination: "", valid_from: today() };
 
 export function Vfis0500Page(): JSX.Element {

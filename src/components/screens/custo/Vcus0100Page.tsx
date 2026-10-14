@@ -21,6 +21,7 @@ import { EntityName } from "@/components/ui/EntityName";
 import {
   loadItems, loadWorkCenters, loadChartOfAccounts, loadFinancialCostCenters, loadCostCenters,
 } from "@/services/lookups";
+import { hojeLocal } from "@/utils/dataLocal";
 
 /**
  * VCUS0100 — Custos.
@@ -63,7 +64,7 @@ const COST_TABS = [
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (n: number) => `${(n * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 
 const REGRA_VAZIA: OverheadRuleDTO = {
   code: "", description: "", base: "CONVERSAO", method: "PERCENTUAL", rate: 0,

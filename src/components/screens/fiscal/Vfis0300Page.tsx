@@ -6,6 +6,7 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const UTIL: CfopUtilization[] = ["INDUSTRIALIZACAO_COMERCIO", "IMOBILIZADO", "USO_CONSUMO"];
@@ -23,10 +24,15 @@ export function Vfis0300Page(): JSX.Element {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
 
+  // O CFOP é um cadastro só para todas as empresas do banco: quem altera muda
+  // para todas. Por isso só o perfil ADMIN inclui ou altera; os demais consultam.
+  const isAdmin = useAuthStore((state) => state.user?.role?.toUpperCase() === "ADMIN");
+  const SO_ADMIN = "O CFOP vale para todas as empresas: só o perfil ADMIN inclui ou altera.";
+
   const reload = useCallback(async () => {
     setBusy(true);
-    try { setList(await listCfops(false)); }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao listar CFOPs.") }); }
+    try { setList(await listCfops(false)); return true; }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao listar CFOPs.") }); return false; }
     finally { setBusy(false); }
   }, []);
   useEffect(() => { void reload(); }, [reload]);
@@ -39,9 +45,13 @@ export function Vfis0300Page(): JSX.Element {
     if (!form.code || !form.description.trim()) { setFeedback({ type: "error", message: "Código e Descrição são obrigatórios." }); return; }
     setBusy(true); setFeedback(null);
     try {
-      if (editing) { await updateCfop(form); setFeedback({ type: "success", message: `CFOP ${form.code} atualizado.` }); }
-      else { await createCfop(form); setFeedback({ type: "success", message: `CFOP ${form.code} cadastrado.` }); }
-      novo(); await reload();
+      const msg = editing ? `CFOP ${form.code} atualizado.` : `CFOP ${form.code} cadastrado.`;
+      if (editing) await updateCfop(form); else await createCfop(form);
+      // novo() limpa o aviso: a confirmação vem depois dele, senão sumia na hora.
+      novo();
+      // Se a lista não recarregar, o erro dela fica na tela (com o registro já gravado).
+      if (await reload()) setFeedback({ type: "success", message: msg });
+      else setFeedback({ type: "error", message: `${msg} Mas a lista não pôde ser atualizada — recarregue a tela.` });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -54,13 +64,14 @@ export function Vfis0300Page(): JSX.Element {
       </header>
 
       <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span><button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy}>+ Novo CFOP</button></div>
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Ações</span><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span><button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy || !isAdmin} title={isAdmin ? undefined : SO_ADMIN}>+ Novo CFOP</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Ações</span><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy || !isAdmin} title={isAdmin ? undefined : SO_ADMIN}>{busy ? "Salvando..." : editing ? "Atualizar" : "Salvar"}</button></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VFIS0300 — CFOPs / Naturezas de Operação" filename="vfis0300" /></div>
       </div>
 
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        {!isAdmin && <div className="erp-feedback info">{SO_ADMIN} Você pode consultar e usar os CFOPs normalmente.</div>}
         <section className="erp-detail-panel">
           <div className="erp-tabs"><button className="erp-tab active">CFOPs</button></div>
           <div className="erp-detail-body">

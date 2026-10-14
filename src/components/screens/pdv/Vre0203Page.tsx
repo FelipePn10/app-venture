@@ -5,9 +5,10 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadRepresentatives } from "@/services/lookups";
 import { getCommercialCommissionSettings, listCommercialCommissions, saveCommercialCommissionSettings, transitionCommercialCommission, type CommercialCommissionEntryDTO, type CommercialCommissionSettingsDTO } from "@/services/commercialCommissionService";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => hojeLocal();
 const plusMonths = (n: number) => { const d = new Date(); d.setMonth(d.getMonth() + n); return d.toISOString().slice(0, 10); };
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

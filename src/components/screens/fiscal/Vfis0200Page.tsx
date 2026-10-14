@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   type FiscalExit, type CreateExitDTO, type ExitItemDTO, type TipoPessoa, type PreviaNFe,
-  listExits, createExit, authorizeExit, cancelExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao,
+  listExits, createExit, authorizeExit, cancelExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
   previewExit,
 } from "@/services/nfeService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
@@ -9,10 +9,11 @@ import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { FaturarPedidoPanel } from "./FaturarPedidoPanel";
 
-type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
+type FeedbackState = { type: "success" | "error" | "info" | "warn"; message: string } | null;
 type Mode = "list" | "create" | "pedido";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 const EMPTY_ITEM: ExitItemDTO = {
   sequence: 1, item_code: "", ncm: "", cfop: "", quantidade: 1,
@@ -74,6 +75,7 @@ export function Vfis0200Page(): JSX.Element {
   const [form, setForm] = useState<CreateExitDTO>(EMPTY_FORM);
   const [lastCreated, setLastCreated] = useState<FiscalExit | null>(null);
   const [cceView, setCceView] = useState<{ id: number; list: Obj[] } | null>(null);
+  const [pendView, setPendView] = useState<{ id: number; list: PendenciaNFe[] } | null>(null);
   const [previa, setPrevia] = useState<PreviaNFe | null>(null);
   const [verPayload, setVerPayload] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -180,9 +182,9 @@ export function Vfis0200Page(): JSX.Element {
         + `Ambiente: ${conferida.ambiente.toUpperCase()}. Nota autorizada só se desfaz por cancelamento.${resumo}`,
       );
       if (!ok) return;
-      await authorizeExit(code);
+      const r = await authorizeExit(code);
       setPrevia(null);
-      setFeedback({ type: "success", message: `NF-e ${code} enviada para autorização.` });
+      setFeedback(comAvisos(`NF-e ${code} enviada para autorização.`, r.warnings, code));
       await reload();
     }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
@@ -193,7 +195,7 @@ export function Vfis0200Page(): JSX.Element {
     if (j === null) return;
     if (j.trim().length < 15) { setFeedback({ type: "error", message: "A justificativa deve ter no mínimo 15 caracteres." }); return; }
     setBusy(true); setFeedback(null);
-    try { await cancelExit(code, j.trim()); setFeedback({ type: "success", message: `NF-e ${code} cancelada.` }); await reload(); }
+    try { const r = await cancelExit(code, j.trim()); setFeedback(comAvisos(`NF-e ${code} cancelada.`, r.warnings, code)); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -210,11 +212,41 @@ export function Vfis0200Page(): JSX.Element {
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
+  // Nota autorizada/cancelada cujos títulos, estoque ou pedido não entraram: o
+  // backend reprocessa sozinho, mas quem emitiu precisa saber — e poder ver.
+  function comAvisos(ok: string, avisos: string[] | undefined, id: number): FeedbackState {
+    if (!avisos?.length) return { type: "success", message: ok };
+    void verPendencias(id);
+    return { type: "warn", message: `${ok} Atenção: ${avisos.join(" ")}` };
+  }
+
+  // A tela fala o número da nota (o que está no DANFE), não o id interno.
+  const numeroDa = (id: number) => list.find((n) => n.id === id)?.numero_nf || id;
+
+  async function verPendencias(id: number) {
+    try { setPendView({ id, list: await getExitPendencias(id) }); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); }
+  }
+
+  async function reprocessar(id: number) {
+    setBusy(true); setFeedback(null);
+    try {
+      const list = await reprocessarEfeitos(id);
+      setPendView({ id, list });
+      setFeedback({ type: "success", message: `Efeitos da NF-e ${numeroDa(id)} aplicados (títulos, estoque e pedido).` });
+      await reload();
+    } catch (e) {
+      setFeedback({ type: "error", message: errMessage(e) });
+      await verPendencias(id);
+    } finally { setBusy(false); }
+  }
+
   async function consultarStatus(id: number) {
     setBusy(true); setFeedback(null);
     try {
-      const st = await getExitStatus(id) as { status?: string };
-      setFeedback({ type: "info", message: `Status SEFAZ da NF-e ${id}: ${st?.status ?? "desconhecido"}.` });
+      const st = await getExitStatus(id);
+      const m = `Status SEFAZ da NF-e ${id}: ${st.status || "desconhecido"}.`;
+      setFeedback(st.avisos?.length ? comAvisos(m, st.avisos, id) : { type: "info", message: m });
       await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -283,6 +315,36 @@ export function Vfis0200Page(): JSX.Element {
                 <div className="erp-metric"><div className="erp-metric-label">COFINS</div><div className="erp-metric-value">{money(lastCreated.valor_cofins)}</div></div>
               </div>
             )}
+            {pendView && (
+              <div className="erp-fieldset" style={{ marginBottom: 12 }}>
+                <div className="erp-card-header">
+                  <div className="erp-card-header-left"><span className="erp-card-title">Efeitos pendentes da NF-e {numeroDa(pendView.id)}</span></div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {pendView.list.some((p) => p.situacao === "PENDENTE") && (
+                      <button className="erp-btn erp-btn-primary" disabled={busy} onClick={() => void reprocessar(pendView.id)}>Reprocessar agora</button>
+                    )}
+                    <button className="erp-btn" onClick={() => setPendView(null)}>Fechar</button>
+                  </div>
+                </div>
+                <div className="erp-fieldset-body">
+                  <table className="erp-grid">
+                    <thead><tr><th>Etapa</th><th>Situação</th><th>Tentativas</th><th>Último erro</th><th>Próxima tentativa</th></tr></thead>
+                    <tbody>
+                      {pendView.list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma pendência: títulos, estoque e pedido desta NF-e estão em dia.</td></tr>}
+                      {pendView.list.map((p, i) => (
+                        <tr key={i}>
+                          <td>{p.etapa === "CANCELAMENTO" ? "Cancelamento" : "Autorização"}</td>
+                          <td>{p.situacao === "PENDENTE" ? <span className="erp-badge erp-badge-amber">Pendente</span> : <span className="erp-badge erp-badge-green">Resolvida</span>}</td>
+                          <td>{p.tentativas}</td>
+                          <td>{p.ultimo_erro || "—"}</td>
+                          <td>{p.situacao === "PENDENTE" && p.proxima_tentativa ? new Date(p.proxima_tentativa).toLocaleString("pt-BR") : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             {cceView && (
               <div className="erp-fieldset" style={{ marginBottom: 12 }}>
                 <div className="erp-card-header">
@@ -337,6 +399,7 @@ export function Vfis0200Page(): JSX.Element {
                             {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
                             {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelar(nf.id)}>Cancelar</button>}
                             <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void consultarStatus(nf.id)}>Status</button>
+                            {(isAuth || sit === "cancelada") && <button className="erp-btn erp-btn-sm" title="Títulos, estoque e pedido desta nota" onClick={() => void verPendencias(nf.id)}>Efeitos</button>}
                           </td>
                         </tr>
                       );
@@ -710,7 +773,7 @@ export function Vfis0200Page(): JSX.Element {
       <footer className="erp-statusbar">
         <div style={{display:"contents"}}>
           <div className="erp-status-item">NF-e: <strong>{list.length}</strong></div>
-          <div className="erp-status-item">Autorizadas: <strong>{list.filter((n) => n.status.toLowerCase().includes("autoriz")).length}</strong></div>
+          <div className="erp-status-item">Autorizadas: <strong>{list.filter((n) => situacaoDaNota(n.status) === "autorizada").length}</strong></div>
         </div>
         <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>

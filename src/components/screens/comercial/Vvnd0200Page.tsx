@@ -31,10 +31,12 @@ import {
   type RateioComissaoDTO,
   type RateioComissaoLinhaDTO,
 } from "@/services/salesCommissionService";
+import { hojeLocal } from "@/utils/dataLocal";
+import { AtendimentoMrpPanel } from "./AtendimentoMrpPanel";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type DetailTab = "dados" | "itens" | "comissao";
-const today = () => new Date().toISOString().slice(0, 10);
+type DetailTab = "dados" | "itens" | "comissao" | "mrp";
+const today = () => hojeLocal();
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Status da capa → rótulo + classe de badge. */
@@ -411,6 +413,7 @@ export function Vvnd0200Page(): JSX.Element {
                 <button className={`erp-tab${tab === "dados" ? " active" : ""}`} onClick={() => setTab("dados")}>Dados gerais</button>
                 <button className={`erp-tab${tab === "itens" ? " active" : ""}`} onClick={() => setTab("itens")}>Itens ({items.length})</button>
                 <button className={`erp-tab${tab === "comissao" ? " active" : ""}`} onClick={() => setTab("comissao")}>Comissão ({rateioLinhas.length})</button>
+                <button className={`erp-tab${tab === "mrp" ? " active" : ""}`} onClick={() => setTab("mrp")} disabled={isDraft} title={isDraft ? "O pedido entra no MRP depois de confirmado" : undefined}>Atendimento (MRP)</button>
               </div>
               <div className="erp-detail-body">
                 {tab === "dados" && (
@@ -505,6 +508,8 @@ export function Vvnd0200Page(): JSX.Element {
                     {!isDraft && <p style={{ fontSize: 12, color: "var(--v-text-3)" }}>Itens só podem ser adicionados/cancelados enquanto o pedido está em <strong>Rascunho</strong>.</p>}
                   </>
                 )}
+
+                {tab === "mrp" && selected.code && <AtendimentoMrpPanel orderCode={selected.code} />}
 
                 {tab === "comissao" && (
                   <div className="erp-fieldset">

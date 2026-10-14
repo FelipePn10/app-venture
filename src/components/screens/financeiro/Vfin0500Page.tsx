@@ -3,6 +3,7 @@ import { type ReportData, type ReportRow, getReport } from "@/services/financial
 import { errMessage } from "@/services/fiscalShared";
 import { getCustomerNames, getSupplierNames } from "@/services/lookupNames";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type ParamKind = "range" | "none" | "item" | "entity";
@@ -29,7 +30,7 @@ const REPORTS: ReportDef[] = [
 ];
 
 function firstDayOfYear() { return `${new Date().getFullYear()}-01-01`; }
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return hojeLocal(); }
 const prettify = (k: string) => k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 function fmt(v: unknown): string {
