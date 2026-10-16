@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Correções
+- **NF-e rejeitada** mostra o motivo da SEFAZ ao consultar o status, e o número da nota (não o código interno) nas mensagens.
+- **Campo de código do item** aceita também a descrição do item.
+
 ## [v1.6.0] — 2026-10-14
 
 ## Novidades
