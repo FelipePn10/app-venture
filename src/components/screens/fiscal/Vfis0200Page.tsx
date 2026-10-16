@@ -245,8 +245,13 @@ export function Vfis0200Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       const st = await getExitStatus(id);
-      const m = `Status SEFAZ da NF-e ${id}: ${st.status || "desconhecido"}.`;
-      setFeedback(st.avisos?.length ? comAvisos(m, st.avisos, id) : { type: "info", message: m });
+      const m = `Status SEFAZ da NF-e ${numeroDa(id)}: ${st.status || "desconhecido"}.`;
+      // Rejeitada: mostra o motivo da SEFAZ, que é o que a pessoa precisa corrigir.
+      if (st.motivo && /rejeit|erro|deneg|nao_encontrado/i.test(st.status)) {
+        setFeedback({ type: "error", message: `${m} Motivo: ${st.motivo}` });
+      } else {
+        setFeedback(st.avisos?.length ? comAvisos(m, st.avisos, id) : { type: "info", message: m });
+      }
       await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
