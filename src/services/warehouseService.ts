@@ -47,6 +47,7 @@ function toBackendPayload(p: WarehousePayload): Record<string, unknown> {
     type: toTypeEnum(p.tipo),
     disposition: p.disponivel,
     reservations_allowed: true,
+    allow_negative_stock: p.permiteSaldoNegativo,
     observation: p.observacao || undefined,
   };
 }
@@ -59,6 +60,7 @@ function fromBackend(raw: unknown, fallback?: WarehousePayload): WarehouseRespon
     localizacao: fromLocationEnum(parseStr(o, 'location', 'Location')) || fallback?.localizacao || 'Interno',
     tipo: fromTypeEnum(parseStr(o, 'type', 'Type')) || fallback?.tipo || 'Normal',
     disponivel: o['disposition'] !== undefined ? parseBool(o, 'disposition', 'Disposition') : (fallback?.disponivel ?? true),
+    permiteSaldoNegativo: o['allow_negative_stock'] !== undefined ? parseBool(o, 'allow_negative_stock') : fallback?.permiteSaldoNegativo,
     almoxExpedicao: fallback?.almoxExpedicao ?? '',
     cliente: fallback?.cliente ?? '',
     estabelecimento: fallback?.estabelecimento ?? '',
@@ -72,6 +74,19 @@ function fromBackend(raw: unknown, fallback?: WarehousePayload): WarehouseRespon
 
 export async function saveWarehouse(payload: WarehousePayload): Promise<WarehouseResponse> {
   const response = await httpClient.post(`${BASE}/create`, toBackendPayload(payload));
+  return fromBackend(response.data, payload);
+}
+
+/**
+ * Altera o almoxarifado (PUT /api/warehouse/{code}); o código não muda. Antes só
+ * existia o create, e salvar um almoxarifado carregado dava "código duplicado".
+ */
+export async function updateWarehouse(payload: WarehousePayload): Promise<WarehouseResponse> {
+  const body = toBackendPayload(payload);
+  const response = await httpClient.put(`${BASE}/${encodeURIComponent(payload.codigo.trim())}`, {
+    description: body.description, location: body.location, type: body.type, disposition: body.disposition,
+    reservations_allowed: body.reservations_allowed, allow_negative_stock: payload.permiteSaldoNegativo ?? false,
+  });
   return fromBackend(response.data, payload);
 }
 

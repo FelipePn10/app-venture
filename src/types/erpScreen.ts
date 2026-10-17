@@ -975,14 +975,14 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Estoque / Almoxarifado
   {
     code: "VEST0100",
-    title: "Estoque — Movimentos, Saldos, ATP, Reservas, Lotes",
-    description: "Lançar movimentos, consultar saldos/ATP, criar reservas, registrar lotes (genealogia) e consumo médio (ROP).",
+    title: "Central de Estoque",
+    description: "Posição e ATP por situação, extrato (kardex), lançamentos com tipo e centro de custo, transferências, requisições ao almoxarifado, reservas, separação, lotes, reposição e análises (giro, cobertura, parados).",
     module: "almoxarifado",
   },
   {
     code: "VEST0200",
     title: "Inventário e Tipos de Movimento",
-    description: "Criar inventário, contar, ajustar diferenças e fechar; CRUD dos tipos de movimento de estoque.",
+    description: "Inventário físico com foto do saldo, contagem e recontagem, diferenças valorizadas e fechamento que lança os ajustes; tipos de movimento com as regras do lançamento manual.",
     module: "almoxarifado",
   },
   // ── Vendas & Expedição (novas)
