@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.7.0] — 2026-10-17
+
 ## Estoque e suprimentos
 - **VEST0100 virou a Central de Estoque**, com uma aba por assunto e o item escolhido valendo para todas: Posição (ATP que separa o que está em inspeção, posição valorizada em qualquer data com a segunda unidade — metros e quilos, por exemplo), Extrato (kardex com saldo acumulado e estorno na linha), Lançamentos (com tipo de movimento e centro de custo, unidade sempre visível), Transferências (entre almoxarifados numa operação só), Requisições ao almoxarifado, Reservas, Separação e guarda, Lotes, Reposição (ponto de pedido com geração da requisição de compra) e Análises (giro, cobertura, itens parados, curva ABC e lotes a vencer).
 - **VEST0200:** inventário que corrige o saldo de verdade — abre com a foto do estoque, conta e reconta, mostra a diferença valorizada e lança os ajustes no fechamento. Antes criar o inventário dava erro e o fechamento não mexia no saldo. Tipos de movimento com as regras do lançamento (exige centro de custo, permite lançamento manual, atualiza custo, considera consumo) e alteração.
