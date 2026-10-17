@@ -9,6 +9,8 @@ export interface WarehousePayload {
   localizacao: string;
   tipo: string;
   disponivel: boolean;
+  /** Aceita saída que deixa o saldo negativo (padrão: só linha de produção). */
+  permiteSaldoNegativo?: boolean;
   almoxExpedicao: string;
   cliente: string;
   estabelecimento: string;

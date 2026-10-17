@@ -547,7 +547,17 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                                 title="Quantas unidades do cadastro há em 1 unidade da nota (ex.: CX com 12 → 12)"
                                 onChange={(ev) => setItem(idx, { fator: ev.target.value ? Number(ev.target.value) : undefined })} />
                             : (it.fator_conversao ?? 1)}
-                            {it.item_uom && <small style={{ display: "block" }}>= {qtd(it.quantity * (e.fator || 1))} {it.item_uom}</small>}
+                            {it.item_uom && (() => {
+                              // Quantidade que entra no estoque: a do fator digitado, ou a que o
+                              // backend calculou (vínculo, pedido ou conversão do cadastro do item).
+                              const fatorDigitado = e.fator && e.fator > 0 ? e.fator : undefined;
+                              const naUnidade = fatorDigitado ? it.quantity * fatorDigitado : (it.quantidade_estoque ?? it.quantity);
+                              const semConversao = !fatorDigitado && (it.fator_conversao ?? 1) === 1 && !!it.uom && it.uom.toUpperCase() !== it.item_uom.toUpperCase();
+                              return (<>
+                                <small style={{ display: "block" }}>= {qtd(naUnidade)} {it.item_uom}</small>
+                                {semConversao && <small style={{ display: "block", color: "var(--v-err)" }} title="Cadastre a conversão do item em VSUP0110 ou informe o fator">sem conversão {it.uom}→{it.item_uom}</small>}
+                              </>);
+                            })()}
                           </td>
                           <td>{editavel
                             ? <LookupField value={e.plano} loader={loadChartOfAccounts} entityLabel="plano de contas" allowManualCode={false}

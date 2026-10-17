@@ -5,6 +5,7 @@ import {
   lookupCustomer,
   lookupSupplier,
   saveWarehouse,
+  updateWarehouse,
   validateEstablishment,
 } from "@/services/warehouseService";
 import type { LookupEntity, WarehousePayload } from "@/types/warehouse";
@@ -36,6 +37,7 @@ interface FormAlmoxarifado {
   localizacao: Localizacao;
   tipo: TipoAlmoxarifado;
   disponivel: boolean;
+  permiteSaldoNegativo: boolean;
   almoxExpedicao: string;
   cliente: string;
   estabelecimento: string;
@@ -83,6 +85,7 @@ const formInicial: FormAlmoxarifado = {
   localizacao: "Interno",
   tipo: "Normal",
   disponivel: true,
+  permiteSaldoNegativo: false,
   almoxExpedicao: "",
   cliente: "",
   estabelecimento: "",
@@ -141,10 +144,18 @@ export function Vent0800Page(): JSX.Element {
   >({});
   const [novoCliente, setNovoCliente] = useState("");
   const [novoFornecedor, setNovoFornecedor] = useState("");
+  /** Código do almoxarifado carregado do backend: salvar passa a ALTERAR. */
+  const [codigoCarregado, setCodigoCarregado] = useState<string | null>(null);
 
   const setField = useCallback(
     <K extends keyof FormAlmoxarifado>(key: K, value: FormAlmoxarifado[K]) => {
-      setForm((prev) => ({ ...prev, [key]: value }));
+      setForm((prev) => {
+        const next = { ...prev, [key]: value };
+        // Linha de produção nasce permitindo saldo negativo (baixa automática),
+        // como o backend faz; a pessoa pode desligar.
+        if (key === "tipo") next.permiteSaldoNegativo = String(value).toLowerCase().startsWith("linha");
+        return next;
+      });
       setErrors((prev) => ({ ...prev, [key]: undefined }));
       setFeedback(null);
     },
@@ -175,6 +186,7 @@ export function Vent0800Page(): JSX.Element {
       localizacao: (payload.localizacao as Localizacao) ?? "Interno",
       tipo: (payload.tipo as TipoAlmoxarifado) ?? "Normal",
       disponivel: payload.disponivel ?? true,
+      permiteSaldoNegativo: payload.permiteSaldoNegativo ?? false,
       almoxExpedicao: payload.almoxExpedicao ?? "",
       cliente: payload.cliente ?? "",
       estabelecimento: payload.estabelecimento ?? "",
@@ -191,10 +203,12 @@ export function Vent0800Page(): JSX.Element {
     setFeedback(null);
 
     try {
-      const response = await saveWarehouse(
-        buildWarehousePayload(form, clientes, fornecedores),
-      );
+      const payload = buildWarehousePayload(form, clientes, fornecedores);
+      const response = codigoCarregado && codigoCarregado === form.codigo.trim()
+        ? await updateWarehouse(payload)
+        : await saveWarehouse(payload);
       applyWarehouseData(response);
+      setCodigoCarregado(response.codigo);
       setFeedback({
         type: "success",
         message: `Almoxarifado ${response.codigo} salvo com sucesso no backend.`,
@@ -214,6 +228,7 @@ export function Vent0800Page(): JSX.Element {
 
   function handleLimpar() {
     setForm(formInicial);
+    setCodigoCarregado(null);
     setErrors({});
     setClientes([]);
     setFornecedores([]);
@@ -239,7 +254,8 @@ export function Vent0800Page(): JSX.Element {
         return;
       }
       applyWarehouseData(warehouse);
-      setFeedback({ type: "info", message: `Registro ${codigo} carregado a partir do backend.` });
+      setCodigoCarregado(warehouse.codigo);
+      setFeedback({ type: "info", message: `Registro ${codigo} carregado: salvar altera o cadastro (o código não muda).` });
     } catch (error) {
       setFeedback({
         type: "error",
@@ -1121,6 +1137,23 @@ export function Vent0800Page(): JSX.Element {
                         <div className="al-toggle-sub">
                           Cálculo de planejamento
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Saldo negativo */}
+                  <div className="al-field al-col-2" style={{ justifyContent: "flex-end" }}>
+                    <label className="al-label">Saldo negativo</label>
+                    <div className="al-toggle-row" style={{ paddingTop: 8 }}>
+                      <label className="al-toggle">
+                        <input type="checkbox" checked={form.permiteSaldoNegativo}
+                          onChange={(e) => setField("permiteSaldoNegativo", e.target.checked)} />
+                        <div className="al-toggle-track" />
+                        <div className="al-toggle-thumb" />
+                      </label>
+                      <div>
+                        <span className="al-toggle-label">{form.permiteSaldoNegativo ? "Permite" : "Bloqueia"}</span>
+                        <div className="al-toggle-sub">Saída maior que o saldo (ex.: linha com baixa automática)</div>
                       </div>
                     </div>
                   </div>

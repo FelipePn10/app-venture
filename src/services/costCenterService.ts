@@ -19,15 +19,21 @@ export interface CreateCostCenterDTO {
   created_by: string;
 }
 
+/** Alteração (PUT /api/cost-center/{code}). O código não muda. Descrição, data
+ *  de fim e situação mudam sempre; tipo, pai, rateio e início só sem uso (409).
+ *  `end_date` ausente LIMPA a data de fim — mande a atual para mantê-la. */
 export interface UpdateCostCenterDTO {
-  code: number;
   description: string;
   parent_code?: number;
   type: string;
   is_ratio: boolean;
   start_date: string;
   end_date?: string;
+  is_active?: boolean;
 }
+
+export interface UsoCostCenter { onde: string; quantidade: number; }
+export interface UsoCostCenterResumo { em_uso: boolean; usos: UsoCostCenter[]; }
 
 export interface CostCenterResponse {
   code: number;
@@ -37,6 +43,7 @@ export interface CostCenterResponse {
   is_ratio: boolean;
   start_date: string;
   end_date?: string | null;
+  is_active?: boolean;
 }
 
 export interface ListFilters {
@@ -92,6 +99,7 @@ function parseCostCenter(raw: unknown): CostCenterResponse | null {
     is_ratio:    parseBool(obj, 'is_ratio',   'isRatio',     'IsRatio'),
     start_date:  parseStr(obj, 'start_date',  'startDate',   'StartDate'),
     end_date:    parseStr(obj, 'end_date',    'endDate',     'EndDate') || null,
+    is_active:   obj['is_active'] !== false,
   };
 }
 
@@ -161,4 +169,30 @@ export async function getCostCenter(code: number): Promise<CostCenterResponse | 
 
   console.debug('[costCenter] getCostCenter: could not parse response');
   return null;
+}
+
+/** Cadastro: ativos e inativos (a listagem acima, usada nas escolhas, traz só ativos). */
+export async function listCostCentersCadastro(): Promise<CostCenterResponse[]> {
+  const response = await httpClient.get<unknown>(`${BASE}/cadastro`);
+  const arr = unwrapArray(response.data) ?? [];
+  return arr.map(parseCostCenter).filter((c): c is CostCenterResponse => c != null);
+}
+
+export async function updateCostCenter(code: number, dto: UpdateCostCenterDTO): Promise<CostCenterResponse | null> {
+  const response = await httpClient.put<unknown>(`${BASE}/${code}`, dto);
+  return parseCostCenter(response.data);
+}
+
+export async function deleteCostCenter(code: number): Promise<void> {
+  await httpClient.delete(`${BASE}/${code}`);
+}
+
+export async function usoCostCenter(code: number): Promise<UsoCostCenterResumo> {
+  const response = await httpClient.get<unknown>(`${BASE}/${code}/uso`);
+  const obj = (response.data && typeof response.data === 'object' ? response.data : {}) as Obj;
+  const usos = Array.isArray(obj['usos']) ? (obj['usos'] as Obj[]) : [];
+  return {
+    em_uso: obj['em_uso'] === true,
+    usos: usos.map((u) => ({ onde: parseStr(u, 'onde'), quantidade: parseNum(u, 'quantidade') ?? 0 })),
+  };
 }
