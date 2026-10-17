@@ -3,9 +3,14 @@ import { humanizeApiError } from '@/services/apiError';
 import {
   createCostCenter,
   listCostCenters,
+  listCostCentersCadastro,
   getCostCenter,
+  updateCostCenter,
+  deleteCostCenter,
+  usoCostCenter,
   type TypeCC,
   type CostCenterResponse,
+  type UsoCostCenterResumo,
 } from "@/services/costCenterService";
 import { useAuthStore } from "@/store/authStore";
 
@@ -118,8 +123,10 @@ function applyResponseToForm(r: CostCenterResponse): FormCC {
     parentCode:  r.parent_code != null ? String(r.parent_code) : "",
     type:        normalizeTypeCC(r.type),
     isRatio:     r.is_ratio ?? false,
-    startDate:   r.start_date ?? "",
-    endDate:     r.end_date ?? "",
+    // O backend devolve data com hora ("2026-01-01T00:00:00Z"); o <input type="date">
+    // só aceita AAAA-MM-DD e ficava em branco — a edição reprovava na validação.
+    startDate:   (r.start_date ?? "").substring(0, 10),
+    endDate:     (r.end_date ?? "").substring(0, 10),
   };
 }
 
@@ -132,6 +139,8 @@ function formatDateBR(iso: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Vctb0102Page(): JSX.Element {
+  // Excluir é só do ADMIN (o backend recusa os demais com 403).
+  const isAdmin = useAuthStore((state) => state.user?.role?.toUpperCase() === "ADMIN");
   // ── Form state
   const [form, setForm]               = useState<FormCC>(FORM_INICIAL);
   const [modoForm, setModoForm]       = useState<ModoForm>("novo");
@@ -144,6 +153,13 @@ export function Vctb0102Page(): JSX.Element {
   /** CC Pai já confirmado no backend — mostrado sob o campo como confirmação. */
   const [parentInfo, setParentInfo]   = useState<{ code: number; description: string } | null>(null);
   const [parentChecking, setParentChecking] = useState(false);
+  /** Edição: valores carregados, situação e onde o CC é usado. Em uso, só
+   *  descrição, data final e situação mudam, e o CC não pode ser excluído. */
+  const [original, setOriginal]       = useState<FormCC | null>(null);
+  const [ativo, setAtivo]             = useState(true);
+  const [uso, setUso]                 = useState<UsoCostCenterResumo | null>(null);
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+  const [incluirInativos, setIncluirInativos] = useState(false);
 
   // ── Search state
   const [filtroDataRef, setFiltroDataRef]   = useState("");
@@ -215,17 +231,37 @@ export function Vctb0102Page(): JSX.Element {
     if (!form.description.trim()) e.description = "Descrição obrigatória.";
     if (!form.startDate) {
       e.startDate = "Data inicial obrigatória.";
-    } else {
+    } else if (modoForm === "novo" || form.startDate !== original?.startDate) {
       const day = new Date(form.startDate + "T00:00:00").getDate();
       if (day !== 1) e.startDate = "Data inicial deve ser o 1º dia do mês (dia 01).";
     }
     if (form.endDate && form.startDate && form.endDate < form.startDate) {
       e.endDate = "Data final deve ser igual ou posterior à data inicial.";
     }
-    const parentError = await checkParent(form.parentCode, form.code);
-    if (parentError) e.parentCode = parentError;
+    if (modoForm === "novo" || form.parentCode !== original?.parentCode) {
+      const parentError = await checkParent(form.parentCode, form.code);
+      if (parentError) e.parentCode = parentError;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
+  }
+
+  // ── Carrega um CC para edição e confere onde ele é usado
+  async function carregarParaEdicao(cc: CostCenterResponse) {
+    const f = applyResponseToForm(cc);
+    setForm(f);
+    setOriginal(f);
+    setAtivo(cc.is_active !== false);
+    setErrors({});
+    setModoForm("edicao");
+    setCodigoEdit(cc.code);
+    setUso(null);
+    setConfirmarExclusao(false);
+    try {
+      setUso(await usoCostCenter(cc.code));
+    } catch (error) {
+      setFeedback({ type: "error", message: normalizeErrorMessage(error, "Não foi possível conferir onde o CC é usado.") });
+    }
   }
 
   // ── Load by code (form field lookup)
@@ -243,11 +279,8 @@ export function Vctb0102Page(): JSX.Element {
         setFeedback({ type: "info", message: `CC ${codeNum} não encontrado.` });
         return;
       }
-      setForm(applyResponseToForm(cc));
-      setErrors({});
-      setModoForm("edicao");
-      setCodigoEdit(cc.code);
       setFeedback({ type: "info", message: `CC ${cc.code} — ${cc.description} carregado para edição.` });
+      await carregarParaEdicao(cc);
     } catch (error) {
       setFeedback({
         type: "error",
@@ -263,10 +296,12 @@ export function Vctb0102Page(): JSX.Element {
     setIsSearching(true);
     setFeedback(null);
     try {
-      const results = await listCostCenters({
-        reference_date: filtroDataRef || undefined,
-        company:        filtroEmpresa || undefined,
-      });
+      const results = incluirInativos
+        ? await listCostCentersCadastro()
+        : await listCostCenters({
+            reference_date: filtroDataRef || undefined,
+            company:        filtroEmpresa || undefined,
+          });
       setResultados(results);
       setMostrarResultados(true);
       if (results.length === 0) {
@@ -284,21 +319,33 @@ export function Vctb0102Page(): JSX.Element {
 
   // ── Select from list → loads into form as edicao
   function handleSelectFromList(cc: CostCenterResponse) {
-    setForm(applyResponseToForm(cc));
     setFeedback(null);
-    setErrors({});
     setAbaAtiva("dados");
-    setModoForm("edicao");
-    setCodigoEdit(cc.code);
+    void carregarParaEdicao(cc);
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   }
 
-  // ── Save (always creates — update endpoint can be added later)
+  // ── Salvar: cria no modo "novo"; altera (PUT) no modo "edição".
+  // Antes sempre criava, e salvar um CC carregado dava "código duplicado".
   async function handleSalvar() {
     if (!(await validate())) return;
     setIsSaving(true);
     setFeedback(null);
     try {
+      if (modoForm === "edicao" && codigoEdit != null) {
+        const salvo = await updateCostCenter(codigoEdit, {
+          description: form.description.trim(),
+          parent_code: form.parentCode ? Number(form.parentCode) : undefined,
+          type:        form.type,
+          is_ratio:    form.isRatio,
+          start_date:  form.startDate,
+          end_date:    form.endDate || undefined,
+          is_active:   ativo,
+        });
+        if (salvo) await carregarParaEdicao(salvo);
+        setFeedback({ type: "success", message: `Centro de custo ${codigoEdit} — ${form.description} alterado.` });
+        return;
+      }
       const createdBy = user?.id ?? decodeJwtSub(token) ?? "anonymous";
       await createCostCenter({
         code:        Number(form.code),
@@ -324,6 +371,26 @@ export function Vctb0102Page(): JSX.Element {
     }
   }
 
+  // ── Excluir: só sem uso (o backend confere de novo) e com confirmação.
+  async function handleExcluir() {
+    if (codigoEdit == null) return;
+    if (!confirmarExclusao) { setConfirmarExclusao(true); return; }
+    setIsSaving(true);
+    setFeedback(null);
+    try {
+      await deleteCostCenter(codigoEdit);
+      const codigo = codigoEdit;
+      handleNovo();
+      setResultados((prev) => prev.filter((c) => c.code !== codigo));
+      setFeedback({ type: "success", message: `Centro de custo ${codigo} excluído.` });
+    } catch (error) {
+      setConfirmarExclusao(false);
+      setFeedback({ type: "error", message: normalizeErrorMessage(error, "Erro ao excluir o centro de custo.") });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   // ── Novo CC → reset form to creation mode
   function handleNovo() {
     setForm(FORM_INICIAL);
@@ -335,6 +402,10 @@ export function Vctb0102Page(): JSX.Element {
     setAbaAtiva("dados");
     setModoForm("novo");
     setCodigoEdit(null);
+    setOriginal(null);
+    setAtivo(true);
+    setUso(null);
+    setConfirmarExclusao(false);
   }
 
   // ── Limpar → same as Novo
@@ -344,6 +415,8 @@ export function Vctb0102Page(): JSX.Element {
   }
 
   const ehProdutivo = form.type === "PRODUCTIVE";
+  // Em uso (ou enquanto o uso não foi conferido), tipo, pai, rateio e início travam.
+  const travado = modoForm === "edicao" && (uso?.em_uso ?? true);
 
   const ABAS: { id: AbaAtiva; label: string }[] = [
     { id: "dados",    label: "Dados Gerais" },
@@ -751,6 +824,16 @@ export function Vctb0102Page(): JSX.Element {
               </svg>
               Limpar
             </button>
+            {modoForm === "edicao" && (
+              <button
+                className="ctb-btn ctb-btn-danger"
+                onClick={() => void handleExcluir()}
+                disabled={!isAdmin || isSaving || isLoading || uso == null || uso.em_uso}
+                title={!isAdmin ? "Somente administradores excluem" : uso?.em_uso ? "Em uso: desative o CC em vez de excluir" : "Excluir o CC"}
+              >
+                {confirmarExclusao ? "Confirmar exclusão" : "Excluir"}
+              </button>
+            )}
           </div>
 
           <div className="ctb-action-group">
@@ -779,6 +862,17 @@ export function Vctb0102Page(): JSX.Element {
                 }
               </svg>
               {feedback.message}
+            </div>
+          )}
+          {modoForm === "edicao" && uso?.em_uso && (
+            <div className="ctb-feedback info">
+              CC {codigoEdit} em uso em {uso.usos.map((u) => `${u.onde} (${u.quantidade})`).join(", ")}.
+              Só a descrição, a data final e a situação podem mudar, e ele não pode ser excluído — desative-o para que não seja mais escolhido.
+            </div>
+          )}
+          {confirmarExclusao && (
+            <div className="ctb-feedback error">
+              Clique em "Confirmar exclusão" para excluir o CC {codigoEdit}. Não há como desfazer.
             </div>
           )}
 
@@ -825,6 +919,10 @@ export function Vctb0102Page(): JSX.Element {
                     onKeyDown={(e) => e.key === "Enter" && void handlePesquisar()}
                   />
                 </div>
+                <label className="ctb-field" style={{ flex: "0 0 auto", alignSelf: "flex-end", flexDirection: "row", gap: 6, alignItems: "center", fontSize: 12.5 }}>
+                  <input type="checkbox" checked={incluirInativos} onChange={(e) => setIncluirInativos(e.target.checked)} />
+                  Incluir inativos
+                </label>
                 <div style={{ alignSelf: "flex-end" }}>
                   <button
                     className="ctb-btn ctb-btn-ghost"
@@ -892,8 +990,10 @@ export function Vctb0102Page(): JSX.Element {
                           : tipo === "ADMINISTRATIVE" ? "admin"
                           : "comercial";
                         return (
-                          <tr key={cc.code} onClick={() => handleSelectFromList(cc)}>
-                            <td style={{ fontWeight: 600, color: "var(--v-ok)" }}>{cc.code}</td>
+                          <tr key={cc.code} onClick={() => handleSelectFromList(cc)} style={{ opacity: cc.is_active === false ? 0.55 : 1 }}>
+                            <td style={{ fontWeight: 600, color: "var(--v-ok)" }}>
+                              {cc.code}{cc.is_active === false && <span style={{ marginLeft: 6, fontSize: 10, color: "#94a49a" }}>INATIVO</span>}
+                            </td>
                             <td style={{ color: cc.parent_code ? "#233029" : "#94a49a" }}>
                               {cc.parent_code ?? "—"}
                             </td>
@@ -982,6 +1082,8 @@ export function Vctb0102Page(): JSX.Element {
                         style={{ borderRadius: "7px 0 0 7px" }}
                         placeholder="Ex: 100"
                         value={form.code}
+                        readOnly={modoForm === "edicao"}
+                        title={modoForm === "edicao" ? "O código não muda: máquinas, estruturas e ordens guardam o CC por ele" : undefined}
                         onChange={(e) => setField("code", e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && void handleLoadByCode()}
                       />
@@ -1025,6 +1127,7 @@ export function Vctb0102Page(): JSX.Element {
                         style={{ borderRadius: "7px 0 0 7px" }}
                         placeholder="Cód. pai"
                         value={form.parentCode}
+                        disabled={travado}
                         onChange={(e) => setField("parentCode", e.target.value)}
                         onBlur={async (e) => {
                           const msg = await checkParent(e.target.value, form.code);
@@ -1097,6 +1200,7 @@ export function Vctb0102Page(): JSX.Element {
                     <select
                       className="ctb-select"
                       value={form.type}
+                      disabled={travado}
                       onChange={(e) => setField("type", e.target.value as TypeCC)}
                     >
                       {TIPOS_CC.map((t) => (
@@ -1117,7 +1221,7 @@ export function Vctb0102Page(): JSX.Element {
                           <input
                             type="checkbox"
                             checked={form.isRatio}
-                            disabled={!ehProdutivo}
+                            disabled={!ehProdutivo || travado}
                             onChange={(e) => setField("isRatio", e.target.checked)}
                           />
                           <div className="ctb-toggle-track" />
@@ -1158,6 +1262,7 @@ export function Vctb0102Page(): JSX.Element {
                       type="date"
                       className={`ctb-input${errors.startDate ? " has-error" : ""}`}
                       value={form.startDate}
+                      disabled={travado}
                       onChange={(e) => setField("startDate", e.target.value)}
                     />
                     {errors.startDate
@@ -1191,6 +1296,17 @@ export function Vctb0102Page(): JSX.Element {
                       : <span className="ctb-field-hint">Opcional. Deixe em aberto para vigência indeterminada.</span>
                     }
                   </div>
+
+                  {modoForm === "edicao" && (
+                    <div className="ctb-field ctb-col-3">
+                      <label className="ctb-label">Situação</label>
+                      <select className="ctb-select" value={ativo ? "S" : "N"} onChange={(e) => { setAtivo(e.target.value === "S"); setFeedback(null); }}>
+                        <option value="S">Ativo</option>
+                        <option value="N">Inativo</option>
+                      </select>
+                      <span className="ctb-field-hint">Inativo não aparece para escolha; o histórico continua.</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

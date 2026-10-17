@@ -18,6 +18,25 @@ import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 
+// Os dois primeiros dígitos do código IBGE do município são o código da UF. Um
+// código de outra UF passa na NF-e, mas sai errado no CT-e, na NFS-e e no SPED.
+// O backend confere a mesma regra; aqui ela só avisa antes de salvar.
+const PREFIXO_IBGE_DA_UF: Record<string, string> = {
+  RO: "11", AC: "12", AM: "13", RR: "14", PA: "15", AP: "16", TO: "17",
+  MA: "21", PI: "22", CE: "23", RN: "24", PB: "25", PE: "26", AL: "27", SE: "28", BA: "29",
+  MG: "31", ES: "32", RJ: "33", SP: "35", PR: "41", SC: "42", RS: "43",
+  MS: "50", MT: "51", GO: "52", DF: "53",
+};
+
+function erroDoCodigoIBGE(codigo: string, uf: string): string | null {
+  const c = codigo.trim();
+  if (c === "" || /^0+$/.test(c)) return null;
+  if (!/^\d{7}$/.test(c)) return "O código IBGE do município tem 7 dígitos (ex.: 4106902 = Curitiba).";
+  const prefixo = PREFIXO_IBGE_DA_UF[uf.trim().toUpperCase()];
+  if (prefixo && !c.startsWith(prefixo)) return `O código IBGE ${c} não é de município do ${uf.toUpperCase()} (os do ${uf.toUpperCase()} começam com ${prefixo}).`;
+  return null;
+}
+
 const EMPTY: FiscalConfig = {
   cnpj_empresa: "",
   razao_social: "",
@@ -102,6 +121,11 @@ export function Vfis0100Page(): JSX.Element {
   async function handleSalvar() {
     if (!form.cnpj_empresa.trim() || !form.razao_social.trim() || !form.uf_empresa.trim()) {
       setFeedback({ type: "error", message: "CNPJ, Razão Social e UF da empresa são obrigatórios." });
+      return;
+    }
+    const erroIBGE = erroDoCodigoIBGE(form.codigo_municipio ?? "", form.uf_empresa);
+    if (erroIBGE) {
+      setFeedback({ type: "error", message: erroIBGE });
       return;
     }
     if (!validateCNPJOrCPF(form.cnpj_empresa)) {
@@ -285,8 +309,16 @@ export function Vfis0100Page(): JSX.Element {
               </div>
               <div className="erp-field erp-c2">
                 <label className="erp-label">Cód. IBGE</label>
-                <input className="erp-input" value={form.codigo_municipio ?? ""} placeholder="4106902"
-                  onChange={(e) => setField("codigo_municipio", e.target.value)} />
+                <input className="erp-input" value={form.codigo_municipio ?? ""} placeholder="4106902" inputMode="numeric"
+                  title="Código IBGE do município da empresa (7 dígitos). Sai na NF-e, no CT-e, na NFS-e e no SPED."
+                  onChange={(e) => setField("codigo_municipio", e.target.value.replace(/\D/g, "").slice(0, 7))} />
+                {(() => {
+                  const erro = erroDoCodigoIBGE(form.codigo_municipio ?? "", form.uf_empresa);
+                  const vazio = !(form.codigo_municipio ?? "").trim() || /^0+$/.test((form.codigo_municipio ?? "").trim());
+                  if (erro) return <span className="erp-hint" style={{ color: "var(--v-err)" }}>{erro}</span>;
+                  if (vazio) return <span className="erp-hint" style={{ color: "var(--v-warn)" }}>Obrigatório para a NF-e sair com o município certo — consulte em ibge.gov.br.</span>;
+                  return null;
+                })()}
               </div>
               <div className="erp-field erp-c2">
                 <label className="erp-label">CEP</label>

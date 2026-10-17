@@ -42,12 +42,19 @@ export interface PlanoContaDTO {
 }
 export interface PlanoConta extends PlanoContaDTO {
   id: number;
+  /** Inativa: não aparece para escolha em títulos e notas, mas o histórico continua. */
+  is_active?: boolean;
   /** Conta contábil analítica do plano (contabilização automática da NF de entrada). */
   accounting_account_id?: number;
 }
 
 export interface CentroCustoDTO { codigo: string; descricao: string; tipo: string; }
-export interface CentroCusto extends CentroCustoDTO { id: number; }
+export interface CentroCusto extends CentroCustoDTO { id: number; is_active?: boolean; }
+
+/** Onde um plano de contas ou centro de custo está em uso. Em uso, só descrição
+ *  e situação mudam, e não se exclui (o backend recusa com 409). */
+export interface UsoCadastro { onde: string; quantidade: number; }
+export interface UsoCadastroResumo { em_uso: boolean; usos: UsoCadastro[]; }
 
 // ─── Contas a pagar / receber ───────────────────────────────────────────────
 
@@ -400,6 +407,7 @@ function parsePlano(raw: unknown): PlanoConta {
     parent_code: parseStr(o, 'parent_code', 'ParentCode'),
     nivel: parseNum(o, 'nivel', 'Nivel'),
     accounting_account_id: parseNum(o, 'accounting_account_id') || undefined,
+    is_active: o['is_active'] !== false,
   };
 }
 
@@ -410,6 +418,16 @@ function parseCentro(raw: unknown): CentroCusto {
     codigo: parseStr(o, 'codigo', 'Codigo'),
     descricao: parseStr(o, 'descricao', 'Descricao'),
     tipo: parseStr(o, 'tipo', 'Tipo'),
+    is_active: o['is_active'] !== false,
+  };
+}
+
+function parseUso(raw: unknown): UsoCadastroResumo {
+  const o = unwrapObject(raw);
+  const usos = Array.isArray(o['usos']) ? (o['usos'] as Obj[]) : [];
+  return {
+    em_uso: o['em_uso'] === true,
+    usos: usos.map((u) => ({ onde: parseStr(u, 'onde'), quantidade: parseNum(u, 'quantidade') })),
   };
 }
 
@@ -568,6 +586,26 @@ export async function createPlanoConta(dto: PlanoContaDTO): Promise<PlanoConta> 
   const { data } = await httpClient.post(`${BASE}/plano-contas/create`, dto);
   return parsePlano(data);
 }
+/** Cadastro: ativos e inativos (a listagem acima, usada nas escolhas, traz só ativos). */
+export async function listPlanoContasCadastro(): Promise<PlanoConta[]> {
+  const { data } = await httpClient.get(`${BASE}/plano-contas/cadastro`);
+  return unwrapArray(data).map(parsePlano);
+}
+export interface UpdatePlanoContaDTO {
+  codigo: string; descricao: string; tipo: PlanoTipo; natureza: PlanoNatureza;
+  parent_code?: string; is_active?: boolean;
+}
+export async function updatePlanoConta(id: number, dto: UpdatePlanoContaDTO): Promise<PlanoConta> {
+  const { data } = await httpClient.put(`${BASE}/plano-contas/${id}`, dto);
+  return parsePlano(data);
+}
+export async function deletePlanoConta(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/plano-contas/${id}`);
+}
+export async function usoPlanoConta(id: number): Promise<UsoCadastroResumo> {
+  const { data } = await httpClient.get(`${BASE}/plano-contas/${id}/uso`);
+  return parseUso(data);
+}
 
 // ─── Centros de custo ───────────────────────────────────────────────────────
 
@@ -578,6 +616,21 @@ export async function listCentrosCusto(): Promise<CentroCusto[]> {
 export async function createCentroCusto(dto: CentroCustoDTO): Promise<CentroCusto> {
   const { data } = await httpClient.post(`${BASE}/centros-custo/create`, dto);
   return parseCentro(data);
+}
+export async function listCentrosCustoCadastro(): Promise<CentroCusto[]> {
+  const { data } = await httpClient.get(`${BASE}/centros-custo/cadastro`);
+  return unwrapArray(data).map(parseCentro);
+}
+export async function updateCentroCusto(id: number, dto: CentroCustoDTO & { is_active?: boolean }): Promise<CentroCusto> {
+  const { data } = await httpClient.put(`${BASE}/centros-custo/${id}`, dto);
+  return parseCentro(data);
+}
+export async function deleteCentroCusto(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/centros-custo/${id}`);
+}
+export async function usoCentroCusto(id: number): Promise<UsoCadastroResumo> {
+  const { data } = await httpClient.get(`${BASE}/centros-custo/${id}/uso`);
+  return parseUso(data);
 }
 
 // ─── Contas a pagar ─────────────────────────────────────────────────────────

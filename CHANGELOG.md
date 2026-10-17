@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## Novidades
+- **Alterar e excluir plano de contas e centro de custo** (VFIN0120, VFIN0130 e VCTB0102). Clique na linha para carregar o cadastro: a tela mostra onde ele é usado e libera só o que pode mudar sem afetar o que já foi lançado — em uso, descrição e situação (no centro industrial, também a data final); sem uso, tudo. Desative o que não deve mais ser escolhido: o histórico continua apontando para ele. Excluir é só do administrador, só sem uso e pede confirmação. A lista do cadastro mostra os inativos para reativar.
+
+## Correções
+- **VCTB0102:** salvar um centro de custo carregado para edição tentava criá-lo de novo e dava "código duplicado"; agora altera o cadastro. A data inicial carregada também deixou de aparecer em branco.
+- **Código IBGE do município (VFIS0100):** aceita só dígitos, avisa quando não tem 7 dígitos ou é de outra UF e lembra que é obrigatório para a NF-e.
+- **VSUP0660** (parâmetros do fornecedor) e **VAPS0600** (reprogramar operação) chamavam rotas que não existiam no servidor; **VINS0400** (abrir ordem de inspeção) passa a funcionar com a rota nova do backend.
+
 ## [v1.6.3] — 2026-10-16
 
 ## Correções
