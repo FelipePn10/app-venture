@@ -98,9 +98,9 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
       <div className="erp-field erp-c12"><button className="erp-btn" onClick={carregar} disabled={busy}>{form.item_code ? "Movimentos do item" : "Últimos movimentos"}</button></div>
       <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
         <table className="erp-grid">
-          <thead><tr><th>Mov.</th><th>Data</th><th>Item</th><th>Almoxarifado</th><th>Tipo</th><th className="num">Qtd</th><th className="num">Valor</th><th>Lote</th><th>Origem</th><th></th></tr></thead>
+          <thead><tr><th>Mov.</th><th>Data</th><th>Item</th><th>Almoxarifado</th><th>Tipo</th><th className="num">Qtd</th><th className="num">Valor</th><th>Lote</th><th>Endereço</th><th>Origem</th><th></th></tr></thead>
           <tbody>
-            {movs.length === 0 && <tr><td colSpan={10} className="erp-grid-empty">Clique para carregar os movimentos.</td></tr>}
+            {movs.length === 0 && <tr><td colSpan={11} className="erp-grid-empty">Clique para carregar os movimentos.</td></tr>}
             {movs.slice(0, 200).map((m) => (
               <Fragment key={m.id}>
                 <tr style={{ opacity: m.reversed_by_movement_id ? 0.55 : 1 }}>
@@ -109,13 +109,14 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
                   <td><EntityName code={m.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td>
                   <td>{MOVEMENT_LABEL[m.movement_type] ?? m.movement_type}{m.movement_type_code ? ` · ${m.movement_type_code}` : ""}</td>
                   <td className="num">{qtd(m.quantity)}</td><td className="num">{reais(m.total_price)}</td><td>{m.lot || "—"}</td>
+                  <td>{m.address_to ? `${m.address || "—"} → ${m.address_to}` : m.address || "—"}</td>
                   <td>{m.reference_type ? `${REFERENCE_LABEL[m.reference_type] ?? m.reference_type} ${m.reference_code ?? ""}` : "Manual"}{m.cost_center_code ? ` · CC ${m.cost_center_code}` : ""}</td>
                   <td>{estornavel(m) && m.id && <button className="erp-btn erp-btn-sm" onClick={() => { setEstornando(m.id!); setMotivo(""); }} disabled={busy}>Estornar</button>}
                     {m.reversed_by_movement_id && <span className="erp-badge erp-badge-gray">estornado</span>}
                     {m.reverses_movement_id && <span className="erp-badge erp-badge-blue">estorno de {m.reverses_movement_id}</span>}</td>
                 </tr>
                 {estornando === m.id && (
-                  <tr><td colSpan={10}>
+                  <tr><td colSpan={11}>
                     <div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <span>Motivo do estorno do movimento {m.id}:</span>
                       <input className="erp-input" style={{ maxWidth: 360 }} value={motivo} onChange={(e) => setMotivo(e.target.value)} />

@@ -83,7 +83,9 @@ check('metas têm os três patamares e o saldo',
   /PATAMARES/.test(metas) && /upsertGroupTarget/.test(metas) && /upsertGoalBalance/.test(metas));
 
 // ── Reserva de estoque (VEST0100) ──────────────────────────────────────────
-const estoque = read('src/components/screens/almoxarifado/Vest0100Page.tsx');
+// A VEST0100 virou a Central de Estoque em abas (v1.7.0): a reserva mora na aba própria.
+const estoque = read('src/components/screens/almoxarifado/Vest0100Page.tsx')
+  + read('src/components/screens/almoxarifado/estoque/ReservasTab.tsx');
 check('reserva coleta vigência e documento de origem',
   /reservation_date/.test(estoque) && /expiration_date/.test(estoque) && /reference_item_code/.test(estoque));
 

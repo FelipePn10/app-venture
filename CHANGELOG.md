@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Melhorias
+- **Uma tela só para cada cadastro:** tolerâncias de pedido de compra e máscaras de lote tinham duas telas cada, uma delas um formulário genérico. Os códigos antigos (VSUP0630 e VEST0300) continuam abrindo — agora a tela completa (VPCT0100 e VLOT0100) — e saíram do menu e da busca.
+- **Máscaras de lote (VLOT0100):** alterar a máscara e cada parte, desativar parte, escolher a aplicação numa lista, gerar o lote pelo item (como o recebimento faz) e ver o código gerado de forma legível. Máscaras desativadas saem da lista (com opção de mostrá-las).
+
+## Correções
+- **Central de Estoque, Lançamentos:** a grade voltou a mostrar o endereço do movimento (e origem → destino nas transferências).
+
 ## [v1.7.0] — 2026-10-17
 
 ## Estoque e suprimentos

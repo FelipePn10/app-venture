@@ -75,9 +75,17 @@ export function searchErpScreens(screens: ErpScreen[], query: string, limit = MA
 
   // Um código representa uma única rotina. Além de manter a lista limpa, esta
   // defesa evita repetir resultados caso uma fonte futura cadastre a mesma tela.
+  //
+  // Código antigo que virou apelido de outra tela devolve a tela verdadeira:
+  // quem digita VSUP0630 encontra VPCT0100, e a busca por nome não lista as duas.
+  const byCode = new Map(screens.map((screen) => [screen.code.toLocaleUpperCase("pt-BR"), screen]));
   const seenCodes = new Set<string>();
   const results: ErpScreen[] = [];
-  for (const { screen } of ranked) {
+  for (const entry of ranked) {
+    const screen = entry.screen.replacedBy
+      ? byCode.get(entry.screen.replacedBy.toLocaleUpperCase("pt-BR"))
+      : entry.screen;
+    if (!screen) continue;
     const code = screen.code.toLocaleUpperCase("pt-BR");
     if (seenCodes.has(code)) continue;
     seenCodes.add(code);

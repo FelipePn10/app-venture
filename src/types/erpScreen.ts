@@ -78,6 +78,18 @@ export interface ErpScreen {
   title: string;
   description: string;
   module: ErpModule;
+  /**
+   * Código antigo de uma função que já tem tela própria. Ele continua abrindo
+   * (favoritos, atalhos e o hábito de quem digita o código), mas abre a tela
+   * indicada aqui e não aparece no menu — antes eram duas telas para o mesmo
+   * cadastro, uma delas um formulário genérico com payload de exemplo errado.
+   */
+  replacedBy?: string;
+}
+
+/** Telas do menu: o catálogo sem os códigos que apenas apontam para outra tela. */
+export function menuScreens(screens: ErpScreen[]): ErpScreen[] {
+  return screens.filter((screen) => !screen.replacedBy);
 }
 
 /**
@@ -1073,13 +1085,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VENG0300", title: "Cabeçalho e Revisão de Estrutura BOM", description: "Versão, efetividade e status da estrutura do produto.", module: "engenharia" },
   { code: "VENG0400", title: "Desenhos e Revisões", description: "Desenhos, revisões, distribuição, características e parâmetros fabris.", module: "engenharia" },
   { code: "VMRP0200", title: "Pipeline MRP → CRP → APS", description: "Execução coordenada do planejamento de materiais, capacidade e sequência.", module: "planejamento" },
-  { code: "VEST0300", title: "Máscaras de Lote e Série", description: "Composição e geração automática de códigos de lote e série.", module: "almoxarifado" },
+  { code: "VEST0300", title: "Máscaras de Lote e Série", description: "Composição e geração automática de códigos de lote e série.", module: "almoxarifado", replacedBy: "VLOT0100" },
   // Beneficiamento — material do cliente em poder da empresa. Telas NOVAS: o
   // estoque próprio (VEST0100) segue como está. Prefixo VBEN, e não VTER, porque
   // VTER* é o sentido oposto (serviço que MANDAMOS para fora).
   { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901), acompanhar saldo por linha, lançar retorno (5902), sobra e sucata (5903) com rastreabilidade, bloquear material sem pedido ou divergente e encerrar com aprovação.", module: "almoxarifado" },
   { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Saldo do material que pertence ao cliente e está em poder da empresa, por cliente proprietário, item da nota e NF-e de remessa, ordenado pelo prazo fiscal de retorno. Não entra na valoração do estoque próprio.", module: "almoxarifado" },
-  { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento" },
+  { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento", replacedBy: "VPCT0100" },
   { code: "VSUP0640", title: "Registros Operacionais de Compras", description: "Ocorrências normalizadas de compra, recebimento e inspeção.", module: "suprimento" },
   { code: "VSUP0650", title: "Histórico de Movimentos de Compra", description: "Rastreabilidade consolidada de movimentos por fornecedor e item.", module: "suprimento" },
   { code: "VSEC0100", title: "Solicitação e Aprovação de Troca de Senha", description: "Fluxo seguro de solicitação, aprovação e conclusão da troca de senha.", module: "cadastros" },

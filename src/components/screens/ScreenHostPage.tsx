@@ -196,6 +196,10 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VRES0100: <Vres0100Page />,
   VBOM0100: <Vbom0100Page />,
   VLOT0100: <Vlot0100Page />,
+  // Códigos antigos das mesmas funções: abrem a tela própria (ver `replacedBy`
+  // no catálogo). Eram rotinas genéricas que duplicavam VPCT0100 e VLOT0100.
+  VSUP0630: <Vpct0100Page />,
+  VEST0300: <Vlot0100Page />,
   VAUD0100: <Vaud0100Page />,
   VUSR0100: <Vusr0100Page />,
   VNOT0100: <Vnot0100Page />,
