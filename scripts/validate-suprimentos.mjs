@@ -18,6 +18,15 @@ const enumLabels = read('src/utils/enumLabels.ts');
 
 check('VPCT0100 "avaliar" mostra resultado legível (não JSON cru)', !/JSON\.stringify\(evResult/.test(vpct) && /Resultado da avaliação/.test(vpct));
 check('VPCT0100 fornecedor usa modal', /loader=\{loadSuppliers\}/.test(vpct));
+{
+  // VSUP0630 duplicava a VPCT0100 como rotina genérica (com applies_to RECEIPT,
+  // valor que o backend não reconhece). O código antigo agora abre a tela própria.
+  const rotinas = fs.readFileSync(path.join(process.cwd(), 'src/components/screens/operationalRoutines.ts'), 'utf8');
+  const host = fs.readFileSync(path.join(process.cwd(), 'src/components/screens/ScreenHostPage.tsx'), 'utf8');
+  const catalogo = fs.readFileSync(path.join(process.cwd(), 'src/types/erpScreen.ts'), 'utf8');
+  check('VSUP0630 abre a VPCT0100 (sem rotina genérica duplicada)', !/VSUP0630: routine\(/.test(rotinas) && /VSUP0630: <Vpct0100Page \/>/.test(host)
+    && /code: "VSUP0630"[^}]*replacedBy: "VPCT0100"/.test(catalogo));
+}
 check('VTER0100 usa freight_type FIXED/PERCENT (não CIF)', !/freight_type":"CIF"/.test(routineCatalog));
 check('VSUP0610 usa scope GLOBAL (não PURCHASE_ORDER)', !/"scope":"PURCHASE_ORDER"/.test(routineCatalog));
 check('VSUP0610 usa domain RECEIVING_NOTICE (não RECEIVING)', !/"domain":"RECEIVING"/.test(routineCatalog));

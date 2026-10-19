@@ -252,22 +252,6 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   VMRP0200: routine("VMRP0200", "Pipeline MRP → CRP → APS", "Executa de forma coordenada o planejamento de materiais, capacidade e sequenciamento.", [
     { label: "Executar pipeline", method: "POST", path: "/api/planning/run-pipeline", fields: [json('{"plan_code":1,"initial_order_number":1000,"generate_llc":true,"start_from":"2026-07-14T08:00:00Z"}')] },
   ]),
-  VEST0300: routine("VEST0300", "Máscaras de lote e série", "Define partes fixas, datas e sequências e gera códigos de lote pelo contexto do item.", [
-    list("/api/lot-masks/"),
-    { label: "Cadastrar máscara", method: "POST", path: "/api/lot-masks/", fields: [json('{"application":"SUPRIMENTOS","description":"Lote padrão","classification_type":"ITEM","zero_on_year_change":true}')] },
-    { label: "Abrir máscara", method: "GET", path: "/api/lot-masks/{id}", fields: [id()] },
-    { label: "Alterar máscara", method: "PUT", path: "/api/lot-masks/{id}", fields: [id(), json('{"application":"SUPRIMENTOS","description":"Lote padrão","classification_type":"ITEM","zero_on_year_change":true}')] },
-    { label: "Adicionar parte", method: "POST", path: "/api/lot-masks/{id}/parts", fields: [id(), json('{"sequence":1,"part_type":"DATA","value":"","size":8,"date_format":"DDMMYYYY","zero_on_year_change":false}')] },
-    { label: "Alterar parte", method: "PUT", path: "/api/lot-masks/parts/{partId}", fields: [id("partId", "Parte"), json('{"sequence":1,"part_type":"DATA","value":"","size":8,"date_format":"DDMMYYYY","zero_on_year_change":false}')] },
-    { label: "Desativar parte", method: "DELETE", path: "/api/lot-masks/parts/{partId}", fields: [id("partId", "Parte")], destructive: true },
-    { label: "Gerar código de lote", method: "POST", path: "/api/lot-masks/generate", fields: [json('{"application":"SUPRIMENTOS","item_code":"100"}')] },
-    { label: "Desativar máscara", method: "DELETE", path: "/api/lot-masks/{id}", fields: [id()], destructive: true },
-  ]),
-  VSUP0630: routine("VSUP0630", "Tolerâncias de pedido de compra", "Define tolerâncias por faixa e fornecedor e avalia quantidade, preço ou prazo recebido.", [
-    list("/api/purchase-order-tolerances/", [], [], "Consultar tolerâncias"), create("/api/purchase-order-tolerances/", '{"tolerance_type":"QUANTITY","applies_to":"RECEIPT","interval_min":"0","interval_max":"1000","tolerance_value":"5","value_type":"PERCENT","action":"WARN","is_active":true}'),
-    { label: "Alterar", method: "PUT", path: "/api/purchase-order-tolerances/", fields: [json('{"id":1,"tolerance_type":"QUANTITY","applies_to":"RECEIPT","interval_min":"0","tolerance_value":"5","value_type":"PERCENT","action":"WARN","is_active":true}')] },
-    create("/api/purchase-order-tolerances/evaluate", '{"tolerance_type":"QUANTITY","applies_to":"RECEIPT","supplier_code":10,"expected":"100","actual":"104"}', false, "Avaliar tolerância"), remove("/api/purchase-order-tolerances/{id}"),
-  ]),
   VSEC0100: routine("VSEC0100", "Solicitação e aprovação de troca de senha", "Controla o fluxo seguro de solicitação, aprovação administrativa e conclusão da troca pelo titular.", [
     { label: "Solicitar troca", method: "POST", path: "/api/password-change-requests/" },
     list("/api/password-change-requests/", [{ name: "status", label: "Situação" }], ["status"]),

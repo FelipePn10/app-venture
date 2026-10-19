@@ -22,8 +22,18 @@ check('VEST0500 item/almoxarifado/máscara usam modal', /loader=\{loadItems\}/.t
 check('VEST0500 esclarece campo Endereço', /WMS/.test(vest0500));
 check('VENT0800 removeu header Nav/Ferramentas', !/className="al-nav-btn"/.test(vent0800) && !/>Ajuda</.test(vent0800) && !/>Atalhos</.test(vent0800));
 check('VENT0800 mantém carregar almoxarifado pelo código', /handleLoadWarehouseByCode/.test(vent0800));
-check('VEST0300 usa application SUPRIMENTOS (não RECEIVING)', !/"application":"RECEIVING"/.test(routineCatalog) && /"application":"SUPRIMENTOS"/.test(routineCatalog));
-check('VEST0300 operações têm nomes distintos (sem 2 "Cadastrar")', /Cadastrar máscara/.test(routineCatalog) && /Gerar código de lote/.test(routineCatalog));
+// VEST0300 era uma rotina genérica sobre o mesmo cadastro da VLOT0100. Agora o
+// código antigo abre a tela própria, que absorveu o que só a rotina fazia.
+const vlot0100 = read('src/components/screens/almoxarifado/Vlot0100Page.tsx');
+const lotMaskSvc = read('src/services/lotMaskService.ts');
+const screenHost = read('src/components/screens/ScreenHostPage.tsx');
+const catalogo = read('src/types/erpScreen.ts');
+check('VEST0300 não é mais rotina genérica duplicada', !/VEST0300: routine\(/.test(routineCatalog));
+check('VEST0300 abre a VLOT0100 e sai do menu', /VEST0300: <Vlot0100Page \/>/.test(screenHost) && /code: "VEST0300"[^}]*replacedBy: "VLOT0100"/.test(catalogo));
+check('VLOT0100 aplicação é lista das aceitas pelo backend (SUPRIMENTOS…GERAL)', /APPLICATIONS = \['SUPRIMENTOS', 'PRODUCAO', 'VENDAS', 'EXPEDICAO', 'GERAL'\]/.test(lotMaskSvc) && /APPLICATIONS\.map/.test(vlot0100));
+check('VLOT0100 altera máscara e parte e desativa parte', /updateLotMask\(/.test(vlot0100) && /updateLotMaskPart\(/.test(vlot0100) && /deleteLotMaskPart\(/.test(vlot0100)
+  && /httpClient\.put\(`\$\{BASE\}\/parts\/\$\{partId\}`/.test(lotMaskSvc) && /httpClient\.delete\(`\$\{BASE\}\/parts\/\$\{partId\}`/.test(lotMaskSvc));
+check('VLOT0100 gera pelo contexto e mostra o código (não JSON cru)', /generateLotByContext\(/.test(vlot0100) && /Gerar código de lote/.test(vlot0100) && !/JSON\.stringify/.test(vlot0100));
 check('VEXP0120 operações têm nomes distintos (instrução × caixa)', /Consultar instruções de entrega/.test(routineCatalog) && /Consultar caixas de despacho/.test(routineCatalog));
 check('rotina traduz rótulos de lote/expedição (date_format, lot_mask_id, etc.)', /date_format: "Formato de data"/.test(routinePage) && /lot_mask_id: "Máscara de lote"/.test(routinePage) && /planned_ship_date/.test(routinePage));
 check('rotina oferece enum application em PT-BR', /application: \["SUPRIMENTOS"/.test(routinePage));
@@ -33,17 +43,22 @@ check('enumLabel traduz SUPRIMENTOS/PRODUCAO/EXPEDICAO e tipos de parte', /SUPRI
 // O sistema sabia QUANTO havia, não ONDE. Sem endereço no saldo e no movimento
 // não há separação, FEFO nem contagem por endereço — era a maior lacuna do
 // módulo diante do Focco (FEST0332) e do SAP (bin).
-const vest0100 = read('src/components/screens/almoxarifado/Vest0100Page.tsx');
+// Desde a v1.7.0 a VEST0100 é a Central de Estoque em abas: os formulários
+// moraram para almoxarifado/estoque/*.tsx, e a checagem lê a central inteira.
+const estoqueDir = path.join(root, 'src/components/screens/almoxarifado/estoque');
+const vest0100 = read('src/components/screens/almoxarifado/Vest0100Page.tsx')
+  + fs.readdirSync(estoqueDir).filter((n) => n.endsWith('.tsx')).sort()
+    .map((n) => fs.readFileSync(path.join(estoqueDir, n), 'utf8')).join('\n');
 const stockSvc = read('src/services/stockService.ts');
 
-check('movimento de estoque carrega o endereço', /address\?: string/.test(stockSvc) && /movForm\.address/.test(vest0100));
-check('lote carrega validade (é ela que ordena o FEFO)', /expires_at\?: string/.test(stockSvc) && /lotForm\.expires_at/.test(vest0100));
+check('movimento de estoque carrega o endereço', /address\?: string/.test(stockSvc) && /(movForm|form)\.address/.test(vest0100));
+check('lote carrega validade (é ela que ordena o FEFO)', /expires_at\?: string/.test(stockSvc) && /(lotForm|f)\.expires_at/.test(vest0100));
 check('serviço consome a sugestão de separação', /\/api\/stock\/separation\/suggest\//.test(stockSvc));
 check('serviço consome o saldo por endereço', /\/api\/stock\/balances\/by-address/.test(stockSvc));
 check('tela oferece FEFO e FIFO', /FEFO — vence antes, sai antes/.test(vest0100) && /FIFO — entrou antes, sai antes/.test(vest0100));
 check('separação mostra corrida e certificado (rastreabilidade metalúrgica)', /heat_number/.test(vest0100) && /certificate/.test(vest0100));
 check('separação avisa o que faltou e os lotes vencidos', /missing_qty/.test(vest0100) && /expired_skipped/.test(vest0100));
-check('saldo por endereço é exibido por endereço/lote', /saldoEndereco\.map/.test(vest0100));
+check('saldo por endereço é exibido por endereço/lote', /(saldoEndereco|saldos)\.map/.test(vest0100));
 
 check('serviço consome a transferência entre endereços', /\/api\/stock\/separation\/transfer/.test(stockSvc));
 check('tela transfere entre endereços', /transferirEntreEnderecos/.test(vest0100) && /address_from/.test(vest0100) && /address_to/.test(vest0100));

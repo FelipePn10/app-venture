@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WindowControls } from "@/components/window/WindowControls";
 import {
   ERP_SCREENS,
+  menuScreens,
   screensForRole,
   MODULE_META,
   PARENT_CATEGORIES,
@@ -71,8 +72,10 @@ export function DashboardPage(): JSX.Element {
    * rotinas e "usuário não autorizado" em 206 delas.
    */
   const visibleScreens = useMemo(() => screensForRole(ERP_SCREENS, user?.role), [user?.role]);
+  /** O menu e a contagem não repetem as telas que só têm outro código. */
+  const menuVisibleScreens = useMemo(() => menuScreens(visibleScreens), [visibleScreens]);
   /** Áreas e módulos que sobram depois do recorte do perfil. */
-  const visibleModules = useMemo(() => new Set(visibleScreens.map((s) => s.module)), [visibleScreens]);
+  const visibleModules = useMemo(() => new Set(menuVisibleScreens.map((s) => s.module)), [menuVisibleScreens]);
   const visibleAreas = useMemo(
     () => PARENT_ORDER.filter((area) => PARENT_CATEGORIES[area].modules.some((mod) => visibleModules.has(mod))),
     [visibleModules],
@@ -85,9 +88,9 @@ export function DashboardPage(): JSX.Element {
     for (const mod of PARENT_CATEGORIES.comercial_vendas.modules) g[mod] = [];
     for (const mod of PARENT_CATEGORIES.industrial_producao.modules) g[mod] = [];
     for (const mod of PARENT_CATEGORIES.administrativo_financeiro.modules) g[mod] = [];
-    for (const s of visibleScreens) g[s.module].push(s);
+    for (const s of menuVisibleScreens) g[s.module].push(s);
     return g;
-  }, [visibleScreens]);
+  }, [menuVisibleScreens]);
 
   const filteredScreens = useMemo((): ErpScreen[] => {
     return searchErpScreens(visibleScreens, searchQuery);
@@ -357,7 +360,7 @@ export function DashboardPage(): JSX.Element {
           <div className="met ac">
             <div className="metic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/><rect x="9.5" y="1" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/><rect x="1" y="9.5" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" stroke="#3e9654" strokeWidth="1.4"/></svg></div>
             <div className="metl">Rotinas disponíveis</div>
-            <div className="metv">{visibleScreens.length}</div>
+            <div className="metv">{menuVisibleScreens.length}</div>
             <div className="metsu">{plural(visibleAreas.length, "área", "áreas")} | {plural(visibleModules.size, "módulo", "módulos")}</div>
           </div>
           <div className="met">

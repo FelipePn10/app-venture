@@ -53,4 +53,14 @@ if (exactCatalogResult.length !== 1 || exactCatalogResult[0].code !== 'VITM0100'
   throw new Error(`VITM0100 deveria ser o único resultado, mas retornou: ${exactCatalogResult.map((item) => item.code).join(', ')}`);
 }
 
+// Código antigo que virou apelido abre a tela verdadeira e não duplica na busca.
+expectCatalogFirst('VSUP0630', 'VPCT0100');
+expectCatalogFirst('VEST0300', 'VLOT0100');
+const tolerancias = searchErpScreens(ERP_SCREENS, 'tolerâncias de pedido de compra').map((s) => s.code);
+if (tolerancias.filter((c) => c === 'VPCT0100').length !== 1 || tolerancias.includes('VSUP0630')) {
+  throw new Error(`Tolerâncias apareceu duplicada ou pelo código antigo: ${tolerancias.join(', ')}`);
+}
+const semDestino = ERP_SCREENS.filter((s) => s.replacedBy && !ERP_SCREENS.some((t) => t.code === s.replacedBy && !t.replacedBy));
+if (semDestino.length > 0) throw new Error(`Apelido sem tela de destino: ${semDestino.map((s) => s.code).join(', ')}`);
+
 console.log('Ranking da busca de telas validado.');
