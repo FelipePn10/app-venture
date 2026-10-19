@@ -89,36 +89,40 @@ const corpo = async () => (await page.locator('.erp-detail-body').first().innerT
 const contem = (texto, trecho) => texto.includes(trecho.toLowerCase());
 
 try {
-  // ── VEST0100 — cinco assuntos, cinco abas ────────────────────────────────
+  // ── VEST0100 — Central de Estoque (v1.7.0): dez assuntos, dez abas ───────
   await abrirTela('VEST0100');
   const abasEstoque = (await abas()).join(' | ');
-  for (const esperada of ['Saldos e ATP', 'Movimentos', 'Reservas', 'Separação e guarda', 'Lotes']) {
+  for (const esperada of ['Posição', 'Extrato', 'Lançamentos', 'Transferências', 'Requisições', 'Reservas', 'Separação e guarda', 'Lotes', 'Reposição', 'Análises']) {
     assert.ok(abasEstoque.includes(esperada), `a aba "${esperada}" não apareceu no estoque: ${abasEstoque}`);
   }
   // A aba inicial fala de saldo e NÃO mostra o formulário de outra aba.
   let texto = await corpo();
-  assert.ok(/consultar|atp|selecione o item/.test(texto), `a aba de saldos não explicou o que fazer: ${texto.slice(0, 200)}`);
-  assert.ok(!contem(texto, 'Lançar movimento'), 'o formulário de movimento apareceu fora da aba de movimentos');
+  assert.ok(/consultar|atp|selecione o item/.test(texto), `a aba de posição não explicou o que fazer: ${texto.slice(0, 200)}`);
+  assert.ok(!contem(texto, 'Lançar movimento'), 'o formulário de movimento apareceu fora da aba de lançamentos');
   assert.ok(!contem(texto, 'Registrar lote'), 'o formulário de lote apareceu fora da aba de lotes');
 
-  await clicarAba('Movimentos');
-  texto = await corpo();
-  assert.ok(contem(texto, 'Lançar movimento'), 'a aba de movimentos não trouxe o lançamento');
-  assert.ok(!contem(texto, 'Criar reserva'), 'a reserva apareceu na aba de movimentos');
-
-  await clicarAba('Reservas');
-  texto = await corpo();
-  assert.ok(contem(texto, 'Criar reserva'), 'a aba de reservas não trouxe o formulário');
-
-  await clicarAba('Separação e guarda');
-  texto = await corpo();
-  assert.ok(/sugerir separação/.test(texto), 'a aba de separação não trouxe a sugestão');
-  assert.ok(/recalcular curva abc/.test(texto), 'a curva ABC ficou fora da aba de separação e guarda');
-
-  await clicarAba('Lotes');
-  texto = await corpo();
-  assert.ok(contem(texto, 'Registrar lote'), 'a aba de lotes não trouxe o registro');
-  assert.ok(!contem(texto, 'Lançar movimento'), 'o movimento apareceu na aba de lotes');
+  // Cada aba traz a sua ação e nenhuma das outras.
+  const exclusivas = {
+    'Extrato': 'Consultar extrato',
+    'Lançamentos': 'Lançar movimento',
+    'Transferências': 'Transferir',
+    'Requisições': 'Criar requisição',
+    'Reservas': 'Criar reserva',
+    'Separação e guarda': 'Sugerir separação',
+    'Lotes': 'Registrar lote',
+    'Reposição': 'Calcular reposição',
+    'Análises': 'Recalcular curva ABC',
+  };
+  for (const [aba, acao] of Object.entries(exclusivas)) {
+    await clicarAba(aba);
+    texto = await corpo();
+    assert.ok(contem(texto, acao), `a aba ${aba} não trouxe "${acao}"`);
+    for (const [outra, acaoOutra] of Object.entries(exclusivas)) {
+      if (outra !== aba && acaoOutra !== 'Transferir' && acao !== 'Transferir') {
+        assert.ok(!contem(texto, acaoOutra), `"${acaoOutra}" (aba ${outra}) apareceu na aba ${aba}`);
+      }
+    }
+  }
 
   // ── VMRP0100 — o trabalho do planejador, uma aba por passo ───────────────
   await abrirTela('VMRP0100');

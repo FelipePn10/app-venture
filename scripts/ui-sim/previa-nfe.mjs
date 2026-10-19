@@ -86,8 +86,10 @@ try {
   await page.locator('.erp-modal button', { hasText: 'Mostrar' }).first().click();
   await page.locator('.erp-modal pre').first().waitFor();
   const payload = await limpo('.erp-modal pre');
-  assert.ok(payload.includes('"emitente"') && payload.includes('"destinatario"'),
-    'o documento transmitido não veio no formato esperado');
+  // Formato da API v2 da Focus: campos planos (cnpj_emitente, cnpj_destinatario
+  // ou cpf_destinatario), não objetos aninhados — é o que a SEFAZ validou.
+  assert.ok(payload.includes('"cnpj_emitente"') && /"(cnpj|cpf)_destinatario"/.test(payload) && payload.includes('"items"'),
+    'o documento transmitido não veio no formato da Focus (v2)');
   console.log('  ✓ documento transmitido pode ser inspecionado');
 
   await page.screenshot({ path: `${SHOTS}/previa-nfe.png`, fullPage: false });
