@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## Novidades
+- **CIAP (VFIS0345):** o ICMS dos bens do ativo imobilizado deixa de ir para o custo e passa a ser crédito em 48 parcelas. As notas de entrada com CFOP de ativo entram sozinhas no controle; bens antigos podem ser incluídos à mão. A apuração do mês calcula a parcela pelo índice das saídas tributadas e de exportação, grava, fecha o mês e vai para o SPED (Bloco G e ajuste da apuração do ICMS).
+- **Centro de custo único (VCTB0102):** um só cadastro para o financeiro e a contabilidade, em árvore, com responsável e aprovador, orçamento por mês (com aviso de estouro), aprovações pendentes e regra de obrigatoriedade por conta (VFIN0120, "exige centro"). O código VFIN0130 continua abrindo, agora na VCTB0102. As requisições geradas pelo MRP também passam pela aprovação do centro.
+- **Fundação enterprise:** qualidade (amostragem, lote de inspeção com laudo do fornecedor, CAPA/8D, metrologia, certificados e documentos), pós-venda (séries, garantia, ordem de serviço, SLA e indicadores), governança do cadastro de item, devolução e contrato de venda, alçada de desconto e escolha da empresa no login.
+
+## Melhorias
+- **Identificação da empresa num lugar só (VEMP0100):** dados da empresa atual e cadastro de nova empresa; a VFIS0100 fica só com os parâmetros fiscais. O token de produção da Focus não pode mais ser trocado pela tela.
+- **CFOP (VFIS0300):** tabela oficial completa, com busca, filtro, vigência e indicadores. **Tipos de entrada (VFIS0360):** natureza oficial e créditos conferidos com o CFOP.
+
 ## [v1.7.1] — 2026-10-19
 
 ## Melhorias
