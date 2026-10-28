@@ -6,6 +6,7 @@ import {
 } from "@/services/fiscalAdvancedService";
 import { errMessage, type Obj, parseStr } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { type ClassificacaoIBSCBS, listarClassificacoes } from "@/services/reformaTributariaService";
 import { enumLabel } from "@/utils/enumLabels";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -32,6 +33,11 @@ export function Vfis0350Page(): JSX.Element {
   const [attrForm, setAttrForm] = useState(EMPTY_ATTR);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  // Tabela oficial de cClassTrib (só os admitidos na NF-e) para escolher o
+  // tratamento de IBS/CBS do produto; o backend recusa código fora dela.
+  const [classTrib, setClassTrib] = useState<ClassificacaoIBSCBS[]>([]);
+  useEffect(() => { listarClassificacoes().then(setClassTrib).catch(() => setClassTrib([])); }, []);
+  const descricaoClassTrib = classTrib.find((c) => c.cclass_trib === (form.cod_clas_trib ?? "").trim());
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -233,8 +239,10 @@ export function Vfis0350Page(): JSX.Element {
               <input className="erp-input" value={form.mod_bc_icms ?? ""} onChange={(e) => setF("mod_bc_icms", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Mod. BC ICMS ST</label>
               <input className="erp-input" value={form.mod_bc_icms_st ?? ""} onChange={(e) => setF("mod_bc_icms_st", e.target.value)} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Cód. Clas. Trib (CBS/IBS)</label>
-              <input className="erp-input" value={form.cod_clas_trib ?? ""} onChange={(e) => setF("cod_clas_trib", e.target.value)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">cClassTrib (IBS/CBS)</label>
+              <input className="erp-input num" list="vfis0350-classtrib" maxLength={6} placeholder="000001" value={form.cod_clas_trib ?? ""} onChange={(e) => setF("cod_clas_trib", e.target.value)} />
+              <datalist id="vfis0350-classtrib">{classTrib.filter((c) => c.suportado_emissao).map((c) => <option key={c.cclass_trib} value={c.cclass_trib}>{c.descricao.slice(0, 90)}</option>)}</datalist>
+              <small>{(form.cod_clas_trib ?? "").trim() === "" ? "Vazio: tributação integral (000001), salvo CFOP com padrão em VFIS0670." : descricaoClassTrib ? `CST ${descricaoClassTrib.cst} — ${descricaoClassTrib.descricao.slice(0, 120)}` : "Código fora da tabela oficial."}</small></div>
             <div className="erp-field erp-c12"><label className="erp-label">Obs. Fiscal (infAdFisco)</label>
               <input className="erp-input" value={form.obs_fiscal ?? ""} onChange={(e) => setF("obs_fiscal", e.target.value)} /></div>
           

@@ -71,16 +71,19 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos }: {
 
 export type ApontamentoForm = AppointmentDTO;
 /** Entrega ao estoque. `final` conclui a ordem; sem ele a entrega é parcial. */
-export type EntregaForm = { deposito?: number; lote: string; quantidade: string; final: boolean };
+export type EntregaForm = { deposito?: number; lote: string; quantidade: string; final: boolean; series: string };
+/** Perfil de pós-venda do item da OF: série obrigatória na entrega. */
+export type SerieDaOF = { controla: boolean; mascara: boolean };
 export type ConsumoForm = ConsumptionDTO;
 
-export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamentos, operacoesPendentes, conclusao, setConclusao, onApontar, onConsumir, onRetornarSucata, onConcluir }: {
+export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamentos, operacoesPendentes, conclusao, setConclusao, onApontar, onConsumir, onRetornarSucata, onConcluir, serie }: {
   of: ProductionOrderDTO; busy: boolean;
   app: AppointmentDTO; setApp: (f: (p: AppointmentDTO) => AppointmentDTO) => void;
   cons: ConsumptionDTO; setCons: (f: (p: ConsumptionDTO) => ConsumptionDTO) => void;
   apontamentos: AppointmentDTO[]; operacoesPendentes: number;
   conclusao: EntregaForm; setConclusao: (f: (p: EntregaForm) => EntregaForm) => void;
   onApontar: () => void; onConsumir: () => void; onRetornarSucata: () => void; onConcluir: () => void;
+  serie?: SerieDaOF;
 }): JSX.Element {
   const emProducao = of.status === "IN_PROGRESS";
   const saldo = Math.max(0, (of.planned_qty || 0) - (of.produced_qty || 0));
@@ -147,6 +150,11 @@ export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamen
           <LookupField value={conclusao.deposito} loader={loadWarehouses} entityLabel="depósito" onChange={(c) => setConclusao((p) => ({ ...p, deposito: c ? Number(c) : undefined }))} /></div>
         <div className="erp-field vpl-grow"><label className="erp-label" htmlFor="cl-lote">Lote (rastreabilidade)</label>
           <input id="cl-lote" className="erp-input" value={conclusao.lote} onChange={(e) => setConclusao((p) => ({ ...p, lote: e.target.value }))} /></div>
+        {serie?.controla && (
+          <div className="erp-field vpl-grow"><label className={`erp-label${serie.mascara ? "" : " erp-req"}`} htmlFor="cl-series">Números de série — uma por linha</label>
+            <textarea id="cl-series" className="erp-input" rows={2} value={conclusao.series} placeholder={serie.mascara ? "vazio: gerados pela máscara" : "uma série por unidade"}
+              onChange={(e) => setConclusao((p) => ({ ...p, series: e.target.value }))} /></div>
+        )}
         <label className="erp-check"><input type="checkbox" checked={conclusao.final} onChange={(e) => setConclusao((p) => ({ ...p, final: e.target.checked }))} />Última entrega — concluir a ordem</label>
         <button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-end" }} onClick={onConcluir}
           disabled={busy || !emProducao || (conclusao.final && operacoesPendentes > 0)}>{conclusao.final ? "Entregar e concluir" : "Registrar entrega"}</button>

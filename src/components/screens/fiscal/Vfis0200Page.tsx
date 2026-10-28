@@ -7,10 +7,18 @@ import {
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadInvoiceTypesById } from "@/services/lookups";
+import { FINALIDADES_COMPRA } from "@/services/customerService";
 import { FaturarPedidoPanel } from "./FaturarPedidoPanel";
+import { SeriesDaNotaPanel } from "./SeriesDaNotaPanel";
+import { definirClassTribDaLinha } from "@/services/reformaTributariaService";
 
 type FeedbackState = { type: "success" | "error" | "info" | "warn"; message: string } | null;
 type Mode = "list" | "create" | "pedido";
+const ORIGEM_CLASSTRIB: Record<string, string> = {
+  ITEM_DA_NOTA: "da linha", CFOP: "do CFOP", CLASSIFICACAO_FISCAL: "da classificação", PADRAO: "padrão",
+};
 
 // Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -68,6 +76,14 @@ function statusPill(status: string): JSX.Element {
 }
 
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
+
+/** Informações complementares (infCpl) do JSON que será transmitido. */
+function infCplDaPrevia(payload: string): string {
+  try {
+    const v = (JSON.parse(payload) as Record<string, unknown>)["informacoes_adicionais_contribuinte"];
+    return typeof v === "string" ? v : "";
+  } catch { return ""; }
+}
 
 export function Vfis0200Page(): JSX.Element {
   const [mode, setMode] = useState<Mode>("list");
@@ -144,6 +160,17 @@ export function Vfis0200Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try { setCceView({ id, list: await listCartasCorrecao(id) }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  // cClassTrib próprio da linha, corrigido na prévia (nota em rascunho/rejeitada).
+  const [classTribEdit, setClassTribEdit] = useState<Record<number, string>>({});
+  async function aplicarClassTrib(notaId: number, linhaId: number, valor: string) {
+    setBusy(true); setFeedback(null);
+    try {
+      await definirClassTribDaLinha(notaId, linhaId, valor.trim() || null);
+      setClassTribEdit((p) => { const n = { ...p }; delete n[linhaId]; return n; });
+      setPrevia(await previewExit(notaId));
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
   async function abrirPrevia(id: number) {
@@ -450,6 +477,19 @@ export function Vfis0200Page(): JSX.Element {
                     <input className="erp-input" maxLength={2} value={form.uf_destinatario} onChange={(e) => setF("uf_destinatario", e.target.value.toUpperCase())} /></div>
                   <div className="erp-field erp-c6"><label className="erp-label">Natureza da Operação</label>
                     <input className="erp-input" value={form.natureza_operacao} onChange={(e) => setF("natureza_operacao", e.target.value)} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label>
+                    <select className="erp-input" value={form.finalidade_compra ?? ""} onChange={(e) => setF("finalidade_compra", e.target.value || undefined)}>
+                      {FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "Do pedido ou do cliente" : f.label}</option>)}
+                    </select>
+                    <span className="erp-hint">Uso, consumo ou ativo: consumidor final (IPI na base do ICMS, sem diferimento).</span></div>
+                  <div className="erp-field erp-c3"><label className="erp-label">Tipo de nota</label>
+                    <LookupField value={form.invoice_type_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable onChange={(c) => setF("invoice_type_id", c ? Number(c) : undefined)} />
+                    <span className="erp-hint">Os indicadores do tipo de nota (calcula ST, diferimento, PIS/COFINS, DIFAL, ICMS isento) entram no cálculo.</span></div>
+                  <div className="erp-field erp-c12"><label className="erp-label">Informações complementares</label>
+                    <textarea className="erp-input" rows={2} maxLength={2000} value={form.informacoes_complementares ?? ""}
+                      placeholder="Texto que sai no campo de informações complementares da NF-e"
+                      onChange={(e) => setF("informacoes_complementares", e.target.value || undefined)} />
+                    <span className="erp-hint">O sistema acrescenta sozinho o que a lei exige: no Simples Nacional, a identificação de optante e o crédito de ICMS; nos benefícios, a base legal cadastrada na regra de ICMS/IPI.</span></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Frete</label>
                     <input className="erp-input num" type="number" step="0.01" value={form.valor_frete} onChange={(e) => setF("valor_frete", Number(e.target.value))} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">Seguro</label>
@@ -658,41 +698,79 @@ export function Vfis0200Page(): JSX.Element {
                 <div className="erp-fieldset-head">
                   Itens   — <span style={{ fontWeight: 400, opacity: 0.65 }}>{previa.itens.length} linha(s)</span>
                 </div>
-                <div className="erp-fieldset-body"><div className="erp-field erp-c12">
+                <div className="erp-fieldset-body"><div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
                   <table className="erp-grid">
                     <thead>
                       <tr>
-                        <th style={{ width: 34 }}>#</th><th>Descrição</th><th>NCM</th><th>CFOP</th>
-                        <th className="num">Qtd</th><th className="num">Unit.</th><th className="num">Total</th>
-                        <th>CST ICMS</th><th className="num">ICMS</th><th className="num">IPI</th>
-                        <th className="num">ICMS-ST</th><th className="num">PIS</th><th className="num">COFINS</th>
+                        <th style={{ width: 34 }}>#</th><th>Produto</th>
+                        <th className="num">Qtd</th><th className="num">Total</th>
+                        <th title="CST (ou CSOSN no Simples), regra de ICMS/IPI que tributou a linha e valor do ICMS">ICMS</th>
+                        <th className="num">IPI</th>
+                        <th className="num" title="ICMS-ST e, na venda a não contribuinte de outro estado, o DIFAL com o FCP">ST / DIFAL</th>
+                        <th className="num">PIS / COFINS</th>
+                        <th>IBS / CBS (cClassTrib)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {previa.itens.length === 0 && (
-                        <tr><td colSpan={13} className="erp-grid-empty">Esta nota não tem itens — inclua os produtos antes de emitir.</td></tr>
+                        <tr><td colSpan={9} className="erp-grid-empty">Esta nota não tem itens — inclua os produtos antes de emitir.</td></tr>
                       )}
                       {previa.itens.map((it) => (
                         <tr key={it.sequence}>
                           <td>{it.sequence}</td>
-                          <td>{it.descricao || `Item ${it.item_code ?? ""}`}</td>
-                          <td>{it.ncm || <span className="erp-badge erp-badge-red">sem NCM</span>}</td>
-                          <td>{it.cfop || <span className="erp-badge erp-badge-red">sem CFOP</span>}</td>
-                          <td className="num">{it.quantidade}</td>
-                          <td className="num">{money(it.valor_unitario)}</td>
-                          <td className="num">{money(it.valor_total)}</td>
-                          <td>{it.cst_icms || "—"}</td>
-                          <td className="num">{money(it.valor_icms)}</td>
-                          <td className="num">{money(it.valor_ipi)}</td>
-                          <td className="num">{it.valor_icms_st > 0 ? money(it.valor_icms_st) : "—"}</td>
-                          <td className="num">{money(it.valor_pis)}</td>
-                          <td className="num">{money(it.valor_cofins)}</td>
+                          <td>
+                            {it.descricao || `Item ${it.item_code ?? ""}`}
+                            <br /><small style={{ opacity: 0.75 }}>
+                              NCM {it.ncm || <span className="erp-badge erp-badge-red">sem NCM</span>} · CFOP {it.cfop || <span className="erp-badge erp-badge-red">sem CFOP</span>}
+                            </small>
+                          </td>
+                          <td className="num">{it.quantidade}{it.um ? ` ${it.um}` : ""}</td>
+                          <td className="num">{money(it.valor_total)}<br /><small style={{ opacity: 0.75 }}>unit. {money(it.valor_unitario)}</small></td>
+                          <td>
+                            <strong>{it.cst_icms || "—"}</strong> · {money(it.valor_icms)}
+                            <br /><small style={{ opacity: 0.75 }}>
+                              {it.regra_icms_ipi_id ? `regra nº ${it.regra_icms_ipi_id}` : <span title="Sem regra de ICMS/IPI: alíquota interna da empresa">regra geral da empresa</span>}
+                              {it.valor_credito_simples > 0 && ` · crédito SN ${money(it.valor_credito_simples)}`}
+                            </small>
+                          </td>
+                          <td className="num">{money(it.valor_ipi)}{it.cst_ipi ? <><br /><small style={{ opacity: 0.75 }}>CST {it.cst_ipi}</small></> : null}</td>
+                          <td className="num">
+                            {it.valor_icms_st > 0 ? <>ST {money(it.valor_icms_st)}</> : "—"}
+                            {it.valor_difal + it.valor_fcp_uf_dest > 0 && <><br /><small style={{ opacity: 0.75 }}>DIFAL {money(it.valor_difal + it.valor_fcp_uf_dest)}</small></>}
+                          </td>
+                          <td className="num">{money(it.valor_pis)}<br /><small style={{ opacity: 0.75 }}>{money(it.valor_cofins)}</small></td>
+                          <td>
+                            <input className="erp-input num" style={{ width: 82 }} maxLength={6}
+                              value={classTribEdit[it.id] ?? it.cclass_trib}
+                              disabled={busy || !["DRAFT", "REJECTED"].includes(previa.status.toUpperCase())}
+                              title="cClassTrib desta linha; vazio volta ao padrão do CFOP ou da classificação fiscal"
+                              onChange={(e) => setClassTribEdit((p) => ({ ...p, [it.id]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") void aplicarClassTrib(previa.fiscal_exit_id, it.id, classTribEdit[it.id] ?? it.cclass_trib); }} />
+                            {classTribEdit[it.id] !== undefined && classTribEdit[it.id] !== it.cclass_trib && (
+                              <button className="erp-btn erp-btn-sm" onClick={() => void aplicarClassTrib(previa.fiscal_exit_id, it.id, classTribEdit[it.id])}>Aplicar</button>
+                            )}
+                            <br /><small style={{ opacity: 0.75 }}>
+                              IBS {money(it.valor_ibs)} · CBS {money(it.valor_cbs)}{it.aliquota_efetiva_cbs > 0 ? ` (${it.aliquota_efetiva_cbs}%)` : ""}
+                              {(ORIGEM_CLASSTRIB[it.cclass_trib_origem] || it.cst_ibs_cbs) && <><br />{ORIGEM_CLASSTRIB[it.cclass_trib_origem] ?? ""}{it.cst_ibs_cbs ? ` · CST ${it.cst_ibs_cbs}` : ""}</>}
+                            </small>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div></div>
               </div>
+
+              <SeriesDaNotaPanel key={previa.fiscal_exit_id} exitId={previa.fiscal_exit_id}
+                editavel={["DRAFT", "REJECTED"].includes(previa.status.toUpperCase())}
+                onMudou={() => { void previewExit(previa.fiscal_exit_id).then(setPrevia).catch(() => undefined); }} />
+
+              {infCplDaPrevia(previa.payload_enviado) && (
+                <div className="erp-fieldset" style={{ marginBottom: 12 }}>
+                  <div className="erp-fieldset-head">Informações complementares — <span style={{ fontWeight: 400, opacity: 0.65 }}>o texto que vai impresso na nota</span></div>
+                  <div className="erp-fieldset-body"><div className="erp-field erp-c12"><p className="erp-note" style={{ whiteSpace: "pre-wrap" }}>{infCplDaPrevia(previa.payload_enviado)}</p></div></div>
+                </div>
+              )}
 
               <div className="erp-fieldset" style={{ marginBottom: 12 }}>
                 <div className="erp-fieldset-head">Totais</div>

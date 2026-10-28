@@ -122,7 +122,7 @@ export function Vpro0400Page(): JSX.Element {
   }); };
 
   const numField = (label: string, val: number | null | undefined, on: (n: number) => void, req = false, cls = "erp-c3") => (
-    <div className={`erp-field ${cls}`}><label className={`erp-label${req ? " erp-req" : ""}`}>{label}</label><input className="erp-input num" type="number" value={val ?? ""} onChange={(e) => on(Number(e.target.value))} /></div>
+    <div className={`erp-field ${cls}`}><label className={`erp-label${req ? " erp-req" : ""}`}>{label}</label><input className="erp-input num" type="number" step="any" value={val ?? ""} onChange={(e) => on(Number(e.target.value))} /></div>
   );
 
   return (
@@ -253,7 +253,7 @@ export function Vpro0400Page(): JSX.Element {
                   {recChars.map((c) => (
                     <div key={c.id} className="erp-field erp-c6" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <label className="erp-label" style={{ margin: 0, minWidth: 120 }}>{c.name}{c.unit ? ` (${c.unit})` : ""}</label>
-                      <input className="erp-input num" type="number" placeholder="valor" style={{ width: 100 }} value={meas[c.id!]?.measured_value ?? ""} onChange={(e) => setMeas((m) => ({ ...m, [c.id!]: { measured_value: Number(e.target.value), is_conformant: m[c.id!]?.is_conformant ?? true } }))} />
+                      <input className="erp-input num" type="number" step="any" placeholder="valor" style={{ width: 100 }} value={meas[c.id!]?.measured_value ?? ""} onChange={(e) => setMeas((m) => ({ ...m, [c.id!]: { measured_value: Number(e.target.value), is_conformant: m[c.id!]?.is_conformant ?? true } }))} />
                       <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}><input className="erp-check" type="checkbox" checked={meas[c.id!]?.is_conformant ?? true} onChange={(e) => setMeas((m) => ({ ...m, [c.id!]: { measured_value: m[c.id!]?.measured_value ?? 0, is_conformant: e.target.checked } }))} />conforme</label>
                     </div>
                   ))}

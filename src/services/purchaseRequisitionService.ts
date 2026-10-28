@@ -46,6 +46,7 @@ function parseItem(raw: unknown): RequisitionItemDTO {
     attended_qty: parseNum(o, 'attended_qty', 'AttendedQty'),
     cancelled_qty: parseNum(o, 'cancelled_qty', 'CancelledQty'),
     status: parseStr(o, 'status', 'Status') || undefined,
+    delivery_date: parseStr(o, 'delivery_date', 'DeliveryDate') || undefined,
   };
 }
 function parseReq(raw: unknown): RequisitionDTO {

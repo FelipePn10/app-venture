@@ -101,7 +101,7 @@ export function Vdpr0100Page(): JSX.Element {
     });
     setRescheduleResult(r);
     const o = unwrapObject(r);
-    setFeedback({ type: "success", message: `Reprogramação: ${parseNum(o, "rescheduled_orders", "RescheduledOrders") ?? 0} pedido(s) / ${parseNum(o, "rescheduled_items", "RescheduledItems") ?? 0} item(ns) alterados.` });
+    setFeedback({ type: "success", message: `Reprogramação: ${parseNum(o, "updated_orders", "rescheduled_orders") ?? 0} pedido(s) / ${parseNum(o, "updated_items", "rescheduled_items") ?? 0} item(ns) alterados.` });
   });
 
   const linesTotal = useMemo(() => lines.reduce((s, l) => s + l.quantity * (l.unit_price ?? 0), 0), [lines]);
@@ -153,10 +153,10 @@ export function Vdpr0100Page(): JSX.Element {
                 {occupation.map((raw, i) => { const o = unwrapObject(raw); const occ = parseNum(o, "occupation_pct", "OccupationPct"); return (
                   <tr key={i}>
                     <td>{parseStr(o, "date", "Date")?.slice(0, 10) || "—"}</td>
-                    <td className="num">{parseNum(o, "planning_tank_code", "PlanningTankCode") ?? "—"}</td>
-                    <td className="num">{parseNum(o, "allocated_qty", "AllocatedQty") ?? 0}</td>
+                    <td className="num">{parseNum(o, "tank_code", "planning_tank_code") ?? "—"}</td>
+                    <td className="num">{parseNum(o, "allocated", "allocated_qty") ?? 0}</td>
                     <td className="num">{parseNum(o, "capacity", "Capacity") ?? "—"}</td>
-                    <td className="num">{parseNum(o, "free_qty", "FreeQty") ?? "—"}</td>
+                    <td className="num">{parseNum(o, "free", "free_qty") ?? "—"}</td>
                     <td className="num">{occ !== undefined ? pct(occ) : "—"}</td>
                     <td className="num">{money(parseNum(o, "expected_value", "ExpectedValue"))}</td>
                   </tr>

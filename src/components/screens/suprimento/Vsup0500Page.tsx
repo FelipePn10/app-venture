@@ -142,19 +142,17 @@ export function Vsup0500Page(): JSX.Element {
   const setP = <K extends keyof SupplierParametersDTO>(k: K, v: SupplierParametersDTO[K]) => setParams((prev) => ({ ...prev, [k]: v }));
 
   async function carregarParams() {
-    if (!paramEnterprise) { setFeedback({ type: "error", message: "Selecione a empresa dos parâmetros." }); return; }
     setBusy(true); setFeedback(null);
-    try { setParams(await getParameters(paramEnterprise)); setFeedback({ type: "info", message: "Parâmetros de compras carregados." }); }
+    try { setParams(await getParameters()); setFeedback({ type: "info", message: "Parâmetros de compras carregados." }); }
     catch (e) {
       setFeedback({ type: "info", message: errMessage(e, "Esta empresa ainda não tem parâmetros; preencha e salve para criá-los.") });
-      setParams({ enterprise_code: paramEnterprise });
+      setParams({ enterprise_code: paramEnterprise ?? 0 });
     } finally { setBusy(false); }
   }
 
   async function salvarParams() {
-    if (!paramEnterprise) { setFeedback({ type: "error", message: "Selecione a empresa dos parâmetros." }); return; }
     setBusy(true); setFeedback(null);
-    try { await updateParameters({ ...params, enterprise_code: paramEnterprise }); setFeedback({ type: "success", message: "Parâmetros de compras salvos." }); }
+    try { await updateParameters({ ...params, enterprise_code: paramEnterprise ?? 0 }); setFeedback({ type: "success", message: "Parâmetros de compras salvos." }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -240,7 +238,13 @@ export function Vsup0500Page(): JSX.Element {
   async function consultarSefaz() {
     if (!form.code) return;
     setBusy(true); setFeedback(null);
-    try { const r = await sefazQuery(form.code); setFeedback({ type: "info", message: `SEFAZ: ${JSON.stringify(r).slice(0, 200)}` }); await abrir(form.code); }
+    try {
+      const r = await sefazQuery(form.code);
+      const situacao = String(r.situacao_cadastral || r.billing_receipt_status || "").trim();
+      const partes = [r.nome ? String(r.nome) : "", r.uf ? `UF ${String(r.uf)}` : "", situacao ? `situação: ${situacao}` : ""].filter(Boolean);
+      setFeedback({ type: "info", message: `Consulta à SEFAZ concluída${partes.length ? ` — ${partes.join(" · ")}` : ""}. O resultado ficou gravado no fornecedor.` });
+      await abrir(form.code);
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function consultarCnpj() {
@@ -276,7 +280,19 @@ export function Vsup0500Page(): JSX.Element {
   async function verDefaults() {
     if (!form.code) return;
     setBusy(true); setFeedback(null);
-    try { const r = await getPurchasingDefaults(form.code, Number(entCode) || 1); setFeedback({ type: "info", message: `Defaults (emp ${entCode}): ${JSON.stringify(r).slice(0, 240)}` }); }
+    try {
+      const r = await getPurchasingDefaults(form.code, Number(entCode) || 1);
+      const sim = (v: unknown) => (v ? "sim" : "não");
+      const partes = [
+        `condição de pagamento ${r.payment_condition_id ?? "não definida"}`,
+        `frete ${r.freight_type ? enumLabel(String(r.freight_type)).toLowerCase() : "não definido"}`,
+        `conta financeira ${r.financial_account || "não definida"}`,
+        `tipo de NF ${r.default_invoice_type_id ?? "não definido"}`,
+        `tabela de preço ${r.purchase_price_table_id ?? "não definida"}`,
+        `aplica IPI: ${sim(r.applies_ipi)}`,
+      ];
+      setFeedback({ type: "info", message: `Padrões de compra deste fornecedor na empresa: ${partes.join(" · ")}.` });
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function run(fn: () => Promise<void>, ok: string) {
@@ -327,7 +343,7 @@ export function Vsup0500Page(): JSX.Element {
             <span className="erp-tgroup-label">Ações</span>
             <button className="erp-btn erp-btn-dark" onClick={() => void salvar()} disabled={busy}>{busy && <span className="erp-spin" />}{editing ? "Atualizar" : "Salvar"}</button>
             {form.code && <button className="erp-btn" onClick={() => void consultarSefaz()} disabled={busy}>Consultar SEFAZ</button>}
-            {form.code && <button className="erp-btn" onClick={() => void verDefaults()} disabled={busy}>Defaults</button>}
+            {form.code && <button className="erp-btn" onClick={() => void verDefaults()} disabled={busy}>Padrões de compra</button>}
             {form.code && <button className={`erp-btn${isBlocked(form) ? " erp-btn-primary" : " erp-btn-danger"}`} onClick={() => void toggleBlock(form)} disabled={busy}>{isBlocked(form) ? "Liberar" : "Bloquear"}</button>}
           </div>
         )}
@@ -403,9 +419,8 @@ export function Vsup0500Page(): JSX.Element {
                   <div className="erp-fieldset-head">Parâmetros de compras da empresa</div>
                   <div className="erp-fieldset-body">
                     <div className="erp-field erp-c4"><label className="erp-label">Empresa</label>
-                      {enterpriseFixed
-                        ? <input className="erp-input" value={enterpriseFixed} disabled />
-                        : <LookupField value={paramEnterprise} loader={loadEstablishments} entityLabel="empresa" placeholder="Selecionar empresa" onChange={(code) => setParamEnterprise(code ? Number(code) : undefined)} />}
+                      {/* Sempre a empresa da sessão: o backend grava os parâmetros nela. */}
+                      <input className="erp-input" value={enterpriseFixed || "Empresa em que você entrou"} disabled />
                     </div>
                     <div className="erp-field erp-c5" style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
                       <button className="erp-btn erp-btn-dark" onClick={() => void carregarParams()} disabled={busy}>Carregar</button>

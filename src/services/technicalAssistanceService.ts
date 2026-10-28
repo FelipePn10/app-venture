@@ -68,6 +68,11 @@ export interface TACallItemDTO {
   notes?: string | null;
   warranty_until?: string;
   in_warranty?: boolean;
+  /** Garantia decidida pelo pós-venda: SERIE, NF ou INFORMADA. */
+  garantia_origem?: string;
+  cobre_pecas?: boolean;
+  cobre_mao_obra?: boolean;
+  cobre_deslocamento?: boolean;
 }
 
 export interface TACallDTO {
@@ -176,6 +181,10 @@ function parseItem(raw: unknown): TACallItemDTO {
     notes: parseStr(o, 'notes', 'Notes') || null,
     warranty_until: parseStr(o, 'warranty_until', 'WarrantyUntil') || undefined,
     in_warranty: parseBool(o, 'in_warranty', 'InWarranty'),
+    garantia_origem: parseStr(o, 'garantia_origem') || undefined,
+    cobre_pecas: o['cobre_pecas'] === undefined ? undefined : parseBool(o, 'cobre_pecas'),
+    cobre_mao_obra: o['cobre_mao_obra'] === undefined ? undefined : parseBool(o, 'cobre_mao_obra'),
+    cobre_deslocamento: o['cobre_deslocamento'] === undefined ? undefined : parseBool(o, 'cobre_deslocamento'),
   };
 }
 

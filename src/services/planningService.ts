@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, currentUserId, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
 
 /**
  * Pipeline de Planejamento (`/api/planning/run-pipeline`) e Parâmetros de Planejamento
@@ -69,7 +69,7 @@ export async function getPlanningParam(num: number): Promise<PlanningParam> {
   return parseParam(data);
 }
 export async function updatePlanningParam(paramNumber: number, value: string): Promise<PlanningParam> {
-  const { data } = await httpClient.put('/api/planning-params/update', { param_number: paramNumber, value, updated_by: currentUserId() });
+  const { data } = await httpClient.put('/api/planning-params/update', { param_number: paramNumber, value });
   return parseParam(data);
 }
 

@@ -26,58 +26,8 @@ export type ArrecadacaoIndicator = 'SEFAZ' | 'JUSTICA_FEDERAL' | 'JUSTICA_ESTADU
 export type RestituicaoTipo = 'RESTITUICAO' | 'RESSARCIMENTO' | 'COMPLEMENTACAO';
 export type NotaEspecialPurpose = 'COMPLEMENTAR' | 'AJUSTE';
 
-// ─── §28 Redução/Substituição/Diferimento de ICMS ───────────────────────────
-
-export interface IcmsReducaoDTO {
-  id?: number;
-  uf: string;
-  operation_type: IcmsOpType;
-  icms_pct_contrib: number;
-  icms_pct_non_contrib: number;
-  cst_icms_contrib: string;
-  cst_icms_non_contrib: string;
-  ncm_code?: string;
-  is_preferential?: boolean;
-  item_id?: number;
-  item_mask?: string;
-  customer_id?: number;
-  establishment_id?: number;
-  supplier_id?: number;
-  market_segment_id?: number;
-  invoice_type_out_id?: number;
-  invoice_type_in_id?: number;
-  icms_red_pct_contrib?: number;
-  icms_red_target_contrib?: RedTarget;
-  icms_deferral_pct?: number;
-  icms_deferral_target?: RedTarget;
-  icms_subst_pct_contrib?: number;
-  mod_bc_icms_st?: string;
-  fci_icms_pct?: number;
-  fci_reduce_base?: boolean;
-  difal_icms_red_pct?: number;
-  difal_icms_type?: string;
-}
-export interface IcmsReducao extends IcmsReducaoDTO { id: number; }
-
-const ICMS_RED = '/api/fiscal/icms-reducao';
-
-export async function listIcmsReducao(filters?: { uf?: string; item_id?: number | string; active?: boolean }): Promise<IcmsReducao[]> {
-  const { data } = await httpClient.get(`${ICMS_RED}/`, { params: cleanParams(filters) });
-  return asList(data);
-}
-export async function findIcmsReducao(filter: { uf?: string; item_id?: string | number; customer_id?: string | number; op_type?: string }): Promise<IcmsReducao | null> {
-  const { data } = await httpClient.get(`${ICMS_RED}/find`, { params: cleanParams(filter) });
-  const o = unwrapObject(data);
-  return Object.keys(o).length ? (o as unknown as IcmsReducao) : null;
-}
-export async function createIcmsReducao(dto: IcmsReducaoDTO): Promise<IcmsReducao> {
-  const { data } = await httpClient.post(`${ICMS_RED}/`, dto);
-  return asOne(data);
-}
-export async function updateIcmsReducao(dto: IcmsReducaoDTO): Promise<IcmsReducao> {
-  const { data } = await httpClient.put(`${ICMS_RED}/`, dto);
-  return asOne(data);
-}
+// §28 Redução/Substituição/Diferimento de ICMS: unificado nos Parâmetros
+// ICMS/IPI (VFIS0320, fiscalSupportService) — migração 000433 do backend.
 
 // ─── §30 Restituição/Ressarcimento/Complementação ICMS ST ───────────────────
 

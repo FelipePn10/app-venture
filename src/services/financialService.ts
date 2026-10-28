@@ -46,6 +46,8 @@ export interface PlanoConta extends PlanoContaDTO {
   is_active?: boolean;
   /** Conta contábil analítica do plano (contabilização automática da NF de entrada). */
   accounting_account_id?: number;
+  /** O lançamento nesta conta (rateio do título, item da NF de entrada) exige centro de custo. */
+  exige_centro_custo?: boolean;
 }
 
 export interface CentroCustoDTO { codigo: string; descricao: string; tipo: string; }
@@ -408,6 +410,7 @@ function parsePlano(raw: unknown): PlanoConta {
     nivel: parseNum(o, 'nivel', 'Nivel'),
     accounting_account_id: parseNum(o, 'accounting_account_id') || undefined,
     is_active: o['is_active'] !== false,
+    exige_centro_custo: o['exige_centro_custo'] === true,
   };
 }
 
@@ -594,6 +597,8 @@ export async function listPlanoContasCadastro(): Promise<PlanoConta[]> {
 export interface UpdatePlanoContaDTO {
   codigo: string; descricao: string; tipo: PlanoTipo; natureza: PlanoNatureza;
   parent_code?: string; is_active?: boolean;
+  /** Nulo mantém. */
+  exige_centro_custo?: boolean;
 }
 export async function updatePlanoConta(id: number, dto: UpdatePlanoContaDTO): Promise<PlanoConta> {
   const { data } = await httpClient.put(`${BASE}/plano-contas/${id}`, dto);

@@ -5,6 +5,7 @@ import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } fro
 import { LookupField } from "@/components/ui/LookupField";
 import { loadPdmGroups, loadPdmModifiers, loadBaseItems, loadWarehouses, loadWarehousesByCode, loadItems, loadItemClassifications, loadFiscalClassifications } from "@/services/lookups";
 import { listWhereUsed, type WhereUsedRow } from "@/services/ItemStructureService";
+import { itensParecidos, type Candidato } from "@/services/itemGovernancaService";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
 //
@@ -444,6 +445,18 @@ export function Vent0200Page(): JSX.Element {
   const [conferindoUso, setConferindoUso] = useState(false);
   const [carregandoItem, setCarregandoItem] = useState(false);
   const [classificacoesFiscais, setClassificacoesFiscais] = useState<FiscalClassification[]>([]);
+  // Fase 4: itens parecidos com o nome digitado (só no cadastro novo), para
+  // não duplicar o mesmo item com outra grafia.
+  const [parecidos, setParecidos] = useState<Candidato[]>([]);
+  useEffect(() => {
+    const nome = form.name.trim();
+    if (itemEmEdicao || nome.length < 5) { setParecidos([]); return; }
+    let ativo = true;
+    const t = setTimeout(() => {
+      itensParecidos(nome).then((c) => { if (ativo) setParecidos(c); }).catch(() => { if (ativo) setParecidos([]); });
+    }, 600);
+    return () => { ativo = false; clearTimeout(t); };
+  }, [form.name, itemEmEdicao]);
 
   useEffect(() => {
     let active = true;
@@ -1385,6 +1398,12 @@ export function Vent0200Page(): JSX.Element {
                       placeholder="Nome resumido do item"
                       maxLength={60}
                     />
+                    {!itemEmEdicao && parecidos.length > 0 && (
+                      <div className="it-field-warning" id="item-parecidos" style={{ fontSize: 12, marginTop: 4, color: "var(--v-warn, #a15c00)" }}>
+                        Já existe item parecido: {parecidos.slice(0, 3).map((c) => `${c.codigo} · ${c.nome} (${Math.round(c.semelhanca * 100)}%)`).join("; ")}.
+                        Confira antes de gravar para não duplicar o cadastro.
+                      </div>
+                    )}
                     {errors.name && (
                       <span className="it-field-error">
                         <svg
@@ -1728,6 +1747,7 @@ export function Vent0200Page(): JSX.Element {
                           className="it-input it-input-num"
                           type="number"
                           min={0}
+                          step="any"
                           value={form.cyclicalCountMinStock || ""}
                           onChange={(e) =>
                             setField(
@@ -1953,6 +1973,7 @@ export function Vent0200Page(): JSX.Element {
                       className="it-input it-input-num"
                       type="number"
                       min={0}
+                      step="any"
                       value={form.lotMinimo}
                       onChange={(e) => setField("lotMinimo", e.target.value)}
                       placeholder="0"
@@ -1975,6 +1996,7 @@ export function Vent0200Page(): JSX.Element {
                       className="it-input it-input-num"
                       type="number"
                       min={0}
+                      step="any"
                       value={form.lotMultiplo}
                       onChange={(e) => setField("lotMultiplo", e.target.value)}
                       placeholder="0"
@@ -2006,6 +2028,7 @@ export function Vent0200Page(): JSX.Element {
                       className="it-input it-input-num"
                       type="number"
                       min={0}
+                      step="any"
                       value={form.estoqueSeguranca}
                       onChange={(e) =>
                         setField("estoqueSeguranca", e.target.value)
@@ -2045,6 +2068,7 @@ export function Vent0200Page(): JSX.Element {
                       className="it-input it-input-num"
                       type="number"
                       min={0}
+                      step="any"
                       value={form.consumoMedio}
                       onChange={(e) => setField("consumoMedio", e.target.value)}
                       placeholder="No período de cobertura"

@@ -3,7 +3,8 @@ import { type PedidoParaFaturar, previaFaturamentoPedido, faturarPedido } from "
 import { type FiscalExit } from "@/services/nfeService";
 import { errMessage } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadSalesOrders } from "@/services/lookups";
+import { loadInvoiceTypesById, loadSalesOrders } from "@/services/lookups";
+import { FINALIDADES_COMPRA } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -44,6 +45,8 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
   const [frete, setFrete] = useState<string>("");
   const [seguro, setSeguro] = useState<string>("");
   const [desconto, setDesconto] = useState<string>("");
+  const [finalidade, setFinalidade] = useState("");
+  const [tipoNota, setTipoNota] = useState<number | undefined>();
   const [busy, setBusy] = useState(false);
 
   async function carregar(code?: number) {
@@ -55,7 +58,7 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
       setPrevia(p);
       setQtds(Object.fromEntries(p.itens.map((i) => [i.sales_order_item_code, i.quantidade_pendente])));
       setCfop(p.cfop_sugerido); setNatureza(p.natureza_sugerida);
-      setFrete(""); setSeguro(""); setDesconto("");
+      setFrete(""); setSeguro(""); setDesconto(""); setFinalidade(""); setTipoNota(undefined);
     } catch (e) { onFeedback({ type: "error", message: errMessage(e) }); }
     finally { setBusy(false); }
   }
@@ -84,6 +87,8 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
         valor_frete: frete === "" ? undefined : Number(frete),
         valor_seguro: seguro === "" ? undefined : Number(seguro),
         valor_desconto: desconto === "" ? undefined : Number(desconto),
+        finalidade_compra: finalidade || undefined,
+        invoice_type_id: tipoNota,
         itens: parcial ? itens : undefined,
       });
       onCriada(nf);
@@ -177,12 +182,22 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
                   <option value="6101">Venda de produção — fora do estado</option>
                   <option value="5102">Revenda — dentro do estado</option>
                   <option value="6102">Revenda — fora do estado</option>
+                  <option value="6107">Venda de produção a não contribuinte — fora do estado</option>
+                  <option value="6108">Revenda a não contribuinte — fora do estado</option>
+                  <option value="5401">Venda de produção com ST — dentro do estado</option>
+                  <option value="6401">Venda de produção com ST — fora do estado</option>
                   <option value="5405">Revenda com ST — dentro do estado</option>
                 </datalist></div>
               <div className="erp-field erp-c5"><label className="erp-label erp-req">Natureza da operação</label><input className="erp-input" value={natureza} onChange={(e) => setNatureza(e.target.value)} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Frete</label><input className="erp-input num" type="number" step="0.01" value={frete} placeholder={money(estimado(previa.freight_value))} onChange={(e) => setFrete(e.target.value)} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Seguro</label><input className="erp-input num" type="number" step="0.01" value={seguro} placeholder={money(estimado(previa.insurance_value))} onChange={(e) => setSeguro(e.target.value)} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Desconto</label><input className="erp-input num" type="number" step="0.01" value={desconto} placeholder={money(estimado(previa.discount_value))} onChange={(e) => setDesconto(e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label>
+                <select className="erp-input" value={finalidade} onChange={(e) => setFinalidade(e.target.value)}>
+                  {FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "A do pedido (ou do cliente)" : f.label}</option>)}
+                </select></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Tipo de nota</label>
+                <LookupField value={tipoNota} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable onChange={(c) => setTipoNota(c ? Number(c) : undefined)} /></div>
               <div className="erp-field erp-c6"><span className="erp-field-hint">Em branco, frete, seguro e desconto do pedido entram na proporção do que está sendo faturado. Os impostos são calculados na criação da nota e conferidos na prévia antes da transmissão.</span></div>
               <div className="erp-field erp-c12" style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button className="erp-btn erp-btn-primary" onClick={() => void gerar()} disabled={busy || !previa.pode_faturar || produtos <= 0}>

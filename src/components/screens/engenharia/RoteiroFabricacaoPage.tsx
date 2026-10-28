@@ -4,7 +4,7 @@ import {
   type OperationDocumentDTO, type DocumentKind, type InspectionPoint,
   OP_ORIGINS, DOCUMENT_KINDS, INSPECTION_POINTS,
   listOperations, createOperation, updateOperation, deleteOperation,
-  listRoutes, createRoute, deleteRoute,
+  listRoutes, createRoute, deleteRoute, reactivateRoute,
   getRouteDetail, addRouteOperation, removeRouteOperation,
   createEdge, deleteEdge, getLeadTime,
   type RouteOpResourceDTO, type TimeUnit,
@@ -196,7 +196,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
     const alvo = (codigo ?? itemCode).trim();
     if (!alvo) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
     setBusy(true); setFeedback(null); setDetail(null); setLeadTime(null);
-    try { setRoutes(await listRoutes(alvo)); }
+    try { setRoutes(await listRoutes(alvo, true)); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao listar roteiros.") }); }
     finally { setBusy(false); }
   }, [itemCode]);
@@ -206,8 +206,8 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
     if (!alvo) { setFeedback({ type: "error", message: "Escolha o item antes de criar o roteiro." }); return; }
     await createRoute({ ...routeForm, item_code: alvo });
     setRouteForm(EMPTY_ROUTE);
-    setFeedback({ type: "success", message: "Roteiro criado." });
     await carregarRoteiros();
+    setFeedback({ type: "success", message: "Roteiro criado." });
   });
 
   const pedirDesativacaoRoteiro = (r: RouteDTO) => setConfirmacao({
@@ -218,9 +218,20 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
     acao: async () => {
       await deleteRoute(r.id!);
       if (detail?.route?.id === r.id) setDetail(null);
-      setFeedback({ type: "success", message: "Roteiro desativado." });
       await carregarRoteiros();
+      setFeedback({ type: "success", message: "Roteiro desativado." });
     },
+  });
+
+  const reativarRoteiro = (r: RouteDTO) => wrap(async () => {
+    const volta = await reactivateRoute(r.id!);
+    await carregarRoteiros();
+    setFeedback({
+      type: "success",
+      message: r.is_standard && !volta.is_standard
+        ? "Roteiro reativado como alternativo: outro roteiro do item já é o padrão."
+        : "Roteiro reativado. Entra no MRP e no CRP no próximo planejamento.",
+    });
   });
 
   const reloadDetail = useCallback(async (routeId: number) => {
@@ -752,20 +763,23 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
                   <div className="erp-fieldset-head">Roteiros do item — <span style={{ fontWeight: 400, opacity: .65 }}>{routes.length}</span></div>
                   <div className="erp-fieldset-body"><div className="erp-field erp-c12">
                     <table className="erp-grid">
-                      <thead><tr><th style={{ width: 60 }}>#</th><th>Descrição</th><th>Alt.</th><th>Máscara</th><th>Vigência</th><th>Padrão</th><th style={{ width: 170 }}>Ações</th></tr></thead>
+                      <thead><tr><th style={{ width: 60 }}>#</th><th>Descrição</th><th>Alt.</th><th>Máscara</th><th>Vigência</th><th>Padrão</th><th>Situação</th><th style={{ width: 170 }}>Ações</th></tr></thead>
                       <tbody>
-                        {routes.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhum roteiro. Escolha um item na barra acima.</td></tr>}
+                        {routes.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhum roteiro. Escolha um item na barra acima.</td></tr>}
                         {routes.map((r) => (
-                          <tr key={r.id} style={detail?.route?.id === r.id ? { background: "var(--v-green-soft)" } : undefined}>
+                          <tr key={r.id} style={detail?.route?.id === r.id ? { background: "var(--v-green-soft)" } : r.is_active === false ? { opacity: 0.6 } : undefined}>
                             <td>{r.code ?? r.id}</td>
                             <td style={{ fontWeight: 600 }}>{r.description || "—"}</td>
                             <td>{r.alternative}</td>
                             <td>{r.mask || "—"}</td>
                             <td>{r.valid_from ? `${r.valid_from.slice(0, 10)} → ${r.valid_to ? r.valid_to.slice(0, 10) : "sem fim"}` : "sempre"}</td>
                             <td>{r.is_standard ? <span className="erp-badge ok">Sim</span> : <span className="erp-badge erp-badge-gray">Não</span>}</td>
+                            <td>{r.is_active === false ? <span className="erp-badge erp-badge-gray">Desativado</span> : <span className="erp-badge ok">Ativo</span>}</td>
                             <td>
                               <button className="erp-btn erp-btn-sm" onClick={() => void abrirRoteiro(r)}>Abrir</button>{" "}
-                              <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => r.id && pedirDesativacaoRoteiro(r)}>Desativar</button>
+                              {r.is_active === false
+                                ? <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={() => r.id && void reativarRoteiro(r)} disabled={busy}>Reativar</button>
+                                : <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => r.id && pedirDesativacaoRoteiro(r)}>Desativar</button>}
                             </td>
                           </tr>
                         ))}
@@ -1306,7 +1320,7 @@ export function RoteiroFabricacaoPage({ code = "VENT0202" }: { code?: "VENT0115"
 
       <footer className="erp-statusbar">
         <div className="erp-status-item">Operações: <strong>{ops.length}</strong></div>
-        <div className="erp-status-item">Roteiros: <strong>{routes.length}</strong></div>
+        <div className="erp-status-item">Roteiros: <strong>{routes.filter((r) => r.is_active !== false).length}</strong></div>
         {detail?.route && <div className="erp-status-item">Etapas: <strong>{etapasOrdenadas.length}</strong></div>}
         {detail?.route && temRefugo && <div className="erp-status-item">Soltar {pecas(soltar)} para entregar {loteNum}</div>}
         <div className="erp-status-spacer" />

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { type Garantia, ROTULO_ORIGEM_GARANTIA, consultarGarantia } from "@/services/posVendaService";
 import {
   type TACallDTO, type TACallItemDTO, type DefectGroupDTO, type DefectReasonDTO, type WarrantyResponsibleDTO,
   listCalls, getCall, createCall, addCallItem, addReturnNote, generateOrders, updateCallStatus,
@@ -37,6 +38,9 @@ export function Vatc0280Page(): JSX.Element {
   const [form, setForm] = useState<TACallDTO>(EMPTY_CALL);
   const [pendingItems, setPendingItems] = useState<TACallItemDTO[]>([]);
   const [itemForm, setItemForm] = useState<TACallItemDTO>(EMPTY_ITEM);
+  // Prévia da garantia: o pós-venda decide pela série (base instalada), pela NF
+  // de venda ao cliente ou pela data informada — antes de incluir o item.
+  const [garantiaPrevia, setGarantiaPrevia] = useState<Garantia | null>(null);
 
   // status change
   const [newStatus, setNewStatus] = useState("IN_ANALYSIS");
@@ -162,7 +166,9 @@ export function Vatc0280Page(): JSX.Element {
             <tr key={i}>
               <td className="num">{it.sequence}</td><td className="num">{it.item_code}</td><td>{it.serial_number || "—"}</td>
               <td className="num">{it.quantity}</td><td className="num">{it.defect_reason_code ?? "—"}</td><td className="num">{it.warranty_days ?? 0}</td>
-              <td>{it.requested_action || "—"}</td><td>{it.in_warranty ? <span className="erp-badge ok">Em garantia</span> : (it.warranty_until ? <span className="erp-badge warn">Fora</span> : "—")}</td>
+              <td>{it.requested_action || "—"}</td><td title={it.garantia_origem ? `garantia ${ROTULO_ORIGEM_GARANTIA[it.garantia_origem] ?? it.garantia_origem}` : undefined}>
+                {it.in_warranty ? <span className="erp-badge ok">Em garantia</span> : (it.warranty_until ? <span className="erp-badge warn">Fora</span> : "—")}
+                {it.warranty_until && <span className="erp-sub"> até {new Date(`${it.warranty_until.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR")}</span>}</td>
               {removable && <td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removePendingItem(i)} disabled={busy}>Remover</button></td>}
             </tr>
           ))}
@@ -171,12 +177,24 @@ export function Vatc0280Page(): JSX.Element {
     </div>
   );
 
+  const clienteDoChamado = selected?.customer_code || form.customer_code || undefined;
+  useEffect(() => {
+    const item = itemForm.item_code;
+    if (!item) { setGarantiaPrevia(null); return; }
+    const nf = Number(itemForm.purchase_invoice_number);
+    const t = setTimeout(() => {
+      consultarGarantia({ item, serie: itemForm.serial_number || undefined, cliente: clienteDoChamado, nf: nf > 0 ? nf : undefined,
+        data_compra: itemForm.purchase_invoice_date || undefined }).then(setGarantiaPrevia).catch(() => setGarantiaPrevia(null));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [itemForm.item_code, itemForm.serial_number, itemForm.purchase_invoice_number, itemForm.purchase_invoice_date, clienteDoChamado]);
+
   const itemFormFields = (onAdd: () => void) => (
     <div className="erp-fieldset">
       <div className="erp-fieldset-head">Incluir item</div>
       <div className="erp-fieldset-body">
         <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code} loader={loadItems} entityLabel="item" onChange={(c) => setItemForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
-        <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={itemForm.quantity || ""} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
+        <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" step="any" value={itemForm.quantity || ""} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
         <div className="erp-field erp-c3"><label className="erp-label">Nº série</label><input className="erp-input" value={itemForm.serial_number ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, serial_number: e.target.value }))} /></div>
         <div className="erp-field erp-c3"><label className="erp-label">Motivo de defeito</label>
               <select className="erp-tselect" value={itemForm.defect_reason_code ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, defect_reason_code: e.target.value ? Number(e.target.value) : null }))}>
@@ -192,6 +210,18 @@ export function Vatc0280Page(): JSX.Element {
             <option value="REPAIR">Reparo</option><option value="REPLACE">Troca</option><option value="ANALYSIS">Análise</option><option value="CREDIT">Crédito</option>
           </select>
         </div>
+        {garantiaPrevia && (
+          <div className="erp-field erp-c12">
+            <div className={`erp-feedback ${garantiaPrevia.em_garantia ? "success" : "info"}`}>
+              <strong>{garantiaPrevia.em_garantia ? "Em garantia" : garantiaPrevia.ate ? "Garantia vencida" : "Garantia não determinada"}</strong>
+              {garantiaPrevia.ate ? ` até ${new Date(`${garantiaPrevia.ate.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR")}` : ` — ${garantiaPrevia.motivo}`}
+              {garantiaPrevia.origem ? ` · ${ROTULO_ORIGEM_GARANTIA[garantiaPrevia.origem] ?? garantiaPrevia.origem}` : ""}
+              {garantiaPrevia.em_garantia && ` · cobre ${[garantiaPrevia.cobre_pecas && "peças", garantiaPrevia.cobre_mao_obra && "mão de obra", garantiaPrevia.cobre_deslocamento && "deslocamento"].filter(Boolean).join(", ") || "—"}`}
+              {(garantiaPrevia.avisos ?? []).map((a) => <div key={a}>⚠ {a}</div>)}
+              {!garantiaPrevia.ate && <div><small>Sem série na base instalada nem NF de venda, informe a data da compra e os dias de garantia.</small></div>}
+            </div>
+          </div>
+        )}
         <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn" onClick={onAdd} disabled={busy}>Adicionar item</button></div>
       </div>
     </div>

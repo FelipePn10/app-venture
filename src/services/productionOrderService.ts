@@ -252,8 +252,9 @@ export async function startProductionOrder(id: number): Promise<ProductionOrderD
  * sem ela o backend deduz uma chave de OF + dia + quantidade, e duas entregas
  * iguais no mesmo dia viravam uma só.
  */
-export async function completeProductionOrder(id: number, opts: { warehouseId?: number; lot?: string; quantity?: number; final?: boolean } = {}): Promise<ProductionOrderDTO> {
+export async function completeProductionOrder(id: number, opts: { warehouseId?: number; lot?: string; quantity?: number; final?: boolean; series?: string[] } = {}): Promise<ProductionOrderDTO> {
   const body: Obj = { final: Boolean(opts.final), idempotency_key: crypto.randomUUID() };
+  if (opts.series && opts.series.length > 0) body.numeros_serie = opts.series;
   if (opts.warehouseId !== undefined) body.warehouse_id = opts.warehouseId;
   if (opts.lot) body.lot = opts.lot;
   if (opts.quantity !== undefined) body.quantity = String(opts.quantity);

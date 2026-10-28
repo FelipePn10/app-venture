@@ -42,12 +42,24 @@ export interface CustomerDTO {
   carrier_group_code?: number;
   invoice_type_code?: number;
   tax_type_code?: number;
+  /** Finalidade da compra: REVENDA, INDUSTRIALIZACAO ou USO_CONSUMO ("" = deduzir pela IE). */
+  finalidade_compra?: FinalidadeCompra;
   payment_cond_visibility: PaymentCondVisibility;
   credit_limit?: number;
   website?: string;
   blocked?: boolean;
   created_by?: string;
 }
+
+/** O que o cliente faz com a mercadoria — muda a tributação da venda. */
+export type FinalidadeCompra = '' | 'REVENDA' | 'INDUSTRIALIZACAO' | 'USO_CONSUMO';
+
+export const FINALIDADES_COMPRA: { value: FinalidadeCompra; label: string }[] = [
+  { value: '', label: 'Deduzir pela inscrição estadual' },
+  { value: 'REVENDA', label: 'Revenda' },
+  { value: 'INDUSTRIALIZACAO', label: 'Industrialização' },
+  { value: 'USO_CONSUMO', label: 'Uso, consumo ou ativo' },
+];
 
 // ─── Parsers ────────────────────────────────────────────────────────────────
 

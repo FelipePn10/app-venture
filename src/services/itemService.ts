@@ -115,7 +115,10 @@ function parseItem(raw: unknown): ItemDTO {
     is_prototype: parseBool(o, 'is_prototype', 'IsPrototype'),
     is_tool: parseBool(o, 'is_tool', 'IsTool'),
     is_process_item: parseBool(o, 'is_process_item', 'IsProcessItem'),
-    description: parseStr(pdm, 'description_technique', 'DescriptionTechnique') || parseStr(o, 'description', 'Description') || undefined,
+    // A descrição técnica do PDM é a preferida; sem ela, o nome do item. Antes o
+    // nome (que a API manda em `name`) não era lido: item sem descrição técnica
+    // aparecia como "Item 77102" em todo seletor e não era achado pelo nome.
+    description: parseStr(pdm, 'description_technique', 'DescriptionTechnique') || parseStr(o, 'description', 'Description') || parseStr(o, 'name', 'Name') || undefined,
     situation: parseStr(o, 'situation', 'Situation') || undefined,
     health: parseStr(o, 'health', 'Health') || undefined,
     group_code: parseNum(pdm, 'group_code', 'GroupCode') || undefined,

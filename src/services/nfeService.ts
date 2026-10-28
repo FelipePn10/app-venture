@@ -41,6 +41,12 @@ export interface CreateExitDTO {
   valor_seguro: number;
   valor_desconto: number;
   sales_order_code?: number;
+  /** Finalidade da compra; vazia = a do pedido ou do cliente (ou deduzida pela IE). */
+  finalidade_compra?: string;
+  /** Tipo de nota: seus indicadores (ST, diferimento, PIS/COFINS, DIFAL, ICMS isento) entram no cálculo. */
+  invoice_type_id?: number;
+  /** Texto livre das informações complementares; o sistema acrescenta o que a lei exige. */
+  informacoes_complementares?: string;
   /**
    * Cliente da nota. Informado, o sistema completa o endereço do destinatário
    * (exigido pela NF-e) a partir do cadastro — endereço de ENTREGA quando
@@ -230,6 +236,8 @@ export interface PreviaParteNFe {
 }
 
 export interface PreviaItemNFe {
+  /** Linha da nota (para corrigir o cClassTrib a partir da prévia). */
+  id: number;
   sequence: number;
   item_code?: number;
   descricao: string;
@@ -254,6 +262,20 @@ export interface PreviaItemNFe {
   base_icms_st: number;
   valor_icms_st: number;
   mva: number;
+  /** Regra de ICMS/IPI que tributou a linha; ausente = regra geral da empresa. */
+  regra_icms_ipi_id?: number;
+  /** DIFAL (ICMS e FCP da UF de destino) e crédito do Simples. */
+  valor_difal: number;
+  valor_fcp_uf_dest: number;
+  valor_credito_simples: number;
+  /** Reforma tributária: CST/cClassTrib da linha e de onde veio. */
+  cst_ibs_cbs: string;
+  cclass_trib: string;
+  cclass_trib_origem: string;
+  base_ibs_cbs: number;
+  valor_ibs: number;
+  valor_cbs: number;
+  aliquota_efetiva_cbs: number;
 }
 
 export interface PreviaTotaisNFe {
@@ -361,7 +383,15 @@ export async function previewExit(id: number): Promise<PreviaNFe> {
     emitente: parseParte(unwrapObject(o['emitente'] ?? o['Emitente'])),
     destinatario: parseParte(unwrapObject(o['destinatario'] ?? o['Destinatario'])),
     itens: unwrapArray(o['itens'] ?? o['Itens']).map(unwrapObject).map((i) => ({
+      id: parseNum(i, 'id', 'ID'),
       sequence: parseNum(i, 'sequence', 'Sequence'),
+      cst_ibs_cbs: parseStr(i, 'cst_ibs_cbs'),
+      cclass_trib: parseStr(i, 'cclass_trib'),
+      cclass_trib_origem: parseStr(i, 'cclass_trib_origem'),
+      base_ibs_cbs: parseNum(i, 'base_ibs_cbs'),
+      valor_ibs: parseNum(i, 'valor_ibs'),
+      valor_cbs: parseNum(i, 'valor_cbs'),
+      aliquota_efetiva_cbs: parseNum(i, 'aliquota_efetiva_cbs'),
       item_code: parseNum(i, 'item_code', 'ItemCode') || undefined,
       descricao: parseStr(i, 'descricao', 'Descricao'),
       ncm: parseStr(i, 'ncm', 'Ncm'),
@@ -384,6 +414,10 @@ export async function previewExit(id: number): Promise<PreviaNFe> {
       valor_cofins: parseNum(i, 'valor_cofins', 'ValorCOFINS'),
       base_icms_st: parseNum(i, 'base_icms_st', 'BaseICMSST'),
       valor_icms_st: parseNum(i, 'valor_icms_st', 'ValorICMSST'),
+      regra_icms_ipi_id: parseNum(i, 'regra_icms_ipi_id', 'RegraICMSIPI') || undefined,
+      valor_difal: parseNum(i, 'valor_difal', 'ValorDIFAL'),
+      valor_fcp_uf_dest: parseNum(i, 'valor_fcp_uf_dest', 'ValorFCPUFDest'),
+      valor_credito_simples: parseNum(i, 'valor_credito_simples', 'ValorCreditoSimples'),
       mva: parseNum(i, 'mva', 'MVA'),
     })),
     totais: {

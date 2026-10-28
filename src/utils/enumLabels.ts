@@ -82,6 +82,7 @@ const LABELS: Record<string, string> = {
   CONTRACT: 'Contrato', NF_ENTRY: 'Nota de entrada', RECEIVING: 'Recebimento',
   PO_CONFIRMATION: 'Confirmação de pedido', ASN: 'Aviso de remessa', INVOICE: 'Nota fiscal',
   FOB: 'FOB', CIF: 'CIF', FREIGHT: 'Frete',
+  SEM_FRETE: 'Sem frete', DAF: 'DAF', CONVENIO: 'Convênio', RETIRA: 'Retira', CORTESIA: 'Cortesia', TERCEIROS: 'Por conta de terceiros',
   ADVANCE_VALUE: 'Valor de adiantamento', FREIGHT_TYPE: 'Tipo de frete',
   JSON: 'JSON',
 
@@ -105,6 +106,10 @@ const LABELS: Record<string, string> = {
 
   // Utilização do material comprado
   INDUSTRIALIZACAO: 'Industrialização', CONSUMO: 'Consumo', IMOBILIZADO: 'Imobilizado',
+  // Utilização, indicador e tipo de utilização do CFOP (VFIS0300).
+  INDUSTRIALIZACAO_COMERCIO: 'Industrialização/comércio', USO_CONSUMO: 'Uso e consumo', ENERGIA_ELETRICA: 'Energia elétrica',
+  TELECOMUNICACAO: 'Telecomunicação', VENDA_COMERCIAL_EXPORTADORA: 'Venda a comercial exportadora',
+  COMPRA_FIM_ESPECIFICO_EXPORTACAO: 'Compra com fim específico de exportação',
 };
 
 export function enumLabel(value: unknown): string {

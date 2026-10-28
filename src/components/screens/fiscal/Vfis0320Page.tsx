@@ -8,7 +8,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCustomers, loadInvoiceTypesById, loadLegalDevicesById } from "@/services/lookups";
+import { loadCustomers, loadInvoiceTypesById, loadLegalDevicesById, loadSuppliers } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const OPS: OperationType[] = ["AMBAS", "ENTRADA", "SAIDA", "CUSTOS"];
@@ -130,12 +130,24 @@ export function Vfis0320Page(): JSX.Element {
             <div className="erp-field erp-c12"><div className="fis-sec">Restringir a</div></div>
             <div className="erp-field erp-c3"><label className="erp-label">Cliente</label>
               <LookupField value={form.customer_code} loader={loadCustomers} entityLabel="cliente" placeholder="Todos" clearable onChange={(c) => setF("customer_code", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+              <LookupField value={form.supplier_code} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Todos" clearable
+                onChange={(c) => setF("supplier_code", c ? Number(c) : undefined)} />
+              <span className="erp-hint">Só para regra de entrada: regra com fornecedor não vale na nota de saída.</span></div>
             <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento do cliente</label>
               <input className="erp-input num" type="number" value={form.customer_establishment_code ?? ""} onChange={(e) => setF("customer_establishment_code", e.target.value ? Number(e.target.value) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo de NF — saída</label>
               <LookupField value={form.invoice_type_exit_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_exit_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo de NF — entrada</label>
               <LookupField value={form.invoice_type_entry_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_entry_id", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label>
+              <select className="erp-input" value={form.finalidade_compra ?? ""} onChange={(e) => setF("finalidade_compra", e.target.value || undefined)}>
+                <option value="">Qualquer</option>
+                <option value="REVENDA">Revenda</option>
+                <option value="INDUSTRIALIZACAO">Industrialização</option>
+                <option value="USO_CONSUMO">Uso, consumo ou ativo</option>
+              </select>
+              <span className="fis-hint">Vale só para vendas com esta finalidade (do pedido ou do cliente).</span></div>
             <div className="erp-field erp-c6"><label className="erp-label">Descrição</label>
               <input className="erp-input" value={form.description_full ?? ""} placeholder="Para que serve este parâmetro" onChange={(e) => setF("description_full", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}>
@@ -148,9 +160,9 @@ export function Vfis0320Page(): JSX.Element {
         <div className="erp-fieldset"><div className="erp-fieldset-head">ICMS — alíquota, redução, diferimento e acréscimos</div><div className="erp-fieldset-body">
             <div className="erp-field erp-c12"><div className="fis-sec">Alíquota</div></div>
             <div className="erp-field erp-c3"><label className="erp-label">% ICMS Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_pct_contrib} onChange={(e) => setF("icms_pct_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_pct_contrib} onChange={(e) => setF("icms_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">% ICMS Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_pct_non_contrib} onChange={(e) => setF("icms_pct_non_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_pct_non_contrib} onChange={(e) => setF("icms_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">CST Contrib.</label>
               <input className="erp-input" value={form.cst_icms_contrib} onChange={(e) => setF("cst_icms_contrib", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">CST Não-Contrib.</label>
@@ -170,12 +182,12 @@ export function Vfis0320Page(): JSX.Element {
 
             <div className="erp-field erp-c12"><div className="fis-sec">Redução</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_red_pct_contrib ?? ""} onChange={(e) => setF("icms_red_pct_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_red_pct_contrib ?? ""} onChange={(e) => setF("icms_red_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Incide sobre</label>
               <select className="erp-input" value={form.icms_red_target_contrib ?? ""} onChange={(e) => setF("icms_red_target_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_red_pct_non_contrib ?? ""} onChange={(e) => setF("icms_red_pct_non_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_red_pct_non_contrib ?? ""} onChange={(e) => setF("icms_red_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Incide sobre</label>
               <select className="erp-input" value={form.icms_red_target_non_contrib ?? ""} onChange={(e) => setF("icms_red_target_non_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
@@ -186,7 +198,7 @@ export function Vfis0320Page(): JSX.Element {
 
             <div className="erp-field erp-c12"><div className="fis-sec">Diferimento</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% diferimento</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_deferral_pct ?? ""} onChange={(e) => setF("icms_deferral_pct", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_deferral_pct ?? ""} onChange={(e) => setF("icms_deferral_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Incide sobre</label>
               <select className="erp-input" value={form.icms_deferral_target ?? ""} onChange={(e) => setF("icms_deferral_target", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
@@ -197,44 +209,54 @@ export function Vfis0320Page(): JSX.Element {
 
             <div className="erp-field erp-c12"><div className="fis-sec">Acréscimos (Fundo de Combate à Pobreza e outros)</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% acréscimo Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_acres_pct_contrib ?? ""} onChange={(e) => setF("icms_acres_pct_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_acres_pct_contrib ?? ""} onChange={(e) => setF("icms_acres_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Natureza</label>
               <select className="erp-input" value={form.icms_acres_type_contrib ?? ""} onChange={(e) => setF("icms_acres_type_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{ACRES_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2" style={{ alignSelf: "flex-end" }}>
               <label className="erp-check"><input type="checkbox" checked={!!form.icms_acres_sum_contrib} onChange={(e) => setF("icms_acres_sum_contrib", e.target.checked)} /> Soma ao ICMS</label></div>
             <div className="erp-field erp-c2"><label className="erp-label">% acréscimo Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_acres_pct_non_contrib ?? ""} onChange={(e) => setF("icms_acres_pct_non_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_acres_pct_non_contrib ?? ""} onChange={(e) => setF("icms_acres_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Natureza</label>
               <select className="erp-input" value={form.icms_acres_type_non_contrib ?? ""} onChange={(e) => setF("icms_acres_type_non_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{ACRES_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2" style={{ alignSelf: "flex-end" }}>
               <label className="erp-check"><input type="checkbox" checked={!!form.icms_acres_sum_non_contrib} onChange={(e) => setF("icms_acres_sum_non_contrib", e.target.checked)} /> Soma ao ICMS</label></div>
+            <div className="erp-field erp-c12"><span className="fis-hint">
+              FCP do produto: na venda para não contribuinte de outro estado, o acréscimo Não-Contrib. com natureza Fundo de Combate à Pobreza é o FCP
+              que a nota recolhe junto com o DIFAL. Informe-o quando o estado de destino cobra FCP sobre este produto; sem ele vale o FCP geral da tabela de ICMS por UF (só RJ e SE).
+            </span></div>
         </div></div>
         )}
 
         {bloco === "st" && (
         <div className="erp-fieldset"><div className="erp-fieldset-head">Substituição tributária e DIFAL</div><div className="erp-fieldset-body">
             <div className="erp-field erp-c12"><div className="fis-sec">Substituição</div></div>
+            <div className="erp-field erp-c2"><label className="erp-label">MVA original (%)</label>
+              <input className="erp-input num" type="number" step="0.0001" min="0" value={form.mva_pct ?? ""} onChange={(e) => setF("mva_pct", e.target.value ? Number(e.target.value) : undefined)} />
+              <span className="fis-hint">Com MVA, a venda para contribuinte que revende ou industrializa calcula a ST automaticamente.</span></div>
+            <div className="erp-field erp-c4" style={{ alignSelf: "flex-end" }}>
+              <label className="erp-check"><input type="checkbox" checked={form.mva_ajustar_interestadual ?? true} onChange={(e) => setF("mva_ajustar_interestadual", e.target.checked)} /> Ajustar a MVA na venda para outro estado</label>
+              <span className="fis-hint">Fórmula do Convênio ICMS 142/18. Desmarque quando o protocolo do produto já traz a MVA ajustada.</span></div>
             <div className="erp-field erp-c2"><label className="erp-label">% ST Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_subst_pct_contrib ?? ""} onChange={(e) => setF("icms_subst_pct_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_subst_pct_contrib ?? ""} onChange={(e) => setF("icms_subst_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% ST Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_subst_pct_non_contrib ?? ""} onChange={(e) => setF("icms_subst_pct_non_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_subst_pct_non_contrib ?? ""} onChange={(e) => setF("icms_subst_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% ST uso e consumo</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_subst_pct_contrib_uc ?? ""} onChange={(e) => setF("icms_subst_pct_contrib_uc", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_subst_pct_contrib_uc ?? ""} onChange={(e) => setF("icms_subst_pct_contrib_uc", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução da ST</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_subst_red_pct ?? ""} onChange={(e) => setF("icms_subst_red_pct", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_subst_red_pct ?? ""} onChange={(e) => setF("icms_subst_red_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% ICMS interno</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_internal_pct ?? ""} onChange={(e) => setF("icms_internal_pct", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_internal_pct ?? ""} onChange={(e) => setF("icms_internal_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Modalidade da base (modBCST)</label>
               <select className="erp-input" value={form.bc_icms_st_modality ?? ""} onChange={(e) => setF("bc_icms_st_modality", e.target.value || undefined)}>
                 <option value="">—</option>{BC_ST_MODALITIES.map((m) => <option key={m} value={m}>{enumLabel(m)}</option>)}</select></div>
-            <div className="erp-field erp-c2"><label className="erp-label">% p/ ST Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_pct_for_st_contrib ?? ""} onChange={(e) => setF("icms_pct_for_st_contrib", Number(e.target.value))} /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">% p/ ST Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_pct_for_st_non_contrib ?? ""} onChange={(e) => setF("icms_pct_for_st_non_contrib", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label" title="Alíquota interna do estado de destino usada no cálculo da ST; vazio = a da tabela de ICMS por UF">% alíq. destino na ST — Contrib.</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_pct_for_st_contrib ?? ""} onChange={(e) => setF("icms_pct_for_st_contrib", Number(e.target.value))} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label" title="Alíquota interna do estado de destino usada no cálculo da ST; vazio = a da tabela de ICMS por UF">% alíq. destino na ST — Não-Contrib.</label>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_pct_for_st_non_contrib ?? ""} onChange={(e) => setF("icms_pct_for_st_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% FCP-ST partilha</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.fcp_st_partilha_pct ?? ""} onChange={(e) => setF("fcp_st_partilha_pct", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.fcp_st_partilha_pct ?? ""} onChange={(e) => setF("fcp_st_partilha_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Disp. legal ST Contrib.</label>
               <LookupField value={form.legal_device_icms_subst_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_icms_subst_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Disp. legal ST Não-Contrib.</label>
@@ -244,14 +266,14 @@ export function Vfis0320Page(): JSX.Element {
 
             <div className="erp-field erp-c12"><div className="fis-sec">Acréscimos da ST</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% acréscimo Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_st_acres_pct_contrib ?? ""} onChange={(e) => setF("icms_st_acres_pct_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_st_acres_pct_contrib ?? ""} onChange={(e) => setF("icms_st_acres_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Natureza</label>
               <select className="erp-input" value={form.icms_st_acres_type_contrib ?? ""} onChange={(e) => setF("icms_st_acres_type_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{ACRES_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2" style={{ alignSelf: "flex-end" }}>
               <label className="erp-check"><input type="checkbox" checked={!!form.icms_st_acres_sum_contrib} onChange={(e) => setF("icms_st_acres_sum_contrib", e.target.checked)} /> Soma à ST</label></div>
             <div className="erp-field erp-c2"><label className="erp-label">% acréscimo Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_st_acres_pct_non_contrib ?? ""} onChange={(e) => setF("icms_st_acres_pct_non_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_st_acres_pct_non_contrib ?? ""} onChange={(e) => setF("icms_st_acres_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Natureza</label>
               <select className="erp-input" value={form.icms_st_acres_type_non_contrib ?? ""} onChange={(e) => setF("icms_st_acres_type_non_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{ACRES_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
@@ -263,14 +285,14 @@ export function Vfis0320Page(): JSX.Element {
               <select className="erp-input" value={form.icms_difal_type ?? ""} onChange={(e) => setF("icms_difal_type", e.target.value || undefined)}>
                 <option value="">—</option>{DIFAL_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_difal_red_pct ?? ""} onChange={(e) => setF("icms_difal_red_pct", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_difal_red_pct ?? ""} onChange={(e) => setF("icms_difal_red_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução na compra</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.difal_purchase_red_pct ?? ""} onChange={(e) => setF("difal_purchase_red_pct", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.difal_purchase_red_pct ?? ""} onChange={(e) => setF("difal_purchase_red_pct", Number(e.target.value))} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Incide sobre (compra)</label>
               <select className="erp-input" value={form.difal_purchase_red_target ?? ""} onChange={(e) => setF("difal_purchase_red_target", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c2"><label className="erp-label">Dif. alíquota ST uso/consumo</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.dif_aliq_st_contrib_uc ?? ""} onChange={(e) => setF("dif_aliq_st_contrib_uc", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.dif_aliq_st_contrib_uc ?? ""} onChange={(e) => setF("dif_aliq_st_contrib_uc", Number(e.target.value))} /></div>
         </div></div>
         )}
 
@@ -284,14 +306,14 @@ export function Vfis0320Page(): JSX.Element {
               <input className="erp-input" value={form.origem_clas_ipi ?? ""} onChange={(e) => setF("origem_clas_ipi", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c12"><div className="fis-sec">Redução</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.ipi_red_pct_contrib ?? ""} onChange={(e) => setF("ipi_red_pct_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.ipi_red_pct_contrib ?? ""} onChange={(e) => setF("ipi_red_pct_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Incide sobre</label>
               <select className="erp-input" value={form.ipi_red_target_contrib ?? ""} onChange={(e) => setF("ipi_red_target_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
             <div className="erp-field erp-c3"><label className="erp-label">Dispositivo legal Contrib.</label>
               <LookupField value={form.legal_device_ipi_contrib_id} loader={loadLegalDevicesById} entityLabel="dispositivo legal" placeholder="Opcional" clearable onChange={(c) => setF("legal_device_ipi_contrib_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% redução Não-Contrib.</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.ipi_red_pct_non_contrib ?? ""} onChange={(e) => setF("ipi_red_pct_non_contrib", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.ipi_red_pct_non_contrib ?? ""} onChange={(e) => setF("ipi_red_pct_non_contrib", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Incide sobre</label>
               <select className="erp-input" value={form.ipi_red_target_non_contrib ?? ""} onChange={(e) => setF("ipi_red_target_non_contrib", e.target.value || undefined)}>
                 <option value="">—</option>{RED_TARGETS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>
@@ -311,9 +333,9 @@ export function Vfis0320Page(): JSX.Element {
 
             <div className="erp-field erp-c12"><div className="fis-sec">FCI — conteúdo de importação</div></div>
             <div className="erp-field erp-c2"><label className="erp-label">% ICMS origens 1, 2, 3 e 8</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_pct_origins_1238 ?? ""} onChange={(e) => setF("icms_pct_origins_1238", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_pct_origins_1238 ?? ""} onChange={(e) => setF("icms_pct_origins_1238", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">% ST origens 1, 2, 3 e 8</label>
-              <input className="erp-input num" type="number" step="0.01" value={form.icms_subst_pct_origins_1238 ?? ""} onChange={(e) => setF("icms_subst_pct_origins_1238", Number(e.target.value))} /></div>
+              <input className="erp-input num" type="number" step="0.0001" value={form.icms_subst_pct_origins_1238 ?? ""} onChange={(e) => setF("icms_subst_pct_origins_1238", Number(e.target.value))} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">CST do FCI</label>
               <input className="erp-input" value={form.cst_icms_fci ?? ""} onChange={(e) => setF("cst_icms_fci", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c3" style={{ alignSelf: "flex-end" }}>
@@ -329,18 +351,25 @@ export function Vfis0320Page(): JSX.Element {
         </div></div>
         )}
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Parâmetros — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Parâmetros — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c12"><p className="erp-note" style={{ margin: 0 }}>
+            Redução, substituição e diferimento de ICMS (a antiga VFIS0330) ficam aqui, na regra — é a única que a nota usa.
+            Para conferir qual regra vale numa venda, use o <strong>Simulador de Tributação (VFIS0325)</strong>.
+          </p></div>
+          <div className="erp-field erp-c12">
           <table className="erp-grid">
-            <thead><tr><th>#</th><th>UF</th><th>NCM / Item</th><th>Operação</th><th>% Contrib.</th><th>% Não-Contrib.</th><th>CST</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+            <thead><tr><th>#</th><th>UF</th><th>NCM / Item</th><th>Operação</th><th>% Contrib.</th><th>% Não-Contrib.</th><th>CST</th><th>Finalidade</th><th>MVA (ST)</th><th style={{ width: 80 }}>Ações</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhum parâmetro cadastrado.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={10} className="erp-grid-empty">Nenhum parâmetro cadastrado.</td></tr>}
               {list.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.id}</td><td style={{ fontWeight: 600 }}>{p.uf}</td>
+                  <td>{p.id}{p.origem_reducao_id ? <span className="erp-badge erp-badge-gray" title={`Copiada da regra ${p.origem_reducao_id} da antiga VFIS0330`} style={{ marginLeft: 4 }}>da VFIS0330</span> : null}</td><td style={{ fontWeight: 600 }}>{p.uf}</td>
                   <td>{p.ncm_code || (p.item_code ? `Item ${p.item_code}` : "—")}</td>
                   <td>{p.operation_type}</td>
                   <td>{p.icms_pct_contrib}</td><td>{p.icms_pct_non_contrib}</td>
-                  <td>{p.cst_icms_contrib}/{p.cst_icms_non_contrib}</td>
+                  <td>{p.cst_icms_contrib || p.cst_icms_non_contrib ? `${p.cst_icms_contrib || "—"} / ${p.cst_icms_non_contrib || "—"}` : "—"}</td>
+                  <td>{p.finalidade_compra ? ({ REVENDA: "Revenda", INDUSTRIALIZACAO: "Industrialização", USO_CONSUMO: "Uso e consumo" } as Record<string, string>)[p.finalidade_compra] ?? p.finalidade_compra : "Qualquer"}</td>
+                  <td>{p.mva_pct ? `${p.mva_pct}%${p.mva_ajustar_interestadual === false ? "" : " (ajusta)"}` : "—"}</td>
                   <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => edit(p)}>Editar</button></td>
                 </tr>
               ))}

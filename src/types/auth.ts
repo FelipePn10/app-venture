@@ -7,6 +7,8 @@ export interface LoginPayload {
    * dia e some quando o app fecha.
    */
   rememberMe?: boolean;
+  /** Empresa escolhida, quando o usuário tem acesso a mais de uma. */
+  enterpriseCode?: number;
 }
 
 export interface AuthUser {

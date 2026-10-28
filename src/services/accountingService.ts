@@ -245,6 +245,10 @@ export interface ParametrosContabilizacao {
   cofins_recolher_account_id?: number;
   cmv_account_id?: number;
   estoque_account_id?: number;
+  ibs_vendas_account_id?: number;
+  ibs_recolher_account_id?: number;
+  cbs_vendas_account_id?: number;
+  cbs_recolher_account_id?: number;
 }
 
 /** Os três interruptores do ciclo além da entrada. */
@@ -285,6 +289,10 @@ export const CAMPOS_CONTA_PARAMETRO: Array<{ campo: keyof ParametrosContabilizac
   { campo: 'cofins_recolher_account_id', rotulo: 'COFINS a recolher', grupo: 'NF-e de saída' },
   { campo: 'cmv_account_id', rotulo: 'Custo da mercadoria vendida (CMV)', grupo: 'NF-e de saída' },
   { campo: 'estoque_account_id', rotulo: 'Estoque (baixa pelo custo médio)', grupo: 'NF-e de saída' },
+  { campo: 'ibs_vendas_account_id', rotulo: 'IBS sobre vendas (dedução, a partir de 2027)', grupo: 'NF-e de saída' },
+  { campo: 'ibs_recolher_account_id', rotulo: 'IBS a recolher (a partir de 2027)', grupo: 'NF-e de saída' },
+  { campo: 'cbs_vendas_account_id', rotulo: 'CBS sobre vendas (dedução, a partir de 2027)', grupo: 'NF-e de saída' },
+  { campo: 'cbs_recolher_account_id', rotulo: 'CBS a recolher (a partir de 2027)', grupo: 'NF-e de saída' },
 ];
 
 export const GRUPOS_CONTA_PARAMETRO = ['Obrigatórias', 'Impostos a recuperar', 'Retenções a recolher', 'Pagamentos e recebimentos', 'NF-e de saída'];
@@ -329,6 +337,10 @@ function parseParametros(raw: unknown): ParametrosContabilizacao | null {
     cofins_recolher_account_id: opt('cofins_recolher_account_id'),
     cmv_account_id: opt('cmv_account_id'),
     estoque_account_id: opt('estoque_account_id'),
+    ibs_vendas_account_id: opt('ibs_vendas_account_id'),
+    ibs_recolher_account_id: opt('ibs_recolher_account_id'),
+    cbs_vendas_account_id: opt('cbs_vendas_account_id'),
+    cbs_recolher_account_id: opt('cbs_recolher_account_id'),
   };
 }
 
