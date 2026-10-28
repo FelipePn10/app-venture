@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { enumLabel } from "@/utils/enumLabels";
 import {
-  type CustomerDTO, type SupportRef, type CustomerDocType, type PaymentCondVisibility, type AddressType,
-  DOC_TYPES, VISIBILITIES, ADDRESS_TYPES,
+  type CustomerDTO, type SupportRef, type CustomerDocType, type PaymentCondVisibility, type AddressType, type FinalidadeCompra,
+  DOC_TYPES, VISIBILITIES, ADDRESS_TYPES, FINALIDADES_COMPRA,
   listRefs, listCustomers, getCustomer, createCustomer, updateCustomer, blockCustomer, unblockCustomer,
   addCustomerAddress, addCustomerContact, listEstablishments, lookupCnpj, exportCustomers, exportCustomerPDF, type CnpjLookup,
 } from "@/services/customerService";
@@ -115,6 +115,7 @@ export function Vcli0500Page(): JSX.Element {
         sales_table_code: parseNum(p, "sales_table_code", "SalesTableCode", "sales_table_id", "SalesTableID"), carrier_code: parseNum(p, "carrier_code", "CarrierCode", "carrier_id", "CarrierID"),
         carrier_group_code: parseNum(p, "carrier_group_code", "CarrierGroupCode", "carrier_group_id", "CarrierGroupID"), invoice_type_code: parseNum(p, "invoice_type_code", "InvoiceTypeCode", "invoice_type_id", "InvoiceTypeID"),
         tax_type_code: parseNum(p, "tax_type_code", "TaxTypeCode", "tax_type_id", "TaxTypeID"),
+        finalidade_compra: (parseStr(p, "finalidade_compra", "FinalidadeCompra") || "") as FinalidadeCompra,
         payment_cond_visibility: (parseStr(p, "payment_cond_visibility", "PaymentCondVisibility") || "SOMENTE_VINCULADOS") as PaymentCondVisibility,
         credit_limit: parseNum(p, "credit_limit", "CreditLimit"), website: parseStr(p, "website", "Website"),
         blocked: (p.blocked ?? p.Blocked) as boolean ?? false,
@@ -271,6 +272,7 @@ export function Vcli0500Page(): JSX.Element {
                 {refSelect("Grupo Portadores", "carrier_group_code", refs.cgroups)}
                 {refSelect("Tipo de NF", "invoice_type_code", refs.invtypes)}
                 {refSelect("Tipo de Imposto", "tax_type_code", refs.taxtypes)}
+                <div className="erp-field erp-c4"><label className="erp-label">Finalidade da compra</label><select className="erp-input" value={form.finalidade_compra ?? ""} onChange={(e) => setF("finalidade_compra", e.target.value as FinalidadeCompra)}>{FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}</select><span className="erp-field-hint">Uso, consumo ou ativo: o cliente é consumidor final mesmo com IE (IPI na base do ICMS, sem diferimento).</span></div>
                 <div className="erp-field erp-c4"><label className="erp-label">Visib. cond. pagto</label><select className="erp-input" value={form.payment_cond_visibility} onChange={(e) => setF("payment_cond_visibility", e.target.value as PaymentCondVisibility)}>{VISIBILITIES.map((v) => <option key={v} value={v}>{enumLabel(v)}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Limite de crédito</label><input className="erp-input num" type="number" step="0.01" value={form.credit_limit ?? ""} onChange={(e) => setF("credit_limit", e.target.value ? Number(e.target.value) : undefined)} /></div>
                 <div className="erp-field erp-c5"><label className="erp-label">Website</label><input className="erp-input" value={form.website ?? ""} onChange={(e) => setF("website", e.target.value)} /></div>

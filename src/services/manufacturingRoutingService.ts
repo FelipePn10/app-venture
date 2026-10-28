@@ -375,8 +375,11 @@ export async function deleteOperation(id: number): Promise<void> {
 }
 
 // ── Roteiros ──
-export async function listRoutes(itemCode: string): Promise<RouteDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/routes`, { params: { item_code: itemCode } });
+/** `incluirInativos` traz também os roteiros desativados, para a tela reativá-los. */
+export async function listRoutes(itemCode: string, incluirInativos = false): Promise<RouteDTO[]> {
+  const params: Record<string, string> = { item_code: itemCode };
+  if (incluirInativos) params.incluir_inativos = 'true';
+  const { data } = await httpClient.get(`${BASE}/routes`, { params });
   return unwrapArray(data).map(parseRoute);
 }
 export async function createRoute(dto: RouteDTO): Promise<RouteDTO> {
@@ -389,6 +392,11 @@ export async function updateRoute(id: number, dto: Partial<RouteDTO> & { situati
 }
 export async function deleteRoute(id: number): Promise<void> {
   await httpClient.delete(`${BASE}/routes/${id}`);
+}
+/** Devolve o roteiro desativado ao planejamento; se outro já é o padrão, volta como alternativo. */
+export async function reactivateRoute(id: number): Promise<RouteDTO> {
+  const { data } = await httpClient.post(`${BASE}/routes/${id}/reativar`, {});
+  return parseRoute(data);
 }
 export async function getRouteDetail(id: number): Promise<RouteDetail> {
   const { data } = await httpClient.get(`${BASE}/routes/${id}`);

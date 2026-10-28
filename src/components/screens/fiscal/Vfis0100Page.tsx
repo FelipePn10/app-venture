@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import {
   type FiscalConfig,
   type RegimeTributario,
-  type FocusAmbiente,
   getFiscalConfig,
   updateFiscalConfig,
   updateFiscalBranding,
@@ -12,30 +11,11 @@ import {
   MAX_BRANDING_LOGO_BYTES,
 } from "@/services/fiscalConfigService";
 import { errMessage } from "@/services/fiscalShared";
-import { validateCNPJOrCPF } from "@/utils/validation";
+import { openErpScreenWindow } from "@/utils/windowManager";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-
-// Os dois primeiros dígitos do código IBGE do município são o código da UF. Um
-// código de outra UF passa na NF-e, mas sai errado no CT-e, na NFS-e e no SPED.
-// O backend confere a mesma regra; aqui ela só avisa antes de salvar.
-const PREFIXO_IBGE_DA_UF: Record<string, string> = {
-  RO: "11", AC: "12", AM: "13", RR: "14", PA: "15", AP: "16", TO: "17",
-  MA: "21", PI: "22", CE: "23", RN: "24", PB: "25", PE: "26", AL: "27", SE: "28", BA: "29",
-  MG: "31", ES: "32", RJ: "33", SP: "35", PR: "41", SC: "42", RS: "43",
-  MS: "50", MT: "51", GO: "52", DF: "53",
-};
-
-function erroDoCodigoIBGE(codigo: string, uf: string): string | null {
-  const c = codigo.trim();
-  if (c === "" || /^0+$/.test(c)) return null;
-  if (!/^\d{7}$/.test(c)) return "O código IBGE do município tem 7 dígitos (ex.: 4106902 = Curitiba).";
-  const prefixo = PREFIXO_IBGE_DA_UF[uf.trim().toUpperCase()];
-  if (prefixo && !c.startsWith(prefixo)) return `O código IBGE ${c} não é de município do ${uf.toUpperCase()} (os do ${uf.toUpperCase()} começam com ${prefixo}).`;
-  return null;
-}
 
 const EMPTY: FiscalConfig = {
   cnpj_empresa: "",
@@ -53,6 +33,9 @@ const EMPTY: FiscalConfig = {
   telefone: "",
   icms_interno_aliquota: 0,
   icms_diferimento_percentual: 0,
+  exigir_regra_icms_ipi: false,
+  aliquota_credito_simples: 0,
+  cbenef_diferimento: "",
   focus_nfe_configured: false,
   focus_nfe_token: "",
   focus_nfe_ambiente: "homologacao",
@@ -117,19 +100,19 @@ export function Vfis0100Page(): JSX.Element {
   const setNum = useCallback((key: keyof FiscalConfig, raw: string) => {
     setField(key, (raw === "" ? 0 : Number(raw)) as FiscalConfig[typeof key]);
   }, [setField]);
+  // ICMS, diferimento, juros e multa são gravados em FRAÇÃO (0,195) — é o que o
+  // motor fiscal lê. Na tela entram em % (19,5), como em toda nota e tabela.
+  const setPct = useCallback((key: keyof FiscalConfig, raw: string) => {
+    setField(key, (raw === "" ? 0 : Number((Number(raw) / 100).toFixed(6))) as FiscalConfig[typeof key]);
+  }, [setField]);
+  const emPct = (v: unknown) => Number((Number(v || 0) * 100).toFixed(4));
+
+  const semIdentificacao = !form.cnpj_empresa.trim() || !form.razao_social.trim();
+  const travado = !!form.focus_producao_travado;
 
   async function handleSalvar() {
-    if (!form.cnpj_empresa.trim() || !form.razao_social.trim() || !form.uf_empresa.trim()) {
-      setFeedback({ type: "error", message: "CNPJ, Razão Social e UF da empresa são obrigatórios." });
-      return;
-    }
-    const erroIBGE = erroDoCodigoIBGE(form.codigo_municipio ?? "", form.uf_empresa);
-    if (erroIBGE) {
-      setFeedback({ type: "error", message: erroIBGE });
-      return;
-    }
-    if (!validateCNPJOrCPF(form.cnpj_empresa)) {
-      setFeedback({ type: "error", message: "CNPJ/CPF da empresa inválido (dígito verificador não confere)." });
+    if (semIdentificacao) {
+      setFeedback({ type: "error", message: "A empresa ainda não tem identificação (CNPJ, razão social, endereço): cadastre na VEMP0100 antes dos parâmetros fiscais." });
       return;
     }
     setIsSaving(true);
@@ -207,48 +190,21 @@ export function Vfis0100Page(): JSX.Element {
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Emitente   — <span style={{fontWeight:400,opacity:0.65}}>Identificação da empresa</span></div><div className="erp-fieldset-body">
-            
-              <div className="erp-field erp-c3">
-                <label className="erp-label erp-req">CNPJ</label>
-                <input className="erp-input" value={form.cnpj_empresa} placeholder="00000000000000"
-                  onChange={(e) => setField("cnpj_empresa", e.target.value)} />
-                {form.cnpj_empresa.trim() && (
-                  <span className="erp-field-hint" style={{ color: validateCNPJOrCPF(form.cnpj_empresa) ? "#1e6030" : "#b91c1c" }}>
-                    {validateCNPJOrCPF(form.cnpj_empresa) ? "✓ CNPJ/CPF válido" : "✗ CNPJ/CPF inválido"}
-                  </span>
-                )}
-              </div>
-              <div className="erp-field erp-c6">
-                <label className="erp-label erp-req">Razão Social</label>
-                <input className="erp-input" value={form.razao_social}
-                  onChange={(e) => setField("razao_social", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c3">
-                <label className="erp-label">Inscrição Estadual</label>
-                <input className="erp-input" value={form.ie_empresa ?? ""}
-                  onChange={(e) => setField("ie_empresa", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c4">
-                <label className="erp-label erp-req">Regime Tributário</label>
-                <select className="erp-input" value={form.regime_tributario}
-                  onChange={(e) => setField("regime_tributario", e.target.value as RegimeTributario)}>
-                  {REGIMES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-              <div className="erp-field erp-c2">
-                <label className="erp-label erp-req">UF</label>
-                <input className="erp-input" maxLength={2} value={form.uf_empresa}
-                  onChange={(e) => setField("uf_empresa", e.target.value.toUpperCase())} />
-              </div>
-              <div className="erp-field erp-c3">
-                <label className="erp-label">Telefone</label>
-                <input className="erp-input" value={form.telefone ?? ""} placeholder="41999990000"
-                  onChange={(e) => setField("telefone", e.target.value)} />
-              </div>
-            
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Empresa — <span style={{fontWeight:400,opacity:0.65}}>identificação mantida na VEMP0100</span></div><div className="erp-fieldset-body">
+          <div className="erp-field erp-c9">
+            {semIdentificacao ? <p style={{ margin: 0 }}>A empresa ainda não tem identificação. Cadastre CNPJ, razão social e endereço na VEMP0100.</p> : (
+              <p style={{ margin: 0 }}>
+                <b>{form.razao_social}</b>{form.nome_fantasia ? <> ({form.nome_fantasia})</> : null} · CNPJ {form.cnpj_empresa}{form.ie_empresa ? <> · IE {form.ie_empresa}</> : null}
+                {" "}· {REGIMES.find((r) => r.value === form.regime_tributario)?.label ?? "—"}<br />
+                {[form.logradouro, form.numero, form.complemento, form.bairro].filter(Boolean).join(", ") || "Endereço não informado"}
+                {" "}— {form.municipio || "—"}/{form.uf_empresa}{form.codigo_municipio ? <> (IBGE {form.codigo_municipio})</> : null}{form.cep ? <> · CEP {form.cep}</> : null}
+              </p>
+            )}
           </div>
-        </div>
+          <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}>
+            <button className="erp-btn" onClick={() => void openErpScreenWindow("VEMP0100")}>Alterar na VEMP0100</button>
+          </div>
+        </div></div>
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Identidade visual   — <span style={{fontWeight:400,opacity:0.65}}>Logo persistido usado em relatórios e romaneios</span></div><div className="erp-fieldset-body">
           <div className="erp-field erp-c4">
@@ -280,112 +236,96 @@ export function Vfis0100Page(): JSX.Element {
           </div>
         </div></div>
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Endereço   — <span style={{fontWeight:400,opacity:0.65}}>Obrigatório para autorização da NF-e na SEFAZ</span></div><div className="erp-fieldset-body">
-            
-              <div className="erp-field erp-c6">
-                <label className="erp-label">Logradouro</label>
-                <input className="erp-input" value={form.logradouro ?? ""}
-                  onChange={(e) => setField("logradouro", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c2">
-                <label className="erp-label">Número</label>
-                <input className="erp-input" value={form.numero ?? ""}
-                  onChange={(e) => setField("numero", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c4">
-                <label className="erp-label">Complemento</label>
-                <input className="erp-input" value={form.complemento ?? ""}
-                  onChange={(e) => setField("complemento", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c4">
-                <label className="erp-label">Bairro</label>
-                <input className="erp-input" value={form.bairro ?? ""}
-                  onChange={(e) => setField("bairro", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c4">
-                <label className="erp-label">Município</label>
-                <input className="erp-input" value={form.municipio ?? ""}
-                  onChange={(e) => setField("municipio", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c2">
-                <label className="erp-label">Cód. IBGE</label>
-                <input className="erp-input" value={form.codigo_municipio ?? ""} placeholder="4106902" inputMode="numeric"
-                  title="Código IBGE do município da empresa (7 dígitos). Sai na NF-e, no CT-e, na NFS-e e no SPED."
-                  onChange={(e) => setField("codigo_municipio", e.target.value.replace(/\D/g, "").slice(0, 7))} />
-                {(() => {
-                  const erro = erroDoCodigoIBGE(form.codigo_municipio ?? "", form.uf_empresa);
-                  const vazio = !(form.codigo_municipio ?? "").trim() || /^0+$/.test((form.codigo_municipio ?? "").trim());
-                  if (erro) return <span className="erp-hint" style={{ color: "var(--v-err)" }}>{erro}</span>;
-                  if (vazio) return <span className="erp-hint" style={{ color: "var(--v-warn)" }}>Obrigatório para a NF-e sair com o município certo — consulte em ibge.gov.br.</span>;
-                  return null;
-                })()}
-              </div>
-              <div className="erp-field erp-c2">
-                <label className="erp-label">CEP</label>
-                <input className="erp-input" value={form.cep ?? ""} placeholder="80000000"
-                  onChange={(e) => setField("cep", e.target.value)} />
-              </div>
-            
-          </div>
-        </div>
-
         <div className="erp-fieldset"><div className="erp-fieldset-head">Focus NF-e   — <span style={{fontWeight:400,opacity:0.65}}>Integração com a SEFAZ</span></div><div className="erp-fieldset-body">
-            
+          {travado ? (
+            <div className="erp-field erp-c12">
+              <p style={{ margin: 0 }}>
+                <span className="erp-badge erp-badge-green">Produção</span>{" "}
+                {form.focus_nfe_configured ? "Token de produção configurado e protegido." : "Sem token de produção."}
+              </p>
+              <span className="erp-field-hint">Em produção, o token e o ambiente só mudam pela Venture ERP. Para trocar o token (novo certificado, nova conta na Focus), fale com a Venture.</span>
+            </div>
+          ) : (
+            <>
               <div className="erp-field erp-c8">
-                <label className="erp-label">Novo token Focus NF-e</label>
+                <label className="erp-label">Token Focus NF-e de homologação</label>
                 <input className="erp-input" type="password" autoComplete="new-password"
                   value={form.focus_nfe_token ?? ""} disabled={!isAdmin}
-                  placeholder={form.focus_nfe_configured ? "Token configurado — deixe vazio para manter" : "Informe o token"}
+                  placeholder={form.focus_nfe_configured ? "Token configurado — deixe vazio para manter" : "Informe o token de homologação"}
                   onChange={(e) => setField("focus_nfe_token", e.target.value)} />
                 <span className="erp-field-hint">
-                  {form.focus_nfe_configured ? "Token atual configurado e protegido." : "Nenhum token configurado."}
+                  {form.focus_nfe_configured ? "Token de homologação configurado e protegido." : "Nenhum token configurado."} A passagem para produção, com o token de produção, é feita pela Venture ERP.
                 </span>
               </div>
               <div className="erp-field erp-c4">
-                <label className="erp-label erp-req">Ambiente</label>
-                <select className="erp-input" value={form.focus_nfe_ambiente}
-                  onChange={(e) => setField("focus_nfe_ambiente", e.target.value as FocusAmbiente)}>
-                  <option value="homologacao">Homologação</option>
-                  <option value="producao">Produção</option>
-                </select>
+                <label className="erp-label">Ambiente</label>
+                <input className="erp-input" value="Homologação (testes)" disabled />
               </div>
-            
-          </div>
-        </div>
+            </>
+          )}
+        </div></div>
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Tributação &amp; Vencimentos   — <span style={{fontWeight:400,opacity:0.65}}>Alíquotas em decimal (ex: 0.12 = 12%)</span></div><div className="erp-fieldset-body">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Tributação por regra — <span style={{fontWeight:400,opacity:0.65}}>como a nota de venda decide ICMS e IPI</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c8">
+                <label className="erp-check">
+                  <input type="checkbox" checked={form.exigir_regra_icms_ipi}
+                    onChange={(e) => setField("exigir_regra_icms_ipi", e.target.checked)} />
+                  {" "}Exigir regra de ICMS/IPI em toda nota de venda
+                </label>
+                <span className="erp-field-hint">
+                  Ligado: a nota com item sem regra em Parâmetros ICMS/IPI (VFIS0320) fica impedida na prévia e não é transmitida.
+                  Desligado: o item sem regra usa o ICMS interno abaixo e a prévia avisa. Confira os cenários no Simulador de Tributação (VFIS0325) antes de ligar.
+                </span>
+              </div>
+              {form.regime_tributario === "1" && (
+                <div className="erp-field erp-c4">
+                  <label className="erp-label">Crédito do Simples (%)</label>
+                  <input className="erp-input num" type="number" step="0.01" min="0" max="100" value={form.aliquota_credito_simples}
+                    onChange={(e) => setNum("aliquota_credito_simples", e.target.value)} />
+                  <span className="erp-field-hint">Crédito de ICMS que o comprador contribuinte pode aproveitar, conforme a faixa do Simples (ex.: 2,56).</span>
+                </div>
+              )}
+        </div></div>
+
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Tributação &amp; Vencimentos   — <span style={{fontWeight:400,opacity:0.65}}>Alíquotas e taxas em % (ex.: 19,5)</span></div><div className="erp-fieldset-body">
             
-              <div className="erp-field erp-c3">
-                <label className="erp-label">ICMS interno (ratio)</label>
-                <input className="erp-input num" type="number" step="0.0001" value={form.icms_interno_aliquota}
-                  onChange={(e) => setNum("icms_interno_aliquota", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c3">
-                <label className="erp-label">Diferimento ICMS (ratio)</label>
-                <input className="erp-input num" type="number" step="0.0001" value={form.icms_diferimento_percentual}
-                  onChange={(e) => setNum("icms_diferimento_percentual", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c3">
-                <label className="erp-label">Juros ao mês (ratio)</label>
-                <input className="erp-input num" type="number" step="0.0001" value={form.juros_mes}
-                  onChange={(e) => setNum("juros_mes", e.target.value)} />
-              </div>
-              <div className="erp-field erp-c3">
-                <label className="erp-label">Multa atraso (ratio)</label>
-                <input className="erp-input num" type="number" step="0.0001" value={form.multa_atraso}
-                  onChange={(e) => setNum("multa_atraso", e.target.value)} />
+              <div className="erp-field erp-c4">
+                <label className="erp-label">ICMS interno (%)</label>
+                <input className="erp-input num" type="number" step="0.01" value={emPct(form.icms_interno_aliquota)}
+                  onChange={(e) => setPct("icms_interno_aliquota", e.target.value)} />
               </div>
               <div className="erp-field erp-c4">
+                <label className="erp-label">Diferimento ICMS (%)</label>
+                <input className="erp-input num" type="number" step="0.01" value={emPct(form.icms_diferimento_percentual)}
+                  onChange={(e) => setPct("icms_diferimento_percentual", e.target.value)} />
+              </div>
+              <div className="erp-field erp-c4">
+                <label className="erp-label">cBenef do diferimento</label>
+                <input className="erp-input" maxLength={10} value={form.cbenef_diferimento} placeholder="ex.: PR830001"
+                  onChange={(e) => setField("cbenef_diferimento", e.target.value.toUpperCase())} />
+                <span className="erp-field-hint">Código de benefício que a SEFAZ exige na venda com diferimento (CST 51). No Paraná: PR830001.</span>
+              </div>
+              <div className="erp-field erp-c3">
+                <label className="erp-label">Juros ao mês (%)</label>
+                <input className="erp-input num" type="number" step="0.01" value={emPct(form.juros_mes)}
+                  onChange={(e) => setPct("juros_mes", e.target.value)} />
+              </div>
+              <div className="erp-field erp-c3">
+                <label className="erp-label">Multa atraso (%)</label>
+                <input className="erp-input num" type="number" step="0.01" value={emPct(form.multa_atraso)}
+                  onChange={(e) => setPct("multa_atraso", e.target.value)} />
+              </div>
+              <div className="erp-field erp-c2">
                 <label className="erp-label">Venc. ICMS (dia)</label>
                 <input className="erp-input num" type="number" value={form.vencimento_icms_dia}
                   onChange={(e) => setNum("vencimento_icms_dia", e.target.value)} />
               </div>
-              <div className="erp-field erp-c4">
+              <div className="erp-field erp-c2">
                 <label className="erp-label">Venc. IPI (dia)</label>
                 <input className="erp-input num" type="number" value={form.vencimento_ipi_dia}
                   onChange={(e) => setNum("vencimento_ipi_dia", e.target.value)} />
               </div>
-              <div className="erp-field erp-c4">
+              <div className="erp-field erp-c2">
                 <label className="erp-label">Venc. PIS/COFINS (dia)</label>
                 <input className="erp-input num" type="number" value={form.vencimento_pis_cofins_dia}
                   onChange={(e) => setNum("vencimento_pis_cofins_dia", e.target.value)} />

@@ -128,6 +128,10 @@ export interface FaturarPedidoPayload {
   valor_frete?: number;
   valor_seguro?: number;
   valor_desconto?: number;
+  /** Vazia = a finalidade do pedido (ou do cliente). */
+  finalidade_compra?: string;
+  /** Tipo de nota cujos indicadores tributam a saída. */
+  invoice_type_id?: number;
   itens?: Array<{ sales_order_item_code: number; quantidade: number }>;
 }
 

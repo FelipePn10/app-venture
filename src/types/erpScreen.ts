@@ -110,10 +110,42 @@ export const SHOP_FLOOR_SCREENS: readonly string[] = [
   'VPRO1000', // Ficha de Ferramenta — conferir a ferramenta antes de produzir
 ];
 
-/** As rotinas que o perfil enxerga. Perfis de escritório enxergam tudo. */
-export function screensForRole(screens: ErpScreen[], role?: string): ErpScreen[] {
-  if ((role ?? '').toUpperCase() !== 'OPERATOR') return screens;
-  return screens.filter((screen) => SHOP_FLOOR_SCREENS.includes(screen.code));
+/**
+ * Módulo do menu → módulo de permissão do backend (`internal/domain/acesso`).
+ * Com perfil de acesso na empresa, o menu só mostra a rotina cujo módulo o
+ * perfil pode consultar.
+ */
+export const MODULO_DE_PERMISSAO: Record<string, string> = {
+  comercial: 'comercial', cliente: 'comercial', pdv: 'comercial',
+  suprimento: 'suprimentos', importacao: 'suprimentos',
+  inspecao: 'qualidade',
+  almoxarifado: 'estoque',
+  engenharia: 'engenharia',
+  planejamento: 'planejamento',
+  producao: 'producao',
+  manutencao: 'manutencao',
+  assistencia: 'assistencia', garantia: 'assistencia',
+  fiscal: 'fiscal',
+  financeiro: 'financeiro',
+  contabilidade: 'contabilidade',
+  custo: 'custos',
+  cadastros: 'cadastros',
+};
+
+/** Rotinas de uso pessoal que todo usuário abre, com qualquer perfil. */
+export const ROTINAS_PESSOAIS: readonly string[] = ['VSEC0100', 'VNOT0100', 'VAPR0100'];
+
+/** Permissões do perfil, como o menu precisa (módulos que o usuário consulta). */
+export interface AcessoDoMenu { restrito: boolean; permissoes: { modulo: string; acao: string }[] }
+
+/** As rotinas que o perfil enxerga. Perfis de escritório sem perfil de acesso enxergam tudo. */
+export function screensForRole(screens: ErpScreen[], role?: string, acesso?: AcessoDoMenu | null): ErpScreen[] {
+  if ((role ?? '').toUpperCase() === 'OPERATOR') {
+    return screens.filter((screen) => SHOP_FLOOR_SCREENS.includes(screen.code));
+  }
+  if (!acesso?.restrito || (role ?? '').toUpperCase() === 'ADMIN') return screens;
+  const consulta = new Set(acesso.permissoes.filter((p) => p.acao === 'LER').map((p) => p.modulo));
+  return screens.filter((screen) => ROTINAS_PESSOAIS.includes(screen.code) || consulta.has(MODULO_DE_PERMISSAO[screen.module] ?? ''));
 }
 
 export const ERP_SCREENS: ErpScreen[] = [
@@ -165,6 +197,7 @@ export const ERP_SCREENS: ErpScreen[] = [
     title: "Solicitações de Troca de Senha",
     description: "Solicitar, aprovar, concluir ou rejeitar solicitações de troca de senha de usuários.",
     module: "cadastros",
+    replacedBy: "VSEC0100",
   },
   {
     code: "VNOT0100",
@@ -255,8 +288,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Contabilidade
   {
     code: "VCTB0102",
-    title: "Cadastro de Centro de Custo",
-    description: "Cadastrar e vincular centros de custo às empresas.",
+    title: "Centros de Custo",
+    description: "Cadastro único de centros de custo: hierarquia, responsável, aprovador de requisições, conta padrão, orçamento × realizado e árvore consolidada.",
     module: "contabilidade",
   },
 
@@ -301,6 +334,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VENT0200",
     title: "Cadastro de Itens",
     description: "Cadastro e manutenção de itens do estoque.",
+    module: "engenharia",
+  },
+  {
+    code: "VENT0250",
+    title: "Governança do Cadastro",
+    description: "Liberação do cadastro do item por área, campos obrigatórios, bloqueio, descontinuação com substituto e histórico campo a campo.",
     module: "engenharia",
   },
   {
@@ -500,6 +539,42 @@ export const ERP_SCREENS: ErpScreen[] = [
 
   // ── Assistência Técnica (Chamados)
   {
+    code: "VATC0100",
+    title: "Base Instalada",
+    description: "Equipamentos por número de série: onde estão, em que nota foram vendidos, instalação, transferência, baixa e histórico.",
+    module: "assistencia",
+  },
+  {
+    code: "VATC0110",
+    title: "Pós-venda do Item",
+    description: "Perfil de pós-venda do item: controle por número de série e máscara de geração da série na entrega da OF.",
+    module: "assistencia",
+  },
+  {
+    code: "VATC0300",
+    title: "Ordem de Serviço",
+    description: "Atendimento do chamado no cliente ou na fábrica: agenda, técnico, horas, peças do estoque, despesas, garantia e faturamento.",
+    module: "assistencia",
+  },
+  {
+    code: "VATC0310",
+    title: "SLA da Assistência",
+    description: "Prazo de resposta e de solução do chamado por prioridade e por cliente; painel de chamados em risco e vencidos.",
+    module: "assistencia",
+  },
+  {
+    code: "VATC0320",
+    title: "Recuperação junto ao Fornecedor",
+    description: "Cobrar do fornecedor o custo da garantia de componente com falha: reclamação, aceite ou recusa e ressarcimento.",
+    module: "assistencia",
+  },
+  {
+    code: "VATC0400",
+    title: "Indicadores do Pós-venda",
+    description: "Custo da garantia por item, defeito e lote, recuperado de fornecedores, taxa de falha, MTBF, SLA cumprido e tempo de atendimento.",
+    module: "assistencia",
+  },
+  {
     code: "VATC0280",
     title: "Cadastro de Chamados",
     description: "Cadastrar chamados com dados do consumidor, tipo, garantia, motivo, responsável e posição.",
@@ -696,6 +771,42 @@ export const ERP_SCREENS: ErpScreen[] = [
 
   // ── Inspeção
   {
+    code: "VINS0700",
+    title: "Certificados de Qualidade",
+    description: "Certificado ao cliente com lote, corrida, certificado da usina e o resumo das medições dos lotes de inspeção aprovados (PDF).",
+    module: "inspecao",
+  },
+  {
+    code: "VINS0800",
+    title: "Documentos da Qualidade",
+    description: "Instruções de trabalho, procedimentos e formulários com revisão, aprovação por quem não elaborou e histórico de revisões obsoletas.",
+    module: "inspecao",
+  },
+  {
+    code: "VINS0600",
+    title: "Metrologia",
+    description: "Instrumentos de medição, calibrações com resultado pelo erro máximo admissível, vencimentos e impacto da calibração reprovada.",
+    module: "inspecao",
+  },
+  {
+    code: "VINS0500",
+    title: "Não conformidades e CAPA/8D",
+    description: "Não conformidades com lote de inspeção, CAPA pelo 8D ou simples (5 porquês, Ishikawa), ações com responsável e prazo e verificação de eficácia.",
+    module: "inspecao",
+  },
+  {
+    code: "VINS0300",
+    title: "Lotes de Inspeção",
+    description: "Lote único de inspeção (recebimento, processo, final): resultados por unidade da amostra, avaliação NBR 5426 e decisão de uso que libera o estoque.",
+    module: "inspecao",
+  },
+  {
+    code: "VINS0110",
+    title: "Amostragem NBR 5426",
+    description: "Calculadora da norma, procedimentos de amostragem e severidade (normal, apertada, atenuada) por item e fornecedor.",
+    module: "inspecao",
+  },
+  {
     code: "VINS0106",
     title: "Cadastro de Ocorrências",
     description: "Cadastrar ocorrências para itens na inspeção.",
@@ -768,7 +879,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIN0130",
     title: "Centros de Custo",
-    description: "Cadastrar centros de custo.",
+    description: "Agora no cadastro único de centros de custo (VCTB0102).",
+    replacedBy: "VCTB0102",
     module: "financeiro",
   },
   {
@@ -868,15 +980,28 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "fiscal",
   },
   {
+    code: "VFIS0325",
+    title: "Simulador de Tributação",
+    description: "Calcular ICMS, IPI, PIS/COFINS, ST e DIFAL de uma venda como a NF-e vai calcular, por cliente, UF, finalidade e tipo de nota — sem gravar nada.",
+    module: "fiscal",
+  },
+  {
     code: "VFIS0330",
     title: "Redução / Substituição / Diferimento de ICMS",
-    description: "Parametrização avançada de ICMS por item/NCM/UF/cliente (hierarquia).",
+    description: "Unificada em VFIS0320 — Parâmetros ICMS/IPI: redução, substituição e diferimento ficam na regra de ICMS/IPI, a única que a nota usa.",
     module: "fiscal",
+    replacedBy: "VFIS0320",
   },
   {
     code: "VFIS0340",
     title: "Apuração do Simples Nacional",
     description: "Apuração mensal do Simples Nacional por anexo.",
+    module: "fiscal",
+  },
+  {
+    code: "VFIS0345",
+    title: "CIAP — Crédito do ICMS do Ativo",
+    description: "Bens do ativo imobilizado, parcelas mensais do crédito de ICMS pelo índice das saídas, Bloco G da EFD e crédito no E111.",
     module: "fiscal",
   },
   {
@@ -1094,7 +1219,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento", replacedBy: "VPCT0100" },
   { code: "VSUP0640", title: "Registros Operacionais de Compras", description: "Ocorrências normalizadas de compra, recebimento e inspeção.", module: "suprimento" },
   { code: "VSUP0650", title: "Histórico de Movimentos de Compra", description: "Rastreabilidade consolidada de movimentos por fornecedor e item.", module: "suprimento" },
-  { code: "VSEC0100", title: "Solicitação e Aprovação de Troca de Senha", description: "Fluxo seguro de solicitação, aprovação e conclusão da troca de senha.", module: "cadastros" },
+  { code: "VSEC0100", title: "Troca de Senha", description: "Solicitar a troca da própria senha, acompanhar a aprovação e definir a nova senha; o administrador aprova ou rejeita as solicitações da empresa.", module: "cadastros" },
   { code: "VPLA0300", title: "Parâmetros do Planejamento", description: "Parâmetros numerados consumidos pelo MRP e planejamento industrial.", module: "planejamento" },
   { code: "VRES0100", title: "Motivos de Restrição", description: "Cadastro de motivos usados nas restrições comerciais e de configuração.", module: "comercial" },
   { code: "VEXP0110", title: "Gestão de Cargas de Expedição", description: "Montagem, liberação, carregamento e despacho de cargas.", module: "almoxarifado" },
@@ -1106,6 +1231,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VPRO1200", title: "Parada de Máquina", description: "Terminal de chão de fábrica: registrar que a máquina parou e que voltou, sem digitar horário.", module: "producao" },
   { code: "VVND0600", title: "Workflow do Pedido de Venda", description: "Análise, atendimento, conferência e atrasos.", module: "comercial" },
   { code: "VVND0610", title: "Reajuste de Venda Recorrente", description: "Recalcular e justificar o reajuste de um contrato recorrente.", module: "comercial" },
+  { code: "VVND0700", title: "Devolução de Venda", description: "Devolução do cliente pela NF de venda: NF-e de entrada própria ou NF do cliente, estoque de volta, abatimento, crédito, comissão e séries.", module: "comercial" },
+  { code: "VVND0710", title: "Contrato de Venda", description: "Contrato de fornecimento com o cliente: itens com preço fixado, teto, vigência, programação e pedidos de chamada pelo saldo.", module: "comercial" },
   { code: "VSUP0660", title: "Parâmetros e Contatos do Fornecedor", description: "Configurar regras do fornecedor e complementar contatos persistidos.", module: "suprimento" },
   { code: "VSUP0670", title: "Itens e Qualidade do Fornecedor", description: "Consultar itens e anexar relatórios de qualidade ao vínculo com o fornecedor.", module: "suprimento" },
   { code: "VSUP0680", title: "Fontes de Preços de Compra", description: "Selecionar fontes, candidatos e ajustes para tabelas de preços de compra.", module: "suprimento" },
@@ -1116,6 +1243,9 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VFIS0620", title: "Manifestação e Inutilização de NF-e", description: "Transmitir eventos fiscais de destinatário e faixas inutilizadas.", module: "fiscal" },
   { code: "VFIS0630", title: "Tabela IBPT", description: "Importar a tabela oficial e consultar carga tributária por NCM e UF.", module: "fiscal" },
   { code: "VFIS0640", title: "Faturamento de Carga e DANFE", description: "Gerar NF-e a partir da carga e consultar documentos autorizados.", module: "fiscal" },
+  { code: "VAPR0100", title: "Aprovações", description: "Solicitações por alçada (crédito do pedido, política comercial do orçamento) e políticas de aprovação.", module: "cadastros" },
+  { code: "VADM0200", title: "Perfis de Acesso", description: "Perfis da empresa com permissão por módulo e ação, e os perfis de cada usuário.", module: "cadastros" },
+  { code: "VFIS0670", title: "Reforma Tributária (IBS/CBS)", description: "Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e tabela oficial de classificação tributária.", module: "fiscal" },
   { code: "VFIS0120", title: "Exclusão de Tributação NCM", description: "Remover tributação NCM obsoleta de forma controlada.", module: "fiscal" },
   { code: "VFIS0660", title: "Consultas de Parâmetros Fiscais", description: "Consultar cadastros fiscais por chaves e filtros específicos.", module: "fiscal" },
   { code: "VUTL0560", title: "Consulta de UF e Região", description: "Localizar UF e região comercial por suas chaves.", module: "contabilidade" },

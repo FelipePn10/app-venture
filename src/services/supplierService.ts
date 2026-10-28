@@ -222,8 +222,10 @@ export async function createContactType(dto: ContactTypeDTO): Promise<ContactTyp
 }
 
 // ── Parâmetros por empresa ──
-export async function getParameters(enterpriseCode: number): Promise<SupplierParametersDTO> {
-  const { data } = await httpClient.get(`${SUPPORT}/parameters/${enterpriseCode}`);
+// Os parâmetros são sempre da empresa da sessão: o backend não aceita outra
+// (a rota /parameters/{empresa} nunca existiu e respondia 404).
+export async function getParameters(): Promise<SupplierParametersDTO> {
+  const { data } = await httpClient.get(`${SUPPORT}/parameters`);
   return parseParameters(data);
 }
 export async function updateParameters(dto: SupplierParametersDTO): Promise<SupplierParametersDTO> {

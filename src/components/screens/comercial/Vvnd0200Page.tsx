@@ -1,3 +1,4 @@
+import { FINALIDADES_COMPRA } from "@/services/customerService";
 import { useState, useCallback, useMemo } from "react";
 import {
   type SalesOrderDTO,
@@ -345,6 +346,7 @@ export function Vvnd0200Page(): JSX.Element {
                   <div className="erp-fieldset-body">
                     <div className="erp-field erp-c3"><label className="erp-label">Condição de pagamento</label><LookupField value={newOrder.payment_term_code} loader={loadPaymentConditions} entityLabel="condição de pagamento" placeholder="Usar padrão do cliente" onChange={(code) => setO("payment_term_code", code ?? undefined)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" value={newOrder.commission_pct || ""} onChange={(e) => setO("commission_pct", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label><select className="erp-input" value={newOrder.finalidade_compra ?? ""} onChange={(e) => setO("finalidade_compra", e.target.value || undefined)}>{FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "Do cadastro do cliente" : f.label}</option>)}</select><span className="erp-field-hint">Define a tributação: uso, consumo ou ativo é consumidor final.</span></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" type="date" value={newOrder.emission_date ?? ""} onChange={(e) => setO("emission_date", e.target.value)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input" type="date" value={newOrder.delivery_date ?? ""} onChange={(e) => setO("delivery_date", e.target.value)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Portador</label><input className="erp-input num" type="number" value={newOrder.bearer_code ?? ""} onChange={(e) => setO("bearer_code", e.target.value ? Number(e.target.value) : undefined)} /><span className="erp-field-hint">Banco ou carteira de cobrança do título.</span></div>
@@ -432,6 +434,7 @@ export function Vvnd0200Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" value={selected.emission_date?.slice(0, 10) ?? "—"} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input" value={selected.delivery_date?.slice(0, 10) ?? "—"} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" value={selected.commission_pct ?? 0} readOnly /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label><input className="erp-input" value={FINALIDADES_COMPRA.find((f) => f.value === (selected.finalidade_compra ?? ""))?.label.replace("Deduzir pela inscrição estadual", "Do cadastro do cliente") ?? "—"} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Moeda</label><input className="erp-input" value={selected.currency_code ?? "—"} readOnly /></div>
                       </div>
                     </div>
@@ -476,12 +479,12 @@ export function Vvnd0200Page(): JSX.Element {
                           <tr>
                             <th className="num">Seq</th><th className="num">Item</th><th className="num">Almoxarifado</th>
                             <th className="num">Qtd</th><th>UM</th><th className="num">Preço unit.</th><th className="num">Desc. %</th>
-                            <th className="num">Total líq.</th><th>Status</th><th style={{ width: 90 }}></th>
+                            <th className="num">Total líq.</th><th className="num" title="Calculado pela regra de ICMS/IPI quando não informado">IPI %</th><th className="num">ICMS %</th><th>Status</th><th style={{ width: 90 }}></th>
                           </tr>
                         </thead>
                         <tbody>
                           {items.length === 0 && (
-                            <tr><td colSpan={10} className="erp-grid-empty">Nenhum item neste pedido{isDraft ? " — use a barra acima para adicionar" : ""}.</td></tr>
+                            <tr><td colSpan={12} className="erp-grid-empty">Nenhum item neste pedido{isDraft ? " — use a barra acima para adicionar" : ""}.</td></tr>
                           )}
                           {items.map((it) => (
                             <tr key={it.code}>
@@ -493,6 +496,8 @@ export function Vvnd0200Page(): JSX.Element {
                               <td className="num">{money(it.unit_price)}</td>
                               <td className="num">{it.discount_pct ?? 0}</td>
                               <td className="num">{money(it.total_net)}</td>
+                              <td className="num">{it.ipi_pct ?? 0}</td>
+                              <td className="num">{it.icms_pct ?? 0}</td>
                               <td>{statusMeta(it.status).label}</td>
                               <td>{isDraft && <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => cancelarItem(it.code)} disabled={busy}>Cancelar</button>}</td>
                             </tr>
@@ -500,7 +505,7 @@ export function Vvnd0200Page(): JSX.Element {
                         </tbody>
                         {items.length > 0 && (
                           <tfoot>
-                            <tr><td colSpan={7} className="num">Total líquido dos itens</td><td className="num">{money(itemsTotal)}</td><td colSpan={2}></td></tr>
+                            <tr><td colSpan={7} className="num">Total líquido dos itens</td><td className="num">{money(itemsTotal)}</td><td colSpan={4}></td></tr>
                           </tfoot>
                         )}
                       </table>

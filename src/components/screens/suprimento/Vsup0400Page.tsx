@@ -9,6 +9,7 @@ import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadEstablishments, loadSuppliers } from "@/services/lookups";
 import { MapaCotacaoPanel } from "./MapaCotacaoPanel";
+import { listRequisitions, getRequisition, type RequisitionDTO } from "@/services/purchaseRequisitionService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,7 +19,10 @@ const EMPTY_PRICE: QuotationPriceDTO = { quotation_item_id: 0, supplier_code: 0,
 export function Vsup0400Page(): JSX.Element {
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [list, setList] = useState<QuotationDTO[]>([]);
-  const [form, setForm] = useState<{ enterprise_code?: number; requisition_item_ids: string; planned_order_codes: string; supplier_codes: string }>({ enterprise_code: 1, requisition_item_ids: "", planned_order_codes: "", supplier_codes: "" });
+  const [form, setForm] = useState<{ enterprise_code?: number; requisition_item_ids: number[]; planned_order_codes: string; supplier_codes: string }>({ enterprise_code: 1, requisition_item_ids: [], planned_order_codes: "", supplier_codes: "" });
+  // Solicitações em aberto: a cotação nasce marcando as linhas, não digitando o
+  // identificador interno de cada uma (que ninguém conhece).
+  const [solicitacoes, setSolicitacoes] = useState<RequisitionDTO[]>([]);
   const [detail, setDetail] = useState<Obj | null>(null);
   const [selCode, setSelCode] = useState<number | null>(null);
   const [creating, setCreating] = useState(true);
@@ -35,13 +39,24 @@ export function Vsup0400Page(): JSX.Element {
     try { setList(await listQuotations(onlyOpen)); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, [onlyOpen]);
   useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    if (!creating) return;
+    // A lista devolve só a capa; as linhas vêm do detalhe de cada solicitação.
+    // As 50 mais recentes cobrem o que está de fato aguardando cotação.
+    listRequisitions(true)
+      .then((capas) => Promise.all(capas.slice(0, 50).filter((c) => c.code).map((c) => getRequisition(c.code!))))
+      .then(setSolicitacoes)
+      .catch((e) => setFeedback({ type: "error", message: `Não foi possível carregar as solicitações em aberto: ${errMessage(e)}` }));
+  }, [creating]);
+  const saldoDe = (i: { quantity: number; attended_qty?: number; cancelled_qty?: number }) => i.quantity - (i.attended_qty ?? 0) - (i.cancelled_qty ?? 0);
+  const alternarLinha = (id: number) => setForm((p) => ({ ...p, requisition_item_ids: p.requisition_item_ids.includes(id) ? p.requisition_item_ids.filter((x) => x !== id) : [...p.requisition_item_ids, id] }));
 
-  function nova() { setCreating(true); setSelCode(null); setDetail(null); setForm({ enterprise_code: 1, requisition_item_ids: "", planned_order_codes: "", supplier_codes: "" }); setFeedback(null); }
+  function nova() { setCreating(true); setSelCode(null); setDetail(null); setForm({ enterprise_code: 1, requisition_item_ids: [], planned_order_codes: "", supplier_codes: "" }); setFeedback(null); }
   async function criar() {
     if (!form.enterprise_code) { setFeedback({ type: "error", message: "Estabelecimento é obrigatório." }); return; }
     setBusy(true); setFeedback(null);
     try {
-      await createQuotation({ enterprise_code: form.enterprise_code, requisition_item_ids: csv(form.requisition_item_ids), planned_order_codes: csv(form.planned_order_codes), supplier_codes: csv(form.supplier_codes) });
+      await createQuotation({ enterprise_code: form.enterprise_code, requisition_item_ids: form.requisition_item_ids, planned_order_codes: csv(form.planned_order_codes), supplier_codes: csv(form.supplier_codes) });
       nova(); setFeedback({ type: "success", message: "Cotação liberada." }); await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -72,7 +87,17 @@ export function Vsup0400Page(): JSX.Element {
   async function gerar() {
     if (!selCode) return;
     setBusy(true); setFeedback(null);
-    try { const r = await generateQuotationOrders(selCode); setFeedback({ type: "success", message: `Pedidos gerados. ${JSON.stringify(r).slice(0, 160)}` }); await reload(); setDetail(null); setSelCode(null); setCreating(true); }
+    try {
+      const r = await generateQuotationOrders(selCode);
+      const pedidos = (Array.isArray(r.orders) ? r.orders : []) as Record<string, unknown>[];
+      const numeros = pedidos.map((o) => o.OrderNumber ?? o.order_number ?? o.Code ?? o.code).filter((n) => n !== undefined && n !== null);
+      const pulados = Array.isArray(r.skipped) ? (r.skipped as unknown[]).map(String) : [];
+      const msg = numeros.length
+        ? `${numeros.length} pedido(s) de compra gerado(s): ${numeros.join(", ")}.`
+        : "Nenhum pedido foi gerado.";
+      setFeedback({ type: pulados.length ? "info" : "success", message: pulados.length ? `${msg} Não entraram: ${pulados.join("; ")}.` : msg });
+      await reload(); setDetail(null); setSelCode(null); setCreating(true);
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -142,8 +167,22 @@ export function Vsup0400Page(): JSX.Element {
                     <div className="erp-fieldset-head">Nova cotação — a partir de solicitações / ordens planejadas</div>
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c4"><label className="erp-label erp-req">Estabelecimento</label><LookupField value={form.enterprise_code} loader={loadEstablishments} entityLabel="estabelecimento" placeholder="Selecionar" onChange={(c) => setForm((p) => ({ ...p, enterprise_code: c }))} /></div>
-                      <div className="erp-field erp-c4"><label className="erp-label">IDs item solicitação</label><input className="erp-input" placeholder="ex.: 10, 11, 12" value={form.requisition_item_ids} onChange={(e) => setForm((p) => ({ ...p, requisition_item_ids: e.target.value }))} /></div>
-                      <div className="erp-field erp-c4"><label className="erp-label">Códigos ordem planejada</label><input className="erp-input" value={form.planned_order_codes} onChange={(e) => setForm((p) => ({ ...p, planned_order_codes: e.target.value }))} /></div>
+                      <div className="erp-field erp-c12"><label className="erp-label">Itens de solicitação a cotar ({form.requisition_item_ids.length} marcado(s))</label>
+                        <div className="erp-grid-wrap" style={{ maxHeight: 220, overflowY: "auto" }}>
+                          <table className="erp-grid">
+                            <thead><tr><th style={{ width: 32 }}></th><th className="num">Solicitação</th><th>Item</th><th className="num">Saldo</th><th>UM</th><th>Entrega</th></tr></thead>
+                            <tbody>
+                              {solicitacoes.flatMap((r) => (r.items ?? []).filter((i) => i.id && saldoDe(i) > 0).map((i) => (
+                                <tr key={i.id} onClick={() => alternarLinha(i.id!)} style={{ cursor: "pointer" }}>
+                                  <td><input type="checkbox" checked={form.requisition_item_ids.includes(i.id!)} readOnly aria-label={`Cotar o item ${i.item_code} da solicitação ${r.code}`} /></td>
+                                  <td className="num">{r.code}</td><td>{i.item_code}</td><td className="num">{saldoDe(i).toLocaleString("pt-BR")}</td><td>{i.uom}</td><td>{i.delivery_date?.slice(0, 10).split("-").reverse().join("/") ?? "—"}</td>
+                                </tr>
+                              )))}
+                              {solicitacoes.every((r) => !(r.items ?? []).some((i) => i.id && saldoDe(i) > 0)) && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma solicitação de compra com saldo em aberto.</td></tr>}
+                            </tbody>
+                          </table>
+                        </div></div>
+                      <div className="erp-field erp-c4"><label className="erp-label">Ordens planejadas do MRP (números, separados por vírgula)</label><input className="erp-input" value={form.planned_order_codes} onChange={(e) => setForm((p) => ({ ...p, planned_order_codes: e.target.value }))} /></div>
                       <div className="erp-field erp-c8"><label className="erp-label">Fornecedores convidados (códigos)</label><input className="erp-input" placeholder="ex.: 100, 200" value={form.supplier_codes} onChange={(e) => setForm((p) => ({ ...p, supplier_codes: e.target.value }))} /></div>
                       <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void criar()} disabled={busy}>{busy && <span className="erp-spin" />}Liberar cotação</button></div>
                     </div>
@@ -164,8 +203,11 @@ export function Vsup0400Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Registrar preço</div>
                     <div className="erp-fieldset-body">
-                      <div className="erp-field erp-c2"><label className="erp-label erp-req">Item cotação (ID)</label><input className="erp-input num" type="number" value={priceForm.quotation_item_id || ""} onChange={(e) => setPriceForm((p) => ({ ...p, quotation_item_id: Number(e.target.value) }))} /></div>
-                      <div className="erp-field erp-c4"><label className="erp-label erp-req">Fornecedor</label><LookupField value={priceForm.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Selecionar fornecedor" onChange={(c) => setPriceForm((p) => ({ ...p, supplier_code: c ?? 0 }))} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Item da cotação</label><select className="erp-input" value={priceForm.quotation_item_id || ""} onChange={(e) => setPriceForm((p) => ({ ...p, quotation_item_id: Number(e.target.value) }))}>
+                        <option value="">Selecionar</option>
+                        {items.map((it) => { const id = parseNum(it, "id", "ID"); return <option key={id} value={id}>{`${parseNum(it, "sequence", "Sequence") || ""} · ${String(it.item_code ?? it.ItemCode ?? "")} · ${parseNum(it, "quantity", "Quantity").toLocaleString("pt-BR")}`}</option>; })}
+                      </select></div>
+                      <div className="erp-field erp-c3"><label className="erp-label erp-req">Fornecedor</label><LookupField value={priceForm.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Selecionar fornecedor" onChange={(c) => setPriceForm((p) => ({ ...p, supplier_code: c ?? 0 }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Preço</label><input className="erp-input num" type="number" step="0.01" value={priceForm.price} onChange={(e) => setPriceForm((p) => ({ ...p, price: Number(e.target.value) }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Lead (d)</label><input className="erp-input num" type="number" value={priceForm.lead_time_days ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, lead_time_days: e.target.value ? Number(e.target.value) : undefined }))} /></div>
                       <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void addPrice()} disabled={busy}>+ Preço</button></div>

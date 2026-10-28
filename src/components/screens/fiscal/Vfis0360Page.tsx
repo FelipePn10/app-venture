@@ -5,6 +5,7 @@ import {
   listStateGroups, createStateGroup, addUfToStateGroup,
 } from "@/services/fiscalAdvancedService";
 import { errMessage } from "@/services/fiscalShared";
+import { type Cfop, listCfops } from "@/services/fiscalSupportService";
 import { ExportButton } from "@/components/ui/ExportButton";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -22,6 +23,14 @@ const FLAGS: Array<{ campo: "movimenta_estoque" | "gera_financeiro" | "credita_i
   { campo: "credita_ipi", rotulo: "Credita IPI", ajuda: "Desmarcado (uso e consumo, ativo), o IPI vai para o custo." },
   { campo: "credita_pis_cofins", rotulo: "Credita PIS/COFINS", ajuda: "Regime não cumulativo; desmarcado, vão para o custo." },
 ];
+/** Natureza (CFOP de entrada) que não admite crédito: uso e consumo e ativo imobilizado. */
+const semCreditoDe = (natureza: string): { icms: boolean; ipi: boolean; motivo: string } | null => {
+  const n = natureza.replace(/\D/g, "");
+  if (n.length !== 4) return null;
+  if (["556", "407"].includes(n.slice(1))) return { icms: true, ipi: true, motivo: "uso e consumo: sem crédito de ICMS e de IPI" };
+  if (["551", "406"].includes(n.slice(1))) return { icms: true, ipi: true, motivo: "ativo imobilizado: sem crédito de IPI; o ICMS é apropriado em parcelas (CIAP), fora da nota" };
+  return null;
+};
 const resumoFlags = (o: EntryOperationDTO) => {
   const partes = [
     o.movimenta_estoque === false ? "sem estoque" : "estoque",
@@ -43,6 +52,9 @@ export function Vfis0360Page(): JSX.Element {
   const [validUf, setValidUf] = useState<{ code: string; uf: string }>({ code: "", uf: "" });
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
+  // Tabela de CFOP (oficial) para mostrar o título da natureza escolhida.
+  const [cfops, setCfops] = useState<Map<string, Cfop>>(new Map());
+  useEffect(() => { listCfops(false).then((l) => setCfops(new Map(l.map((c) => [String(c.code), c])))).catch(() => setCfops(new Map())); }, []);
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -55,6 +67,15 @@ export function Vfis0360Page(): JSX.Element {
   useEffect(() => { void reload(); }, [reload]);
 
   const setF = <K extends keyof EntryOperationDTO>(k: K, v: EntryOperationDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
+  // Natureza de uso e consumo ou de ativo: desmarca os créditos que ela não admite.
+  function setNatureza(v: string) {
+    const r = semCreditoDe(v);
+    setForm((p) => ({ ...p, nature_operation: v, ...(r ? { credita_icms: !r.icms && p.credita_icms, credita_ipi: !r.ipi && p.credita_ipi } : {}) }));
+    setFeedback(null);
+  }
+  const naturezaDigitos = form.nature_operation.replace(/\D/g, "");
+  const cfopNatureza = cfops.get(naturezaDigitos);
+  const restricao = semCreditoDe(form.nature_operation);
   function novo() { setForm(EMPTY); setEditCode(null); setFeedback(null); }
   // O código pode chegar como número do backend; a tela guarda como texto.
   function edit(o: EntryOperationDTO) { setForm({ ...o }); setEditCode(o.code == null ? null : String(o.code)); setFeedback(null); }
@@ -62,10 +83,16 @@ export function Vfis0360Page(): JSX.Element {
   async function salvar() {
     if (!form.description.trim() || !form.nature_operation.trim()) { setFeedback({ type: "error", message: "Descrição e Natureza de Operação são obrigatórias." }); return; }
     setBusy(true); setFeedback(null);
+    // A natureza que não admite crédito vai sempre sem ele (o backend recusa o contrário).
+    const r = semCreditoDe(form.nature_operation);
+    const dto = r ? { ...form, credita_icms: r.icms ? false : form.credita_icms, credita_ipi: r.ipi ? false : form.credita_ipi } : form;
     try {
-      if (editCode !== null) { await updateEntryOperation({ ...form, code: editCode }); setFeedback({ type: "success", message: `Tipo ${editCode} atualizado.` }); }
-      else { await createEntryOperation(form); setFeedback({ type: "success", message: "Tipo de operação cadastrado." }); }
+      const msg = editCode !== null ? `Tipo ${editCode} atualizado.` : "Tipo de operação cadastrado.";
+      if (editCode !== null) await updateEntryOperation({ ...dto, code: editCode });
+      else await createEntryOperation(dto);
+      // novo() limpa o aviso: a confirmação vem depois dele, senão sumia na hora.
       novo(); await reload();
+      setFeedback({ type: "success", message: msg });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -136,15 +163,23 @@ export function Vfis0360Page(): JSX.Element {
             <div className="erp-fieldset-body">
               
                 <div className="erp-field erp-c2"><label className="erp-label">Código</label>
-                  <input className="erp-input" value={form.code ?? ""} disabled={editCode !== null} onChange={(e) => setF("code", e.target.value)} /></div>
+                  <input className="erp-input" value={editCode ?? ""} placeholder="gerado ao salvar" disabled /></div>
                 <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label>
                   <input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Natureza Op.</label>
-                  <input className="erp-input" value={form.nature_operation} placeholder="1xxx / 2xxx / 3xxx" onChange={(e) => setF("nature_operation", e.target.value)} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label erp-req">Natureza (CFOP de entrada)</label>
+                  <input className="erp-input" value={form.nature_operation} placeholder="1101" inputMode="numeric" onChange={(e) => setNatureza(e.target.value)}
+                    title="O CFOP de entrada da operação. Na nota, o 1º dígito acompanha a UF do fornecedor (1 no estado, 2 fora, 3 exterior)." />
+                  {naturezaDigitos.length === 4 && (cfopNatureza
+                    ? <span className="erp-field-hint">{cfopNatureza.description}</span>
+                    : cfops.size > 0 && <span className="erp-hint" style={{ color: "var(--v-err)" }}>CFOP {naturezaDigitos} fora da tabela (VFIS0300)</span>)}</div>
                 <div className="erp-field erp-c2"><label className="erp-label">Tipo Nota</label>
                   <input className="erp-input" value={form.invoice_type_code ?? ""} onChange={(e) => setF("invoice_type_code", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Grupo Estado</label>
-                  <input className="erp-input" value={form.state_group_code ?? ""} onChange={(e) => setF("state_group_code", e.target.value)} /></div>
+                  <select className="erp-input" value={form.state_group_code ?? ""} onChange={(e) => setF("state_group_code", e.target.value)}
+                    title="Com grupo, a operação só vale para fornecedor das UFs do grupo; a nota de outra UF é recusada.">
+                    <option value="">— qualquer UF —</option>
+                    {groups.map((g) => <option key={String(g.code)} value={String(g.code)}>{g.code} — {g.description}</option>)}
+                  </select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Tipo Fornecedor</label>
                   <input className="erp-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Classif. (tipo)</label>
@@ -154,12 +189,16 @@ export function Vfis0360Page(): JSX.Element {
                 <div className="erp-field erp-c12">
                   <label className="erp-label">Comportamento na nota de entrada</label>
                   <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-                    {FLAGS.map((f) => (
-                      <label key={f.campo} title={f.ajuda} style={{ fontSize: 13 }}>
-                        <input type="checkbox" checked={form[f.campo] !== false} onChange={(e) => setF(f.campo, e.target.checked)} /> {f.rotulo}
-                      </label>
-                    ))}
+                    {FLAGS.map((f) => {
+                      const travado = !!restricao && ((f.campo === "credita_icms" && restricao.icms) || (f.campo === "credita_ipi" && restricao.ipi));
+                      return (
+                        <label key={f.campo} title={travado ? restricao?.motivo : f.ajuda} style={{ fontSize: 13, opacity: travado ? 0.55 : 1 }}>
+                          <input type="checkbox" checked={!travado && form[f.campo] !== false} disabled={travado} onChange={(e) => setF(f.campo, e.target.checked)} /> {f.rotulo}
+                        </label>
+                      );
+                    })}
                   </div>
+                  {restricao && <span className="erp-field-hint">Natureza de {restricao.motivo}.</span>}
                 </div>
               
 

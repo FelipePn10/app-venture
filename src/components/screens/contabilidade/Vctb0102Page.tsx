@@ -1,1431 +1,490 @@
-import { useState, useCallback } from "react";
-import { humanizeApiError } from '@/services/apiError';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createCostCenter,
-  listCostCenters,
-  listCostCentersCadastro,
-  getCostCenter,
-  updateCostCenter,
-  deleteCostCenter,
-  usoCostCenter,
-  type TypeCC,
-  type CostCenterResponse,
-  type UsoCostCenterResumo,
-} from "@/services/costCenterService";
+  type AprovacaoRequisicao, type CentroDeCusto, type NoCentro, type OrcamentoCentro, type TipoCentro, type UsuarioDaEmpresa,
+  aprovacoes as listarAprovacoes, arvore as carregarArvore, decidirAprovacao, listarCentros, listarUsuarios,
+  orcamento as carregarOrcamento, salvarGestao, salvarOrcamento,
+} from "@/services/costCenterGestaoService";
+import { type UsoCostCenterResumo, createCostCenter, deleteCostCenter, updateCostCenter, usoCostCenter } from "@/services/costCenterService";
+import { type PlanoConta, listPlanoContas } from "@/services/financialService";
+import { errMessage } from "@/services/fiscalShared";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuthStore } from "@/store/authStore";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
+type Aba = "cadastro" | "orcamento" | "arvore" | "aprovacoes";
 
-const TIPOS_CC: TypeCC[] = [
-  "AUXILIARY",
-  "PRODUCTIVE",
-  "ADMINISTRATIVE",
-  "COMMERCIAL",
+const TIPOS: Array<{ v: TipoCentro; l: string; ajuda: string }> = [
+  { v: "PRODUCTIVE", l: "Produtivo", ajuda: "Produz diretamente o produto (corte, usinagem, montagem). Recebe rateio de absorção quando “Recebe rateio” está marcado." },
+  { v: "AUXILIARY", l: "Auxiliar/Apoio", ajuda: "Apoia a produção (PCP, qualidade, almoxarifado, manutenção). Não recebe rateio de absorção." },
+  { v: "ADMINISTRATIVE", l: "Administrativo", ajuda: "Área administrativa (financeiro, RH, TI). Só rateios primários." },
+  { v: "COMMERCIAL", l: "Comercial/Vendas", ajuda: "Gestão comercial (vendas, marketing). Só rateios primários." },
 ];
+const rotuloTipo = (t: string) => TIPOS.find((x) => x.v === t)?.l ?? t;
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const primeiroDoMes = () => `${hojeISO().slice(0, 8)}01`;
+const dataBR = (s?: string | null) => (s ? new Date(`${s.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—");
+const valor = (s?: string | number | null) => Number(s ?? 0);
+const moeda = (s?: string | number | null) => valor(s).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// "1.234,56" ou "1234.56" → "1234.56" (decimal com ponto, como o backend lê).
+const paraDecimal = (s: string) => { const t = s.trim(); if (t === "") return "0"; return t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t; };
+const paraTela = (s: string) => (valor(s) === 0 ? "" : valor(s).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
-const TIPO_CC_LABEL: Record<TypeCC, string> = {
-  AUXILIARY:      "Auxiliar/Apoio",
-  PRODUCTIVE:     "Produtivo",
-  ADMINISTRATIVE: "Administrativo",
-  COMMERCIAL:     "Comercial/Vendas",
+type Form = {
+  codigo: string; descricao: string; tipo: TipoCentro; parent: string; isRatio: boolean; inicio: string; fim: string; ativo: boolean;
+  responsavel: string; aprovador: string; aprovaRequisicoes: boolean; conta: string;
 };
+const VAZIO = (): Form => ({
+  codigo: "", descricao: "", tipo: "PRODUCTIVE", parent: "", isRatio: false, inicio: primeiroDoMes(), fim: "", ativo: true,
+  responsavel: "", aprovador: "", aprovaRequisicoes: false, conta: "",
+});
 
-const TIPO_CC_INFO: Record<TypeCC, string> = {
-  AUXILIARY:
-    "Centros que auxiliam processos produtivos (PCP, Qualidade, Almoxarifado, Manutenção). Não recebem rateios de absorção.",
-  PRODUCTIVE:
-    "Centros que produzem diretamente o produto (Corte, Usinagem, Montagem, Embalagem). Podem receber rateios de absorção quando Rateio estiver marcado.",
-  ADMINISTRATIVE:
-    "Área administrativa (Financeiro, RH, TI). Não recebem rateios de absorção, somente rateios primários.",
-  COMMERCIAL:
-    "Gestão comercial (Depto de Vendas, Marketing, Supervisores). Não recebem rateios de absorção, somente rateios primários.",
-};
-
-// Maps both backend enum values and legacy PT-BR strings
-const BACKEND_TO_TYPE_CC: Record<string, TypeCC> = {
-  AUXILIARY:        "AUXILIARY",
-  PRODUCTIVE:       "PRODUCTIVE",
-  ADMINISTRATIVE:   "ADMINISTRATIVE",
-  COMMERCIAL:       "COMMERCIAL",
-  "Auxiliar/Apoio": "AUXILIARY",
-  "Auxiliar":       "AUXILIARY",
-  "Produtivo":      "PRODUCTIVE",
-  "Administrativo": "ADMINISTRATIVE",
-  "Comercial/Vendas": "COMMERCIAL",
-  "Comercial":      "COMMERCIAL",
-};
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type AbaAtiva  = "dados" | "empresas";
-type ModoForm  = "novo"  | "edicao";
-
-type FeedbackState = {
-  type: "success" | "error" | "info";
-  message: string;
-} | null;
-
-interface FormCC {
-  code: string;
-  description: string;
-  parentCode: string;
-  type: TypeCC;
-  isRatio: boolean;
-  startDate: string;
-  endDate: string;
-}
-
-interface EmpresaVinculo {
-  empresa: string;
-  unidade: string;
-}
-
-const FORM_INICIAL: FormCC = {
-  code: "",
-  description: "",
-  parentCode: "",
-  type: "ADMINISTRATIVE",
-  isRatio: false,
-  startDate: "",
-  endDate: "",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function normalizeTypeCC(raw: string | undefined | null): TypeCC {
-  if (!raw) return "ADMINISTRATIVE";
-  return BACKEND_TO_TYPE_CC[raw] ?? "ADMINISTRATIVE";
-}
-
-function decodeJwtSub(token: string | null): string | undefined {
-  if (!token) return undefined;
-  try {
-    const payload = token.split(".")[1];
-    if (!payload) return undefined;
-    const decoded = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-    ) as Record<string, unknown>;
-    const sub = decoded["sub"] ?? decoded["id"] ?? decoded["user_id"];
-    return typeof sub === "string" && sub.length > 0 ? sub : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function normalizeErrorMessage(error: unknown, fallback: string): string {
-  return humanizeApiError(error, fallback);
-}
-
-function applyResponseToForm(r: CostCenterResponse): FormCC {
-  return {
-    code:        r.code != null ? String(r.code) : "",
-    description: r.description ?? "",
-    parentCode:  r.parent_code != null ? String(r.parent_code) : "",
-    type:        normalizeTypeCC(r.type),
-    isRatio:     r.is_ratio ?? false,
-    // O backend devolve data com hora ("2026-01-01T00:00:00Z"); o <input type="date">
-    // só aceita AAAA-MM-DD e ficava em branco — a edição reprovava na validação.
-    startDate:   (r.start_date ?? "").substring(0, 10),
-    endDate:     (r.end_date ?? "").substring(0, 10),
-  };
-}
-
-function formatDateBR(iso: string): string {
-  if (!iso || iso.length < 10) return "—";
-  const [y, m, d] = iso.substring(0, 10).split("-");
-  return `${d}/${m}/${y}`;
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
+/**
+ * VCTB0102 — o cadastro único de centro de custo. Junta o que estava em duas
+ * telas (VCTB0102 e VFIN0130) e acrescenta a gestão: código da empresa,
+ * responsável, aprovador das requisições, conta contábil padrão, orçamento
+ * mensal × realizado e a árvore consolidada.
+ */
 export function Vctb0102Page(): JSX.Element {
-  // Excluir é só do ADMIN (o backend recusa os demais com 403).
-  const isAdmin = useAuthStore((state) => state.user?.role?.toUpperCase() === "ADMIN");
-  // ── Form state
-  const [form, setForm]               = useState<FormCC>(FORM_INICIAL);
-  const [modoForm, setModoForm]       = useState<ModoForm>("novo");
-  const [codigoEdit, setCodigoEdit]   = useState<number | null>(null);
-  const [abaAtiva, setAbaAtiva]       = useState<AbaAtiva>("dados");
-  const [empresas, setEmpresas]       = useState<EmpresaVinculo[]>([]);
-  const [novaEmpresa, setNovaEmpresa] = useState("");
-  const [novaUnidade, setNovaUnidade] = useState("");
-  const [errors, setErrors]           = useState<Partial<Record<keyof FormCC, string>>>({});
-  /** CC Pai já confirmado no backend — mostrado sob o campo como confirmação. */
-  const [parentInfo, setParentInfo]   = useState<{ code: number; description: string } | null>(null);
-  const [parentChecking, setParentChecking] = useState(false);
-  /** Edição: valores carregados, situação e onde o CC é usado. Em uso, só
-   *  descrição, data final e situação mudam, e o CC não pode ser excluído. */
-  const [original, setOriginal]       = useState<FormCC | null>(null);
-  const [ativo, setAtivo]             = useState(true);
-  const [uso, setUso]                 = useState<UsoCostCenterResumo | null>(null);
-  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
-  const [incluirInativos, setIncluirInativos] = useState(false);
+  const isAdmin = useAuthStore((s) => s.user?.role?.toUpperCase() === "ADMIN");
+  const usuarioAtual = useAuthStore((s) => s.user?.id);
+  const [aba, setAba] = useState<Aba>("cadastro");
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [busy, setBusy] = useState(false);
+  const [centros, setCentros] = useState<CentroDeCusto[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioDaEmpresa[]>([]);
+  const [contas, setContas] = useState<PlanoConta[]>([]);
 
-  // ── Search state
-  const [filtroDataRef, setFiltroDataRef]   = useState("");
-  const [filtroEmpresa, setFiltroEmpresa]   = useState("");
-  const [resultados, setResultados]         = useState<CostCenterResponse[]>([]);
-  const [mostrarResultados, setMostrarResultados] = useState(false);
-
-  // ── Loading / feedback
-  const [isSaving,    setIsSaving]    = useState(false);
-  const [isLoading,   setIsLoading]   = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [feedback,    setFeedback]    = useState<FeedbackState>(null);
-
-  const user  = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
-
-  // ── Field setter
-  const setField = useCallback(
-    <K extends keyof FormCC>(key: K, value: FormCC[K]) => {
-      setForm((prev) => {
-        const next = { ...prev, [key]: value };
-        if (key === "type" && value !== "PRODUCTIVE") {
-          (next as FormCC).isRatio = false;
-        }
-        return next;
-      });
-      setErrors((prev) => ({ ...prev, [key]: undefined }));
-      setFeedback(null);
-    },
-    [],
-  );
-
-  /**
-   * Confere se o CC Pai informado existe de fato. O backend aceita
-   * `parent_code` sem checar a referência, então um pai inexistente gravava um
-   * CC órfão — a hierarquia ficava quebrada e só aparecia no rateio.
-   *
-   * Devolve a mensagem de erro (ou `null` se estiver tudo certo) e atualiza o
-   * rótulo de confirmação exibido sob o campo.
-   */
-  const checkParent = useCallback(async (raw: string, selfCode: string): Promise<string | null> => {
-    const trimmed = raw.trim();
-    setParentInfo(null);
-    if (!trimmed) return null; // campo é opcional
-    const code = Number(trimmed);
-    if (isNaN(code) || code <= 0 || !Number.isInteger(code)) return "CC Pai deve ser um número inteiro positivo.";
-    if (selfCode.trim() && code === Number(selfCode)) return "Um centro de custo não pode ser pai de si mesmo.";
-    setParentChecking(true);
-    try {
-      const cc = await getCostCenter(code);
-      if (!cc) return `CC Pai ${code} não existe. Cadastre-o primeiro ou deixe o campo em branco.`;
-      setParentInfo({ code: cc.code, description: cc.description });
-      return null;
-    } catch {
-      return "Não foi possível verificar o CC Pai. Verifique a conexão.";
-    } finally {
-      setParentChecking(false);
-    }
+  const recarregar = useCallback(async () => {
+    try { setCentros(await listarCentros()); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao carregar os centros de custo.") }); }
   }, []);
+  useEffect(() => {
+    void recarregar();
+    listarUsuarios().then(setUsuarios).catch(() => setUsuarios([]));
+    listPlanoContas().then(setContas).catch(() => setContas([]));
+  }, [recarregar]);
 
-  // ── Validation
-  async function validate(): Promise<boolean> {
-    const e: Partial<Record<keyof FormCC, string>> = {};
-    if (!form.code.trim()) {
-      e.code = "Código obrigatório.";
-    } else if (isNaN(Number(form.code)) || Number(form.code) <= 0) {
-      e.code = "Código deve ser um número inteiro positivo.";
+  // Profundidade de cada centro na árvore (para recuar na lista).
+  const porCode = useMemo(() => new Map(centros.map((c) => [c.code, c])), [centros]);
+  const profundidade = useCallback((c: CentroDeCusto) => {
+    let n = 0; let p = c.parent_code;
+    while (p != null && n < 20) { const pai = porCode.get(p); if (!pai) break; n++; p = pai.parent_code; }
+    return n;
+  }, [porCode]);
+  const ordenados = useMemo(() => {
+    // Em árvore: cada pai seguido dos filhos, pelo código da empresa.
+    const filhos = new Map<number | null, CentroDeCusto[]>();
+    for (const c of centros) {
+      const k = c.parent_code != null && porCode.has(c.parent_code) ? c.parent_code : null;
+      filhos.set(k, [...(filhos.get(k) ?? []), c]);
     }
-    if (!form.description.trim()) e.description = "Descrição obrigatória.";
-    if (!form.startDate) {
-      e.startDate = "Data inicial obrigatória.";
-    } else if (modoForm === "novo" || form.startDate !== original?.startDate) {
-      const day = new Date(form.startDate + "T00:00:00").getDate();
-      if (day !== 1) e.startDate = "Data inicial deve ser o 1º dia do mês (dia 01).";
-    }
-    if (form.endDate && form.startDate && form.endDate < form.startDate) {
-      e.endDate = "Data final deve ser igual ou posterior à data inicial.";
-    }
-    if (modoForm === "novo" || form.parentCode !== original?.parentCode) {
-      const parentError = await checkParent(form.parentCode, form.code);
-      if (parentError) e.parentCode = parentError;
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  // ── Carrega um CC para edição e confere onde ele é usado
-  async function carregarParaEdicao(cc: CostCenterResponse) {
-    const f = applyResponseToForm(cc);
-    setForm(f);
-    setOriginal(f);
-    setAtivo(cc.is_active !== false);
-    setErrors({});
-    setModoForm("edicao");
-    setCodigoEdit(cc.code);
-    setUso(null);
-    setConfirmarExclusao(false);
-    try {
-      setUso(await usoCostCenter(cc.code));
-    } catch (error) {
-      setFeedback({ type: "error", message: normalizeErrorMessage(error, "Não foi possível conferir onde o CC é usado.") });
-    }
-  }
-
-  // ── Load by code (form field lookup)
-  async function handleLoadByCode() {
-    const codeNum = Number(form.code.trim());
-    if (!form.code.trim() || isNaN(codeNum) || codeNum <= 0) {
-      setErrors((prev) => ({ ...prev, code: "Informe um código para consultar." }));
-      return;
-    }
-    setIsLoading(true);
-    setFeedback(null);
-    try {
-      const cc = await getCostCenter(codeNum);
-      if (!cc) {
-        setFeedback({ type: "info", message: `CC ${codeNum} não encontrado.` });
-        return;
+    const out: CentroDeCusto[] = [];
+    const visitar = (k: number | null, n: number) => {
+      for (const c of (filhos.get(k) ?? []).sort((a, b) => a.codigo.localeCompare(b.codigo))) {
+        out.push(c); if (n < 20) visitar(c.code, n + 1);
       }
-      setFeedback({ type: "info", message: `CC ${cc.code} — ${cc.description} carregado para edição.` });
-      await carregarParaEdicao(cc);
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: normalizeErrorMessage(error, "Erro ao consultar centro de custo."),
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+    visitar(null, 0);
+    return out;
+  }, [centros, porCode]);
+
+  // ─── Cadastro ───────────────────────────────────────────────────────────────
+  const [form, setForm] = useState<Form>(VAZIO());
+  const [editCode, setEditCode] = useState<number | null>(null);
+  const [uso, setUso] = useState<UsoCostCenterResumo | null>(null);
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [inativos, setInativos] = useState(false);
+  const travado = editCode != null && (uso?.em_uso ?? true);
+  const setF = <K extends keyof Form>(k: K, v: Form[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
+
+  function novo() { setForm(VAZIO()); setEditCode(null); setUso(null); setConfirmarExclusao(false); setFeedback(null); }
+  async function editar(c: CentroDeCusto) {
+    setForm({
+      codigo: c.codigo, descricao: c.descricao, tipo: c.tipo, parent: c.parent_code != null ? String(c.parent_code) : "", isRatio: c.is_ratio,
+      inicio: c.start_date.slice(0, 10), fim: c.end_date ? c.end_date.slice(0, 10) : "", ativo: c.is_active,
+      responsavel: c.responsavel_id ?? "", aprovador: c.aprovador_id ?? "", aprovaRequisicoes: c.aprova_requisicoes, conta: c.conta_padrao_id ? String(c.conta_padrao_id) : "",
+    });
+    setEditCode(c.code); setUso(null); setConfirmarExclusao(false); setFeedback(null);
+    try { setUso(await usoCostCenter(c.code)); } catch { setUso(null); }
   }
 
-  // ── List search
-  async function handlePesquisar() {
-    setIsSearching(true);
-    setFeedback(null);
+  // O centro-pai não pode ser o próprio centro nem um descendente dele.
+  const descendentes = useMemo(() => {
+    const s = new Set<number>();
+    if (editCode == null) return s;
+    const visitar = (code: number) => { for (const c of centros) if (c.parent_code === code && !s.has(c.code)) { s.add(c.code); visitar(c.code); } };
+    visitar(editCode);
+    return s;
+  }, [centros, editCode]);
+
+  function conferir(): string | null {
+    if (!form.codigo.trim()) return "Informe o código do centro de custo.";
+    if (!form.descricao.trim()) return "Informe a descrição.";
+    if (!form.inicio) return "Informe a data de início.";
+    if ((editCode == null || !travado) && !form.inicio.endsWith("-01")) return "A data de início é o 1º dia do mês.";
+    if (form.fim && form.fim < form.inicio) return "A data de fim não pode ser anterior à de início.";
+    if (form.aprovaRequisicoes && !form.aprovador) return "Para aprovar as requisições do centro, escolha o aprovador.";
+    const outro = centros.find((c) => c.codigo.trim().toUpperCase() === form.codigo.trim().toUpperCase() && c.code !== editCode);
+    if (outro) return `Já existe o centro ${outro.codigo} — ${outro.descricao}.`;
+    return null;
+  }
+
+  async function salvar() {
+    const erro = conferir();
+    if (erro) { setFeedback({ type: "error", message: erro }); return; }
+    setBusy(true); setFeedback(null);
+    const gestao = {
+      codigo: form.codigo.trim(), responsavel_id: form.responsavel || null, aprovador_id: form.aprovador || null,
+      aprova_requisicoes: form.aprovaRequisicoes, conta_padrao_id: form.conta ? Number(form.conta) : null,
+    };
     try {
-      const results = incluirInativos
-        ? await listCostCentersCadastro()
-        : await listCostCenters({
-            reference_date: filtroDataRef || undefined,
-            company:        filtroEmpresa || undefined,
-          });
-      setResultados(results);
-      setMostrarResultados(true);
-      if (results.length === 0) {
-        setFeedback({ type: "info", message: "Nenhum CC encontrado para o filtro informado." });
-      }
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: normalizeErrorMessage(error, "Erro ao pesquisar centros de custo."),
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  }
-
-  // ── Select from list → loads into form as edicao
-  function handleSelectFromList(cc: CostCenterResponse) {
-    setFeedback(null);
-    setAbaAtiva("dados");
-    void carregarParaEdicao(cc);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  }
-
-  // ── Salvar: cria no modo "novo"; altera (PUT) no modo "edição".
-  // Antes sempre criava, e salvar um CC carregado dava "código duplicado".
-  async function handleSalvar() {
-    if (!(await validate())) return;
-    setIsSaving(true);
-    setFeedback(null);
-    try {
-      if (modoForm === "edicao" && codigoEdit != null) {
-        const salvo = await updateCostCenter(codigoEdit, {
-          description: form.description.trim(),
-          parent_code: form.parentCode ? Number(form.parentCode) : undefined,
-          type:        form.type,
-          is_ratio:    form.isRatio,
-          start_date:  form.startDate,
-          end_date:    form.endDate || undefined,
-          is_active:   ativo,
+      let code = editCode;
+      if (code == null) {
+        const criado = await createCostCenter({
+          code: 0, description: form.descricao.trim(), parent_code: form.parent ? Number(form.parent) : undefined, type: form.tipo,
+          is_ratio: form.isRatio, start_date: form.inicio, end_date: form.fim || undefined, created_by: usuarioAtual ?? "",
         });
-        if (salvo) await carregarParaEdicao(salvo);
-        setFeedback({ type: "success", message: `Centro de custo ${codigoEdit} — ${form.description} alterado.` });
-        return;
+        code = criado.code;
+      } else {
+        await updateCostCenter(code, {
+          description: form.descricao.trim(), parent_code: form.parent ? Number(form.parent) : undefined, type: form.tipo,
+          is_ratio: form.isRatio, start_date: form.inicio, end_date: form.fim || undefined, is_active: form.ativo,
+        });
       }
-      const createdBy = user?.id ?? decodeJwtSub(token) ?? "anonymous";
-      await createCostCenter({
-        code:        Number(form.code),
-        description: form.description.trim(),
-        parent_code: form.parentCode ? Number(form.parentCode) : undefined,
-        type:        form.type,
-        is_ratio:    form.isRatio,
-        start_date:  form.startDate,
-        end_date:    form.endDate || undefined,
-        created_by:  createdBy,
-      });
-      setFeedback({
-        type: "success",
-        message: `Centro de custo ${form.code} — ${form.description} salvo com sucesso.`,
-      });
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message: normalizeErrorMessage(error, "Erro ao salvar. Verifique os campos e a conexão."),
-      });
-    } finally {
-      setIsSaving(false);
-    }
+      const salvo = await salvarGestao(code, gestao);
+      await recarregar();
+      await editar({ ...salvo, start_date: salvo.start_date ?? form.inicio });
+      setFeedback({ type: "success", message: `Centro de custo ${salvo.codigo} — ${salvo.descricao} salvo.` });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
-  // ── Excluir: só sem uso (o backend confere de novo) e com confirmação.
-  async function handleExcluir() {
-    if (codigoEdit == null) return;
+  async function excluir() {
+    if (editCode == null) return;
     if (!confirmarExclusao) { setConfirmarExclusao(true); return; }
-    setIsSaving(true);
-    setFeedback(null);
+    setBusy(true); setFeedback(null);
     try {
-      await deleteCostCenter(codigoEdit);
-      const codigo = codigoEdit;
-      handleNovo();
-      setResultados((prev) => prev.filter((c) => c.code !== codigo));
+      await deleteCostCenter(editCode);
+      const codigo = form.codigo;
+      novo(); await recarregar();
       setFeedback({ type: "success", message: `Centro de custo ${codigo} excluído.` });
-    } catch (error) {
-      setConfirmarExclusao(false);
-      setFeedback({ type: "error", message: normalizeErrorMessage(error, "Erro ao excluir o centro de custo.") });
-    } finally {
-      setIsSaving(false);
+    } catch (e) { setConfirmarExclusao(false); setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  const listaFiltrada = ordenados.filter((c) => {
+    if (!inativos && !c.is_active) return false;
+    const t = busca.trim().toLowerCase();
+    return !t || c.codigo.toLowerCase().includes(t) || c.descricao.toLowerCase().includes(t) || (c.responsavel ?? "").toLowerCase().includes(t);
+  });
+
+  // ─── Orçamento ──────────────────────────────────────────────────────────────
+  const [ano, setAno] = useState(new Date().getFullYear());
+  const [orc, setOrc] = useState<OrcamentoCentro[]>([]);
+  const [celulas, setCelulas] = useState<Record<string, string>>({});
+  const carregarOrc = useCallback(async () => {
+    setBusy(true);
+    try {
+      const o = await carregarOrcamento(ano);
+      setOrc(o);
+      const m: Record<string, string> = {};
+      for (const l of o) l.orcado.forEach((v, i) => { m[`${l.cost_center_id}:${i + 1}`] = paraTela(v); });
+      setCelulas(m);
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }, [ano]);
+  useEffect(() => { if (aba === "orcamento") void carregarOrc(); }, [aba, carregarOrc]);
+
+  async function gravarOrcamento() {
+    const linhas: Array<{ cost_center_id: number; mes: number; valor: string }> = [];
+    for (const l of orc) {
+      for (let mes = 1; mes <= 12; mes++) {
+        const txt = celulas[`${l.cost_center_id}:${mes}`] ?? "";
+        const novoValor = paraDecimal(txt);
+        if (Number.isNaN(Number(novoValor))) { setFeedback({ type: "error", message: `Valor inválido em ${l.codigo} / ${MESES[mes - 1]}: ${txt}` }); return; }
+        if (Number(novoValor) !== valor(l.orcado[mes - 1])) linhas.push({ cost_center_id: l.cost_center_id, mes, valor: novoValor });
+      }
     }
+    if (linhas.length === 0) { setFeedback({ type: "info", message: "Nenhum valor alterado." }); return; }
+    setBusy(true); setFeedback(null);
+    try {
+      const o = await salvarOrcamento(ano, linhas);
+      setOrc(o);
+      setFeedback({ type: "success", message: `${linhas.length} mês(es) de orçamento gravado(s).` });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+  const orcOrdenado = useMemo(() => {
+    const ordem = new Map(ordenados.map((c, i) => [c.id, i]));
+    return [...orc].sort((a, b) => (ordem.get(a.cost_center_id) ?? 0) - (ordem.get(b.cost_center_id) ?? 0));
+  }, [orc, ordenados]);
+
+  // ─── Árvore ─────────────────────────────────────────────────────────────────
+  const [mesArvore, setMesArvore] = useState(new Date().getMonth() + 1);
+  const [nos, setNos] = useState<NoCentro[]>([]);
+  const carregarNos = useCallback(async () => {
+    setBusy(true);
+    try { setNos(await carregarArvore(ano, mesArvore)); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }, [ano, mesArvore]);
+  useEffect(() => { if (aba === "arvore") void carregarNos(); }, [aba, carregarNos]);
+  const linhasArvore = useMemo(() => {
+    const out: Array<{ n: NoCentro; nivel: number }> = [];
+    const visitar = (ns: NoCentro[], nivel: number) => { for (const n of ns) { out.push({ n, nivel }); visitar(n.filhos ?? [], nivel + 1); } };
+    visitar(nos, 0);
+    return out;
+  }, [nos]);
+
+  // ─── Aprovações ─────────────────────────────────────────────────────────────
+  const [aprov, setAprov] = useState<AprovacaoRequisicao[]>([]);
+  const [statusAprov, setStatusAprov] = useState("PENDENTE");
+  const [minhas, setMinhas] = useState(true);
+  const [motivo, setMotivo] = useState<Record<number, string>>({});
+  const carregarAprov = useCallback(async () => {
+    setBusy(true);
+    try { setAprov(await listarAprovacoes({ status: statusAprov, minhas })); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }, [statusAprov, minhas]);
+  useEffect(() => { if (aba === "aprovacoes") void carregarAprov(); }, [aba, carregarAprov]);
+  async function decidir(a: AprovacaoRequisicao, aprovar: boolean) {
+    if (!aprovar && !(motivo[a.id] ?? "").trim()) { setFeedback({ type: "error", message: "Informe o motivo da reprovação." }); return; }
+    setBusy(true); setFeedback(null);
+    try {
+      await decidirAprovacao(a.id, aprovar, motivo[a.id] ?? "");
+      setFeedback({ type: "success", message: `Requisição ${a.requisition_code} ${aprovar ? "aprovada" : "reprovada"} no centro ${a.centro_codigo}.` });
+      await carregarAprov();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
-  // ── Novo CC → reset form to creation mode
-  function handleNovo() {
-    setForm(FORM_INICIAL);
-    setErrors({});
-    setFeedback(null);
-    setEmpresas([]);
-    setNovaEmpresa("");
-    setNovaUnidade("");
-    setAbaAtiva("dados");
-    setModoForm("novo");
-    setCodigoEdit(null);
-    setOriginal(null);
-    setAtivo(true);
-    setUso(null);
-    setConfirmarExclusao(false);
-  }
-
-  // ── Limpar → same as Novo
-  function handleLimpar() {
-    handleNovo();
-    setMostrarResultados(false);
-  }
-
-  const ehProdutivo = form.type === "PRODUCTIVE";
-  // Em uso (ou enquanto o uso não foi conferido), tipo, pai, rateio e início travam.
-  const travado = modoForm === "edicao" && (uso?.em_uso ?? true);
-
-  const ABAS: { id: AbaAtiva; label: string }[] = [
-    { id: "dados",    label: "Dados Gerais" },
-    { id: "empresas", label: `Empresas${empresas.length > 0 ? ` (${empresas.length})` : ""}` },
-  ];
-
-  // ─── JSX ──────────────────────────────────────────────────────────────────
+  const tipoAtual = TIPOS.find((t) => t.v === form.tipo);
+  const statusAprovRotulo: Record<string, [string, string]> = {
+    PENDENTE: ["Pendente", "erp-badge-amber"], APROVADA: ["Aprovada", "erp-badge-green"], REPROVADA: ["Reprovada", "erp-badge-red"],
+  };
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Contabilidade</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Centros de Custo</span><span className="erp-crumb-code">VCTB0102</span></nav>
+        <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">{centros.length} centro(s)</span>
+      </header>
 
-        .ctb-root {
-          min-height: 100vh; background: #dfe4e0;
-          font-family: 'Inter', sans-serif; color: #1c2b22;
-          display: flex; flex-direction: column;
-        }
-
-        /* ── TOPBAR ── */
-        .ctb-topbar {
-          height: 52px; background: #16281d;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 20px; flex-shrink: 0;
-          border-bottom: 1px solid rgba(62,150,84,0.15);
-        }
-        .ctb-topbar-left { display: flex; align-items: center; gap: 10px; }
-        .ctb-logo-mark {
-          width: 28px; height: 28px; background: #2f7d47;
-          border-radius: 6px; display: flex; align-items: center; justify-content: center;
-        }
-        .ctb-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .ctb-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
-        .ctb-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #3f8a58;
-          padding-left: 14px; margin-left: 14px;
-          border-left: 1px solid rgba(255,255,255,0.08);
-        }
-
-        /* ── ACTION BAR ── */
-        .ctb-actionbar {
-          background: #fff; border-bottom: 1px solid #dbe8d5;
-          padding: 0 20px; display: flex; align-items: center;
-          gap: 4px; height: 46px; flex-shrink: 0;
-        }
-        .ctb-action-group {
-          display: flex; align-items: center; gap: 4px;
-          padding-right: 12px; margin-right: 8px;
-          border-right: 1px solid #e8f0e4;
-        }
-        .ctb-action-group:last-child { border-right: none; }
-        .ctb-action-label {
-          font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
-        }
-        .ctb-btn {
-          display: inline-flex; align-items: center; gap: 6px;
-          height: 32px; padding: 0 12px; border: 1.5px solid transparent;
-          border-radius: 7px; font-family: 'Inter', sans-serif;
-          font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
-          transition: background 0.13s, border-color 0.13s, color 0.13s;
-        }
-        .ctb-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
-        .ctb-btn-primary:hover:not(:disabled) { background: #1e3728; }
-        .ctb-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ctb-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
-        .ctb-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
-        .ctb-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ctb-btn-danger { background: transparent; color: #b94040; border-color: #f0c8c8; }
-        .ctb-btn-danger:hover:not(:disabled) { background: #fff0f0; border-color: #e09090; }
-        .ctb-btn-sm { height: 28px; padding: 0 9px; font-size: 12px; }
-        .ctb-btn-new {
-          background: #eef9f0; color: #1a6030; border-color: #b4d8b8; font-weight: 600;
-        }
-        .ctb-btn-new:hover:not(:disabled) { background: #dff5e4; border-color: #88c898; }
-
-        /* ── BODY ── */
-        .ctb-body {
-          flex: 1; padding: 16px 20px; display: flex;
-          flex-direction: column; gap: 0; overflow-y: auto;
-        }
-        .ctb-body::-webkit-scrollbar { width: 5px; }
-        .ctb-body::-webkit-scrollbar-thumb { background: #cce0c8; border-radius: 4px; }
-
-        /* ── SECTION BANNER ── */
-        .ctb-section-banner {
-          display: flex; align-items: center; gap: 10px;
-          padding: 14px 0 8px;
-        }
-        .ctb-section-banner:first-child { padding-top: 0; }
-        .ctb-section-banner-pill {
-          font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #6b7d71;
-          background: #e0ede0; border: 1px solid #c8dcc8;
-          border-radius: 20px; padding: 3px 10px; white-space: nowrap;
-        }
-        .ctb-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .ctb-section-banner-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
-
-        /* ── CARD ── */
-        .ctb-card {
-          background: #fff; border: 1px solid #dbe8d5;
-          border-radius: 12px; overflow: hidden; margin-bottom: 14px;
-        }
-        .ctb-card-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
-        }
-        .ctb-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .ctb-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
-        .ctb-card-badge {
-          font-size: 10.5px; font-weight: 500; color: #2f7d47;
-          background: #eef5ea; border: 1px solid #c4dfc8; border-radius: 12px; padding: 2px 8px;
-        }
-        .ctb-card-body { padding: 18px 18px; }
-
-        /* ── MODO BADGES ── */
-        .ctb-modo-novo {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px;
-          border-radius: 20px; background: #e8f5e0; color: #1e5818;
-          border: 1px solid #a8d898;
-        }
-        .ctb-modo-edicao {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px;
-          border-radius: 20px; background: #fff8e0; color: #7a5200;
-          border: 1px solid #e0c860;
-        }
-        .ctb-modo-dot {
-          width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-        }
-        .ctb-modo-novo  .ctb-modo-dot { background: #2f7d47; }
-        .ctb-modo-edicao .ctb-modo-dot { background: #c8a020; }
-
-        /* ── FILTER ROW ── */
-        .ctb-filter-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-
-        /* ── GRID ── */
-        .ctb-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px 14px; align-items: start; }
-        .ctb-col-2  { grid-column: span 2; }
-        .ctb-col-3  { grid-column: span 3; }
-        .ctb-col-4  { grid-column: span 4; }
-        .ctb-col-5  { grid-column: span 5; }
-        .ctb-col-6  { grid-column: span 6; }
-        .ctb-col-7  { grid-column: span 7; }
-        .ctb-col-8  { grid-column: span 8; }
-        .ctb-col-10 { grid-column: span 10; }
-        .ctb-col-12 { grid-column: span 12; }
-
-        /* ── FIELDS ── */
-        .ctb-field { display: flex; flex-direction: column; gap: 5px; }
-        .ctb-label {
-          font-size: 10.5px; font-weight: 600; color: #6b7d71;
-          text-transform: uppercase; letter-spacing: 0.4px;
-          display: flex; align-items: center; gap: 4px;
-        }
-        .ctb-label-req { color: #c84040; font-size: 12px; line-height: 1; }
-        .ctb-input {
-          width: 100%; height: 36px; background: #f8fbf6;
-          border: 1.5px solid #d4e8cc; border-radius: 7px;
-          padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1c2b22; outline: none;
-          transition: border-color 0.13s, box-shadow 0.13s;
-        }
-        .ctb-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .ctb-input::placeholder { color: #a9b6ac; font-size: 12px; }
-        .ctb-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
-        .ctb-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
-        .ctb-input[type="date"] { cursor: pointer; }
-
-        .ctb-select {
-          width: 100%; height: 36px; background: #f8fbf6;
-          border: 1.5px solid #d4e8cc; border-radius: 7px;
-          padding: 0 28px 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1c2b22; outline: none;
-          appearance: none; cursor: pointer;
-          background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23789a84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 10px center;
-          transition: border-color 0.13s;
-        }
-        .ctb-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-
-        .ctb-input-wrap { position: relative; display: flex; }
-        .ctb-input-btn {
-          height: 36px; padding: 0 10px; flex-shrink: 0;
-          background: #edf5ea; border: 1.5px solid #d4e8cc; border-left: none;
-          border-radius: 0 7px 7px 0; display: flex; align-items: center;
-          justify-content: center; gap: 5px;
-          cursor: pointer; color: #3a6048;
-          font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 500;
-          transition: background 0.12s; white-space: nowrap;
-        }
-        .ctb-input-btn:hover { background: #ddf0e0; }
-        .ctb-input-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        .ctb-field-error { font-size: 11px; color: #c84040; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
-        .ctb-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
-        .ctb-field-ok    { font-size: 11px; color: #2f7d47; margin-top: 2px; font-weight: 500; }
-
-        /* ── INFO BOX ── */
-        .ctb-info-box {
-          margin-top: 6px; padding: 8px 12px;
-          background: #f4f9f2; border: 1px solid #d4e8cc;
-          border-radius: 7px; font-size: 12px; color: #46574c; line-height: 1.55;
-        }
-        .ctb-info-box.produtivo { background: #f0f8ea; border-color: #b4d8a8; color: #2a4820; }
-
-        /* ── TOGGLE ── */
-        .ctb-toggle-row { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
-        .ctb-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
-        .ctb-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .ctb-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .ctb-toggle input:checked ~ .ctb-toggle-track { background: #2f7d47; }
-        .ctb-toggle-thumb {
-          position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
-          background: #fff; border-radius: 50%; transition: transform 0.2s;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-        }
-        .ctb-toggle input:checked ~ .ctb-toggle-thumb { transform: translateX(18px); }
-        .ctb-toggle.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
-        .ctb-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; }
-        .ctb-toggle-sub   { font-size: 11.5px; color: #7a9c84; }
-
-        /* ── SECTION DIVIDER ── */
-        .ctb-section-sep   { height: 1px; background: #edf5e8; margin: 20px 0; }
-        .ctb-section-label {
-          font-size: 10px; font-weight: 700; letter-spacing: 1px;
-          text-transform: uppercase; color: #a0b8a8; margin-bottom: 14px;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .ctb-section-label::after { content: ''; flex: 1; height: 1px; background: #e8f0e4; }
-
-        /* ── TABS ── */
-        .ctb-tabs {
-          display: flex; align-items: flex-end; gap: 0;
-          border-bottom: 2px solid #dbe8d5; background: #fafcf9;
-        }
-        .ctb-tab {
-          padding: 10px 20px; font-size: 12.5px; font-weight: 500;
-          color: #6b7d71; cursor: pointer; border: none; background: transparent;
-          border-bottom: 2px solid transparent; margin-bottom: -2px;
-          transition: color 0.13s, border-color 0.13s; white-space: nowrap;
-          font-family: 'Inter', sans-serif;
-        }
-        .ctb-tab:hover { color: #253a2d; }
-        .ctb-tab.active { color: #16281d; border-bottom-color: #2f7d47; font-weight: 600; }
-        .ctb-tab-body { padding: 20px 18px; }
-
-        /* ── RESULTS TABLE ── */
-        .ctb-results-wrap { border-top: 1px solid #edf5e8; overflow-x: auto; }
-        .ctb-results-bar {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
-        }
-        .ctb-results-bar-left { display: flex; align-items: center; gap: 8px; }
-        .ctb-results-bar-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ctb-results-hint { font-size: 11px; color: #94a49a; }
-        .ctb-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .ctb-results-table th {
-          background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #6b7d71;
-          text-transform: uppercase; letter-spacing: 0.5px;
-          border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
-        }
-        .ctb-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
-        .ctb-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
-        .ctb-results-table tbody tr:hover { background: #eef9f0; }
-        .ctb-results-empty { text-align: center; padding: 28px 12px; color: #94a49a; font-size: 12.5px; }
-
-        .ctb-tipo-badge {
-          display: inline-flex; align-items: center;
-          font-size: 11px; font-weight: 600; border-radius: 12px; padding: 2px 8px;
-        }
-        .ctb-tipo-badge.produtivo   { background: #e8f5e0; color: #2a6018; border: 1px solid #b4d898; }
-        .ctb-tipo-badge.auxiliar    { background: #e8f0fc; color: #1a4080; border: 1px solid #a8c0e8; }
-        .ctb-tipo-badge.admin       { background: #fdf8e8; color: #604800; border: 1px solid #e0d090; }
-        .ctb-tipo-badge.comercial   { background: #fdf0e8; color: #603000; border: 1px solid #e0b890; }
-
-        /* ── VINCULOS TABLE ── */
-        .ctb-vinculos-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-        .ctb-vinculos-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ctb-vinculos-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .ctb-vinculos-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .ctb-vinculos-table th {
-          background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #6b7d71;
-          text-transform: uppercase; letter-spacing: 0.5px;
-          border-bottom: 1.5px solid #dbe8d5;
-        }
-        .ctb-vinculos-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; }
-        .ctb-vinculos-table tbody tr:hover { background: #f4fbf2; }
-        .ctb-vinculos-empty { text-align: center; padding: 32px 12px; color: #94a49a; font-size: 12.5px; }
-        .ctb-remove-btn {
-          background: transparent; border: none; cursor: pointer; color: #c89090;
-          padding: 3px 6px; border-radius: 5px; font-size: 12px; font-family: 'Inter', sans-serif;
-          transition: background 0.12s, color 0.12s;
-        }
-        .ctb-remove-btn:hover { background: #fdecea; color: #b94040; }
-
-        /* ── FEEDBACK ── */
-        .ctb-feedback {
-          display: flex; align-items: center; gap: 9px; padding: 11px 15px;
-          border-radius: 9px; font-size: 13px; animation: ctbFadeIn 0.2s ease;
-          margin-bottom: 14px;
-        }
-        .ctb-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
-        .ctb-feedback.error   { background: #fff5f5; border: 1px solid #f8c0c0; border-left: 3px solid #e05252; color: #b91c1c; }
-        .ctb-feedback.info    { background: #f0f8ff; border: 1px solid #c7def8; border-left: 3px solid #4a90d9; color: #1a4070; }
-
-        /* ── RATEIO WARN ── */
-        .ctb-rateio-warn {
-          display: flex; align-items: flex-start; gap: 8px; margin-top: 8px;
-          background: #fffbf0; border: 1px solid #f0dca0; border-left: 3px solid #e8b800;
-          border-radius: 7px; padding: 8px 12px;
-          font-size: 11.5px; color: #5a4000; line-height: 1.5;
-        }
-
-        /* ── FOOTER ── */
-        .ctb-footer {
-          background: #fff; border-top: 1px solid #dbe8d5;
-          padding: 8px 20px; display: flex; align-items: center;
-          justify-content: space-between; flex-shrink: 0;
-        }
-        .ctb-footer-left { display: flex; align-items: center; gap: 20px; }
-        .ctb-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
-        .ctb-footer-stat strong { color: #1c2b22; font-weight: 600; }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .ctb-spinner {
-          width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid rgba(223,240,226,0.3); border-top-color: #dff0e2;
-          border-radius: 50%; animation: spin 0.65s linear infinite;
-        }
-        .ctb-spinner-dark {
-          width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
-          border-radius: 50%; animation: spin 0.65s linear infinite;
-        }
-        @keyframes ctbFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
-
-      <div className="ctb-root">
-
-        {/* ── TOPBAR ── */}
-        <header className="ctb-topbar">
-          <div className="ctb-topbar-left">
-            <div className="ctb-logo-mark">
-              <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-                <rect x="1.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-                <rect x="10.5" y="1.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-                <rect x="1.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-                <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-              </svg>
-            </div>
-            <span className="ctb-app-name">
-              Venture<span className="ctb-app-sub">ERP &amp; Soluções</span>
-            </span>
-            <span className="ctb-screen-title">VCTB0102 — Cadastro de Centro de Custo</span>
-          </div>
-        </header>
-
-        {/* ── ACTION BAR ── */}
-        <div className="ctb-actionbar">
-          <div className="ctb-action-group">
-            <span className="ctb-action-label">Cadastro</span>
-            <button
-              className="ctb-btn ctb-btn-new"
-              onClick={handleNovo}
-              disabled={isSaving || isLoading}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-              Novo CC
-            </button>
-          </div>
-
-          <div className="ctb-action-group">
-            <span className="ctb-action-label">Ações</span>
-            <button
-              className="ctb-btn ctb-btn-primary"
-              onClick={() => void handleSalvar()}
-              disabled={isSaving || isLoading}
-            >
-              {isSaving
-                ? <><div className="ctb-spinner" />Salvando...</>
-                : <>
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                      <path d="M5 2v4h6V2M5 9h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    Salvar
-                  </>
-              }
-            </button>
-            <button
-              className="ctb-btn ctb-btn-danger"
-              onClick={handleLimpar}
-              disabled={isSaving || isLoading}
-            >
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              Limpar
-            </button>
-            {modoForm === "edicao" && (
-              <button
-                className="ctb-btn ctb-btn-danger"
-                onClick={() => void handleExcluir()}
-                disabled={!isAdmin || isSaving || isLoading || uso == null || uso.em_uso}
-                title={!isAdmin ? "Somente administradores excluem" : uso?.em_uso ? "Em uso: desative o CC em vez de excluir" : "Excluir o CC"}
-              >
-                {confirmarExclusao ? "Confirmar exclusão" : "Excluir"}
-              </button>
-            )}
-          </div>
-
-          <div className="ctb-action-group">
-            <button className="ctb-btn ctb-btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M8 7v4M8 5.5h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              Ajuda
-            </button>
-          </div>
-        </div>
-
-        {/* ── BODY ── */}
-        <div className="ctb-body">
-
-          {/* Feedback */}
-          {feedback && (
-            <div className={`ctb-feedback ${feedback.type}`}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                {feedback.type === "success"
-                  ? <path d="M3 8l3.5 3.5L13 5" stroke="#1e6030" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  : feedback.type === "error"
-                    ? <><circle cx="8" cy="8" r="6" stroke="#e05252" strokeWidth="1.4" /><path d="M8 5v3.5M8 10.5h.01" stroke="#e05252" strokeWidth="1.4" strokeLinecap="round" /></>
-                    : <><circle cx="8" cy="8" r="6" stroke="#4a90d9" strokeWidth="1.4" /><path d="M8 7v4M8 5.5h.01" stroke="#4a90d9" strokeWidth="1.4" strokeLinecap="round" /></>
-                }
-              </svg>
-              {feedback.message}
-            </div>
-          )}
-          {modoForm === "edicao" && uso?.em_uso && (
-            <div className="ctb-feedback info">
-              CC {codigoEdit} em uso em {uso.usos.map((u) => `${u.onde} (${u.quantidade})`).join(", ")}.
-              Só a descrição, a data final e a situação podem mudar, e ele não pode ser excluído — desative-o para que não seja mais escolhido.
-            </div>
-          )}
-          {confirmarExclusao && (
-            <div className="ctb-feedback error">
-              Clique em "Confirmar exclusão" para excluir o CC {codigoEdit}. Não há como desfazer.
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* SEÇÃO 1 — PESQUISA                                         */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-
-          <div className="ctb-section-banner">
-            <span className="ctb-section-banner-pill">1 — Pesquisar</span>
-            <div className="ctb-section-banner-line" />
-            <span className="ctb-section-banner-hint">Filtre a lista e clique em um registro para carregá-lo no formulário abaixo</span>
-          </div>
-
-          <div className="ctb-card">
-            <div className="ctb-card-header">
-              <div className="ctb-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#2f7d47" strokeWidth="1.4" />
-                  <path d="M10 10l3.5 3.5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-                <span className="ctb-card-title">Pesquisa de Centros de Custo</span>
-              </div>
-            </div>
-
-            <div className="ctb-card-body" style={{ paddingBottom: 14 }}>
-              <div className="ctb-filter-row">
-                <div className="ctb-field" style={{ flex: "0 0 180px" }}>
-                  <label className="ctb-label">Data de Referência</label>
-                  <input
-                    type="date"
-                    className="ctb-input"
-                    value={filtroDataRef}
-                    onChange={(e) => setFiltroDataRef(e.target.value)}
-                  />
-                  <span className="ctb-field-hint">Filtra por vigência ativa na data.</span>
-                </div>
-                <div className="ctb-field" style={{ flex: "0 0 220px" }}>
-                  <label className="ctb-label">Empresa</label>
-                  <input
-                    className="ctb-input"
-                    placeholder="Código ou nome"
-                    value={filtroEmpresa}
-                    onChange={(e) => setFiltroEmpresa(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && void handlePesquisar()}
-                  />
-                </div>
-                <label className="ctb-field" style={{ flex: "0 0 auto", alignSelf: "flex-end", flexDirection: "row", gap: 6, alignItems: "center", fontSize: 12.5 }}>
-                  <input type="checkbox" checked={incluirInativos} onChange={(e) => setIncluirInativos(e.target.checked)} />
-                  Incluir inativos
-                </label>
-                <div style={{ alignSelf: "flex-end" }}>
-                  <button
-                    className="ctb-btn ctb-btn-ghost"
-                    onClick={() => void handlePesquisar()}
-                    disabled={isSearching}
-                  >
-                    {isSearching
-                      ? <><div className="ctb-spinner-dark" />Buscando...</>
-                      : <>
-                          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                            <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                            <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                          </svg>
-                          Pesquisar
-                        </>
-                    }
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Results — inside the search card */}
-            {mostrarResultados && (
-              <div className="ctb-results-wrap">
-                <div className="ctb-results-bar">
-                  <div className="ctb-results-bar-left">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 4h12M2 8h12M2 12h8" stroke="#6b7d71" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    <span className="ctb-results-bar-label">Resultados</span>
-                    <span className="ctb-card-badge">{resultados.length} registro(s)</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span className="ctb-results-hint">↓ Clique em um registro para carregar no formulário</span>
-                    <button
-                      className="ctb-btn ctb-btn-ghost ctb-btn-sm"
-                      onClick={() => setMostrarResultados(false)}
-                    >
-                      Fechar
-                    </button>
-                  </div>
-                </div>
-
-                {resultados.length === 0 ? (
-                  <div className="ctb-results-empty">Nenhum centro de custo encontrado para os filtros informados.</div>
-                ) : (
-                  <table className="ctb-results-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 80 }}>CC</th>
-                        <th style={{ width: 80 }}>CC Pai</th>
-                        <th>Descrição</th>
-                        <th style={{ width: 170 }}>Tipo</th>
-                        <th style={{ width: 70 }}>Rateio</th>
-                        <th style={{ width: 110 }}>Início</th>
-                        <th style={{ width: 110 }}>Fim</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resultados.map((cc) => {
-                        const tipo = normalizeTypeCC(cc.type);
-                        const badgeClass =
-                          tipo === "PRODUCTIVE"     ? "produtivo"
-                          : tipo === "AUXILIARY"    ? "auxiliar"
-                          : tipo === "ADMINISTRATIVE" ? "admin"
-                          : "comercial";
-                        return (
-                          <tr key={cc.code} onClick={() => handleSelectFromList(cc)} style={{ opacity: cc.is_active === false ? 0.55 : 1 }}>
-                            <td style={{ fontWeight: 600, color: "var(--v-ok)" }}>
-                              {cc.code}{cc.is_active === false && <span style={{ marginLeft: 6, fontSize: 10, color: "#94a49a" }}>INATIVO</span>}
-                            </td>
-                            <td style={{ color: cc.parent_code ? "#233029" : "#94a49a" }}>
-                              {cc.parent_code ?? "—"}
-                            </td>
-                            <td>{cc.description}</td>
-                            <td>
-                              <span className={`ctb-tipo-badge ${badgeClass}`}>
-                                {TIPO_CC_LABEL[tipo]}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              {cc.is_ratio
-                                ? <span style={{ color: "var(--v-ok)", fontWeight: 600, fontSize: 12 }}>Sim</span>
-                                : <span style={{ color: "var(--v-text-muted)", fontSize: 12 }}>Não</span>
-                              }
-                            </td>
-                            <td style={{ fontSize: 12 }}>{formatDateBR(cc.start_date)}</td>
-                            <td style={{ fontSize: 12, color: cc.end_date ? "#233029" : "#94a49a" }}>
-                              {cc.end_date ? formatDateBR(cc.end_date) : "Em aberto"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* SEÇÃO 2 — CRIAR / EDITAR                                   */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-
-          <div className="ctb-section-banner">
-            <span className="ctb-section-banner-pill">2 — Criar / Editar</span>
-            <div className="ctb-section-banner-line" />
-            <span className="ctb-section-banner-hint">
-              {modoForm === "novo"
-                ? "Preencha os campos e clique em Salvar para criar um novo CC"
-                : `Editando CC #${codigoEdit ?? "?"} — clique em Novo CC para cancelar`}
-            </span>
-          </div>
-
-          {/* ── MAIN FORM CARD ── */}
-          <div className="ctb-card">
-            <div className="ctb-card-header">
-              <div className="ctb-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 2h9l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#2f7d47" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5 2v4h6V2M5 9h6" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-                <span className="ctb-card-title">Centro de Custo</span>
-              </div>
-              {modoForm === "novo"
-                ? <span className="ctb-modo-novo"><span className="ctb-modo-dot" />Novo Cadastro</span>
-                : <span className="ctb-modo-edicao"><span className="ctb-modo-dot" />Editando CC #{codigoEdit}</span>
-              }
-            </div>
-
-            {/* TABS */}
-            <div className="ctb-tabs">
-              {ABAS.map((aba) => (
-                <button
-                  key={aba.id}
-                  className={`ctb-tab${abaAtiva === aba.id ? " active" : ""}`}
-                  onClick={() => setAbaAtiva(aba.id)}
-                >
-                  {aba.label}
-                </button>
-              ))}
-            </div>
-
-            {/* ── ABA: DADOS GERAIS ── */}
-            {abaAtiva === "dados" && (
-              <div className="ctb-tab-body">
-
-                <div className="ctb-section-label">Identificação</div>
-                <div className="ctb-grid">
-
-                  {/* CC Code */}
-                  <div className="ctb-field ctb-col-2">
-                    <label className="ctb-label">Cód. CC <span className="ctb-label-req">*</span></label>
-                    <div className="ctb-input-wrap">
-                      <input
-                        className={`ctb-input${errors.code ? " has-error" : ""}`}
-                        style={{ borderRadius: "7px 0 0 7px" }}
-                        placeholder="Ex: 100"
-                        value={form.code}
-                        readOnly={modoForm === "edicao"}
-                        title={modoForm === "edicao" ? "O código não muda: máquinas, estruturas e ordens guardam o CC por ele" : undefined}
-                        onChange={(e) => setField("code", e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && void handleLoadByCode()}
-                      />
-                      <button
-                        className="ctb-input-btn"
-                        title="Carregar CC por código"
-                        type="button"
-                        disabled={isLoading}
-                        onClick={() => void handleLoadByCode()}
-                      >
-                        {isLoading
-                          ? <div className="ctb-spinner-dark" style={{ width: 12, height: 12 }} />
-                          : <>
-                              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                                <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                              </svg>
-                              Carregar
-                            </>
-                        }
-                      </button>
-                    </div>
-                    {errors.code
-                      ? <span className="ctb-field-error">
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                            <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                          </svg>
-                          {errors.code}
-                        </span>
-                      : <span className="ctb-field-hint">Enter ou "Carregar" para buscar código existente.</span>
-                    }
-                  </div>
-
-                  {/* CC Pai */}
-                  <div className="ctb-field ctb-col-2">
-                    <label className="ctb-label">CC Pai</label>
-                    <div className="ctb-input-wrap">
-                      <input
-                        className={`ctb-input${errors.parentCode ? " has-error" : ""}`}
-                        style={{ borderRadius: "7px 0 0 7px" }}
-                        placeholder="Cód. pai"
-                        value={form.parentCode}
-                        disabled={travado}
-                        onChange={(e) => setField("parentCode", e.target.value)}
-                        onBlur={async (e) => {
-                          const msg = await checkParent(e.target.value, form.code);
-                          setErrors((prev) => ({ ...prev, parentCode: msg ?? undefined }));
-                        }}
-                      />
-                      <button
-                        className="ctb-input-btn"
-                        title="Verificar CC Pai"
-                        type="button"
-                        disabled={!form.parentCode.trim() || isLoading || parentChecking}
-                        onClick={async () => {
-                          const msg = await checkParent(form.parentCode, form.code);
-                          setErrors((prev) => ({ ...prev, parentCode: msg ?? undefined }));
-                        }}
-                      >
-                        {parentChecking
-                          ? <div className="ctb-spinner-dark" style={{ width: 12, height: 12 }} />
-                          : <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                              <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                            </svg>
-                        }
-                      </button>
-                    </div>
-                    {errors.parentCode
-                      ? <span className="ctb-field-error">
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                            <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                          </svg>
-                          {errors.parentCode}
-                        </span>
-                      : parentInfo
-                        ? <span className="ctb-field-ok">✓ {parentInfo.code} — {parentInfo.description}</span>
-                        : <span className="ctb-field-hint">Opcional — CC principal ao qual este é subordinado. É conferido ao sair do campo.</span>
-                    }
-                  </div>
-
-                  {/* Descrição */}
-                  <div className="ctb-field ctb-col-8">
-                    <label className="ctb-label">Descrição <span className="ctb-label-req">*</span></label>
-                    <input
-                      className={`ctb-input${errors.description ? " has-error" : ""}`}
-                      placeholder="Ex: Departamento de Produção"
-                      value={form.description}
-                      onChange={(e) => setField("description", e.target.value)}
-                      maxLength={100}
-                    />
-                    {errors.description && (
-                      <span className="ctb-field-error">
-                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                          <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                          <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                        </svg>
-                        {errors.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="ctb-section-sep" />
-
-                <div className="ctb-section-label">Classificação MLC</div>
-                <div className="ctb-grid">
-
-                  {/* Tipo CC */}
-                  <div className="ctb-field ctb-col-5">
-                    <label className="ctb-label">Tipo CC <span className="ctb-label-req">*</span></label>
-                    <select
-                      className="ctb-select"
-                      value={form.type}
-                      disabled={travado}
-                      onChange={(e) => setField("type", e.target.value as TypeCC)}
-                    >
-                      {TIPOS_CC.map((t) => (
-                        <option key={t} value={t}>{TIPO_CC_LABEL[t]}</option>
-                      ))}
-                    </select>
-                    <div className={`ctb-info-box${ehProdutivo ? " produtivo" : ""}`}>
-                      {TIPO_CC_INFO[form.type]}
-                    </div>
-                  </div>
-
-                  {/* Rateio */}
-                  <div className="ctb-field ctb-col-4">
-                    <label className="ctb-label">Rateio de Absorção</label>
-                    <div style={{ paddingTop: 6 }}>
-                      <div className="ctb-toggle-row">
-                        <label className={`ctb-toggle${!ehProdutivo ? " disabled" : ""}`}>
-                          <input
-                            type="checkbox"
-                            checked={form.isRatio}
-                            disabled={!ehProdutivo || travado}
-                            onChange={(e) => setField("isRatio", e.target.checked)}
-                          />
-                          <div className="ctb-toggle-track" />
-                          <div className="ctb-toggle-thumb" />
-                        </label>
-                        <div>
-                          <span className="ctb-toggle-label">
-                            {form.isRatio ? "Habilitado" : "Desabilitado"}
-                          </span>
-                          <div className="ctb-toggle-sub">
-                            {ehProdutivo
-                              ? "CC receberá rateios de absorção (FMLC0202)"
-                              : "Disponível apenas para o tipo Produtivo"}
-                          </div>
-                        </div>
-                      </div>
-                      {!ehProdutivo && (
-                        <div className="ctb-rateio-warn">
-                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                            <path d="M8 2L1.5 13.5h13L8 2z" stroke="#e8b800" strokeWidth="1.4" strokeLinejoin="round" />
-                            <path d="M8 6v4M8 11.5h.01" stroke="#e8b800" strokeWidth="1.4" strokeLinecap="round" />
-                          </svg>
-                          <span>Rateio de absorção é exclusivo do tipo <strong>Produtivo</strong>. CCs <strong>{TIPO_CC_LABEL[form.type]}</strong> recebem somente rateios primários.</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="ctb-section-sep" />
-
-                <div className="ctb-section-label">Vigência</div>
-                <div className="ctb-grid">
-
-                  <div className="ctb-field ctb-col-3">
-                    <label className="ctb-label">Data Inicial <span className="ctb-label-req">*</span></label>
-                    <input
-                      type="date"
-                      className={`ctb-input${errors.startDate ? " has-error" : ""}`}
-                      value={form.startDate}
-                      disabled={travado}
-                      onChange={(e) => setField("startDate", e.target.value)}
-                    />
-                    {errors.startDate
-                      ? <span className="ctb-field-error">
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                            <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                          </svg>
-                          {errors.startDate}
-                        </span>
-                      : <span className="ctb-field-hint">Deve ser o 1º dia do mês (dia 01).</span>
-                    }
-                  </div>
-
-                  <div className="ctb-field ctb-col-3">
-                    <label className="ctb-label">Data Final</label>
-                    <input
-                      type="date"
-                      className={`ctb-input${errors.endDate ? " has-error" : ""}`}
-                      value={form.endDate}
-                      onChange={(e) => setField("endDate", e.target.value)}
-                    />
-                    {errors.endDate
-                      ? <span className="ctb-field-error">
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <circle cx="6" cy="6" r="5" stroke="#c84040" strokeWidth="1.2" />
-                            <path d="M6 4v2.5M6 8h.01" stroke="#c84040" strokeWidth="1.2" strokeLinecap="round" />
-                          </svg>
-                          {errors.endDate}
-                        </span>
-                      : <span className="ctb-field-hint">Opcional. Deixe em aberto para vigência indeterminada.</span>
-                    }
-                  </div>
-
-                  {modoForm === "edicao" && (
-                    <div className="ctb-field ctb-col-3">
-                      <label className="ctb-label">Situação</label>
-                      <select className="ctb-select" value={ativo ? "S" : "N"} onChange={(e) => { setAtivo(e.target.value === "S"); setFeedback(null); }}>
-                        <option value="S">Ativo</option>
-                        <option value="N">Inativo</option>
-                      </select>
-                      <span className="ctb-field-hint">Inativo não aparece para escolha; o histórico continua.</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── ABA: EMPRESAS ── */}
-            {abaAtiva === "empresas" && (
-              <div className="ctb-tab-body">
-                <div className="ctb-vinculos-head">
-                  <span className="ctb-vinculos-title">Empresas vinculadas</span>
-                  <div className="ctb-vinculos-add">
-                    <input
-                      className="ctb-input"
-                      style={{ width: 180 }}
-                      placeholder="Código da empresa"
-                      value={novaEmpresa}
-                      onChange={(e) => setNovaEmpresa(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && (() => {
-                        if (novaEmpresa.trim()) {
-                          setEmpresas((p) => [...p, { empresa: novaEmpresa.trim(), unidade: novaUnidade.trim() }]);
-                          setNovaEmpresa("");
-                          setNovaUnidade("");
-                        }
-                      })()}
-                    />
-                    <input
-                      className="ctb-input"
-                      style={{ width: 120 }}
-                      placeholder="Unidade (ex: Hora)"
-                      value={novaUnidade}
-                      onChange={(e) => setNovaUnidade(e.target.value)}
-                    />
-                    <button
-                      className="ctb-btn ctb-btn-ghost ctb-btn-sm"
-                      onClick={() => {
-                        if (!novaEmpresa.trim()) return;
-                        setEmpresas((p) => [...p, { empresa: novaEmpresa.trim(), unidade: novaUnidade.trim() }]);
-                        setNovaEmpresa("");
-                        setNovaUnidade("");
-                      }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                      Adicionar
-                    </button>
-                  </div>
-                </div>
-
-                {empresas.length === 0 ? (
-                  <div className="ctb-vinculos-empty">
-                    Nenhuma empresa vinculada. Adicione acima.
-                  </div>
-                ) : (
-                  <table className="ctb-vinculos-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 50 }}>#</th>
-                        <th>Empresa</th>
-                        <th style={{ width: 160 }}>Unidade</th>
-                        <th style={{ width: 80 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {empresas.map((e, i) => (
-                        <tr key={i}>
-                          <td style={{ color: "var(--v-text-muted)", fontSize: 12 }}>{i + 1}</td>
-                          <td style={{ fontWeight: 600, color: "var(--v-ok)" }}>{e.empresa}</td>
-                          <td style={{ color: e.unidade ? "#233029" : "#94a49a" }}>
-                            {e.unidade || "—"}
-                          </td>
-                          <td>
-                            <button
-                              className="ctb-remove-btn"
-                              onClick={() => setEmpresas((p) => p.filter((_, j) => j !== i))}
-                            >
-                              Remover
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-
-                <div style={{ marginTop: 16, padding: "10px 14px", background: "#f0f8ff", border: "1px solid #c7def8", borderLeft: "3px solid #4a90d9", borderRadius: 8, fontSize: 12, color: "var(--v-info)", lineHeight: 1.55 }}>
-                  <strong>Unidade:</strong> Informar a unidade de medida para o Custo Operacional (FCST0113) e Cálculo do Tempo Trabalhado (FCST0252). Exemplos: Hora, Minuto.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── FOOTER ── */}
-        <footer className="ctb-footer">
-          <div className="ctb-footer-left">
-            <div className="ctb-footer-stat">
-              CC: <strong>{form.code || "—"}</strong>
-            </div>
-            <div className="ctb-footer-stat">
-              Tipo: <strong>{TIPO_CC_LABEL[form.type]}</strong>
-            </div>
-            <div className="ctb-footer-stat">
-              Rateio: <strong>{form.isRatio ? "Sim" : "Não"}</strong>
-            </div>
-            <div className="ctb-footer-stat">
-              Vigência: <strong>{form.startDate ? formatDateBR(form.startDate) : "—"}</strong>
-              {form.endDate && <> a <strong>{formatDateBR(form.endDate)}</strong></>}
-            </div>
-          </div>
-          <div className="ctb-footer-stat" style={{ gap: 8 }}>
-            {modoForm === "novo"
-              ? <span className="ctb-modo-novo" style={{ fontSize: 11 }}><span className="ctb-modo-dot" />Novo Cadastro</span>
-              : <span className="ctb-modo-edicao" style={{ fontSize: 11 }}><span className="ctb-modo-dot" />Editando #{codigoEdit}</span>
-            }
-            <span style={{ color: "var(--v-text-muted)", fontSize: 11 }}>GRUPO VENTURE LTDA</span>
-          </div>
-        </footer>
-
+      <div className="erp-toolbar">
+        {aba === "cadastro" && (<>
+          <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span>
+            <button className="erp-btn" onClick={novo} disabled={busy}>+ Novo centro</button></div>
+          <div className="erp-tgroup"><span className="erp-tgroup-label">Ações</span>
+            <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "Salvando..." : editCode != null ? "Salvar alteração" : "Cadastrar"}</button>
+            {editCode != null && isAdmin && (
+              <button className="erp-btn" onClick={() => void excluir()} disabled={busy || travado}
+                title={travado ? "Centro em uso: desative em vez de excluir" : undefined}>{confirmarExclusao ? "Confirmar exclusão" : "Excluir"}</button>
+            )}</div>
+        </>)}
+        {aba === "orcamento" && (
+          <div className="erp-tgroup"><span className="erp-tgroup-label">Orçamento</span>
+            <button className="erp-btn erp-btn-primary" onClick={() => void gravarOrcamento()} disabled={busy}>Gravar orçamento</button>
+            <button className="erp-btn" onClick={() => void carregarOrc()} disabled={busy}>Recarregar</button></div>
+        )}
+        <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VCTB0102 — Centros de Custo" filename="vctb0102" /></div>
       </div>
-    </>
+
+      <div className="erp-content">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <section className="erp-detail-panel">
+          <div className="erp-tabs">
+            <button className={`erp-tab ${aba === "cadastro" ? "active" : ""}`} onClick={() => setAba("cadastro")}>Cadastro</button>
+            <button className={`erp-tab ${aba === "orcamento" ? "active" : ""}`} onClick={() => setAba("orcamento")}>Orçamento</button>
+            <button className={`erp-tab ${aba === "arvore" ? "active" : ""}`} onClick={() => setAba("arvore")}>Árvore e realizado</button>
+            <button className={`erp-tab ${aba === "aprovacoes" ? "active" : ""}`} onClick={() => setAba("aprovacoes")}>Aprovações de requisição</button>
+          </div>
+          <div className="erp-detail-body">
+
+          {aba === "cadastro" && (<>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">{editCode != null ? `Centro ${form.codigo}` : "Novo centro de custo"}{travado && <span style={{ fontWeight: 400, opacity: 0.65 }}> — em uso: tipo, centro-pai, rateio e início não mudam</span>}</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label>
+                <input className="erp-input" value={form.codigo} maxLength={50} placeholder="CC-FAB-CORTE" onChange={(e) => setF("codigo", e.target.value.toUpperCase())} /></div>
+              <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label>
+                <input className="erp-input" value={form.descricao} onChange={(e) => setF("descricao", e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Centro-pai</label>
+                <select className="erp-input" value={form.parent} disabled={travado} onChange={(e) => setF("parent", e.target.value)}>
+                  <option value="">— raiz —</option>
+                  {ordenados.filter((c) => c.code !== editCode && !descendentes.has(c.code) && c.is_active).map((c) => (
+                    <option key={c.code} value={String(c.code)}>{"  ".repeat(profundidade(c))}{c.codigo} — {c.descricao}</option>))}
+                </select></div>
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Tipo</label>
+                <select className="erp-input" value={form.tipo} disabled={travado} onChange={(e) => setF("tipo", e.target.value as TipoCentro)}>
+                  {TIPOS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+                </select></div>
+              {tipoAtual && <div className="erp-field erp-c12"><span className="erp-field-hint">{tipoAtual.ajuda}</span></div>}
+              <div className="erp-field erp-c2"><label className="erp-label erp-req">Início</label>
+                <input className="erp-input" type="date" value={form.inicio} disabled={travado} onChange={(e) => setF("inicio", e.target.value)} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Fim</label>
+                <input className="erp-input" type="date" value={form.fim} onChange={(e) => setF("fim", e.target.value)} /></div>
+              <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check">
+                <input type="checkbox" checked={form.isRatio} disabled={travado} onChange={(e) => setF("isRatio", e.target.checked)} /> Recebe rateio de absorção</label></div>
+              {editCode != null && <div className="erp-field erp-c2" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check">
+                <input type="checkbox" checked={form.ativo} onChange={(e) => setF("ativo", e.target.checked)} /> Ativo</label></div>}
+            </div></div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Gestão — <span style={{ fontWeight: 400, opacity: 0.65 }}>quem responde pelo centro e quem aprova as requisições</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label">Responsável</label>
+                <select className="erp-input" value={form.responsavel} onChange={(e) => setF("responsavel", e.target.value)}>
+                  <option value="">—</option>{usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Aprovador</label>
+                <select className="erp-input" value={form.aprovador} onChange={(e) => setF("aprovador", e.target.value)}>
+                  <option value="">—</option>{usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select></div>
+              <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check" title="A requisição de compra com item deste centro só vira pedido depois que o aprovador aprovar.">
+                <input type="checkbox" checked={form.aprovaRequisicoes} onChange={(e) => setF("aprovaRequisicoes", e.target.checked)} /> Aprova as requisições de compra</label></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Conta contábil padrão</label>
+                <select className="erp-input" value={form.conta} onChange={(e) => setF("conta", e.target.value)} title="Vale na nota de entrada quando o item tem este centro e nenhuma conta">
+                  <option value="">—</option>{contas.map((p) => <option key={p.id} value={String(p.id)}>{p.codigo} — {p.descricao}</option>)}
+                </select></div>
+              {uso?.em_uso && <div className="erp-field erp-c12"><span className="erp-field-hint">Em uso: {uso.usos.map((u) => `${u.onde} (${u.quantidade})`).join(", ")}.</span></div>}
+            </div></div>
+
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Centros de custo — <span style={{ fontWeight: 400, opacity: 0.65 }}>{listaFiltrada.length}</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c6"><label className="erp-label">Buscar</label>
+                <input className="erp-input" value={busca} placeholder="código, descrição ou responsável" onChange={(e) => setBusca(e.target.value)} /></div>
+              <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check">
+                <input type="checkbox" checked={inativos} onChange={(e) => setInativos(e.target.checked)} /> Mostrar inativos</label></div>
+              <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
+                <table className="erp-grid">
+                  <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Vigência</th><th>Responsável</th><th>Aprovação</th><th>Situação</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                  <tbody>
+                    {listaFiltrada.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">{centros.length === 0 ? "Nenhum centro de custo cadastrado." : "Nenhum centro para o filtro."}</td></tr>}
+                    {listaFiltrada.map((c) => (
+                      <tr key={c.code} style={c.is_active ? undefined : { opacity: 0.55 }} className={c.code === editCode ? "erp-row-selected" : undefined}>
+                        <td style={{ fontWeight: 600, paddingLeft: 8 + profundidade(c) * 16 }}>{c.codigo}</td>
+                        <td>{c.descricao}</td><td>{rotuloTipo(c.tipo)}</td>
+                        <td><small>{dataBR(c.start_date)}{c.end_date ? ` a ${dataBR(c.end_date)}` : ""}</small></td>
+                        <td>{c.responsavel || "—"}</td>
+                        <td>{c.aprova_requisicoes ? <span className="erp-badge erp-badge-blue" title={`Aprovador: ${c.aprovador ?? ""}`}>{c.aprovador || "sim"}</span> : "—"}</td>
+                        <td>{c.is_active ? <span className="erp-badge erp-badge-green">Ativo</span> : <span className="erp-badge erp-badge-gray">Inativo</span>}</td>
+                        <td><button className="erp-btn erp-btn-sm" onClick={() => void editar(c)}>Editar</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div></div>
+          </>)}
+
+          {aba === "orcamento" && (
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Orçamento mensal × realizado — <span style={{ fontWeight: 400, opacity: 0.65 }}>o realizado vem do contas a pagar (rateio do título), pela data de emissão</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label">Ano</label>
+                <input className="erp-input num" type="number" value={ano} onChange={(e) => setAno(Number(e.target.value) || new Date().getFullYear())} /></div>
+              <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
+                <table className="erp-grid">
+                  <thead><tr><th>Centro</th>{MESES.map((m) => <th key={m} className="num">{m}</th>)}<th className="num">Orçado</th><th className="num">Realizado</th></tr></thead>
+                  <tbody>
+                    {orcOrdenado.length === 0 && <tr><td colSpan={15} className="erp-grid-empty">Nenhum centro de custo.</td></tr>}
+                    {orcOrdenado.map((l) => {
+                      const totalOrc = l.orcado.reduce((s, v) => s + valor(v), 0);
+                      const totalReal = l.realizado.reduce((s, v) => s + valor(v), 0);
+                      const c = centros.find((x) => x.id === l.cost_center_id);
+                      return (
+                        <tr key={l.cost_center_id}>
+                          <td style={{ fontWeight: 600, whiteSpace: "nowrap", paddingLeft: 8 + (c ? profundidade(c) : 0) * 16 }} title={l.descricao}>{l.codigo}</td>
+                          {MESES.map((m, i) => {
+                            const real = valor(l.realizado[i]); const orcado = valor(l.orcado[i]);
+                            const estourou = orcado > 0 && real > orcado;
+                            return (
+                              <td key={m} style={{ minWidth: 92 }}>
+                                <input className="erp-input num" style={{ height: 26, padding: "0 4px" }} inputMode="decimal" aria-label={`Orçado ${l.codigo} ${m}`}
+                                  value={celulas[`${l.cost_center_id}:${i + 1}`] ?? ""} onChange={(e) => setCelulas((x) => ({ ...x, [`${l.cost_center_id}:${i + 1}`]: e.target.value }))} />
+                                {real > 0 && <small style={{ display: "block", textAlign: "right", color: estourou ? "var(--v-err)" : undefined }}>{moeda(real)}</small>}
+                              </td>
+                            );
+                          })}
+                          <td className="num">{moeda(totalOrc)}</td>
+                          <td className="num" style={{ color: totalOrc > 0 && totalReal > totalOrc ? "var(--v-err)" : undefined }}>{moeda(totalReal)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <small>Digite o orçado de cada mês; embaixo, em menor, o realizado (em vermelho quando passou do orçado). O alerta “Orçamento do centro de custo estourado” avisa no mês corrente.</small>
+              </div>
+            </div></div>
+          )}
+
+          {aba === "arvore" && (
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Árvore consolidada — <span style={{ fontWeight: 400, opacity: 0.65 }}>cada centro soma os filhos</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c2"><label className="erp-label">Ano</label>
+                <input className="erp-input num" type="number" value={ano} onChange={(e) => setAno(Number(e.target.value) || new Date().getFullYear())} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Mês</label>
+                <select className="erp-input" value={mesArvore} onChange={(e) => setMesArvore(Number(e.target.value))}>
+                  <option value={0}>Ano todo</option>{MESES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                </select></div>
+              <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
+                <table className="erp-grid">
+                  <thead><tr><th>Centro</th><th>Descrição</th><th>Responsável</th><th className="num">Orçado (próprio)</th><th className="num">Realizado (próprio)</th><th className="num">Orçado consolidado</th><th className="num">Realizado consolidado</th><th className="num">% usado</th></tr></thead>
+                  <tbody>
+                    {linhasArvore.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhum centro de custo.</td></tr>}
+                    {linhasArvore.map(({ n, nivel }) => {
+                      const pct = valor(n.orcado_consolidado) > 0 ? (valor(n.realizado_consolidado) / valor(n.orcado_consolidado)) * 100 : null;
+                      return (
+                        <tr key={n.id} style={n.is_active ? undefined : { opacity: 0.55 }}>
+                          <td style={{ fontWeight: nivel === 0 ? 700 : 600, paddingLeft: 8 + nivel * 18 }}>{n.codigo}</td>
+                          <td>{n.descricao}</td><td>{n.responsavel || "—"}</td>
+                          <td className="num">{moeda(n.orcado)}</td><td className="num">{moeda(n.realizado)}</td>
+                          <td className="num" style={{ fontWeight: 600 }}>{moeda(n.orcado_consolidado)}</td>
+                          <td className="num" style={{ fontWeight: 600 }}>{moeda(n.realizado_consolidado)}</td>
+                          <td className="num">{pct == null ? "—" : n.estourado
+                            ? <span className="erp-badge erp-badge-red">{pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% — estourado</span>
+                            : `${pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div></div>
+          )}
+
+          {aba === "aprovacoes" && (
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Requisições de compra pelo aprovador do centro</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c3"><label className="erp-label">Situação</label>
+                <select className="erp-input" value={statusAprov} onChange={(e) => setStatusAprov(e.target.value)}>
+                  <option value="PENDENTE">Pendentes</option><option value="APROVADA">Aprovadas</option><option value="REPROVADA">Reprovadas</option><option value="">Todas</option>
+                </select></div>
+              <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check">
+                <input type="checkbox" checked={minhas} onChange={(e) => setMinhas(e.target.checked)} /> Só as que eu aprovo</label></div>
+              <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
+                <table className="erp-grid">
+                  <thead><tr><th>Requisição</th><th>Centro</th><th>Desde</th><th>Situação</th><th>Motivo</th><th style={{ width: 220 }}>Decisão</th></tr></thead>
+                  <tbody>
+                    {aprov.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma requisição nesta situação.</td></tr>}
+                    {aprov.map((a) => (
+                      <tr key={a.id}>
+                        <td style={{ fontWeight: 600 }}>{a.requisition_code}</td>
+                        <td>{a.centro_codigo} — {a.centro_descricao}</td>
+                        <td><small>{new Date(a.criado_em).toLocaleString("pt-BR")}</small></td>
+                        <td><span className={`erp-badge ${statusAprovRotulo[a.status]?.[1] ?? ""}`}>{statusAprovRotulo[a.status]?.[0] ?? a.status}</span></td>
+                        <td>{a.pode_decidir
+                          ? <input className="erp-input" style={{ height: 26 }} placeholder="motivo (obrigatório para reprovar)" value={motivo[a.id] ?? ""} onChange={(e) => setMotivo((m) => ({ ...m, [a.id]: e.target.value }))} />
+                          : (a.justificativa ?? "—")}</td>
+                        <td>{a.pode_decidir ? (<>
+                          <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void decidir(a, true)} disabled={busy}>Aprovar</button>{" "}
+                          <button className="erp-btn erp-btn-sm" onClick={() => void decidir(a, false)} disabled={busy}>Reprovar</button>
+                        </>) : a.status === "PENDENTE" ? <small>aguardando o aprovador</small> : <small>{a.decidido_em ? new Date(a.decidido_em).toLocaleString("pt-BR") : ""}</small>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <small>A requisição com item de centro que aprova requisições só vira pedido de compra depois de aprovada aqui. Quem pediu a requisição não a aprova.</small>
+              </div>
+            </div></div>
+          )}
+          </div>
+        </section>
+      </div>
+
+      <footer className="erp-statusbar">
+        <div className="erp-status-item">Centros: <strong>{centros.length}</strong></div>
+        <div className="erp-status-item">Ativos: <strong>{centros.filter((c) => c.is_active).length}</strong></div>
+        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
+      </footer>
+    </div>
   );
 }

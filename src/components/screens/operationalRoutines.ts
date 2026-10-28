@@ -9,7 +9,7 @@ const routine = (code: string, title: string, description: string, operations: R
 const enumOpt = (name: string, label: string, options: string[]): RoutineField => ({ name, label, options });
 
 export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
-  VENT0100: routine("VENT0100", "Consulta de pedidos de venda", "Consulta pedidos e seus itens sem expor comandos de manutenção; use VPDV0200 quando for necessário alterar o pedido.", [
+  VENT0100: routine("VENT0100", "Consulta de pedidos de venda", "Consulta pedidos e seus itens sem expor comandos de manutenção; use VVND0200 quando for necessário alterar o pedido.", [
     list("/api/sales-order/list"),
     { label: "Abrir pedido", method: "GET", path: "/api/sales-order/{code}", fields: [id("code", "Pedido")] },
     { label: "Consultar itens", method: "GET", path: "/api/sales-order/items/{code}", fields: [id("code", "Pedido")] },
@@ -21,7 +21,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Lead time crítico", method: "GET", path: "/api/routing/routes/{id}/lead-time", fields: [id("id", "Roteiro")] },
     { label: "Carga CRP do plano", method: "GET", path: "/api/crp/{planCode}", fields: [id("planCode", "Plano")] },
   ]),
-  VPDV0253: routine("VPDV0253", "Console de acompanhamento de pedidos", "Apresenta carteira, posição, itens, promessas e reprogramações para acompanhamento; não substitui o cadastro VPDV0200.", [
+  VPDV0253: routine("VPDV0253", "Console de acompanhamento de pedidos", "Apresenta carteira, posição, itens, promessas e reprogramações para acompanhamento; não substitui o cadastro VVND0200.", [
     list("/api/sales-order/list"),
     { label: "Pedidos faturados", method: "GET", path: "/api/sales-order/status/F", fields: [] },
     { label: "Abrir posição", method: "GET", path: "/api/sales-order/{code}", fields: [id("code", "Pedido")] },
@@ -225,7 +225,7 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   ]),
 
   VENG0300: routine("VENG0300", "Cabeçalho e revisão de estrutura BOM", "Controla efetividade, versão e status do cabeçalho da estrutura do produto.", [
-    create("/api/bom-headers/", '{"item_code":100,"mask":"","bom_type":"MBOM","valid_from":"2026-07-14T00:00:00Z","created_by":"UUID_DO_USUARIO"}'),
+    create("/api/bom-headers/", '{"item_code":100,"mask":"","bom_type":"MBOM","valid_from":"2026-07-14T00:00:00Z"}'),
     { label: "Consultar por item", method: "GET", path: "/api/bom-headers/item/{itemCode}", fields: [id("itemCode", "Item")] },
     { label: "Abrir cabeçalho", method: "GET", path: "/api/bom-headers/{id}", fields: [id()] },
     { label: "Alterar situação", method: "PUT", path: "/api/bom-headers/{id}/status", fields: [id(), json('{"status":"APPROVED"}')] },
@@ -252,17 +252,10 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
   VMRP0200: routine("VMRP0200", "Pipeline MRP → CRP → APS", "Executa de forma coordenada o planejamento de materiais, capacidade e sequenciamento.", [
     { label: "Executar pipeline", method: "POST", path: "/api/planning/run-pipeline", fields: [json('{"plan_code":1,"initial_order_number":1000,"generate_llc":true,"start_from":"2026-07-14T08:00:00Z"}')] },
   ]),
-  VSEC0100: routine("VSEC0100", "Solicitação e aprovação de troca de senha", "Controla o fluxo seguro de solicitação, aprovação administrativa e conclusão da troca pelo titular.", [
-    { label: "Solicitar troca", method: "POST", path: "/api/password-change-requests/" },
-    list("/api/password-change-requests/", [{ name: "status", label: "Situação" }], ["status"]),
-    { label: "Aprovar solicitação", method: "POST", path: "/api/password-change-requests/{requestID}/approve", adminOnly: true, fields: [{ name: "requestID", label: "ID da solicitação", required: true }] },
-    { label: "Rejeitar solicitação", method: "POST", path: "/api/password-change-requests/{requestID}/reject", adminOnly: true, fields: [{ name: "requestID", label: "ID da solicitação", required: true }, { name: "reason", label: "Motivo", required: true }] },
-    { label: "Concluir troca", method: "POST", path: "/api/password-change-requests/{requestID}/complete", fields: [{ name: "requestID", label: "ID da solicitação", required: true }, { name: "current_password", label: "Senha atual", type: "password", required: true }, { name: "new_password", label: "Nova senha", type: "password", required: true }, { name: "confirm_password", label: "Confirmar nova senha", type: "password", required: true }] },
-  ]),
   VPLA0300: routine("VPLA0300", "Parâmetros do planejamento", "Consulta e mantém parâmetros numerados usados pelo MRP e pelo planejamento industrial.", [
     list("/api/planning-params/list"),
     { label: "Abrir parâmetro", method: "GET", path: "/api/planning-params/{number}", fields: [id("number", "Número do parâmetro")] },
-    { label: "Alterar parâmetro", method: "PUT", path: "/api/planning-params/update", fields: [json('{"param_number":1,"value":"true","updated_by":"UUID_DO_USUARIO"}')] },
+    { label: "Alterar parâmetro", method: "PUT", path: "/api/planning-params/update", fields: [json('{"param_number":1,"value":"true"}')] },
   ]),
   VRES0100: routine("VRES0100", "Motivos de restrição", "Mantém os motivos utilizados nas restrições comerciais e de configuração.", [
     list("/api/restriction-reason/list"), create("/api/restriction-reason/create", '{"description":"Combinação não permitida","situation":"ACTIVE"}'),
@@ -270,8 +263,12 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Alterar motivo", method: "PUT", path: "/api/restriction-reason/{code}", fields: [id("code", "Código"), json('{"description":"Combinação não permitida","situation":"ACTIVE"}')] },
     remove("/api/restriction-reason/{code}", [id("code", "Código")]),
   ]),
-  VFIS0610: routine("VFIS0610", "Importação de NF-e de compra por chave", "Busca a NF-e na integração fiscal, cria a entrada, baixa o pedido e movimenta o estoque.", [
-    create("/api/fiscal/entries/import-nfe/", '{"chave_acesso":"00000000000000000000000000000000000000000000","purchase_order_code":1000,"warehouse_id":1}'),
+  // Antes chamava /import-nfe, a rota antiga que aprovava a nota na hora e
+  // tomava o código do produto do fornecedor (cProd) como código do item —
+  // estoque e custo no item errado sem conferência nenhuma. A importação pela
+  // chave deixa a nota pendente para conciliar e aprovar na VFIS0210.
+  VFIS0610: routine("VFIS0610", "Importação de NF-e de compra por chave", "Baixa a NF-e da SEFAZ pela chave e deixa a nota pendente de conferência; a conciliação dos itens, o plano de contas, as parcelas e a aprovação continuam na VFIS0210.", [
+    create("/api/fiscal/entries/import-key", '{"chave_acesso":"00000000000000000000000000000000000000000000"}', false, "Importar pela chave"),
   ]),
   VADM0100: routine("VADM0100", "Trilha de auditoria", "Consulta alterações autenticadas por usuário, rota e período; acesso exclusivo de administrador.", [
     { label: "Consultar", method: "GET", path: "/api/audit-log", adminOnly: true, fields: [{ name: "user_id", label: "Usuário" }, { name: "route", label: "Rota" }, { name: "from", label: "De", type: "datetime-local" }, { name: "to", label: "Até", type: "datetime-local" }, { name: "limit", label: "Limite", type: "number", defaultValue: "100" }, { name: "offset", label: "Deslocamento", type: "number", defaultValue: "0" }], query: ["user_id", "route", "from", "to", "limit", "offset"] },

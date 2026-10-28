@@ -26,6 +26,7 @@ export function Vfin0120Page(): JSX.Element {
   // Conta em edição (null = nova) e o uso dela: em uso, só descrição e situação mudam.
   const [editId, setEditId] = useState<number | null>(null);
   const [ativa, setAtiva] = useState(true);
+  const [exigeCentro, setExigeCentro] = useState(false);
   const [uso, setUso] = useState<UsoCadastroResumo | null>(null);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const travado = editId != null && (uso?.em_uso ?? true);
@@ -44,7 +45,7 @@ export function Vfin0120Page(): JSX.Element {
 
   async function editar(c: PlanoConta) {
     setForm({ codigo: c.codigo, descricao: c.descricao, tipo: c.tipo, natureza: c.natureza, parent_code: c.parent_code ?? "", nivel: c.nivel });
-    setEditId(c.id); setAtiva(c.is_active !== false); setUso(null); setConfirmarExclusao(false); setFeedback(null);
+    setEditId(c.id); setAtiva(c.is_active !== false); setExigeCentro(c.exige_centro_custo === true); setUso(null); setConfirmarExclusao(false); setFeedback(null);
     try { setUso(await usoPlanoConta(c.id)); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e, "Não foi possível conferir onde a conta é usada.") }); }
   }
@@ -55,7 +56,7 @@ export function Vfin0120Page(): JSX.Element {
     try {
       const parent_code = form.parent_code?.trim() || undefined;
       if (editId != null) {
-        await updatePlanoConta(editId, { codigo: form.codigo.trim(), descricao: form.descricao, tipo: form.tipo, natureza: form.natureza, parent_code, is_active: ativa });
+        await updatePlanoConta(editId, { codigo: form.codigo.trim(), descricao: form.descricao, tipo: form.tipo, natureza: form.natureza, parent_code, is_active: ativa, exige_centro_custo: exigeCentro });
         setFeedback({ type: "success", message: `Conta ${form.codigo} alterada.` });
       } else {
         const nivel = form.codigo.split(".").length;
@@ -135,11 +136,14 @@ export function Vfin0120Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label">Natureza</label>
               <select className="erp-input" value={form.natureza} disabled={travado} onChange={(e) => setF("natureza", e.target.value as PlanoNatureza)}>
                 <option value="CREDITO">CRÉDITO</option><option value="DEBITO">DÉBITO</option></select></div>
-            {editId != null && (
+            {editId != null && (<>
               <div className="erp-field erp-c2"><label className="erp-label">Situação</label>
                 <select className="erp-input" value={ativa ? "S" : "N"} onChange={(e) => { setAtiva(e.target.value === "S"); setFeedback(null); }}>
                   <option value="S">Ativa</option><option value="N">Inativa</option></select></div>
-            )}
+              <div className="erp-field erp-c4" style={{ display: "flex", alignItems: "flex-end" }}>
+                <label className="erp-check" title="O rateio do título a pagar e o item da nota de entrada nesta conta não são aceitos sem centro de custo (VCTB0102).">
+                  <input type="checkbox" checked={exigeCentro} onChange={(e) => { setExigeCentro(e.target.checked); setFeedback(null); }} /> Exige centro de custo</label></div>
+            </>)}
           
         </div></div>
 

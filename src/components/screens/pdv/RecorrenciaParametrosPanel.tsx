@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getRecurringParameters, upsertRecurringParameters,
   listAdjustmentDates, createAdjustmentDate, calculateAdjustment,
 } from "@/services/recurringSalesService";
-import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
+import { errMessage, parseBool, parseNum, parseStr, unwrapArray, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadCustomers, loadEstablishments, loadItems, loadRepresentatives, loadSalesPlans } from "@/services/lookups";
 import { useEscapeToClose } from "@/hooks/useEscapeToClose";
@@ -57,13 +57,25 @@ export function RecorrenciaParametrosPanel({ enterpriseCode, onClose, aviso }: P
 
   useEscapeToClose(onClose);
 
+  // O aviso vem do pai como função nova a cada render. Depender dele recriava
+  // `executar` e a carga dos parâmetros: um erro avisava, o pai renderizava e a
+  // carga rodava de novo — 271 chamadas seguidas na empresa sem parâmetros.
+  const avisoRef = useRef(aviso);
+  avisoRef.current = aviso;
   const executar = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true);
-    try { await fn(); } catch (e) { aviso("error", errMessage(e)); } finally { setBusy(false); }
-  }, [aviso]);
+    try { await fn(); } catch (e) { avisoRef.current("error", errMessage(e)); } finally { setBusy(false); }
+  }, []);
 
   const carregarParametros = useCallback(() => executar(async () => {
-    const o = await getRecurringParameters(enterpriseCode);
+    let o: Obj | null;
+    try {
+      o = await getRecurringParameters(enterpriseCode);
+    } catch (e) {
+      // Empresa sem parâmetros ainda: vale o padrão até gravar.
+      if ((e as { response?: { status?: number } })?.response?.status === 404) return;
+      throw e;
+    }
     if (!o || Object.keys(o).length === 0) return;
     setParam({
       current_month_billing_limit_day: String(parseNum(o, "current_month_billing_limit_day", "CurrentMonthBillingLimitDay") || 20),
@@ -143,9 +155,12 @@ export function RecorrenciaParametrosPanel({ enterpriseCode, onClose, aviso }: P
     });
   }
 
-  const afetados = previa ? parseNum(previa, "affected", "Affected", "total", "Total") : 0;
-  const valorAntes = previa ? parseNum(previa, "previous_total", "PreviousTotal") : 0;
-  const valorDepois = previa ? parseNum(previa, "new_total", "NewTotal") : 0;
+  // A prévia vem por item reajustado (`impacts`): cada linha agrupa os
+  // contratos de origem (`source_codes`) com o total mensal antes e depois.
+  const impactos = previa ? unwrapArray(previa["impacts"]).map(unwrapObject) : [];
+  const afetados = impactos.reduce((n, i) => n + unwrapArray(i["source_codes"]).length, 0);
+  const valorAntes = impactos.reduce((s, i) => s + parseNum(i, "previous_total"), 0);
+  const valorDepois = previa ? parseNum(previa, "total_value") : 0;
 
   return (
     <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-label="Parâmetros e reajustes da recorrência">

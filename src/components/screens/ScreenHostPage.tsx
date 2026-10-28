@@ -36,6 +36,15 @@ const Vpre0201Page = lazy(() => import("./previsao/Vpre0201Page").then((m) => ({
 const Vpre0251Page = lazy(() => import("./previsao/Vpre0251Page").then((m) => ({ default: m.Vpre0251Page })));
 const Vpre0301Page = lazy(() => import("./previsao/Vpre0301Page").then((m) => ({ default: m.Vpre0301Page })));
 const Vatc0280Page = lazy(() => import("./assistencia/Vatc0280Page").then((m) => ({ default: m.Vatc0280Page })));
+const Vatc0100Page = lazy(() => import("./assistencia/Vatc0100Page").then((m) => ({ default: m.Vatc0100Page })));
+const Vatc0110Page = lazy(() => import("./assistencia/Vatc0110Page").then((m) => ({ default: m.Vatc0110Page })));
+const Vatc0300Page = lazy(() => import("./assistencia/Vatc0300Page").then((m) => ({ default: m.Vatc0300Page })));
+const Vvnd0710Page = lazy(() => import("./comercial/Vvnd0710Page").then((m) => ({ default: m.Vvnd0710Page })));
+const Vvnd0700Page = lazy(() => import("./comercial/Vvnd0700Page").then((m) => ({ default: m.Vvnd0700Page })));
+const Vent0250Page = lazy(() => import("./engenharia/Vent0250Page").then((m) => ({ default: m.Vent0250Page })));
+const Vatc0310Page = lazy(() => import("./assistencia/Vatc0310Page").then((m) => ({ default: m.Vatc0310Page })));
+const Vatc0320Page = lazy(() => import("./assistencia/Vatc0320Page").then((m) => ({ default: m.Vatc0320Page })));
+const Vatc0400Page = lazy(() => import("./assistencia/Vatc0400Page").then((m) => ({ default: m.Vatc0400Page })));
 const Vatc0480Page = lazy(() => import("./assistencia/Vatc0480Page").then((m) => ({ default: m.Vatc0480Page })));
 const Vatc0380Page = lazy(() => import("./assistencia/Vatc0380Page").then((m) => ({ default: m.Vatc0380Page })));
 const Vsac0200Page = lazy(() => import("./assistencia/Vsac0200Page").then((m) => ({ default: m.Vsac0200Page })));
@@ -52,6 +61,12 @@ const Vcon0200Page = lazy(() => import("./suprimento/Vcon0200Page").then((m) => 
 const Vcon0400Page = lazy(() => import("./suprimento/Vcon0400Page").then((m) => ({ default: m.Vcon0400Page })));
 const Vcon0202Page = lazy(() => import("./suprimento/Vcon0202Page").then((m) => ({ default: m.Vcon0202Page })));
 const Vavr0200Page = lazy(() => import("./suprimento/Vavr0200Page").then((m) => ({ default: m.Vavr0200Page })));
+const Vins0700Page = lazy(() => import("./inspecao/Vins0700Page").then((m) => ({ default: m.Vins0700Page })));
+const Vins0800Page = lazy(() => import("./inspecao/Vins0800Page").then((m) => ({ default: m.Vins0800Page })));
+const Vins0600Page = lazy(() => import("./inspecao/Vins0600Page").then((m) => ({ default: m.Vins0600Page })));
+const Vins0500Page = lazy(() => import("./inspecao/Vins0500Page").then((m) => ({ default: m.Vins0500Page })));
+const Vins0300Page = lazy(() => import("./inspecao/Vins0300Page").then((m) => ({ default: m.Vins0300Page })));
+const Vins0110Page = lazy(() => import("./inspecao/Vins0110Page").then((m) => ({ default: m.Vins0110Page })));
 const Vins0106Page = lazy(() => import("./inspecao/Vins0106Page").then((m) => ({ default: m.Vins0106Page })));
 const Vins0200Page = lazy(() => import("./inspecao/Vins0200Page").then((m) => ({ default: m.Vins0200Page })));
 const Vins0201Page = lazy(() => import("./inspecao/Vins0201Page").then((m) => ({ default: m.Vins0201Page })));
@@ -64,7 +79,6 @@ const Vimp0200Page = lazy(() => import("./importacao/Vimp0200Page").then((m) => 
 const Vfin0100Page = lazy(() => import("./financeiro/Vfin0100Page").then((m) => ({ default: m.Vfin0100Page })));
 const Vfin0110Page = lazy(() => import("./financeiro/Vfin0110Page").then((m) => ({ default: m.Vfin0110Page })));
 const Vfin0120Page = lazy(() => import("./financeiro/Vfin0120Page").then((m) => ({ default: m.Vfin0120Page })));
-const Vfin0130Page = lazy(() => import("./financeiro/Vfin0130Page").then((m) => ({ default: m.Vfin0130Page })));
 const Vfin0200Page = lazy(() => import("./financeiro/Vfin0200Page").then((m) => ({ default: m.Vfin0200Page })));
 const Vfin0210Page = lazy(() => import("./financeiro/Vfin0210Page").then((m) => ({ default: m.Vfin0210Page })));
 const Vfin0300Page = lazy(() => import("./financeiro/Vfin0300Page").then((m) => ({ default: m.Vfin0300Page })));
@@ -82,9 +96,11 @@ const Vfis0220Page = lazy(() => import("./fiscal/Vfis0220Page").then((m) => ({ d
 const Vfis0300Page = lazy(() => import("./fiscal/Vfis0300Page").then((m) => ({ default: m.Vfis0300Page })));
 const Vfis0310Page = lazy(() => import("./fiscal/Vfis0310Page").then((m) => ({ default: m.Vfis0310Page })));
 const Vfis0320Page = lazy(() => import("./fiscal/Vfis0320Page").then((m) => ({ default: m.Vfis0320Page })));
-const Vfis0330Page = lazy(() => import("./fiscal/Vfis0330Page").then((m) => ({ default: m.Vfis0330Page })));
+const Vfis0325Page = lazy(() => import("./fiscal/Vfis0325Page").then((m) => ({ default: m.Vfis0325Page })));
 const Vfis0340Page = lazy(() => import("./fiscal/Vfis0340Page").then((m) => ({ default: m.Vfis0340Page })));
+const Vfis0345Page = lazy(() => import("./fiscal/Vfis0345Page").then((m) => ({ default: m.Vfis0345Page })));
 const Vfis0350Page = lazy(() => import("./fiscal/Vfis0350Page").then((m) => ({ default: m.Vfis0350Page })));
+const Vfis0670Page = lazy(() => import("./fiscal/Vfis0670Page").then((m) => ({ default: m.Vfis0670Page })));
 const Vfis0360Page = lazy(() => import("./fiscal/Vfis0360Page").then((m) => ({ default: m.Vfis0360Page })));
 const Vfis0500Page = lazy(() => import("./fiscal/Vfis0500Page").then((m) => ({ default: m.Vfis0500Page })));
 const Vfis0510Page = lazy(() => import("./fiscal/Vfis0510Page").then((m) => ({ default: m.Vfis0510Page })));
@@ -150,7 +166,9 @@ const Vres0100Page = lazy(() => import("./producao/Vres0100Page").then((m) => ({
 const Vbom0100Page = lazy(() => import("./engenharia/Vbom0100Page").then((m) => ({ default: m.Vbom0100Page })));
 const Vlot0100Page = lazy(() => import("./almoxarifado/Vlot0100Page").then((m) => ({ default: m.Vlot0100Page })));
 const Vaud0100Page = lazy(() => import("./cadastros/Vaud0100Page").then((m) => ({ default: m.Vaud0100Page })));
-const Vusr0100Page = lazy(() => import("./cadastros/Vusr0100Page").then((m) => ({ default: m.Vusr0100Page })));
+const Vadm0200Page = lazy(() => import("./cadastros/Vadm0200Page").then((m) => ({ default: m.Vadm0200Page })));
+const Vapr0100Page = lazy(() => import("./cadastros/Vapr0100Page").then((m) => ({ default: m.Vapr0100Page })));
+const Vsec0100Page = lazy(() => import("./cadastros/Vsec0100Page").then((m) => ({ default: m.Vsec0100Page })));
 const Vnot0100Page = lazy(() => import("./cadastros/Vnot0100Page").then((m) => ({ default: m.Vnot0100Page })));
 const Vest0500Page = lazy(() => import("./almoxarifado/Vest0500Page").then((m) => ({ default: m.Vest0500Page })));
 import { WindowControls } from "@/components/window/WindowControls";
@@ -201,7 +219,10 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSUP0630: <Vpct0100Page />,
   VEST0300: <Vlot0100Page />,
   VAUD0100: <Vaud0100Page />,
-  VUSR0100: <Vusr0100Page />,
+  // VUSR0100 era a mesma função de VSEC0100 em outra tela; os dois abrem a
+  // tela própria da troca de senha.
+  VSEC0100: <Vsec0100Page />,
+  VUSR0100: <Vsec0100Page />,
   VNOT0100: <Vnot0100Page />,
   VEST0500: <Vest0500Page />,
   // Engenharia
@@ -228,6 +249,15 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VPRE0301: <Vpre0301Page />,
   // Assistência Técnica
   VATC0280: <Vatc0280Page />,
+  VATC0100: <Vatc0100Page />,
+  VATC0110: <Vatc0110Page />,
+  VATC0300: <Vatc0300Page />,
+  VATC0310: <Vatc0310Page />,
+  VENT0250: <Vent0250Page />,
+  VVND0700: <Vvnd0700Page />,
+  VVND0710: <Vvnd0710Page />,
+  VATC0320: <Vatc0320Page />,
+  VATC0400: <Vatc0400Page />,
   VATC0480: <Vatc0480Page />,
   VATC0380: <Vatc0380Page />,
   VSAC0200: <Vsac0200Page />,
@@ -297,7 +327,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VFIN0100: <Vfin0100Page />,
   VFIN0110: <Vfin0110Page />,
   VFIN0120: <Vfin0120Page />,
-  VFIN0130: <Vfin0130Page />,
+  // VFIN0130 foi unificada na VCTB0102 (centro de custo único, migração 447).
+  VFIN0130: <Vctb0102Page />,
   VFIN0200: <Vfin0200Page />,
   VFIN0210: <Vfin0210Page />,
   VFIN0300: <Vfin0300Page />,
@@ -313,9 +344,16 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VFIS0300: <Vfis0300Page />,
   VFIS0310: <Vfis0310Page />,
   VFIS0320: <Vfis0320Page />,
-  VFIS0330: <Vfis0330Page />,
+  VFIS0325: <Vfis0325Page />,
+  // VFIS0330 (redução/substituição/diferimento) foi unificada nos parâmetros
+  // de ICMS/IPI: o atalho antigo abre a VFIS0320.
+  VFIS0330: <Vfis0320Page />,
   VFIS0340: <Vfis0340Page />,
+  VFIS0345: <Vfis0345Page />,
   VFIS0350: <Vfis0350Page />,
+  VFIS0670: <Vfis0670Page />,
+  VADM0200: <Vadm0200Page />,
+  VAPR0100: <Vapr0100Page />,
   VFIS0360: <Vfis0360Page />,
   VFIS0500: <Vfis0500Page />,
   VFIS0510: <Vfis0510Page />,
@@ -340,6 +378,12 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VCON0202: <Vcon0202Page />,
   VAVR0200: <Vavr0200Page />,
   // Inspeção
+  VINS0700: <Vins0700Page />,
+  VINS0800: <Vins0800Page />,
+  VINS0600: <Vins0600Page />,
+  VINS0500: <Vins0500Page />,
+  VINS0300: <Vins0300Page />,
+  VINS0110: <Vins0110Page />,
   VINS0106: <Vins0106Page />,
   VINS0200: <Vins0200Page />,
   VINS0201: <Vins0201Page />,

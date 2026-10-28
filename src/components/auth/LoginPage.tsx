@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { login } from "@/services/authService";
+import { login, EmpresaObrigatoriaError, type EmpresaDeAcesso } from "@/services/authService";
 import { getClientVersion } from "@/services/versionService";
 import { getRememberedEmail, isRememberMeChosen, setRememberMe, useAuthStore } from "@/store/authStore";
 import {
@@ -31,6 +31,9 @@ export function LoginPage(): JSX.Element {
     password?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Usuário com acesso a mais de uma empresa escolhe em qual entrar.
+  const [empresas, setEmpresas] = useState<EmpresaDeAcesso[]>([]);
+  const [empresaEscolhida, setEmpresaEscolhida] = useState<number | undefined>(undefined);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [clientVersion, setClientVersion] = useState<string>("");
@@ -96,7 +99,7 @@ export function LoginPage(): JSX.Element {
       const destino = await resolverTenantPorEmail(email);
       definirTenantAtivo(destino);
 
-      const response = await login({ email, password, rememberMe });
+      const response = await login({ email, password, rememberMe, enterpriseCode: empresaEscolhida });
       // A escolha é registrada ANTES de gravar o token: é ela que decide se a
       // sessão vai para o disco ou só para a janela atual.
       setRememberMe(rememberMe, email);
@@ -110,6 +113,12 @@ export function LoginPage(): JSX.Element {
       });
       navigate("/dashboard", { replace: true });
     } catch (error) {
+      if (error instanceof EmpresaObrigatoriaError) {
+        setEmpresas(error.empresas);
+        setEmpresaEscolhida((atual) => atual ?? error.empresas[0]?.code);
+        setErrorMessage(error.message);
+        return;
+      }
       const defaultMessage = "Falha ao autenticar no backend. Verifique usuário, senha, rota e formato esperado pela API.";
       setErrorMessage(error instanceof Error ? error.message : defaultMessage);
     } finally {
@@ -968,6 +977,9 @@ export function LoginPage(): JSX.Element {
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setFieldErrors((p) => ({ ...p, email: undefined }));
+                      // Outro usuário: a lista de empresas era do anterior.
+                      setEmpresas([]);
+                      setEmpresaEscolhida(undefined);
                     }}
                     autoComplete="username"
                     required
@@ -1123,6 +1135,25 @@ export function LoginPage(): JSX.Element {
                   </span>
                 )}
               </div>
+
+              {empresas.length > 1 && (
+                <div className="lp-field">
+                  <div className="lp-field-label">
+                    <span className="lp-label-text">Empresa</span>
+                  </div>
+                  <div className="lp-input-wrap">
+                    <select
+                      id="empresa"
+                      className="lp-input"
+                      style={{ paddingLeft: 14 }}
+                      value={empresaEscolhida ?? ""}
+                      onChange={(e) => setEmpresaEscolhida(Number(e.target.value))}
+                    >
+                      {empresas.map((e) => <option key={e.code} value={e.code}>{e.name} ({e.code})</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Lembrar */}
               <div className="lp-remember-row">

@@ -57,7 +57,25 @@ export interface CfopDTO {
   difal: boolean;
   doacao: boolean;
 }
-export interface Cfop extends CfopDTO { is_active?: boolean; }
+export interface Cfop extends CfopDTO {
+  id?: number;
+  is_active?: boolean;
+  description_full?: string;
+  /** Da tabela oficial do Portal da NF-e (IT 2023.002): vigência e indicadores da SEFAZ. */
+  oficial?: boolean;
+  inicio_vigencia?: string;
+  fim_vigencia?: string;
+  ind_nfe?: boolean;
+  ind_comunica?: boolean;
+  ind_transp?: boolean;
+  ind_devol?: boolean;
+  ind_retor?: boolean;
+  ind_anula?: boolean;
+  ind_remes?: boolean;
+  ind_comb?: boolean;
+  ind_exc_ibscbs?: boolean;
+}
+export interface CfopDTOComSituacao extends CfopDTO { id?: number; is_active?: boolean; }
 
 export async function listCfops(includeInactive = false): Promise<Cfop[]> {
   const { data } = await httpClient.get(`${BASE}/cfops/`, activeParams(includeInactive));
@@ -67,7 +85,7 @@ export async function createCfop(dto: CfopDTO): Promise<Cfop> {
   const { data } = await httpClient.post(`${BASE}/cfops/`, dto);
   return asOne(data);
 }
-export async function updateCfop(dto: CfopDTO): Promise<Cfop> {
+export async function updateCfop(dto: CfopDTOComSituacao): Promise<Cfop> {
   const { data } = await httpClient.put(`${BASE}/cfops/`, dto);
   return asOne(data);
 }
@@ -195,8 +213,22 @@ export interface ParametroIcmsIpiDTO {
   icms_difal_type?: string;
   difal_purchase_red_pct?: number;
   difal_purchase_red_target?: string;
+
+  // Cenário
+  /** REVENDA, INDUSTRIALIZACAO ou USO_CONSUMO; vazio = qualquer finalidade. */
+  finalidade_compra?: string;
+  /** MVA original da substituição tributária (40 = 40%). */
+  mva_pct?: number;
+  /** Ajusta a MVA na venda interestadual (Convênio ICMS 142/18). Padrão: sim. */
+  mva_ajustar_interestadual?: boolean;
+  /** Fornecedor (código) — restringe regra de ENTRADA; regra com fornecedor não vale na saída. */
+  supplier_code?: number;
 }
-export interface ParametroIcmsIpi extends ParametroIcmsIpiDTO { id: number; is_active?: boolean; }
+export interface ParametroIcmsIpi extends ParametroIcmsIpiDTO {
+  id: number; is_active?: boolean;
+  /** Regra copiada do antigo cadastro de redução/substituição (VFIS0330). */
+  origem_reducao_id?: number;
+}
 
 export async function listParametrosIcmsIpi(includeInactive = false): Promise<ParametroIcmsIpi[]> {
   const { data } = await httpClient.get(`${BASE}/parametros-icms-ipi/`, activeParams(includeInactive));

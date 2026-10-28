@@ -141,6 +141,9 @@ type Aba = (typeof ABAS)[number]["id"];
 
 const HOJE = () => hojeLocal();
 
+/** Número do simulador em pt-BR, sem a cauda de casas do ponto flutuante. */
+const fmtSim = (n: number, casas = 2) => Number(n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: casas });
+
 export function Vmaq0200Page(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
@@ -1437,35 +1440,37 @@ export function Vmaq0200Page(): JSX.Element {
         {aba === "simulador" && (<>
         {/* ── Cálculo de tempo de produção (§3) ──────────────────────────── */}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Cálculo de tempo de produção</div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label><LookupField value={calc.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setCalc((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={calc.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(code) => setCalc((p) => ({ ...p, item_code: String(code ?? "") }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><LookupField value={calc.mask || undefined} loader={loadItemMasks} entityLabel="máscara" onChange={(code) => setCalc((p) => ({ ...p, mask: code ? String(code) : "" }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req">Máquina</label>
+          <div className="erp-field erp-c3"><label className="erp-label erp-req">Máquina</label>
             <LookupField value={calc.machine_code || undefined} loader={loadMachines} entityLabel="máquina" onChange={(code) => setCalc((p) => ({ ...p, machine_code: code ?? 0 }))} />
           </div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" type="number" value={calc.demand_qty || ""} onChange={(e) => setCalc((p) => ({ ...p, demand_qty: Number(e.target.value) }))} /></div>
-          <div className="erp-field erp-c4" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={calcular} disabled={busy}>Calcular tempo</button></div>
-        
+          <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={calcular} disabled={busy}>Calcular tempo</button></div>
+        </div></div>
+
+        {/* O resultado tem bloco próprio: dentro da grade de cima ele ocupava
+            uma coluna só e os campos ficavam espremidos uns sobre os outros. */}
         {calcResult && (
-          <div className="erp-fieldset-body" style={{ marginTop: 10 }}>
-            <div className="erp-field erp-c2"><label className="erp-label">Ciclos</label><input className="erp-input num" value={calcResult.cycles} readOnly /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Setup (min)</label><input className="erp-input num" value={calcResult.setup_minutes} readOnly /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Produção (min)</label><input className="erp-input num" value={calcResult.production_minutes} readOnly /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Total (min)</label><input className="erp-input num" value={calcResult.total_minutes} readOnly /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Total (h)</label><input className="erp-input num" value={calcResult.total_hours} readOnly /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Eficiência aplicada</label><input className="erp-input" value={`${(calcResult.efficiency_rate * 100).toFixed(1)}% (${calcResult.efficiency_source === "ITEM" ? "item" : "máquina"})`} readOnly /></div>
+          <div className="erp-fieldset"><div className="erp-fieldset-head">Resultado do cálculo</div><div className="erp-fieldset-body">
+            <div className="erp-field erp-c2"><label className="erp-label">Ciclos</label><input className="erp-input num" value={fmtSim(calcResult.cycles)} readOnly /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Setup (min)</label><input className="erp-input num" value={fmtSim(calcResult.setup_minutes)} readOnly /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Produção (min)</label><input className="erp-input num" value={fmtSim(calcResult.production_minutes)} readOnly /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Total (min)</label><input className="erp-input num" value={fmtSim(calcResult.total_minutes)} readOnly /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Total (h)</label><input className="erp-input num" value={fmtSim(calcResult.total_hours)} readOnly /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Eficiência aplicada</label><input className="erp-input" value={`${fmtSim(calcResult.efficiency_rate * 100, 1)}% (${calcResult.efficiency_source === "ITEM" ? "item" : "máquina"})`} readOnly /></div>
             {calcResult.consumable_refills > 0 && (
               <>
                 <div className="erp-field erp-c3"><label className="erp-label">{calcResult.consumable_description || "Consumível"}</label>
-                  <input className="erp-input" readOnly value={`${calcResult.consumable_used.toFixed(2)} ${calcResult.consumable_unit}`} /></div>
+                  <input className="erp-input" readOnly value={`${fmtSim(calcResult.consumable_used)} ${calcResult.consumable_unit}`} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Trocas de carga</label>
-                  <input className="erp-input num" readOnly value={calcResult.consumable_refills} /></div>
+                  <input className="erp-input num" readOnly value={fmtSim(calcResult.consumable_refills)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Parado na troca (min)</label>
-                  <input className="erp-input num" readOnly value={calcResult.consumable_minutes} /></div>
+                  <input className="erp-input num" readOnly value={fmtSim(calcResult.consumable_minutes)} /></div>
               </>
             )}
-          </div>
+          </div></div>
         )}
-        </div></div>
         </>)}
 
         {aba === "agenda" && (<>

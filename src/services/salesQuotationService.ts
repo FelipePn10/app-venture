@@ -151,6 +151,8 @@ export interface SalesQuotationItemDTO {
   discount_pct?: number;
   ipi_pct?: number;
   st_pct?: number;
+  /** IPI e ST digitados: não recalcular pela regra de ICMS/IPI. */
+  tributos_manuais?: boolean;
   total_gross?: number;
   /** Valor dos PRODUTOS já com desconto — sem imposto. */
   total_net?: number;

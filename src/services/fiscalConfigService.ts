@@ -27,9 +27,18 @@ export interface FiscalConfig {
   brand_color?: string;
   icms_interno_aliquota: number;
   icms_diferimento_percentual: number;
+  /** Linha de nota sem regra de ICMS/IPI não é transmitida. */
+  exigir_regra_icms_ipi: boolean;
+  /** pCredSN (%) do optante do Simples Nacional. */
+  aliquota_credito_simples: number;
+  /** cBenef do diferimento (CST 51), ex.: PR830001 no Paraná. */
+  cbenef_diferimento: string;
   focus_nfe_configured: boolean;
   focus_nfe_token?: string;
   focus_nfe_ambiente: FocusAmbiente;
+  /** Em produção, token e ambiente só mudam pela Venture ERP (comando no servidor). */
+  focus_producao_travado?: boolean;
+  nome_fantasia?: string;
   juros_mes: number;
   multa_atraso: number;
   vencimento_icms_dia: number;
@@ -71,9 +80,14 @@ function parseConfig(raw: unknown): FiscalConfig {
     brand_color: parseStr(o, 'brand_color', 'BrandColor'),
     icms_interno_aliquota: parseNum(o, 'icms_interno_aliquota', 'IcmsInternoAliquota'),
     icms_diferimento_percentual: parseNum(o, 'icms_diferimento_percentual', 'IcmsDiferimentoPercentual'),
+    exigir_regra_icms_ipi: parseBool(o, 'exigir_regra_icms_ipi', 'ExigirRegraICMSIPI'),
+    aliquota_credito_simples: parseNum(o, 'aliquota_credito_simples', 'AliquotaCreditoSimples'),
+    cbenef_diferimento: parseStr(o, 'cbenef_diferimento', 'CBenefDiferimento'),
     focus_nfe_configured: parseBool(o, 'focus_nfe_configured', 'FocusNfeConfigured'),
     focus_nfe_token: parseStr(o, 'focus_nfe_token', 'FocusNfeToken'),
     focus_nfe_ambiente: (amb === 'producao' ? 'producao' : 'homologacao') as FocusAmbiente,
+    focus_producao_travado: parseBool(o, 'focus_producao_travado', 'FocusProducaoTravado'),
+    nome_fantasia: parseStr(o, 'nome_fantasia', 'NomeFantasia'),
     juros_mes: parseNum(o, 'juros_mes', 'JurosMes'),
     multa_atraso: parseNum(o, 'multa_atraso', 'MultaAtraso'),
     vencimento_icms_dia: parseNum(o, 'vencimento_icms_dia', 'VencimentoIcmsDia'),
@@ -89,9 +103,18 @@ export async function getFiscalConfig(): Promise<FiscalConfig> {
   return parseConfig(data);
 }
 
+/** Campos da identificação: mantidos na VEMP0100, não vão nesta gravação. */
+const IDENTIFICACAO: Array<keyof FiscalConfig> = [
+  'cnpj_empresa', 'razao_social', 'ie_empresa', 'regime_tributario', 'uf_empresa', 'logradouro', 'numero',
+  'complemento', 'bairro', 'municipio', 'codigo_municipio', 'cep', 'telefone', 'nome_fantasia',
+];
+
+/** Grava só os parâmetros fiscais; a identificação da empresa fica como está. */
 export async function updateFiscalConfig(cfg: FiscalConfig): Promise<FiscalConfig> {
   const payload: Partial<FiscalConfig> = { ...cfg };
   delete payload.focus_nfe_configured;
+  delete payload.focus_producao_travado;
+  for (const k of IDENTIFICACAO) delete payload[k];
   if (!payload.focus_nfe_token?.trim()) delete payload.focus_nfe_token;
   const { data } = await httpClient.put(BASE, payload);
   return parseConfig(data);

@@ -69,6 +69,8 @@ export interface SalesOrderDTO {
   digit_date?: string;
   customer_code: number;
   currency_code?: string;
+  /** Finalidade da compra nesta venda ("" = a do cadastro do cliente). */
+  finalidade_compra?: string;
   payment_term_code?: number;
   price_table_code?: number;
   commission_pct?: number;
@@ -176,6 +178,7 @@ function parseOrder(raw: unknown): SalesOrderDTO {
     digit_date: parseStr(o, 'digit_date', 'DigitDate') || undefined,
     customer_code: parseNum(o, 'customer_code', 'CustomerCode'),
     currency_code: parseStr(o, 'currency_code', 'CurrencyCode'),
+    finalidade_compra: parseStr(o, 'finalidade_compra', 'FinalidadeCompra') || undefined,
     payment_term_code: parseNum(o, 'payment_term_code', 'PaymentTermCode'),
     price_table_code: parseNum(o, 'price_table_code', 'PriceTableCode'),
     commission_pct: parseNum(o, 'commission_pct', 'CommissionPct'),

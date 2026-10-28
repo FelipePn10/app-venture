@@ -65,7 +65,7 @@ export function Vavf0204Page(): JSX.Element {
               {list.map((s, i) => (
                 <div key={i} className="erp-list-row" style={{ cursor: "default" }}>
                   <span className="erp-list-code">{parseStr(s, "period_start", "PeriodStart").slice(0, 10)} → {parseStr(s, "period_end", "PeriodEnd").slice(0, 10)}</span>
-                  <span className="erp-list-sub">IQF {pct(parseNum(s, "iqf", "IQF", "total_score", "TotalScore"))}</span>
+                  <span className="erp-list-sub">IQF {pct(parseNum(s, "overall_score", "iqf", "total_score"))}</span>
                 </div>
               ))}
             </div>
@@ -96,7 +96,7 @@ export function Vavf0204Page(): JSX.Element {
                     <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input num" readOnly value={pct(parseNum(computed, "delivery_score", "DeliveryScore"))} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Comercial</label><input className="erp-input num" readOnly value={pct(parseNum(computed, "commercial_score", "CommercialScore"))} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Atendimento</label><input className="erp-input num" readOnly value={pct(parseNum(computed, "service_score", "ServiceScore"))} /></div>
-                    <div className="erp-field erp-c3"><label className="erp-label">IQF final</label><input className="erp-input num" readOnly value={pct(parseNum(computed, "iqf", "IQF", "total_score", "TotalScore"))} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">IQF final</label><input className="erp-input num" readOnly value={pct(parseNum(computed, "overall_score", "iqf", "total_score"))} /></div>
                   </div>
                 </div>
               )}

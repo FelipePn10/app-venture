@@ -7,7 +7,21 @@ const host = readFileSync(new URL('../src/components/screens/ScreenHostPage.tsx'
 const help = readFileSync(new URL('../HELP_TELAS_ERP.md', import.meta.url), 'utf8');
 const fiscalConfigService = readFileSync(new URL('../src/services/fiscalConfigService.ts', import.meta.url), 'utf8');
 const fiscalConfigScreen = readFileSync(new URL('../src/components/screens/fiscal/Vfis0100Page.tsx', import.meta.url), 'utf8');
-const routeSources = `${routines}\n${fiscalConfigService}`;
+// Telas que deixaram de ser rotina de JSON cru e ganharam tela própria: a
+// garantia passa a ser a tela registrada no ScreenHost e o serviço que ela usa
+// falar com a rota real.
+const dedicated = {
+  VSUP0630: { page: 'Vpct0100Page', service: 'purchaseTolerancesService.ts', path: '/api/purchase-order-tolerances' },
+  VEST0300: { page: 'Vlot0100Page', service: 'lotMaskService.ts', path: '/api/lot-masks' },
+  VFIN0600: { page: 'Vfin0600Page', service: 'adiantamentoService.ts', path: '/api/financial/adiantamentos' },
+  VFIN0620: { page: 'Vfin0620Page', service: 'financialService.ts', path: '/conciliacao/' , base: '/api/financial' },
+};
+// O serviço monta `${BASE}/...`: a rota do grupo conta como declarada quando
+// o serviço da tela própria usa a base (e, na conciliação, o trecho da rota).
+const dedicatedPaths = Object.values(dedicated)
+  .filter((d) => readFileSync(new URL(`../src/services/${d.service}`, import.meta.url), 'utf8').includes(d.path))
+  .map((d) => (d.base ? `${d.base}${d.path}` : `${d.path}/`)).join('\n');
+const routeSources = `${routines}\n${fiscalConfigService}\n${dedicatedPaths}`;
 
 const codes = [
   'VSUP0600', 'VAVF0300', 'VSUP0610', 'VSUP0620', 'VIMP0300', 'VAVF0203',
@@ -17,7 +31,7 @@ const codes = [
   'VTER0100', 'VTER0200', 'VTER0300', 'VTER0400',
   'VAPS0100', 'VAPS0200', 'VAPS0300', 'VAPS0400', 'VAPS0500', 'VAPS0600',
   'VENG0300', 'VENG0400', 'VMRP0200', 'VEST0300',
-  'VSEC0100', 'VPLA0300', 'VRES0100', 'VFIS0610', 'VADM0100', 'VEXP0110', 'VEXP0120',
+  'VPLA0300', 'VRES0100', 'VFIS0610', 'VADM0100', 'VEXP0110', 'VEXP0120',
   'VCLI0117', 'VCLI0202', 'VIMP0102', 'VGAR0211',
   'VENG0500', 'VMAQ0300', 'VCAL0200', 'VPRO1100', 'VVND0600', 'VSAC0200', 'VREP0600', 'VEST0400',
   'VFIN0600', 'VFIN0610', 'VFIN0620',
@@ -45,8 +59,8 @@ const requiredPaths = [
   '/api/aps/resource-groups', '/api/aps/machine-calendars', '/api/aps/machine-downtimes',
   '/sequencing-profile', '/industrial-profile', '/api/aps/sequence/view', '/api/aps/sequence/settings',
   '/api/bom-headers/', '/api/drawings/', '/api/planning/run-pipeline', '/api/lot-masks/',
-  '/api/password-change-requests/', '/api/planning-params/', '/api/restriction-reason/',
-  '/api/fiscal/entries/import-nfe/', '/api/audit-log',
+  '/api/planning-params/', '/api/restriction-reason/',
+  '/api/fiscal/entries/import-key', '/api/audit-log',
   '/api/fiscal/config/branding', '/api/fiscal/config/logo',
   '/api/financial/adiantamentos/', '/api/financial/cnab/remessa-240', '/api/financial/conciliacao/',
   '/api/recurring-sales/{code}/recalculate-adjustment',
@@ -69,13 +83,23 @@ for (const [index, match] of [...routines.matchAll(/json\('([^']*)'\)/g)].entrie
   try { JSON.parse(match[1]); } catch (error) { failures.push(`payload de exemplo ${index + 1} inválido: ${error.message}`); }
 }
 for (const code of codes) {
-  if (!routines.includes(`${code}: routine(`)) failures.push(`${code}: configuração ausente`);
+  const own = dedicated[code];
+  if (own) {
+    if (!host.includes(`${code}: <${own.page} />`)) failures.push(`${code}: tela própria ${own.page} não registrada no ScreenHost`);
+    const svc = readFileSync(new URL(`../src/services/${own.service}`, import.meta.url), 'utf8');
+    if (!svc.includes(own.path)) failures.push(`${code}: ${own.service} não usa ${own.path}`);
+  } else if (!routines.includes(`${code}: routine(`)) failures.push(`${code}: configuração ausente`);
   if (!screens.includes(`code: "${code}"`)) failures.push(`${code}: catálogo ausente`);
   if (!help.includes(`### ${code} —`)) failures.push(`${code}: manual ausente no HELP`);
 }
 for (const path of requiredPaths) {
   if (!routeSources.includes(path)) failures.push(`${path}: rota não declarada`);
 }
+// Troca de senha tem tela própria (VSEC0100; VUSR0100 aponta para ela).
+const passwordService = readFileSync(new URL('../src/services/passwordChangeService.ts', import.meta.url), 'utf8');
+if (!host.includes('VSEC0100: <Vsec0100Page />') || !host.includes('VUSR0100: <Vsec0100Page />')) failures.push('VSEC0100/VUSR0100: tela própria de troca de senha ausente');
+if (!passwordService.includes("'/api/password-change-requests'") || !passwordService.includes('/mine')) failures.push('/api/password-change-requests: rota não declarada');
+if (!screens.includes('code: "VSEC0100"')) failures.push('VSEC0100: catálogo ausente');
 if (!host.includes('OPERATIONAL_ROUTINES') || !host.includes('OperationalRoutinePage')) {
   failures.push('registro dinâmico das rotinas ausente no ScreenHost');
 }

@@ -9,7 +9,7 @@ export interface DemandaCreateRequest {
   item_code: string;          // int64
   mask?: string;              // optional configuration mask
   cost_center_code?: number;  // optional int64
-  quantity: number;           // float64
+  quantity: number;           // decimal no backend (texto); normalizado por parseNum
   demand_date: string;        // "YYYY-MM-DD"
   created_by: string;         // uuid.UUID as string
 }

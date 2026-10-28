@@ -16,9 +16,10 @@ import { type Aba, Abas, Aviso, Cabecalho, Progresso, Rodape, Selo, Vazio } from
 import { data, normalizar, num, situacaoOF } from "../planejamento/planFormat";
 import { useAcao } from "../planejamento/planHooks";
 import {
-  ApontamentoTab, ConsumosTab, CustoTab, EtapasTab, MateriaisTab, ResumoTab, type EntregaForm, type LeituraForm, type MaterialForm,
+  ApontamentoTab, ConsumosTab, CustoTab, EtapasTab, MateriaisTab, ResumoTab, type EntregaForm, type LeituraForm, type MaterialForm, type SerieDaOF,
 } from "./of/OfTabs";
 import { OPERACAO, SITUACAO_FALTA } from "./of/operacao";
+import { lerSeries, obterPerfil } from "@/services/posVendaService";
 import { hojeLocal } from "@/utils/dataLocal";
 
 /**
@@ -61,7 +62,14 @@ export function Vpro0900Page(): JSX.Element {
   const [custo, setCusto] = useState<CostDTO | null>(null);
   const [app, setApp] = useState<AppointmentDTO>(APONTAMENTO_VAZIO);
   const [cons, setCons] = useState<ConsumptionDTO>(CONSUMO_VAZIO);
-  const [conclusao, setConclusao] = useState<EntregaForm>({ lote: "", quantidade: "", final: true });
+  const [conclusao, setConclusao] = useState<EntregaForm>({ lote: "", quantidade: "", final: true, series: "" });
+  // Item com número de série (VATC0110): a entrega leva as séries.
+  const [serieDaOF, setSerieDaOF] = useState<SerieDaOF | undefined>();
+  useEffect(() => {
+    const item = of?.item_code;
+    if (!item) { setSerieDaOF(undefined); return; }
+    obterPerfil(String(item)).then((p) => setSerieDaOF({ controla: p.controla_serie, mascara: Boolean(p.mascara_serie_id) })).catch(() => setSerieDaOF(undefined));
+  }, [of?.item_code]);
   const [etapa, setEtapa] = useState({ horas: "", pecas: "", motivo: "" });
   const [matForm, setMatForm] = useState<MaterialForm>(MATERIAL_VAZIO);
   const [token, setToken] = useState<ProductionScanToken | null>(null);
@@ -178,8 +186,12 @@ export function Vpro0900Page(): JSX.Element {
     const saldo = Math.max(0, (of.planned_qty || 0) - (of.produced_qty || 0));
     const qtd = conclusao.quantidade.trim() ? Number(conclusao.quantidade) : saldo;
     if (!(qtd >= 0) || (!conclusao.final && qtd <= 0)) { setFeedback({ type: "error", message: "Informe a quantidade entregue." }); return; }
-    await completeProductionOrder(id, { warehouseId: conclusao.deposito, lot: conclusao.lote || undefined, quantity: qtd, final: conclusao.final });
-    setConclusao((c) => ({ ...c, lote: "", quantidade: "" })); await recarregar();
+    const series = serieDaOF?.controla ? lerSeries(conclusao.series) : [];
+    if (serieDaOF?.controla && !serieDaOF.mascara && series.length !== qtd) {
+      setFeedback({ type: "error", message: `O item controla número de série: informe ${num(qtd)} série(s), uma por unidade (informadas: ${series.length}).` }); return;
+    }
+    await completeProductionOrder(id, { warehouseId: conclusao.deposito, lot: conclusao.lote || undefined, quantity: qtd, final: conclusao.final, series });
+    setConclusao((c) => ({ ...c, lote: "", quantidade: "", series: "" })); await recarregar();
     const lote = conclusao.lote ? ` no lote ${conclusao.lote}` : "";
     setFeedback({ type: "success", message: conclusao.final
       ? `OF ${id} concluída: ${num(qtd)} peça(s) entraram no estoque${lote}.`
@@ -344,7 +356,7 @@ export function Vpro0900Page(): JSX.Element {
                 <Aviso feedback={feedback} busy={busy} />
                 {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} />}
                 {aba === "apontamento" && <ApontamentoTab of={of} busy={busy} app={app} setApp={setApp} cons={cons} setCons={setCons} apontamentos={apontamentos}
-                  operacoesPendentes={pendentes} conclusao={conclusao} setConclusao={setConclusao}
+                  operacoesPendentes={pendentes} conclusao={conclusao} setConclusao={setConclusao} serie={serieDaOF}
                   onApontar={apontar} onConsumir={consumir} onRetornarSucata={retornarSucata} onConcluir={concluir} />}
                 {aba === "etapas" && <EtapasTab of={of} busy={busy} operacoes={operacoes} etapa={etapa} setEtapa={setEtapa} onAlterar={(i, s) => void alterarEtapa(i, s)}
                   onGerarCodigo={gerarCodigo} token={token} leitura={leitura} setLeitura={setLeitura} onLer={() => void ler()} onExplodir={explodir} />}

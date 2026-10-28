@@ -15,6 +15,7 @@ import {
 } from "@/types/erpScreen";
 import { openErpScreenWindow } from "@/utils/windowManager";
 import { useAuthStore } from "@/store/authStore";
+import { useAcessoStore } from "@/store/acessoStore";
 import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
 import { searchErpScreens } from "@/utils/screenSearch";
 
@@ -71,7 +72,10 @@ export function DashboardPage(): JSX.Element {
    * os demais perfis veem o catálogo inteiro. Sem isso, o operador recebia 209
    * rotinas e "usuário não autorizado" em 206 delas.
    */
-  const visibleScreens = useMemo(() => screensForRole(ERP_SCREENS, user?.role), [user?.role]);
+  const acesso = useAcessoStore((s) => s.acesso);
+  const carregarAcesso = useAcessoStore((s) => s.carregar);
+  useEffect(() => { void carregarAcesso(); }, [carregarAcesso, user?.id]);
+  const visibleScreens = useMemo(() => screensForRole(ERP_SCREENS, user?.role, acesso), [user?.role, acesso]);
   /** O menu e a contagem não repetem as telas que só têm outro código. */
   const menuVisibleScreens = useMemo(() => menuScreens(visibleScreens), [visibleScreens]);
   /** Áreas e módulos que sobram depois do recorte do perfil. */

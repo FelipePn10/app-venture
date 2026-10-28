@@ -26,4 +26,14 @@ export async function entrar(page) {
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForLoadState('networkidle');
+  // Usuário com mais de uma empresa: a tela pergunta em qual entrar. Espera o
+  // que vier primeiro — o painel ou a pergunta — antes de decidir.
+  const empresa = page.locator('#empresa');
+  await page.waitForFunction(() => location.hash.includes('dashboard') || !!document.querySelector('#empresa'), undefined, { timeout: 30000 }).catch(() => {});
+  if (await empresa.count()) {
+    if (process.env.EMPRESA_CODE) await empresa.selectOption(process.env.EMPRESA_CODE);
+    await page.click('button[type="submit"]');
+    await page.waitForFunction(() => location.hash.includes('dashboard'), undefined, { timeout: 30000 }).catch(() => {});
+    await page.waitForLoadState('networkidle');
+  }
 }

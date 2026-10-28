@@ -154,6 +154,20 @@ function extractAuthResponse(payload: unknown, typedIdentifier?: string): AuthRe
   };
 }
 
+/** Empresa a que o usuário tem acesso (escolha no login). */
+export interface EmpresaDeAcesso { code: number; name: string }
+
+/**
+ * Senha conferida, mas o usuário tem acesso a mais de uma empresa: a tela
+ * pergunta em qual entrar e reenvia com `enterpriseCode`.
+ */
+export class EmpresaObrigatoriaError extends Error {
+  constructor(public readonly empresas: EmpresaDeAcesso[]) {
+    super('Você tem acesso a mais de uma empresa: escolha em qual entrar.');
+    this.name = 'EmpresaObrigatoriaError';
+  }
+}
+
 async function tryLoginWithField(field: string, payload: LoginPayload): Promise<AuthResponse> {
   const identifier = payload.email.trim();
   const response = await httpClient.post(AUTH_LOGIN_PATH, {
@@ -161,6 +175,7 @@ async function tryLoginWithField(field: string, payload: LoginPayload): Promise<
     password: payload.password,
     // O prazo do token é decidido pelo backend a partir desta escolha.
     remember_me: payload.rememberMe === true,
+    ...(payload.enterpriseCode ? { enterprise_code: payload.enterpriseCode } : {}),
   });
 
   const auth = extractAuthResponse(response.data, identifier);
@@ -175,6 +190,12 @@ async function loginWithApi(payload: LoginPayload): Promise<AuthResponse> {
       return await tryLoginWithField(field, payload);
     } catch (error) {
       lastError = error;
+      const corpo = axios.isAxiosError(error) ? (error.response?.data as { code?: string; empresas?: EmpresaDeAcesso[] } | undefined) : undefined;
+      if (axios.isAxiosError(error) && error.response?.status === 409 && corpo?.code === 'EMPRESA_OBRIGATORIA') {
+        throw new EmpresaObrigatoriaError(
+          (corpo.empresas ?? []).map((e) => ({ code: Number(e.code), name: String(e.name ?? e.code) })),
+        );
+      }
 
       if (
         !axios.isAxiosError(error) ||
