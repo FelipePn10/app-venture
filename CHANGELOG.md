@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.8.0] — 2026-10-28
+
 ## Novidades
 - **CIAP (VFIS0345):** o ICMS dos bens do ativo imobilizado deixa de ir para o custo e passa a ser crédito em 48 parcelas. As notas de entrada com CFOP de ativo entram sozinhas no controle; bens antigos podem ser incluídos à mão. A apuração do mês calcula a parcela pelo índice das saídas tributadas e de exportação, grava, fecha o mês e vai para o SPED (Bloco G e ajuste da apuração do ICMS).
 - **Centro de custo único (VCTB0102):** um só cadastro para o financeiro e a contabilidade, em árvore, com responsável e aprovador, orçamento por mês (com aviso de estouro), aprovações pendentes e regra de obrigatoriedade por conta (VFIN0120, "exige centro"). O código VFIN0130 continua abrindo, agora na VCTB0102. As requisições geradas pelo MRP também passam pela aprovação do centro.
