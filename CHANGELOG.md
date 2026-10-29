@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.9.0] — 2026-10-29
+
 ## Novidades
 - **Demanda independente (VPLA0102) refeita:** produzir ou comprar sem pedido de venda, por motivo — expectativa de venda (estoque, reposição, antecipação) ou finalidade própria (amostra, feira, consumo interno, assistência, projeto). Programação de entregas, almoxarifado e cliente de destino, prioridade, **Atender** pela saída de estoque, **Gerar OF agora** para urgência e a lista das ordens ligadas à demanda.
 - **Consumo pela venda:** o pedido de venda consome a previsão e a demanda de estoque do item; o MRP planeja o maior dos dois, nunca a soma. A aba **Consumo** mostra quais pedidos consumiram cada demanda e cada semana de previsão.
