@@ -30,6 +30,7 @@ const Vite0116Page = lazy(() => import("./engenharia/Vite0116Page").then((m) => 
 const Vctb0102Page = lazy(() => import("./contabilidade/Vctb0102Page").then((m) => ({ default: m.Vctb0102Page })));
 const Vutl0555Page = lazy(() => import("./contabilidade/Vutl0555Page").then((m) => ({ default: m.Vutl0555Page })));
 const Vpla0102Page = lazy(() => import("./planejamento/Vpla0102Page").then((m) => ({ default: m.Vpla0102Page })));
+const Vpla0310Page = lazy(() => import("./planejamento/Vpla0310Page").then((m) => ({ default: m.Vpla0310Page })));
 const Vpre0101Page = lazy(() => import("./previsao/Vpre0101Page").then((m) => ({ default: m.Vpre0101Page })));
 const Vpre0102Page = lazy(() => import("./previsao/Vpre0102Page").then((m) => ({ default: m.Vpre0102Page })));
 const Vpre0201Page = lazy(() => import("./previsao/Vpre0201Page").then((m) => ({ default: m.Vpre0201Page })));
@@ -242,6 +243,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VUTL0555: <Vutl0555Page />,
   // Planejamento
   VPLA0102: <Vpla0102Page />,
+  VPLA0310: <Vpla0310Page />,
   VPRE0101: <Vpre0101Page />,
   VPRE0102: <Vpre0102Page />,
   VPRE0201: <Vpre0201Page />,

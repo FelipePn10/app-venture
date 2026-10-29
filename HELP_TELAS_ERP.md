@@ -299,7 +299,7 @@ regra de cada linha.
 | Código | Tela | Para que serve |
 |---|---|---|
 | [VPLN0100](#vpln0100--pipeline-de-planejamento-mrpcrpaps) | Pipeline de Planejamento (MRP→CRP→APS) | Executar MRP, CRP e APS num único disparo com parecer de viabilidade, e manter parâmetros de planejamento. |
-| [VPLA0102](#vpla0102--cadastro-de-demandas-independentes) | Cadastro de Demandas Independentes | Cadastrar demandas independentes para o Cálculo do Planejamento. |
+| [VPLA0102](#vpla0102--demanda-independente) | Demanda Independente | Produzir ou comprar sem pedido de venda: estoque, amostra, feira, consumo interno, assistência, projeto; consumo pela venda e OF direta. |
 | [VMRP0100](#vmrp0100--mrp--planejamento-de-materiais) | MRP — Planejamento de Materiais | Rodar o MRP por plano, analisar sugestões de ordens, firmar (→ Ordem Planejada/OF), perfil MRP por item, exceções e regras configuradas. |
 | [VPRE0101](#vpre0101--tabela-de-apropriação) | Tabela de Apropriação | Determinar o percentual de acomodação dos itens nos dias da semana. |
 | [VPRE0102](#vpre0102--bloqueio-de-previsão-de-vendas) | Bloqueio de Previsão de Vendas | Informar períodos em que as previsões de venda devem estar bloqueadas. |
@@ -310,6 +310,7 @@ regra de cada linha.
 | [VPLC0200](#vplc0200--montagem-de-carga) | Montagem de Carga | Selecionar pedidos e gerar cargas para faturamento, etiquetas e emissão de notas fiscais por carga. |
 | [VMRP0200](#vmrp0200--pipeline-mrp--crp--aps) | Pipeline MRP → CRP → APS | Execução coordenada do planejamento de materiais, capacidade e sequência. |
 | [VPLA0300](#vpla0300--parâmetros-do-planejamento) | Parâmetros do Planejamento | Parâmetros numerados consumidos pelo MRP e planejamento industrial. |
+| [VPLA0310](#vpla0310--política-de-planejamento-por-item) | Política de Planejamento por Item | Estratégia (consumo pela venda ou sob encomenda), janela de consumo, horizonte firme e tempo de segurança por item ou classificação. |
 | [VCAL0200](#vcal0200--dias-úteis-prometidos-por-item) | Dias Úteis Prometidos por Item | Calendário mensal efetivo da promessa do item. |
 
 **[Suprimento](#suprimento)** — Fornecedores, pedido de compra, solicitação, cotação, contratos, recebimento e serviços de terceiros.
@@ -2524,8 +2525,11 @@ e baixar o estoque com os retalhos.
 **Para que serve.** A ordem de fabricação (OF): do início à entrega no estoque, com
 apontamentos, etapas, materiais, consumos e o custo real.
 
-**Origem.** A OF nasce ao **firmar** uma ordem planejada do MRP (VMRP0100) ou pelo
-botão **+ Nova OF** (item, quantidade, máquina, prioridade, observações).
+**Origem.** A OF nasce ao **firmar** uma ordem planejada do MRP (VMRP0100), pelo
+**Gerar OF agora** da demanda independente (VPLA0102) ou pelo botão **+ Nova OF**
+(item, quantidade, máquina, início, término, almoxarifado que recebe, centro de
+custo, prioridade, observações). O início não pode ser depois do término, e o
+almoxarifado que recebe precisa ser da empresa em que você está.
 
 **Situações.** Aberta → Em produção → Concluída → Encerrada (ou Cancelada).
 
@@ -2746,7 +2750,10 @@ programar a rodada automática, simular cenários e manter os parâmetros.
    **capacidade** (máquina, horas por dia, parada de/até). Calcule e compare lado
    a lado com o plano real: planejado, cobertura, falta, horas por centro e dias
    em sobrecarga. Nada disso mexe no plano real; **só a demanda** pode ser
-   aplicada ao plano real. Descarte o cenário quando terminar.
+   aplicada ao plano real. Ao aplicar, a demanda zerada no cenário é cancelada —
+   ou encerrada, se já teve saída para a finalidade — e a quantidade nova não pode
+   ficar abaixo do que já saiu (a aplicação inteira é recusada, com o motivo).
+   Descarte o cenário quando terminar.
 4. **Parâmetros de planejamento:** a lista dos parâmetros numerados, editáveis na
    própria linha.
 
@@ -2757,20 +2764,60 @@ simultânea é recusada.
 
 ---
 
-#### VPLA0102 — Cadastro de Demandas Independentes
+#### VPLA0102 — Demanda Independente
 
-**Para que serve.** Lançar demandas que não vêm de pedido de venda (previsão
-firme, reposição, amostra, projeto) para o MRP considerar.
+**Para que serve.** Dizer ao MRP o que produzir ou comprar **sem pedido de
+venda**: fabricar para estoque, repor, antecipar uma venda esperada, fazer
+amostra ou protótipo, peças para feira, consumo interno, assistência técnica ou
+um projeto/obra. O MRP gera a OF (item fabricado) ou a compra (item comprado).
 
-**Como usar.** Informe número da demanda, item (e se for configurado, a
-**máscara** — o botão de máscaras permite escolher ou gerenciar as
-configurações), centro de custo, quantidade e data. Para alterar, busque pelo
-número.
+**Como usar.** **+ Nova demanda** → item (e a máscara, se for configurado),
+**motivo**, quantidade e data da necessidade; opcionalmente almoxarifado de
+destino, centro de custo, cliente, projeto (obrigatório no motivo Projeto),
+prioridade e observação. A numeração é automática. Para dividir em entregas,
+use a **programação** (ex.: 100 peças em 4 entregas a cada 7 dias).
 
-**Dica.** As demandas dos pedidos de venda nascem sozinhas quando o pedido é
-confirmado (VVND0200) — não lance de novo aqui.
+**Os dois tipos de motivo.**
 
-**Telas relacionadas.** VMRP0100, VVND0200.
+| Família | Motivos | Como se encerra |
+|---|---|---|
+| Expectativa de venda | Produção para estoque, Reposição, Antecipação de venda | O **pedido de venda consome** a demanda (só o pedido confirmado ou faturado; rascunho e orçamento não consomem): o MRP planeja o maior dos dois, nunca a soma. Pedido com entrega até 30 dias depois da data da demanda consome (parâmetros 46/47 da VPLA0300). Passada a janela sem venda, ela **vence** e sai do cálculo |
+| Finalidade própria | Amostra, Feira, Consumo interno, Assistência, Projeto | A venda não consome. Ela segura o estoque até a saída: **Atender** lança a saída no estoque (com o tipo de movimento) e baixa o saldo da demanda. Estornar a saída na Central de Estoque devolve o saldo |
+
+**A demanda aberta mostra** o que a venda já consumiu, o que já saiu para a
+finalidade, o que o **MRP vai planejar** e quanto disso já está **coberto por
+ordens** (e quanto ainda está **sem ordem**); a aba **Ordens** mostra as ordens
+que a cobrem (a sugestão firmada no MRP ou a OF aberta aqui), pelo número da OF.
+
+**Aba Consumo.** Mostra que pedidos de venda consumiram a demanda (pedido, linha,
+cliente, entrega e quanto). **Ver o consumo do item** abre o quadro do item
+inteiro: a previsão por semana (prevista, consumida e o que sobra para o MRP), as
+demandas de estoque e cada pedido — quanto ele consumiu e quanto vendeu **acima da
+expectativa** (esse excedente o MRP planeja pelo próprio pedido).
+
+**Janela e estratégia por item.** A janela de consumo e a estratégia são as da
+política do item (VPLA0310) ou, sem ela, as dos parâmetros 46/47. Item **sob
+encomenda** não aceita demanda de estoque, reposição ou antecipação de venda.
+
+**Ações.** **Alterar** (só aberta), **Gerar OF agora** (urgência: abre a OF já
+ligada à demanda; no próximo MRP ela é suprimento firme), **Atender** (finalidade
+própria), **Cancelar** (nada saiu ainda) ou **Encerrar saldo** (já houve saída ou
+ordem).
+
+**Gerar OF agora** sugere a quantidade **sem ordem** e só aparece enquanto houver
+saldo sem ordem: a demanda já coberta não abre uma segunda OF. Se a OF ligada for
+cancelada (ou a ordem planejada excluída antes de virar OF), a quantidade volta a
+ficar sem ordem e o botão reaparece. Vale só para item
+**fabricado**: o comprado é atendido pela compra que o MRP sugere. Uma quantidade
+maior (lote mínimo, múltiplo) é aceita, mas a demanda conta como coberto só o que
+estava sem ordem. O **almoxarifado de destino** precisa ser da empresa em que você
+está.
+
+**Dica.** Não lance aqui os pedidos de venda: o MRP já lê o pedido confirmado
+direto. Antes de 28/10/2026 a confirmação gerava uma demanda por linha, e o
+pedido entrava duas vezes no cálculo; essas demandas foram canceladas.
+
+**Telas relacionadas.** VMRP0100, VPRO0900, VEST0100, VPLA0300, VPRE0201.
 
 ---
 
@@ -2789,11 +2836,17 @@ planejador.
 | **Cobertura** | Para cada item: até quando o estoque cobre e até quando estoque + ordens firmes cobrem, com farol (crítico, atenção, coberto). Filtre por planejador ou tipo e firme a planejada que cobre a falta sem sair da tela |
 | **Sugestões** | O resultado do cálculo: item, tipo (fabricação/compra), quantidade, necessidade, início e término, máquina e tempo. Filtre por item, tipo e atraso e **firme em lote**. *Para quem é* mostra os pedidos e demandas que a sugestão atende |
 | **Ordens planejadas** | As ordens já criadas, com as transições **Firmar**, **Liberar** e **Voltar para planejada** (em lote) |
-| **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como) |
+| **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como). **Horizonte firme**: a sugestão precisava começar dentro do horizonte firme (VPLA0310/VPLA0300) e foi para o fim dele; a mensagem diz quanto ela chega depois da necessidade — firme a ordem à mão se precisar antes e marque como tratada |
 | **Rastreamento** | De cada pedido ou demanda até as compras dos componentes, e de uma ordem até quem depende dela — "esta compra serve a quem?" e "o que falta para este pedido sair?" |
-| **Perfil do item** | O perfil por data: demanda, planejadas, firmes e estoque projetado — e quando o estoque fura. Também as regras configuradas do item |
-| **Planos** | Cadastro dos planos (código, nome, abrangência, classificação) e as empresas inter-fábrica de cada plano |
+| **Perfil do item** | O perfil por data: demanda, planejadas, firmes e estoque projetado — e quando o estoque fura. Também as regras configuradas do item: **Campo** `lead_time` (prazo em dias úteis) ou `lote_minimo`, o **Valor** e, se a regra for só para uma configuração, a **Condição da máscara** (igual, diferente ou faixa "mínimo-máximo"). Sem condição, a regra vale para o item inteiro |
+| **Planos** | Cadastro dos planos (código, nome, abrangência, classificação) e as empresas inter-fábrica de cada plano. Na abrangência *um item de ordem*, busque o pedido pelo **número** e escolha a linha |
 | **Relatórios** | Relatórios do plano em grade legível |
+
+**De onde vem o prazo.** O MRP recua o início de cada ordem pelo prazo do item,
+em dias úteis: a regra configurada do item (aba Perfil do item), se houver; senão,
+para item **comprado**, o prazo de entrega do fornecedor preferencial do item; para
+item **fabricado**, o tempo do roteiro. Sem nenhum deles, o prazo é zero. O tempo
+de segurança e o horizonte firme (VPLA0310) entram depois.
 
 **Firmar uma sugestão.** Vira ordem planejada firme; se for de **fabricação**, a
 ordem de produção (VPRO0900) é criada na hora; se for operação **externa**, nasce
@@ -2926,6 +2979,60 @@ partir de). Para o resultado legível e o parecer de viabilidade, use a
 **Para que serve.** Consultar e alterar os parâmetros numerados do MRP e do
 planejamento. A mesma lista, editável na linha, está na aba *Parâmetros de
 planejamento* da **VPLN0100**.
+
+**Consumo pela venda (46 e 47).** Um pedido de venda com entrega na data V
+consome a previsão e a demanda de estoque (VPLA0102) com data entre V − 46 dias
+e V + 47 dias. Padrão: 30 e 0. O parâmetro 11 tira do cálculo a previsão das
+semanas que já passaram.
+
+**Horizonte firme (48).** De hoje até hoje + 48 dias corridos, o MRP não cria
+ordem nova: a sugestão que precisaria começar nesse período começa no fim dele, e
+o MRP avisa com a mensagem *Horizonte firme* (VMRP0100, aba Exceções). Padrão 0
+(desligado).
+
+**Tempo de segurança (49).** A ordem planejada chega 49 dias úteis antes da
+necessidade, para absorver atraso de produção ou de fornecedor. Padrão 0.
+
+Os quatro valores (46 a 49) valem para os itens sem política própria. Para mudar
+só alguns itens ou uma família, use a **VPLA0310**.
+
+---
+
+#### VPLA0310 — Política de Planejamento por Item
+
+**Para que serve.** Dar a um item, ou a uma classificação de itens, um jeito
+próprio de ser planejado, em vez dos parâmetros da empresa (VPLA0300).
+
+**O que se define.**
+
+| Campo | O que faz |
+|---|---|
+| **Estratégia** | **Consumo pela venda** (padrão): o pedido de venda consome a previsão e a demanda de estoque; o MRP planeja o maior dos dois, nunca a soma. **Sob encomenda**: só o pedido de venda gera necessidade; a previsão e a demanda de estoque do item não entram no MRP (amostra, feira e as outras finalidades continuam). |
+| **Consumo: dias antes / depois** | A janela em que um pedido consome a previsão e a demanda de estoque, contada da entrega do pedido. Com 0 dias antes e 15 depois, o pedido só consome o que vem depois dele. |
+| **Horizonte firme** | Dias corridos, a partir de hoje, em que o MRP não cria ordem nova para o item. A sugestão vai para o fim do horizonte e o MRP avisa. Para atender antes, firme a ordem à mão. |
+| **Tempo de segurança** | Dias úteis que a ordem chega antes da necessidade. |
+
+**Herança.** Campo vazio herda. A ordem é: a política do **item**; depois a da
+**classificação** mais detalhada do item (a subfamília vence a família); por fim
+os **parâmetros da empresa**. Cada campo herda sozinho: o item pode definir só o
+tempo de segurança e herdar a estratégia da família.
+
+**Como usar.**
+1. **+ Nova política**, escolha **Vale para** (um item ou uma classificação) e
+   preencha só o que muda. Uma política por item e uma por classificação.
+2. **Alterar** troca os valores; o item ou a classificação não muda (exclua e
+   cadastre outra).
+3. **Excluir** devolve o item ou a classificação à herança.
+4. **Política que vale para um item**: escolha o item e **Consultar** — mostra o
+   valor final de cada campo e de onde ele veio (do item, da classificação ou
+   parâmetro da empresa).
+
+**Quando vale.** No próximo MRP e na hora, na posição das demandas (VPLA0102).
+Demanda de estoque, reposição ou antecipação de venda de item **sob encomenda**
+não se cadastra; a que já existia aparece como *Sob encomenda* e fica fora do
+cálculo.
+
+**Telas relacionadas.** VPLA0300, VPLA0102, VMRP0100, VPRE0101.
 
 ---
 

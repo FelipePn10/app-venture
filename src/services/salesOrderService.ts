@@ -10,8 +10,9 @@ const BASE = '/api/sales-order';
  *
  * Automações do backend disparadas ao confirmar (`status → P`):
  *  - checagem de limite de crédito → estoura/cliente bloqueado ⇒ pedido bloqueado;
- *  - reserva de estoque (ATP) por linha;
- *  - geração de demanda independente idempotente por item.
+ *  - reserva de estoque (ATP) por linha.
+ * O MRP lê o pedido confirmado direto (saldo aberto da linha); a confirmação
+ * não gera mais demanda independente, que contava o pedido duas vezes.
  * A autorização da NF-e de saída posta `OUT`, consome reservas e marca o pedido `F`.
  *
  * Datas (`emission_date`/`delivery_date`) aceitam `YYYY-MM-DD` ou ISO; `emission_date`

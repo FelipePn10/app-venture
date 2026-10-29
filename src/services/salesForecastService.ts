@@ -9,7 +9,9 @@ const BASE = '/api/sales-forecast';
  * (`create-monthly`) e o backend distribui a quantidade em semanas ISO conforme
  * os dias úteis do calendário industrial; `create` grava direto uma semana ISO.
  * `generate` calcula a média do histórico (pedidos/faturamento) e projeta.
- * A previsão entra no MRP/MPS como demanda independente do tipo previsão.
+ * A previsão entra no MRP/MPS como demanda independente do tipo previsão. O
+ * pedido de venda do item a consome (parâmetros 46/47 de VPLA0300): o MRP planeja
+ * o maior dos dois, nunca a soma; semana passada não entra (parâmetro 11).
  *
  * Regras relevantes: `week` entre 1 e 53, `year` > 2000, `quantity` > 0. Antes de
  * gravar, o backend verifica se a segunda-feira da semana ISO cai em período

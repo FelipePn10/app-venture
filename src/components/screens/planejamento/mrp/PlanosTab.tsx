@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   type InterFactoryDTO, type ProductionPlanDTO, createProductionPlan, getInterFactories, setInterFactories,
 } from "@/services/productionPlanService";
+import { type SalesOrderItemDTO, listSalesOrderItems, listSalesOrders } from "@/services/salesOrderService";
 import { abrangenciaDo, demandasIndependentes } from "./planos";
 import { Aviso, Painel, Selo, Vazio } from "../planUi";
 import { dataHora } from "../planFormat";
@@ -26,6 +27,20 @@ export function PlanosTab({ planos, plano, onEscolher, onRecarregar }: {
   const [novo, setNovo] = useState(NOVO);
   const [inter, setInter] = useState<InterFactoryDTO[]>([]);
   const [interForm, setInterForm] = useState({ code: "", autoRelease: false });
+  // Plano de um item de ordem: escolhe-se o pedido pelo número e a linha numa
+  // lista — o código interno da linha não é algo que o usuário conheça.
+  const [pedidoNum, setPedidoNum] = useState("");
+  const [linhas, setLinhas] = useState<SalesOrderItemDTO[] | null>(null);
+  const buscarPedido = () => run(async () => {
+    const n = Number(pedidoNum);
+    if (!n) { setFeedback({ type: "error", message: "Informe o número do pedido de venda." }); return; }
+    const pedido = (await listSalesOrders()).find((o) => o.order_number === n);
+    if (!pedido?.code) { setLinhas(null); setFeedback({ type: "error", message: `Pedido ${n} não encontrado nesta empresa.` }); return; }
+    const itens = (await listSalesOrderItems(pedido.code)).filter((i) => i.code && i.status !== "CANCELLED");
+    setLinhas(itens);
+    setNovo((p) => ({ ...p, order_item_code: itens.length === 1 ? String(itens[0].code) : "" }));
+    if (!itens.length) setFeedback({ type: "error", message: `O pedido ${n} não tem linha aberta.` });
+  });
 
   useEffect(() => {
     if (!plano) { setInter([]); return; }
@@ -39,7 +54,7 @@ export function PlanosTab({ planos, plano, onEscolher, onRecarregar }: {
     if (!code || code <= 0) { setFeedback({ type: "error", message: "Informe um código de plano positivo." }); return; }
     if (!novo.name.trim()) { setFeedback({ type: "error", message: "Informe o nome do plano." }); return; }
     if (novo.abrangencia === "classificacao" && !novo.classification.trim()) { setFeedback({ type: "error", message: "Informe a classificação a que o plano se aplica." }); return; }
-    if (novo.abrangencia === "ordem" && !Number(novo.order_item_code)) { setFeedback({ type: "error", message: "Informe o item da ordem." }); return; }
+    if (novo.abrangencia === "ordem" && !Number(novo.order_item_code)) { setFeedback({ type: "error", message: "Busque o pedido e escolha a linha." }); return; }
     await createProductionPlan({
       code, name: novo.name.trim(), planning_types: ["MRP"],
       classification: novo.abrangencia === "classificacao" ? novo.classification.trim() : undefined,
@@ -107,11 +122,20 @@ export function PlanosTab({ planos, plano, onEscolher, onRecarregar }: {
               <div className="erp-field erp-c7"><label className="erp-label" htmlFor="pl-class-it">Itens da classificação</label>
                 <input id="pl-class-it" className="erp-input" placeholder="100,101,102 — vazio pega todos" value={novo.class_item_codes} onChange={(e) => setNovo((p) => ({ ...p, class_item_codes: e.target.value }))} /></div>
             </>)}
-            {novo.abrangencia === "ordem" && (
-              <div className="erp-field erp-c6"><label className="erp-label erp-req" htmlFor="pl-ordem">Item da ordem</label>
-                <input id="pl-ordem" className="erp-input num" type="number" value={novo.order_item_code} onChange={(e) => setNovo((p) => ({ ...p, order_item_code: e.target.value }))} />
-                <span className="erp-hint">Não combina com filtro de classificação.</span></div>
-            )}
+            {novo.abrangencia === "ordem" && (<>
+              <div className="erp-field erp-c4"><label className="erp-label erp-req" htmlFor="pl-pedido">Pedido de venda nº</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input id="pl-pedido" className="erp-input num" type="number" value={pedidoNum} onChange={(e) => { setPedidoNum(e.target.value); setLinhas(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") void buscarPedido(); }} />
+                  <button type="button" className="erp-btn" onClick={() => void buscarPedido()} disabled={busy}>Buscar</button>
+                </div></div>
+              <div className="erp-field erp-c8"><label className="erp-label erp-req" htmlFor="pl-linha">Linha do pedido</label>
+                <select id="pl-linha" className="erp-input" value={novo.order_item_code} disabled={!linhas?.length} onChange={(e) => setNovo((p) => ({ ...p, order_item_code: e.target.value }))}>
+                  <option value="">{linhas ? (linhas.length ? "Escolha a linha…" : "Sem linha aberta") : "Busque o pedido primeiro"}</option>
+                  {(linhas ?? []).map((l) => <option key={l.code} value={l.code}>{`Linha ${l.sequence ?? "?"} — ${l.item_code}${l.mask ? ` (${l.mask})` : ""} — ${l.requested_qty - (l.attended_qty ?? 0) - (l.cancelled_qty ?? 0)} a atender`}</option>)}
+                </select>
+                <span className="erp-hint">Só essa linha entra no cálculo (sem previsão, demanda independente ou outros pedidos). Para o dia a dia, use "Todos os itens".</span></div>
+            </>)}
             <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void criar()} disabled={busy}>Criar plano</button></div>
           </div>
         </Painel>
