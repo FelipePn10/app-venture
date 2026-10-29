@@ -368,7 +368,7 @@ export function CenariosTab({ planos, planoAtual, busy, run, setFeedback }: {
       </>)}
 
       <ConfirmDialog aberto={confirmar === "promover"} titulo="Aplicar a demanda do cenário ao plano real?"
-        mensagem="Demandas novas viram demandas independentes, e as demandas independentes ajustadas passam a ter a nova quantidade/data (quantidade 0 desativa). Ajustes de pedido de venda, estoque, prazo e capacidade não são aplicados. Depois, rode o MRP do plano real."
+        mensagem="Demandas novas viram demandas independentes, e as demandas independentes ajustadas passam a ter a nova quantidade/data (quantidade 0 cancela; a que já teve saída é encerrada, e a quantidade não fica abaixo do que já saiu). Ajustes de pedido de venda, estoque, prazo e capacidade não são aplicados. Depois, rode o MRP do plano real."
         assunto={aberto ? `${aberto.name} · plano ${aberto.base_plan_code}` : undefined} rotuloConfirmar="Aplicar demanda"
         onCancelar={() => setConfirmar(null)} onConfirmar={() => { setConfirmar(null); void promover(); }} />
       <ConfirmDialog aberto={confirmar === "descartar"} titulo="Descartar o cenário?"

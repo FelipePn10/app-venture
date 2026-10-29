@@ -49,7 +49,7 @@ export function PerfilTab({ plano, itensDoPlano, itemInicial }: { plano?: number
     if (!regra.item_code || !regra.field_name.trim()) { setFeedback({ type: "error", message: "Consulte um item e informe o campo da regra." }); return; }
     await createConfiguredRule(regra);
     setRegras(await listConfiguredRules(regra.item_code));
-    setRegra((s) => ({ ...s, rule_value: "" }));
+    setRegra((s) => ({ ...s, rule_value: "", condicao_mascara: "" }));
     setFeedback({ type: "success", message: "Regra criada." });
   });
 
@@ -115,18 +115,23 @@ export function PerfilTab({ plano, itensDoPlano, itemInicial }: { plano?: number
               </select></div>
             <div className="erp-field"><label className="erp-label erp-req" htmlFor="rg-campo">Campo</label>
               <input id="rg-campo" className="erp-input" value={regra.field_name} onChange={(e) => setRegra((s) => ({ ...s, field_name: e.target.value }))} /></div>
-            <div className="erp-field"><label className="erp-label" htmlFor="rg-tipo">Regra</label>
+            <div className="erp-field vpl-grow"><label className="erp-label erp-req" htmlFor="rg-valor">Valor</label>
+              <input id="rg-valor" className="erp-input" placeholder={regra.field_name === "lead_time" ? "dias úteis" : regra.field_name === "lote_minimo" ? "quantidade" : ""}
+                value={regra.rule_value} onChange={(e) => setRegra((s) => ({ ...s, rule_value: e.target.value }))} /></div>
+            <div className="erp-field"><label className="erp-label" htmlFor="rg-tipo">Máscara</label>
               <select id="rg-tipo" className="erp-input" value={regra.rule_type} onChange={(e) => setRegra((s) => ({ ...s, rule_type: e.target.value as ConfiguredRule["rule_type"] }))}>
                 {RULE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}
               </select></div>
-            <div className="erp-field vpl-grow"><label className="erp-label" htmlFor="rg-valor">Valor</label>
-              <input id="rg-valor" className="erp-input" value={regra.rule_value} onChange={(e) => setRegra((s) => ({ ...s, rule_value: e.target.value }))} /></div>
+            <div className="erp-field"><label className="erp-label" htmlFor="rg-cond">Condição da máscara</label>
+              <input id="rg-cond" className="erp-input" placeholder={regra.rule_type === "RANGE" ? "ex.: 100-200" : "vazio = todas"} value={regra.condicao_mascara ?? ""}
+                onChange={(e) => setRegra((s) => ({ ...s, condicao_mascara: e.target.value }))} /></div>
             <button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-end" }} onClick={() => void criarRegra()} disabled={busy}>Criar regra</button>
           </div>
           {regras.length > 0 ? (
             <table className="erp-grid" style={{ marginTop: 12 }}>
-              <thead><tr><th>Tabela</th><th>Campo</th><th>Regra</th><th>Valor</th><th className="num">Seq.</th></tr></thead>
-              <tbody>{regras.map((r, i) => <tr key={r.id ?? i}><td>{enumLabel(r.table_type)}</td><td>{r.field_name}</td><td>{enumLabel(r.rule_type)}</td><td>{r.rule_value}</td><td className="num">{r.sequence ?? "—"}</td></tr>)}</tbody>
+              <thead><tr><th>Tabela</th><th>Campo</th><th>Valor</th><th>Vale para</th><th className="num">Seq.</th></tr></thead>
+              <tbody>{regras.map((r, i) => <tr key={r.id ?? i}><td>{enumLabel(r.table_type)}</td><td>{r.field_name}</td><td>{r.rule_value}</td>
+                <td>{r.condicao_mascara ? `máscara ${enumLabel(r.rule_type).toLowerCase()} ${r.condicao_mascara}` : "todas as máscaras"}</td><td className="num">{r.sequence ?? "—"}</td></tr>)}</tbody>
             </table>
           ) : <p className="erp-hint" style={{ marginTop: 10 }}>Este item ainda não tem regras configuradas.</p>}
         </Painel>

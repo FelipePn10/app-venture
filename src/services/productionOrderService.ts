@@ -28,6 +28,8 @@ export interface ProductionOrderDTO {
   end_date?: string | null;
   machine_id?: number | null;
   cost_center_id?: number | null;
+  /** Almoxarifado (id) que recebe a produção. */
+  warehouse_id?: number | null;
   employee_id?: number | null;
   priority?: string | null;
   notes?: string | null;

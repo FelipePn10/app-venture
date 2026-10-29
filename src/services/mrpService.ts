@@ -59,6 +59,8 @@ export interface ConfiguredRule {
   rule_type: RuleType;
   rule_value: string;
   sequence?: number;
+  /** Vazia: a regra vale para todas as máscaras do item. Preenchida: a regra (igual, diferente, faixa "a-b") compara a máscara com ela. */
+  condicao_mascara?: string;
 }
 
 export interface MrpException {
@@ -157,6 +159,7 @@ function parseRule(raw: unknown): ConfiguredRule {
     rule_type: (parseStr(o, 'rule_type', 'RuleType') || 'EQUAL') as RuleType,
     rule_value: parseStr(o, 'rule_value', 'RuleValue'),
     sequence: parseNum(o, 'sequence', 'Sequence') || undefined,
+    condicao_mascara: parseStr(o, 'condicao_mascara') || undefined,
   };
 }
 function parseException(raw: unknown): MrpException {

@@ -384,8 +384,14 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Planejamento
   {
     code: "VPLA0102",
-    title: "Cadastro de Demandas Independentes",
-    description: "Cadastrar demandas independentes para o Cálculo do Planejamento.",
+    title: "Demanda Independente",
+    description: "Produzir ou comprar sem pedido de venda (estoque, reposição, amostra, feira, consumo interno, assistência, projeto, antecipação de venda): programação de entregas, consumo pela venda, atendimento pela saída e OF direta.",
+    module: "planejamento",
+  },
+  {
+    code: "VPLA0310",
+    title: "Política de Planejamento por Item",
+    description: "Estratégia (consumo pela venda ou sob encomenda), janela de consumo, horizonte firme e tempo de segurança por item ou por classificação; o que não for definido segue os parâmetros da empresa.",
     module: "planejamento",
   },
   {

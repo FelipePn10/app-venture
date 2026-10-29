@@ -11,7 +11,7 @@ import {
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { loadItems, loadMachinesById, loadWarehouses } from "@/services/lookups";
+import { loadCostCentersById, loadItems, loadMachinesById, loadWarehouses } from "@/services/lookups";
 import { type Aba, Abas, Aviso, Cabecalho, Progresso, Rodape, Selo, Vazio } from "../planejamento/planUi";
 import { data, normalizar, num, situacaoOF } from "../planejamento/planFormat";
 import { useAcao } from "../planejamento/planHooks";
@@ -379,7 +379,7 @@ export function Vpro0900Page(): JSX.Element {
       {novaAberta && (
         <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nova-of-titulo" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setNovaAberta(false); }}>
           <div className="erp-modal" style={{ width: "min(640px, 94vw)" }}>
-            <div className="erp-modal-head"><div><strong id="nova-of-titulo">Nova ordem de produção</strong><div className="erp-field-hint">A ordem nasce aberta; inicie a produção quando for para o chão de fábrica.</div></div>
+            <div className="erp-modal-head"><div><strong id="nova-of-titulo">Nova ordem de produção</strong><div className="erp-field-hint">A ordem nasce aberta; inicie a produção quando for para o chão de fábrica. Para produzir para estoque, amostra ou projeto com acompanhamento, cadastre a demanda na VPLA0102 e use "Gerar OF agora".</div></div>
               <button className="erp-btn erp-btn-sm" onClick={() => setNovaAberta(false)} disabled={busy}>Fechar</button></div>
             <div className="erp-modal-body">
               <div className="erp-fieldset-body" style={{ padding: 0 }}>
@@ -389,6 +389,14 @@ export function Vpro0900Page(): JSX.Element {
                   <input id="nova-qtd" className="erp-input num" type="number" min={0} value={nova.planned_qty || ""} onChange={(e) => setNova((p) => ({ ...p, planned_qty: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label">Máquina</label>
                   <LookupField value={nova.machine_id || undefined} loader={loadMachinesById} entityLabel="máquina" clearable onChange={(c) => setNova((p) => ({ ...p, machine_id: c ? Number(c) : undefined }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label" htmlFor="nova-ini">Início</label>
+                  <input id="nova-ini" className="erp-input" type="date" value={nova.start_date ?? ""} onChange={(e) => setNova((p) => ({ ...p, start_date: e.target.value || null }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label" htmlFor="nova-fim">Término (necessidade)</label>
+                  <input id="nova-fim" className="erp-input" type="date" value={nova.end_date ?? ""} onChange={(e) => setNova((p) => ({ ...p, end_date: e.target.value || null }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Almoxarifado que recebe</label>
+                  <LookupField value={nova.warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" clearable onChange={(c) => setNova((p) => ({ ...p, warehouse_id: c ? Number(c) : null }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Centro de custo</label>
+                  <LookupField value={nova.cost_center_id || undefined} loader={loadCostCentersById} entityLabel="centro de custo" clearable onChange={(c) => setNova((p) => ({ ...p, cost_center_id: c ? Number(c) : null }))} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label" htmlFor="nova-prio">Prioridade</label>
                   <select id="nova-prio" className="erp-input" value={nova.priority ?? "NORMAL"} onChange={(e) => setNova((p) => ({ ...p, priority: e.target.value }))}>
                     <option value="LOW">Baixa</option><option value="NORMAL">Normal</option><option value="HIGH">Alta</option><option value="URGENTE">Urgente</option>

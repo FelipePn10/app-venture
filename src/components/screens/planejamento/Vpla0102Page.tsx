@@ -1,1152 +1,526 @@
-import { useState, useCallback } from "react";
-import { humanizeApiError } from '@/services/apiError';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createDemanda,
-  listDemandas,
-  listDemandaByItem,
-  listDemandaFromDate,
-  getDemanda,
-  type DemandaResponse,
+  type Demanda, type DemandaDTO, type Motivo, MOTIVOS, alterarDemanda, atenderDemanda, cancelarDemanda, criarDemanda,
+  type ConsumoDoItem, consumoDoItem, decimalParaApi, encerrarDemanda, gerarOFDaDemanda, listarDemandas, motivoDe, obterDemanda,
 } from "@/services/demandaService";
-import { useAuthStore } from "@/store/authStore";
+import { type MovementTypeDTO, listMovementTypes } from "@/services/stockService";
+import { loadCostCenters, loadCustomers, loadItems, loadWarehouses } from "@/services/lookups";
+import { LookupField } from "@/components/ui/LookupField";
+import { ExportButton } from "@/components/ui/ExportButton";
+import { hojeLocal } from "@/utils/dataLocal";
+import { type Aba, Abas, Aviso, Cabecalho, Detalhe, Kpis, Painel, Rodape, Selo, Vazio } from "./planUi";
+import { type Tom, data, normalizar, num, situacaoOF } from "./planFormat";
+import { useAcao } from "./planHooks";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+/**
+ * VPLA0102 — Demanda independente: o que se quer produzir ou comprar sem
+ * pedido de venda. A lista fica à esquerda (situação e motivo), a demanda à
+ * direita com a posição de hoje (o que a venda consumiu, o que já saiu para a
+ * finalidade, o que o MRP vai planejar) e as ordens que a cobrem.
+ */
+type FiltroSituacao = "ABERTA" | "ENCERRADA" | "CANCELADA" | "";
+const FILTROS: { id: FiltroSituacao; rotulo: string }[] = [
+  { id: "ABERTA", rotulo: "Abertas" }, { id: "ENCERRADA", rotulo: "Encerradas" }, { id: "CANCELADA", rotulo: "Canceladas" }, { id: "", rotulo: "Todas" },
+];
+type AbaDemanda = "resumo" | "ordens" | "consumo";
 
-type ModoForm = "novo" | "edicao";
-type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-
-interface FormDemanda {
-  demanda: string;    // code_demand (int64 as string, "" = auto / next available)
-  item: string;       // código comercial alfanumérico do item
-  configurado: boolean; // UI toggle — controls whether mask is shown/required
-  mask: string;       // mask (optional config string)
-  cCusto: string;     // cost_center_code (int64 as string)
-  quantidade: string; // quantity (float64 as string)
-  data: string;       // demand_date (YYYY-MM-DD)
-}
-
-interface ConfiguracaoItem {
-  codigo: string;
-  descricao: string;
-}
-
-const FORM_INICIAL: FormDemanda = {
-  demanda: "",
-  item: "",
-  configurado: false,
-  mask: "",
-  cCusto: "",
-  quantidade: "",
-  data: "",
+const POSICAO: Record<string, { rotulo: string; tom: Tom; ajuda: string }> = {
+  ABERTA: { rotulo: "Aberta", tom: "info", ajuda: "Entra inteira no próximo MRP." },
+  PARCIAL: { rotulo: "Parcial", tom: "warn", ajuda: "Parte já foi consumida pela venda ou atendida; o MRP planeja o saldo." },
+  ATENDIDA: { rotulo: "Atendida", tom: "ok", ajuda: "Tudo saiu do estoque para a finalidade." },
+  CONSUMIDA: { rotulo: "Consumida", tom: "ok", ajuda: "Os pedidos de venda cobriram toda a demanda." },
+  VENCIDA: { rotulo: "Vencida", tom: "muted", ajuda: "Passou da janela de consumo sem venda: saiu do cálculo." },
+  SOB_ENCOMENDA: { rotulo: "Sob encomenda", tom: "muted", ajuda: "O item é planejado sob encomenda (VPLA0310): só o pedido de venda gera necessidade, e esta demanda não entra no MRP." },
+  ENCERRADA: { rotulo: "Encerrada", tom: "muted", ajuda: "Saldo encerrado à mão." },
+  CANCELADA: { rotulo: "Cancelada", tom: "muted", ajuda: "Fora do planejamento." },
 };
+const posicao = (p?: string) => POSICAO[p ?? ""] ?? { rotulo: p ?? "—", tom: "muted" as Tom, ajuda: "" };
+const PRIORIDADES = [{ v: 1, r: "1 — Urgente" }, { v: 2, r: "2 — Alta" }, { v: 3, r: "3 — Normal" }, { v: 4, r: "4 — Baixa" }, { v: 5, r: "5 — Quando der" }];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+type Form = {
+  code?: number; item: string; mask: string; motivo: Motivo; quantidade: string; data: string; almox?: number; centro?: number;
+  cliente?: number; projeto: string; prioridade: number; observacao: string; entregas: string; intervalo: string;
+};
+const FORM_VAZIO = (): Form => ({ item: "", mask: "", motivo: "ESTOQUE", quantidade: "", data: hojeLocal(), projeto: "", prioridade: 3, observacao: "", entregas: "1", intervalo: "7" });
 
-function isWeekend(dateStr: string): boolean {
-  if (!dateStr) return false;
-  const d = new Date(dateStr + "T12:00:00");
-  return d.getDay() === 0 || d.getDay() === 6;
-}
-
-function formatDateBR(iso: string): string {
-  if (!iso || iso.length < 10) return "—";
-  const [y, m, d] = iso.substring(0, 10).split("-");
-  return `${d}/${m}/${y}`;
-}
-
-function decodeJwtSub(token: string | null): string | undefined {
-  if (!token) return undefined;
-  try {
-    const payload = token.split(".")[1];
-    if (!payload) return undefined;
-    const decoded = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-    ) as Record<string, unknown>;
-    const sub = decoded["sub"] ?? decoded["id"] ?? decoded["user_id"];
-    return typeof sub === "string" && sub.length > 0 ? sub : undefined;
-  } catch { return undefined; }
-}
-
-function normalizeError(error: unknown, fallback: string): string {
-  return humanizeApiError(error, fallback);
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
+const q = (t?: string) => Number(t ?? 0);
 
 export function Vpla0102Page(): JSX.Element {
-  const user  = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
+  const { busy, feedback, setFeedback, run } = useAcao();
+  const [lista, setLista] = useState<Demanda[]>([]);
+  const [situacao, setSituacao] = useState<FiltroSituacao>("ABERTA");
+  const [motivo, setMotivo] = useState("");
+  const [busca, setBusca] = useState("");
+  const [dem, setDem] = useState<Demanda | null>(null);
+  const [aba, setAba] = useState<AbaDemanda>("resumo");
+  const [form, setForm] = useState<Form | null>(null);
+  const [atender, setAtender] = useState<{ quantidade: string; almox?: number; tipo: string; observacao: string } | null>(null);
+  const [tipos, setTipos] = useState<MovementTypeDTO[]>([]);
+  const [of, setOf] = useState<{ quantidade: string; inicio: string; fim: string; prioridade: string } | null>(null);
+  const [fechar, setFechar] = useState<{ acao: "cancelar" | "encerrar"; motivo: string } | null>(null);
+  const [visao, setVisao] = useState<ConsumoDoItem | null>(null);
 
-  // Form
-  const [form, setForm]               = useState<FormDemanda>(FORM_INICIAL);
-  const [modoForm, setModoForm]       = useState<ModoForm>("novo");
-  const [demandaEdit, setDemandaEdit] = useState<number | null>(null);
-  const [errors, setErrors]           = useState<Partial<Record<keyof FormDemanda, string>>>({});
+  const listar = useCallback(async () => {
+    setLista(await listarDemandas({ situacao, motivo }));
+  }, [situacao, motivo]);
+  useEffect(() => { void run(listar); }, [run, listar]);
 
-  // Config modal
-  const [showConfigModal, setShowConfigModal]   = useState(false);
-  const [configuracoes, setConfiguracoes]       = useState<ConfiguracaoItem[]>([]);
-  const [novaConfigCod, setNovaConfigCod]       = useState("");
-  const [novaConfigDesc, setNovaConfigDesc]     = useState("");
+  const abrir = (code: number) => void run(async () => { setDem(await obterDemanda(code)); setAba("resumo"); setVisao(null); });
+  const verConsumoDoItem = () => { if (dem) void run(async () => { setVisao(await consumoDoItem(dem.item_business_code)); }); };
+  const recarregar = async (code?: number) => {
+    await listar();
+    if (code) setDem(await obterDemanda(code));
+  };
 
-  // Search
-  const [filtroItem,       setFiltroItem]       = useState("");
-  const [filtroDataInicio, setFiltroDataInicio] = useState("");
-  const [filtroDataFim,    setFiltroDataFim]    = useState("");
-  const [resultados,       setResultados]       = useState<DemandaResponse[]>([]);
-  const [mostrarResultados, setMostrarResultados] = useState(false);
+  const visiveis = useMemo(() => {
+    const t = normalizar(busca.trim());
+    if (!t) return lista;
+    return lista.filter((d) => normalizar(`${d.code_demand} ${d.item_business_code} ${d.item_name} ${d.projeto ?? ""}`).includes(t));
+  }, [lista, busca]);
 
-  // Loading / feedback
-  const [isSaving,    setIsSaving]    = useState(false);
-  const [isLoading,   setIsLoading]   = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [feedback,    setFeedback]    = useState<FeedbackState>(null);
+  const kpis = useMemo(() => {
+    const abertas = lista.filter((d) => d.situacao === "ABERTA");
+    return {
+      abertas: abertas.length,
+      aPlanejar: abertas.filter((d) => q(d.a_planejar) > 0).length,
+      vencidas: abertas.filter((d) => d.posicao === "VENCIDA").length,
+      finalidade: abertas.filter((d) => d.familia === "FINALIDADE" && q(d.a_planejar) > 0).length,
+    };
+  }, [lista]);
 
-  const setField = useCallback(<K extends keyof FormDemanda>(key: K, val: FormDemanda[K]) => {
-    setForm((prev) => ({ ...prev, [key]: val }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  // ── Ações ──────────────────────────────────────────────────────────────────
+  const novo = () => { setFeedback(null); setForm(FORM_VAZIO()); };
+  const editar = (d: Demanda) => {
     setFeedback(null);
-  }, []);
-
-  // ── Validation
-  function validate(): boolean {
-    const e: Partial<Record<keyof FormDemanda, string>> = {};
-    if (form.demanda.trim() && (isNaN(Number(form.demanda)) || Number(form.demanda) <= 0)) {
-      e.demanda = "Deve ser um número inteiro positivo.";
-    }
-    if (!form.item.trim()) {
-      e.item = "Código do item obrigatório.";
-    }
-    if (form.configurado && !form.mask.trim()) {
-      e.mask = "Informe a máscara (configuração) do item configurado.";
-    }
-    if (!form.quantidade.trim() || isNaN(Number(form.quantidade)) || Number(form.quantidade) <= 0) {
-      e.quantidade = "Quantidade deve ser um número positivo.";
-    }
-    if (!form.data) {
-      e.data = "Data obrigatória.";
-    } else if (isWeekend(form.data)) {
-      e.data = "Data deve ser um dia útil (não pode ser sábado ou domingo).";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  // ── Load by demand code
-  async function handleCarregarDemanda() {
-    const num = Number(form.demanda.trim());
-    if (!form.demanda.trim() || isNaN(num) || num <= 0) {
-      setErrors((p) => ({ ...p, demanda: "Informe um número para consultar." }));
-      return;
-    }
-    setIsLoading(true);
-    setFeedback(null);
-    try {
-      const d = await getDemanda(num);
-      if (!d) {
-        setFeedback({ type: "info", message: `Demanda ${num} não encontrada.` });
+    setForm({
+      code: d.code_demand, item: d.item_business_code, mask: d.mask ?? "", motivo: d.motivo, quantidade: d.quantity.replace(".", ","),
+      data: d.demand_date, almox: d.warehouse_id, centro: d.cost_center_code, cliente: d.customer_code, projeto: d.projeto ?? "",
+      prioridade: d.prioridade || 3, observacao: d.observacao ?? "", entregas: "1", intervalo: "7",
+    });
+  };
+  const salvar = () => {
+    if (!form) return;
+    // O que falta se diz aqui: quantidade vazia chegava ao servidor como texto
+    // vazio e voltava "não foi possível ler os dados enviados".
+    if (!form.item) { setFeedback({ type: "error", message: "Escolha o item." }); return; }
+    if (!(q(decimalParaApi(form.quantidade)) > 0)) { setFeedback({ type: "error", message: "Informe a quantidade (maior que zero)." }); return; }
+    if (!form.data) { setFeedback({ type: "error", message: "Informe a data da necessidade." }); return; }
+    void run(async () => {
+      const dto: DemandaDTO = {
+        item_code: form.item, mask: form.mask.trim() || undefined, quantity: decimalParaApi(form.quantidade), demand_date: form.data,
+        // Vazio vai como 0 / "": na alteração, campo omitido fica como estava.
+        motivo: form.motivo, warehouse_id: form.almox ?? 0, cost_center_code: form.centro, customer_code: form.cliente ?? 0,
+        projeto: form.projeto.trim(), prioridade: form.prioridade, observacao: form.observacao.trim(),
+      };
+      if (form.code) {
+        const d = await alterarDemanda(form.code, dto);
+        setForm(null); await recarregar(d.code_demand);
+        setFeedback({ type: "success", message: `Demanda ${d.code_demand} alterada.` });
         return;
       }
-      setForm({
-        demanda:     String(d.code_demand),
-        item:        String(d.item_code),
-        configurado: !!d.mask,
-        mask:        d.mask ?? "",
-        cCusto:      d.cost_center_code != null ? String(d.cost_center_code) : "",
-        quantidade:  String(d.quantity),
-        data:        d.demand_date ?? "",
-      });
-      setErrors({});
-      setModoForm("edicao");
-      setDemandaEdit(d.code_demand);
-      setFeedback({ type: "info", message: `Demanda ${d.code_demand} — Item ${d.item_code} carregada para edição.` });
-    } catch (error) {
-      setFeedback({ type: "error", message: normalizeError(error, "Erro ao consultar demanda.") });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // ── Save (create)
-  async function handleSalvar() {
-    if (!validate()) return;
-    setIsSaving(true);
-    setFeedback(null);
-    try {
-      const createdBy = user?.id ?? decodeJwtSub(token) ?? "anonymous";
-      const result = await createDemanda({
-        code_demand:      form.demanda.trim() ? Number(form.demanda) : 0,
-        item_code:        form.item.trim(),
-        mask:             form.configurado && form.mask.trim() ? form.mask.trim() : undefined,
-        cost_center_code: form.cCusto.trim() ? Number(form.cCusto) : undefined,
-        quantity:         Number(form.quantidade),
-        demand_date:      form.data,
-        created_by:       createdBy,
-      });
-      setForm((prev) => ({ ...prev, demanda: String(result.code_demand) }));
-      setModoForm("edicao");
-      setDemandaEdit(result.code_demand);
-      setFeedback({
-        type: "success",
-        message: `Demanda ${result.code_demand} — Item ${result.item_code} salva com sucesso.`,
-      });
-    } catch (error) {
-      setFeedback({ type: "error", message: normalizeError(error, "Erro ao salvar demanda.") });
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  // ── Search — routes to the correct endpoint based on filled filters
-  async function handlePesquisar() {
-    setIsSearching(true);
-    setFeedback(null);
-    try {
-      let results: DemandaResponse[];
-      if (filtroItem.trim()) {
-        results = await listDemandaByItem(filtroItem.trim());
-      } else if (filtroDataInicio.trim()) {
-        results = await listDemandaFromDate(filtroDataInicio);
-      } else {
-        results = await listDemandas();
-      }
-      setResultados(results);
-      setMostrarResultados(true);
-      if (results.length === 0) {
-        setFeedback({ type: "info", message: "Nenhuma demanda encontrada para o filtro informado." });
-      }
-    } catch (error) {
-      setFeedback({ type: "error", message: normalizeError(error, "Erro ao pesquisar demandas.") });
-    } finally {
-      setIsSearching(false);
-    }
-  }
-
-  // ── Select from list
-  function handleSelectFromList(d: DemandaResponse) {
-    setForm({
-      demanda:     String(d.code_demand),
-      item:        String(d.item_code),
-      configurado: !!d.mask,
-      mask:        d.mask ?? "",
-      cCusto:      d.cost_center_code != null ? String(d.cost_center_code) : "",
-      quantidade:  String(d.quantity),
-      data:        d.demand_date ?? "",
+      const n = Number(form.entregas) || 1;
+      const criadas = await criarDemanda({ ...dto, entregas: n > 1 ? n : undefined, intervalo_dias: n > 1 ? Number(form.intervalo) || 0 : undefined });
+      setForm(null);
+      await recarregar(criadas[0]?.code_demand);
+      setFeedback({ type: "success", message: criadas.length > 1
+        ? `Programação cadastrada: demandas ${criadas[0].code_demand} a ${criadas[criadas.length - 1].code_demand} (${criadas.length} entregas).`
+        : `Demanda ${criadas[0]?.code_demand} cadastrada. Ela entra no próximo MRP.` });
     });
-    setErrors({});
-    setFeedback(null);
-    setModoForm("edicao");
-    setDemandaEdit(d.code_demand);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  }
+  };
+  const abrirAtender = (d: Demanda) => void run(async () => {
+    if (!tipos.length) setTipos((await listMovementTypes()).filter((t) => t.is_active !== false && t.allows_manual && (t.entry_exit === "SAIDA" || t.entry_exit === "AMBOS")));
+    setAtender({ quantidade: d.a_planejar.replace(".", ","), almox: d.warehouse_id, tipo: "", observacao: "" });
+  });
+  const confirmarAtender = () => {
+    if (!dem || !atender) return;
+    if (!(q(decimalParaApi(atender.quantidade)) > 0)) { setFeedback({ type: "error", message: "Informe a quantidade que sai." }); return; }
+    const almox = atender.almox;
+    if (!almox) { setFeedback({ type: "error", message: "Informe o almoxarifado de onde o material sai." }); return; }
+    if (!atender.tipo) { setFeedback({ type: "error", message: "Escolha o tipo de movimento da saída." }); return; }
+    void run(async () => {
+      const d = await atenderDemanda(dem.code_demand, { quantidade: decimalParaApi(atender.quantidade), warehouse_id: almox, movement_type_code: atender.tipo, observacao: atender.observacao.trim() || undefined });
+      setAtender(null); setDem(d); await listar();
+      setFeedback({ type: "success", message: `Saída lançada. Atendido: ${num(q(d.atendida))} de ${num(q(d.quantity))}.` });
+    });
+  };
+  const confirmarOF = () => {
+    if (!dem || !of) return;
+    if (of.quantidade.trim() && !(q(decimalParaApi(of.quantidade)) > 0)) { setFeedback({ type: "error", message: "A quantidade da OF precisa ser maior que zero." }); return; }
+    void run(async () => {
+      const d = await gerarOFDaDemanda(dem.code_demand, { quantidade: decimalParaApi(of.quantidade) || undefined, start_date: of.inicio || undefined, end_date: of.fim || undefined, priority: of.prioridade });
+      setOf(null); setDem(d); setAba("ordens"); await listar();
+      const ultima = d.ordens?.[d.ordens.length - 1];
+      setFeedback({ type: "success", message: `OF ${ultima?.order_number ?? ""} aberta e ligada à demanda ${d.code_demand}.` });
+    });
+  };
+  const confirmarFechar = () => {
+    if (!dem || !fechar) return;
+    void run(async () => {
+      const d = fechar.acao === "cancelar" ? await cancelarDemanda(dem.code_demand, fechar.motivo) : await encerrarDemanda(dem.code_demand, fechar.motivo);
+      setFechar(null); setDem(d); await listar();
+      setFeedback({ type: "success", message: `Demanda ${d.code_demand} ${fechar.acao === "cancelar" ? "cancelada" : "encerrada"}: sai do planejamento.` });
+    });
+  };
 
-  // ── Novo / Limpar
-  function handleNovo() {
-    setForm(FORM_INICIAL);
-    setErrors({});
-    setFeedback(null);
-    setModoForm("novo");
-    setDemandaEdit(null);
-  }
-
-  function handleLimpar() {
-    handleNovo();
-    setResultados([]);
-    setMostrarResultados(false);
-    setFiltroItem("");
-    setFiltroDataInicio("");
-    setFiltroDataFim("");
-  }
-
-  // ── Config modal
-  function handleAddConfiguracao() {
-    const cod = novaConfigCod.trim();
-    if (!cod) return;
-    if (configuracoes.some((c) => c.codigo === cod)) return;
-    setConfiguracoes((prev) => [...prev, { codigo: cod, descricao: novaConfigDesc.trim() }]);
-    setNovaConfigCod("");
-    setNovaConfigDesc("");
-  }
-
-  function handleUsarConfiguracao(cod: string) {
-    setField("mask", cod);
-    setShowConfigModal(false);
-  }
-
-  // ─── JSX ──────────────────────────────────────────────────────────────────
+  const aberta = dem?.situacao === "ABERTA";
+  const pos = posicao(dem?.posicao);
+  const temSaida = q(dem?.atendida) > 0;
+  const motivoForm = form ? motivoDe(form.motivo) : undefined;
+  const nEntregas = Number(form?.entregas) || 1;
+  const parte = form && nEntregas > 1 && q(decimalParaApi(form.quantidade)) > 0 ? q(decimalParaApi(form.quantidade)) / nEntregas : 0;
+  const ABAS: Aba<AbaDemanda>[] = [
+    { id: "resumo", label: "Resumo" },
+    { id: "ordens", label: "Ordens", contador: dem?.ordens?.length ?? 0, hint: "Ordens que cobrem a demanda (firmadas do MRP ou abertas por aqui)" },
+    { id: "consumo", label: "Consumo", contador: dem?.consumo?.length ?? 0, hint: "Pedidos de venda que consumiram a demanda e a visão de consumo do item" },
+  ];
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <div className="erp-screen">
+      <Cabecalho modulo="Planejamento" titulo="Demanda Independente" codigo="VPLA0102" />
 
-        .pla-root {
-          min-height: 100vh; background: #dfe4e0;
-          font-family: 'Inter', sans-serif; color: #1c2b22;
-          display: flex; flex-direction: column;
-        }
-
-        /* ── TOPBAR ── */
-        .pla-topbar {
-          height: 52px; background: #16281d;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 110px 0 20px; flex-shrink: 0;
-          border-bottom: 1px solid rgba(62,150,84,0.15);
-        }
-        .pla-topbar-left { display: flex; align-items: center; gap: 10px; }
-        .pla-logo-mark {
-          width: 28px; height: 28px; background: #2f7d47;
-          border-radius: 6px; display: flex; align-items: center; justify-content: center;
-        }
-        .pla-app-name { font-size: 13px; font-weight: 600; color: #e0f0e3; line-height: 1.1; }
-        .pla-app-sub  { display: block; font-size: 9px; font-weight: 400; color: #54655a; }
-        .pla-screen-title {
-          font-size: 12.5px; font-weight: 500; color: #3f8a58;
-          padding-left: 14px; margin-left: 14px;
-          border-left: 1px solid rgba(255,255,255,0.08);
-        }
-        .pla-topbar-right { display: flex; align-items: center; gap: 8px; }
-        .pla-screen-badge {
-          font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
-          background: rgba(62,150,84,0.15); color: #8fce9f;
-          border: 1px solid rgba(62,150,84,0.25); border-radius: 5px;
-          padding: 3px 8px;
-        }
-
-        /* ── ACTION BAR ── */
-        .pla-actionbar {
-          background: #fff; border-bottom: 1px solid #dbe8d5;
-          padding: 0 20px; display: flex; align-items: center;
-          gap: 4px; height: 46px; flex-shrink: 0;
-        }
-        .pla-action-group {
-          display: flex; align-items: center; gap: 4px;
-          padding-right: 12px; margin-right: 8px;
-          border-right: 1px solid #e8f0e4;
-        }
-        .pla-action-group:last-child { border-right: none; }
-        .pla-action-label {
-          font-size: 9.5px; font-weight: 600; letter-spacing: 0.8px;
-          text-transform: uppercase; color: #94a49a; margin-right: 4px; white-space: nowrap;
-        }
-        .pla-btn {
-          display: inline-flex; align-items: center; gap: 6px;
-          height: 32px; padding: 0 12px; border: 1.5px solid transparent;
-          border-radius: 7px; font-family: 'Inter', sans-serif;
-          font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap;
-          transition: background 0.13s, border-color 0.13s, color 0.13s;
-        }
-        .pla-btn-primary { background: #16281d; color: #dff0e2; border-color: #16281d; }
-        .pla-btn-primary:hover:not(:disabled) { background: #1e3728; }
-        .pla-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pla-btn-ghost { background: transparent; color: #46574c; border-color: #d4e8d0; }
-        .pla-btn-ghost:hover:not(:disabled) { background: #f0f8ec; border-color: #a9b6ac; color: #1c2b22; }
-        .pla-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pla-btn-new {
-          background: #eef9f0; color: #1a6030; border-color: #b4d8b8; font-weight: 600;
-        }
-        .pla-btn-new:hover:not(:disabled) { background: #dff5e4; border-color: #88c898; }
-        .pla-btn-config {
-          background: #f0eeff; color: #4a1e9a; border-color: #c8b4e8; font-weight: 600;
-        }
-        .pla-btn-config:hover:not(:disabled) { background: #e4d8ff; border-color: #a888d8; }
-        .pla-btn-config:disabled { opacity: 0.45; cursor: not-allowed; }
-
-        /* ── BODY ── */
-        .pla-body {
-          flex: 1; padding: 16px 20px;
-          display: flex; flex-direction: column; overflow-y: auto;
-        }
-        .pla-body::-webkit-scrollbar { width: 5px; }
-        .pla-body::-webkit-scrollbar-thumb { background: #cce0c8; border-radius: 4px; }
-
-        /* ── SECTION BANNER ── */
-        .pla-section-banner {
-          display: flex; align-items: center; gap: 10px;
-          padding: 14px 0 8px;
-        }
-        .pla-section-banner:first-child { padding-top: 0; }
-        .pla-section-banner-pill {
-          font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-          text-transform: uppercase; color: #6b7d71;
-          background: #e0ede0; border: 1px solid #c8dcc8;
-          border-radius: 20px; padding: 3px 10px; white-space: nowrap;
-        }
-        .pla-section-banner-line { flex: 1; height: 1px; background: #dbe8d5; }
-        .pla-section-banner-hint { font-size: 11px; color: #94a49a; white-space: nowrap; }
-
-        /* ── CARD ── */
-        .pla-card {
-          background: #fff; border: 1px solid #dbe8d5;
-          border-radius: 12px; overflow: hidden; margin-bottom: 14px;
-        }
-        .pla-card-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 18px; border-bottom: 1px solid #edf5e8; background: #fafcf9;
-        }
-        .pla-card-header-left { display: flex; align-items: center; gap: 8px; }
-        .pla-card-title { font-size: 12px; font-weight: 600; color: #253a2d; text-transform: uppercase; letter-spacing: 0.6px; }
-        .pla-card-body { padding: 18px 18px; }
-
-        /* ── MODO BADGES ── */
-        .pla-modo-novo {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px;
-          border-radius: 20px; background: #e8f5e0; color: #1e5818;
-          border: 1px solid #a8d898;
-        }
-        .pla-modo-edicao {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px;
-          border-radius: 20px; background: #fff8e0; color: #7a5200;
-          border: 1px solid #e0c860;
-        }
-        .pla-modo-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-        .pla-modo-novo .pla-modo-dot { background: #2f7d47; }
-        .pla-modo-edicao .pla-modo-dot { background: #c8a020; }
-
-        /* ── GRID ── */
-        .pla-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px 14px; align-items: start; }
-        .pla-col-2  { grid-column: span 2; }
-        .pla-col-3  { grid-column: span 3; }
-        .pla-col-4  { grid-column: span 4; }
-        .pla-col-5  { grid-column: span 5; }
-        .pla-col-6  { grid-column: span 6; }
-        .pla-col-8  { grid-column: span 8; }
-        .pla-col-12 { grid-column: span 12; }
-
-        /* ── FIELDS ── */
-        .pla-field { display: flex; flex-direction: column; gap: 5px; }
-        .pla-label {
-          font-size: 10.5px; font-weight: 600; color: #6b7d71;
-          text-transform: uppercase; letter-spacing: 0.4px;
-          display: flex; align-items: center; gap: 4px;
-        }
-        .pla-label-req { color: #c84040; font-size: 12px; line-height: 1; }
-        .pla-input {
-          width: 100%; height: 36px; background: #f8fbf6;
-          border: 1.5px solid #d4e8cc; border-radius: 7px;
-          padding: 0 10px; font-family: 'Inter', sans-serif;
-          font-size: 13px; color: #1c2b22; outline: none;
-          transition: border-color 0.13s, box-shadow 0.13s;
-        }
-        .pla-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
-        .pla-input::placeholder { color: #a9b6ac; font-size: 12px; }
-        .pla-input:disabled { background: #dfe4e0; color: #8aaa94; cursor: not-allowed; border-color: #e0ead8; }
-        .pla-input.has-error { border-color: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,0.1); }
-        .pla-input[type="date"] { cursor: pointer; }
-        .pla-input[type="number"] { -moz-appearance: textfield; }
-        .pla-input[type="number"]::-webkit-outer-spin-button,
-        .pla-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-        .pla-input-wrap { position: relative; display: flex; }
-        .pla-input-wrap .pla-input { border-radius: 7px 0 0 7px; }
-        .pla-input-btn {
-          height: 36px; padding: 0 10px; flex-shrink: 0;
-          background: #edf5ea; border: 1.5px solid #d4e8cc; border-left: none;
-          border-radius: 0 7px 7px 0; display: flex; align-items: center;
-          justify-content: center; gap: 5px;
-          cursor: pointer; color: #3a6048;
-          font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 500;
-          transition: background 0.12s; white-space: nowrap;
-        }
-        .pla-input-btn:hover { background: #ddf0e0; }
-        .pla-input-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        .pla-field-error { font-size: 11px; color: #c84040; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
-        .pla-field-hint  { font-size: 11px; color: #7a9c84; margin-top: 2px; line-height: 1.45; }
-
-        /* ── TOGGLE ── */
-        .pla-toggle-row { display: flex; align-items: center; gap: 10px; padding-top: 2px; height: 36px; }
-        .pla-toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; cursor: pointer; }
-        .pla-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .pla-toggle-track { position: absolute; inset: 0; background: #d4e0d0; border-radius: 20px; transition: background 0.2s; }
-        .pla-toggle input:checked ~ .pla-toggle-track { background: #2f7d47; }
-        .pla-toggle-thumb {
-          position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
-          background: #fff; border-radius: 50%; transition: transform 0.2s;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-        }
-        .pla-toggle input:checked ~ .pla-toggle-thumb { transform: translateX(18px); }
-        .pla-toggle-label { font-size: 13px; color: #46574c; font-weight: 500; user-select: none; }
-        .pla-toggle-sub   { font-size: 11px; color: #8aaa94; }
-
-        /* ── SECTION DIVIDER ── */
-        .pla-section-sep { height: 1px; background: #edf5e8; margin: 18px 0 14px; }
-        .pla-section-label {
-          font-size: 10px; font-weight: 700; letter-spacing: 1px;
-          text-transform: uppercase; color: #a0b8a8; margin-bottom: 14px;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .pla-section-label::after { content: ''; flex: 1; height: 1px; background: #e8f0e4; }
-
-        /* ── FILTER ROW ── */
-        .pla-filter-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-        .pla-filter-field { display: flex; flex-direction: column; gap: 5px; }
-        .pla-filter-input {
-          height: 34px; background: #f8fbf6; border: 1.5px solid #d4e8cc;
-          border-radius: 7px; padding: 0 10px;
-          font-family: 'Inter', sans-serif; font-size: 13px; color: #1c2b22; outline: none;
-          transition: border-color 0.13s;
-        }
-        .pla-filter-input:focus { border-color: #2f7d47; }
-        .pla-filter-input::placeholder { color: #a9b6ac; font-size: 12px; }
-        .pla-filter-input[type="date"] { cursor: pointer; }
-
-        /* ── RESULTS TABLE ── */
-        .pla-results-wrap { border-top: 1px solid #edf5e8; overflow-x: auto; }
-        .pla-results-bar {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 18px; background: #f4f9f2; border-bottom: 1px solid #e8f0e4;
-        }
-        .pla-results-label { font-size: 11px; font-weight: 600; color: #46574c; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pla-results-hint  { font-size: 11px; color: #94a49a; }
-        .pla-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .pla-results-table th {
-          background: #f4f9f2; padding: 8px 12px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #6b7d71;
-          text-transform: uppercase; letter-spacing: 0.5px;
-          border-bottom: 1.5px solid #dbe8d5; white-space: nowrap;
-        }
-        .pla-results-table td { padding: 9px 12px; border-bottom: 1px solid #f0f6ec; color: #233029; vertical-align: middle; }
-        .pla-results-table tbody tr { cursor: pointer; transition: background 0.1s; }
-        .pla-results-table tbody tr:hover { background: #eef9f0; }
-        .pla-results-empty { text-align: center; padding: 28px 12px; color: #94a49a; font-size: 12.5px; }
-        .pla-tag {
-          display: inline-flex; align-items: center;
-          font-size: 11px; font-weight: 600; border-radius: 12px; padding: 2px 8px;
-        }
-        .pla-tag-sim { background: #e8f5e0; color: #2a6018; border: 1px solid #b4d898; }
-        .pla-tag-nao { background: #f4f4f4; color: #6b7d71; border: 1px solid #dde8d8; }
-
-        /* ── FEEDBACK ── */
-        .pla-feedback {
-          display: flex; align-items: center; gap: 9px; padding: 11px 15px;
-          border-radius: 9px; font-size: 13px; animation: plaFadeIn 0.2s ease;
-          margin-bottom: 14px;
-        }
-        .pla-feedback.success { background: #f0faf2; border: 1px solid #b4dec0; color: #1e6030; }
-        .pla-feedback.error   { background: #fff5f5; border: 1px solid #f8c0c0; border-left: 3px solid #e05252; color: #b91c1c; }
-        .pla-feedback.info    { background: #f0f8ff; border: 1px solid #c7def8; border-left: 3px solid #4a90d9; color: #1a4070; }
-
-        /* ── FOOTER ── */
-        .pla-footer {
-          background: #fff; border-top: 1px solid #dbe8d5;
-          padding: 8px 20px; display: flex; align-items: center;
-          justify-content: space-between; flex-shrink: 0;
-        }
-        .pla-footer-stat { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6b7d71; }
-        .pla-footer-stat strong { color: #1c2b22; font-weight: 600; }
-
-        /* ── MODAL ── */
-        .pla-modal-overlay {
-          position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-          display: flex; align-items: center; justify-content: center;
-          z-index: 1000; animation: plaFadeIn 0.15s ease;
-        }
-        .pla-modal {
-          background: #fff; border-radius: 14px; width: 560px; max-width: 90vw;
-          max-height: 80vh; display: flex; flex-direction: column;
-          box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-        }
-        .pla-modal-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 16px 20px; border-bottom: 1px solid #edf5e8;
-        }
-        .pla-modal-title { font-size: 13.5px; font-weight: 600; color: #16281d; }
-        .pla-modal-close {
-          background: none; border: none; cursor: pointer; color: #8aaa94;
-          padding: 4px; border-radius: 6px; display: flex; align-items: center;
-          transition: background 0.12s, color 0.12s;
-        }
-        .pla-modal-close:hover { background: #dfe4e0; color: #46574c; }
-        .pla-modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
-        .pla-modal-footer {
-          padding: 12px 20px; border-top: 1px solid #edf5e8;
-          display: flex; justify-content: flex-end; gap: 8px;
-        }
-        .pla-modal-add-row { display: flex; gap: 8px; margin-bottom: 16px; align-items: flex-end; }
-        .pla-modal-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .pla-modal-table th {
-          background: #f4f9f2; padding: 7px 10px; text-align: left;
-          font-size: 10.5px; font-weight: 700; color: #6b7d71;
-          text-transform: uppercase; letter-spacing: 0.5px;
-          border-bottom: 1.5px solid #dbe8d5;
-        }
-        .pla-modal-table td { padding: 8px 10px; border-bottom: 1px solid #f0f6ec; color: #233029; }
-        .pla-modal-table tbody tr:hover { background: #f0faf2; }
-        .pla-modal-empty { text-align: center; padding: 24px; color: #94a49a; font-size: 12.5px; }
-        .pla-modal-usar {
-          background: none; border: 1px solid #b4d8b8; border-radius: 5px;
-          color: #2a6030; font-size: 11px; font-weight: 600; cursor: pointer;
-          padding: 3px 9px; transition: background 0.12s;
-          font-family: 'Inter', sans-serif;
-        }
-        .pla-modal-usar:hover { background: #e8f5e0; }
-        .pla-remove-btn {
-          background: transparent; border: none; cursor: pointer; color: #c89090;
-          padding: 3px 6px; border-radius: 5px; font-size: 12px;
-          transition: background 0.12s, color 0.12s;
-        }
-        .pla-remove-btn:hover { background: #fdecea; color: #b94040; }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .pla-spinner {
-          width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid rgba(223,240,226,0.3); border-top-color: #dff0e2;
-          border-radius: 50%; animation: spin 0.65s linear infinite;
-        }
-        .pla-spinner-dark {
-          width: 14px; height: 14px; flex-shrink: 0;
-          border: 2px solid #d4e8cc; border-top-color: #2f7d47;
-          border-radius: 50%; animation: spin 0.65s linear infinite;
-        }
-        @keyframes plaFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
-
-      <div className="pla-root">
-
-        {/* ── TOPBAR ── */}
-        <header className="pla-topbar">
-          <div className="pla-topbar-left">
-            <div className="pla-logo-mark">
-              <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-                <rect x="1.5" y="1.5"   width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.9)" />
-                <rect x="10.5" y="1.5"  width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-                <rect x="1.5" y="10.5"  width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.4)" />
-                <rect x="10.5" y="10.5" width="6" height="6" rx="1.2" fill="rgba(255,255,255,0.7)" />
-              </svg>
-            </div>
-            <span className="pla-app-name">
-              Venture <span className="pla-app-sub">ERP &amp; Soluções</span>
-            </span>
-            <span className="pla-screen-title">VPLA0102 — Cadastro de Demandas Independentes</span>
-          </div>
-          <div className="pla-topbar-right">
-            <span className="pla-screen-badge">PLANEJAMENTO</span>
-          </div>
-        </header>
-
-        {/* ── ACTION BAR ── */}
-        <div className="pla-actionbar">
-          <div className="pla-action-group">
-            <span className="pla-action-label">Cadastro</span>
-            <button type="button" className="pla-btn pla-btn-new" onClick={handleNovo}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-              Nova
-            </button>
-            <button
-              type="button" className="pla-btn pla-btn-primary"
-              onClick={handleSalvar} disabled={isSaving}
-            >
-              {isSaving ? <span className="pla-spinner" /> : (
-                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-              Salvar
-            </button>
-          </div>
-
-          <div className="pla-action-group">
-            <span className="pla-action-label">Item</span>
-            <button
-              type="button" className="pla-btn pla-btn-config"
-              onClick={() => setShowConfigModal(true)}
-              disabled={!form.item.trim()}
-              title={!form.item.trim() ? "Informe um item primeiro" : "Gerenciar configurações do item"}
-            >
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.8 2.8l1.4 1.4M9.8 9.8l1.4 1.4M2.8 11.2l1.4-1.4M9.8 4.2l1.4-1.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              Configurado
-            </button>
-          </div>
-
-          <div className="pla-action-group">
-            <button type="button" className="pla-btn pla-btn-ghost" onClick={handleLimpar}>
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              Limpar
-            </button>
-            <button type="button" className="pla-btn pla-btn-ghost">
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M7 4.5v3M7 9.5h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              Ajuda
-            </button>
-          </div>
-        </div>
-
-        {/* ── BODY ── */}
-        <div className="pla-body">
-
-          {feedback && (
-            <div className={`pla-feedback ${feedback.type}`}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                {feedback.type === "success"
-                  ? <path d="M3 8l3.5 3.5L13 5" stroke="#1e6030" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  : feedback.type === "error"
-                  ? <><circle cx="8" cy="8" r="6" stroke="#e05252" strokeWidth="1.4" /><path d="M8 5v3.5M8 10.5h.01" stroke="#e05252" strokeWidth="1.4" strokeLinecap="round" /></>
-                  : <><circle cx="8" cy="8" r="6" stroke="#4a90d9" strokeWidth="1.4" /><path d="M8 5.5v3M8 10h.01" stroke="#4a90d9" strokeWidth="1.4" strokeLinecap="round" /></>
-                }
-              </svg>
-              {feedback.message}
-            </div>
-          )}
-
-          {/* ── 1. PESQUISAR ── */}
-          <div className="pla-section-banner">
-            <span className="pla-section-banner-pill">1 — Pesquisar</span>
-            <div className="pla-section-banner-line" />
-            <span className="pla-section-banner-hint">Filtrar demandas existentes</span>
-          </div>
-
-          <div className="pla-card">
-            <div className="pla-card-header">
-              <div className="pla-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#2f7d47" strokeWidth="1.4" />
-                  <path d="M10 10l3.5 3.5" stroke="#2f7d47" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-                <span className="pla-card-title">Filtros de Pesquisa</span>
-              </div>
-            </div>
-            <div className="pla-card-body">
-              <div className="pla-filter-row">
-                <div className="pla-filter-field">
-                  <span className="pla-label">Item</span>
-                  <input
-                    className="pla-filter-input" style={{ width: 160 }}
-                    type="text" placeholder="Código do item..."
-                    value={filtroItem}
-                    onChange={(e) => setFiltroItem(e.target.value)}
-                  />
-                </div>
-                <div className="pla-filter-field">
-                  <span className="pla-label">Data Início</span>
-                  <input
-                    className="pla-filter-input" type="date"
-                    value={filtroDataInicio}
-                    onChange={(e) => setFiltroDataInicio(e.target.value)}
-                  />
-                </div>
-                <div className="pla-filter-field">
-                  <span className="pla-label">Data Fim</span>
-                  <input
-                    className="pla-filter-input" type="date"
-                    value={filtroDataFim}
-                    onChange={(e) => setFiltroDataFim(e.target.value)}
-                  />
-                </div>
-                <button
-                  type="button" className="pla-btn pla-btn-primary"
-                  onClick={handlePesquisar} disabled={isSearching}
-                  style={{ marginBottom: 0 }}
-                >
-                  {isSearching ? <span className="pla-spinner" /> : (
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  )}
-                  Pesquisar
-                </button>
-              </div>
-            </div>
-
-            {mostrarResultados && (
-              <div className="pla-results-wrap">
-                <div className="pla-results-bar">
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span className="pla-results-label">Resultados</span>
-                    <span className="pla-results-hint">{resultados.length} demanda{resultados.length !== 1 ? "s" : ""} encontrada{resultados.length !== 1 ? "s" : ""}</span>
-                  </div>
-                  <button
-                    type="button"
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#7a9c84", fontFamily: "Inter, sans-serif" }}
-                    onClick={() => { setMostrarResultados(false); setResultados([]); }}
-                  >
-                    Fechar
-                  </button>
-                </div>
-                <table className="pla-results-table">
-                  <thead>
-                    <tr>
-                      <th>Nº Demanda</th>
-                      <th>Item</th>
-                      <th>Configurado</th>
-                      <th>Máscara</th>
-                      <th>C. Custo</th>
-                      <th>Quantidade</th>
-                      <th>Data</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resultados.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="pla-results-empty">Nenhuma demanda encontrada.</td>
-                      </tr>
-                    ) : resultados.map((d) => (
-                      <tr key={d.code_demand} onClick={() => handleSelectFromList(d)}>
-                        <td><strong>{d.code_demand}</strong></td>
-                        <td><code style={{ fontSize: 12, background: "#edf5ea", padding: "2px 6px", borderRadius: 4 }}>{d.item_code}</code></td>
-                        <td>
-                          <span className={`pla-tag ${d.mask ? "pla-tag-sim" : "pla-tag-nao"}`}>
-                            {d.mask ? "Sim" : "Não"}
-                          </span>
-                        </td>
-                        <td>{d.mask ?? "—"}</td>
-                        <td>{d.cost_center_code != null ? d.cost_center_code : "—"}</td>
-                        <td>{d.quantity}</td>
-                        <td>{formatDateBR(d.demand_date)}</td>
-                        <td>
-                          <button
-                            type="button" className="pla-modal-usar"
-                            onClick={(e) => { e.stopPropagation(); handleSelectFromList(d); }}
-                          >
-                            Selecionar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* ── 2. CADASTRAR / EDITAR ── */}
-          <div className="pla-section-banner">
-            <span className="pla-section-banner-pill">2 — Cadastrar</span>
-            <div className="pla-section-banner-line" />
-            <span className="pla-section-banner-hint">Preencha os dados e clique em Salvar</span>
-          </div>
-
-          <div className="pla-card">
-            <div className="pla-card-header">
-              <div className="pla-card-header-left">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 3h10v10H3z" stroke="#2f7d47" strokeWidth="1.3" strokeLinejoin="round" />
-                  <path d="M6 8h4M8 6v4" stroke="#2f7d47" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
-                <span className="pla-card-title">Dados da Demanda</span>
-              </div>
-              {modoForm === "novo" ? (
-                <span className="pla-modo-novo">
-                  <span className="pla-modo-dot" />
-                  Novo Cadastro
-                </span>
-              ) : (
-                <span className="pla-modo-edicao">
-                  <span className="pla-modo-dot" />
-                  Editando Demanda #{demandaEdit}
-                </span>
-              )}
-            </div>
-            <div className="pla-card-body">
-              <div className="pla-grid">
-
-                {/* Nº Demanda */}
-                <div className="pla-field pla-col-2">
-                  <label className="pla-label">Nº Demanda</label>
-                  <div className="pla-input-wrap">
-                    <input
-                      className={`pla-input${errors.demanda ? " has-error" : ""}`}
-                      type="number" min="1"
-                      placeholder="Automático"
-                      value={form.demanda}
-                      onChange={(e) => setField("demanda", e.target.value)}
-                    />
-                    <button
-                      type="button" className="pla-input-btn"
-                      onClick={handleCarregarDemanda} disabled={isLoading || !form.demanda.trim()}
-                      title="Carregar demanda"
-                    >
-                      {isLoading ? <span className="pla-spinner-dark" /> : (
-                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                          <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                          <path d="M9.5 9.5l2.5 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
-                      )}
-                      Carregar
-                    </button>
-                  </div>
-                  {errors.demanda && <span className="pla-field-error">⚠ {errors.demanda}</span>}
-                  <span className="pla-field-hint">Deixe em branco para numeração automática.</span>
-                </div>
-
-                {/* Item */}
-                <div className="pla-field pla-col-4">
-                  <label className="pla-label">
-                    Item <span className="pla-label-req">*</span>
-                  </label>
-                  <input
-                    className={`pla-input${errors.item ? " has-error" : ""}`}
-                    type="text" maxLength={60} placeholder="Ex.: TEA452-0"
-                    value={form.item}
-                    onChange={(e) => setField("item", e.target.value)}
-                  />
-                  {errors.item && <span className="pla-field-error">⚠ {errors.item}</span>}
-                  <span className="pla-field-hint">Deve estar cadastrado no planejamento.</span>
-                </div>
-
-              </div>
-
-              {/* ── Configuração ── */}
-              <div className="pla-section-sep" />
-              <div className="pla-section-label">Configuração do Item</div>
-
-              <div className="pla-grid">
-                <div className="pla-field pla-col-4">
-                  <label className="pla-label">Configurado</label>
-                  <div className="pla-toggle-row">
-                    <label className="pla-toggle">
-                      <input
-                        type="checkbox"
-                        checked={form.configurado}
-                        onChange={(e) => {
-                          setField("configurado", e.target.checked);
-                          if (!e.target.checked) setField("mask", "");
-                        }}
-                      />
-                      <span className="pla-toggle-track" />
-                      <span className="pla-toggle-thumb" />
-                    </label>
-                    <span className="pla-toggle-label">
-                      {form.configurado ? "Item configurado" : "Item padrão"}
-                    </span>
-                    {form.configurado && (
-                      <span className="pla-toggle-sub">— selecione uma configuração abaixo</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pla-field pla-col-4">
-                  <label className="pla-label">
-                    Máscara (Configuração)
-                    {form.configurado && <span className="pla-label-req">*</span>}
-                  </label>
-                  <div className="pla-input-wrap">
-                    <input
-                      className={`pla-input${errors.mask ? " has-error" : ""}`}
-                      type="text"
-                      placeholder={form.configurado ? "Máscara da configuração..." : "—"}
-                      value={form.mask}
-                      disabled={!form.configurado}
-                      onChange={(e) => setField("mask", e.target.value)}
-                    />
-                    <button
-                      type="button" className="pla-input-btn"
-                      disabled={!form.configurado || !form.item.trim()}
-                      onClick={() => setShowConfigModal(true)}
-                      title="Gerenciar máscaras"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                        <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4" />
-                        <path d="M7 1.5v2M7 10.5v2M1.5 7h2M10.5 7h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                      </svg>
-                      Selecionar
-                    </button>
-                  </div>
-                  {errors.mask && <span className="pla-field-error">⚠ {errors.mask}</span>}
-                </div>
-              </div>
-
-              {/* ── Dados da demanda ── */}
-              <div className="pla-section-sep" />
-              <div className="pla-section-label">Quantidade e Data</div>
-
-              <div className="pla-grid">
-                {/* Centro de Custo */}
-                <div className="pla-field pla-col-3">
-                  <label className="pla-label">C. Custo</label>
-                  <div className="pla-input-wrap">
-                    <input
-                      className="pla-input" type="number" min="1"
-                      placeholder="Código..."
-                      value={form.cCusto}
-                      onChange={(e) => setField("cCusto", e.target.value)}
-                    />
-                    <button type="button" className="pla-input-btn" title="Selecionar centro de custo">
-                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                        <rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                        <path d="M4 7h6M7 4v6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                      </svg>
-                      Selecionar
-                    </button>
-                  </div>
-                  <span className="pla-field-hint">Cadastrado em VCTB0102.</span>
-                </div>
-
-                {/* Quantidade */}
-                <div className="pla-field pla-col-3">
-                  <label className="pla-label">
-                    Quantidade <span className="pla-label-req">*</span>
-                  </label>
-                  <input
-                    className={`pla-input${errors.quantidade ? " has-error" : ""}`}
-                    type="number" min="0.001" step="0.001"
-                    placeholder="0,000"
-                    value={form.quantidade}
-                    onChange={(e) => setField("quantidade", e.target.value)}
-                  />
-                  {errors.quantidade && <span className="pla-field-error">⚠ {errors.quantidade}</span>}
-                </div>
-
-                {/* Data */}
-                <div className="pla-field pla-col-3">
-                  <label className="pla-label">
-                    Data <span className="pla-label-req">*</span>
-                  </label>
-                  <input
-                    className={`pla-input${errors.data ? " has-error" : ""}`}
-                    type="date"
-                    value={form.data}
-                    onChange={(e) => setField("data", e.target.value)}
-                  />
-                  {errors.data
-                    ? <span className="pla-field-error">⚠ {errors.data}</span>
-                    : <span className="pla-field-hint">Deve ser um dia útil no calendário industrial.</span>
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── FOOTER ── */}
-        <footer className="pla-footer">
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div className="pla-footer-stat">
-              Demanda: <strong>{form.demanda.trim() || "—"}</strong>
-            </div>
-            <div className="pla-footer-stat">
-              Item: <strong>{form.item.trim() || "—"}</strong>
-            </div>
-            <div className="pla-footer-stat">
-              Qtd: <strong>{form.quantidade || "—"}</strong>
-            </div>
-            <div className="pla-footer-stat">
-              Data: <strong>{form.data ? formatDateBR(form.data) : "—"}</strong>
-            </div>
-          </div>
-          <div className="pla-footer-stat" style={{ color: "#a0b8a8" }}>
-            VPLA0102 · Planejamento
-          </div>
-        </footer>
+      <div className="erp-toolbar vpl-toolbar">
+        <button className="erp-btn erp-btn-new" onClick={novo} disabled={busy}>+ Nova demanda</button>
+        <div className="erp-tgroup"><button className="erp-btn" onClick={() => void run(() => recarregar(dem?.code_demand))} disabled={busy}>Atualizar</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Motivo</span>
+          <select className="erp-tselect" aria-label="Filtrar por motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+            <option value="">Todos</option>
+            {MOTIVOS.map((m) => <option key={m.id} value={m.id}>{m.rotulo}</option>)}
+          </select></div>
+        <div className="erp-tspacer" />
+        <div className="erp-tgroup"><ExportButton title="VPLA0102 — Demanda Independente" filename="vpla0102" build={() => ({
+          columns: ["Demanda", "Item", "Motivo", "Quantidade", "Data", "Consumida", "Atendida", "A planejar", "Posição"],
+          rows: visiveis.map((d) => [String(d.code_demand), `${d.item_business_code} ${d.item_name}`, d.motivo_descricao, num(q(d.quantity)), data(d.demand_date),
+            num(q(d.consumida)), num(q(d.atendida)), num(q(d.a_planejar)), posicao(d.posicao).rotulo]),
+        })} /></div>
       </div>
 
-      {/* ── MODAL — Configurações do Item ── */}
-      {showConfigModal && (
-        <div className="pla-modal-overlay" onClick={() => setShowConfigModal(false)}>
-          <div className="pla-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pla-modal-header">
-              <span className="pla-modal-title">
-                Configurações do Item{form.item.trim() ? ` — ${form.item}` : ""}
-              </span>
-              <button type="button" className="pla-modal-close" onClick={() => setShowConfigModal(false)}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
+      <div className="erp-content">
+        <div className="erp-main">
+          <aside className="erp-list-panel">
+            <div className="erp-panel-head">
+              <span className="erp-panel-title">Demandas</span><span className="erp-count">{visiveis.length}</span>
+              <div className="erp-panel-head-spacer" />
+              <input className="erp-search" placeholder="Nº, item ou projeto…" aria-label="Buscar demanda" value={busca} onChange={(e) => setBusca(e.target.value)} />
             </div>
-            <div className="pla-modal-body">
-              <p style={{ fontSize: 12, color: "#6b7d71", marginBottom: 14, lineHeight: 1.6 }}>
-                Defina novas configurações para o item configurado. Clique em <strong>Usar</strong> para aplicar a configuração à demanda.
-              </p>
+            <div className="vpl-list-filters">
+              {FILTROS.map((f) => <button key={f.id || "todas"} type="button" className={`erp-chip${situacao === f.id ? " active" : ""}`} onClick={() => setSituacao(f.id)}>{f.rotulo}</button>)}
+            </div>
+            <div className="erp-list">
+              {visiveis.length === 0 && <div className="erp-list-empty">{lista.length ? "Nenhuma demanda com essa busca." : "Nenhuma demanda nesse filtro."}</div>}
+              {visiveis.map((d) => {
+                const p = posicao(d.posicao);
+                return (
+                  <div key={d.code_demand} className={`erp-list-row${dem?.code_demand === d.code_demand ? " sel" : ""}`} onClick={() => abrir(d.code_demand)}
+                    role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") abrir(d.code_demand); }}>
+                    <span className="erp-list-code">Nº {d.code_demand}</span>
+                    <span className="erp-list-sub">{d.item_business_code} · {d.item_name}</span>
+                    <span className="vpl-list-row-right"><Selo tom={p.tom} title={p.ajuda}>{p.rotulo}</Selo></span>
+                    <div className="erp-list-meta" style={{ width: "100%" }}>
+                      <span className="erp-text-muted" style={{ fontSize: 11.5 }}>{data(d.demand_date)} · {d.motivo_descricao}</span>
+                      <div style={{ flex: 1 }} />
+                      <span className="erp-list-money" title="A planejar / quantidade">{num(q(d.a_planejar))}/{num(q(d.quantity))}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
 
-              {/* Add row */}
-              <div className="pla-modal-add-row">
-                <div className="pla-filter-field" style={{ flex: "0 0 130px" }}>
-                  <span className="pla-label" style={{ fontSize: 10 }}>Código</span>
-                  <input
-                    className="pla-filter-input" style={{ width: "100%" }}
-                    type="text" placeholder="Código..."
-                    value={novaConfigCod}
-                    onChange={(e) => setNovaConfigCod(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddConfiguracao()}
-                  />
-                </div>
-                <div className="pla-filter-field" style={{ flex: 1 }}>
-                  <span className="pla-label" style={{ fontSize: 10 }}>Descrição</span>
-                  <input
-                    className="pla-filter-input" style={{ width: "100%" }}
-                    type="text" placeholder="Descrição da configuração..."
-                    value={novaConfigDesc}
-                    onChange={(e) => setNovaConfigDesc(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddConfiguracao()}
-                  />
-                </div>
-                <button
-                  type="button" className="pla-btn pla-btn-new"
-                  onClick={handleAddConfiguracao} disabled={!novaConfigCod.trim()}
-                  style={{ flexShrink: 0 }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
-                  Adicionar
-                </button>
+          <section className="erp-detail-panel">
+            {!dem ? (
+              <div className="erp-detail-body"><Aviso feedback={feedback} busy={busy} />
+                <Kpis itens={[
+                  { label: "Abertas", value: num(kpis.abertas, 0), hint: "no filtro atual", tom: "info" },
+                  { label: "Entram no MRP", value: num(kpis.aPlanejar, 0), hint: "com saldo a planejar" },
+                  { label: "Finalidade a atender", value: num(kpis.finalidade, 0), hint: "amostra, feira, consumo, assistência, projeto", tom: kpis.finalidade ? "warn" : "ok" },
+                  { label: "Vencidas", value: num(kpis.vencidas, 0), hint: "sem venda na janela: encerre ou ajuste a data", tom: kpis.vencidas ? "warn" : "ok" },
+                ]} />
+                <Vazio titulo="Escolha uma demanda na lista" texto={<>Demanda independente é o que se quer produzir ou comprar <strong>sem pedido de venda</strong>: para estoque, amostra, feira, consumo interno, assistência ou projeto. Ela entra no próximo MRP, que gera a OF ou a compra.</>}
+                  acao={<button className="erp-btn erp-btn-primary" onClick={novo}>+ Nova demanda</button>} />
               </div>
-
-              {/* Table */}
-              {configuracoes.length === 0 ? (
-                <div className="pla-modal-empty">
-                  Nenhuma configuração definida. Adicione uma acima.
+            ) : (<>
+              <div style={{ padding: "14px 16px 0" }}>
+                <div className="vpl-record">
+                  <div className="vpl-record-main">
+                    <div className="vpl-record-title">Demanda {dem.code_demand} <Selo tom={pos.tom} title={pos.ajuda}>{pos.rotulo}</Selo> <Selo tom="muted">{dem.motivo_descricao}</Selo></div>
+                    <div className="vpl-record-sub">{dem.item_business_code} · {dem.item_name}{dem.mask ? ` · ${dem.mask}` : ""} · {num(q(dem.quantity))} para {data(dem.demand_date)}</div>
+                  </div>
+                  <div className="vpl-record-actions">
+                    {aberta && <button className="erp-btn" onClick={() => editar(dem)} disabled={busy}>Alterar</button>}
+                    {aberta && q(dem.sem_ordem) > 0 && <button className="erp-btn erp-btn-primary" onClick={() => setOf({ quantidade: dem.sem_ordem.replace(".", ","), inicio: hojeLocal(), fim: dem.demand_date, prioridade: dem.prioridade <= 1 ? "URGENTE" : dem.prioridade === 2 ? "HIGH" : "NORMAL" })} disabled={busy}
+                      title="Abre a OF agora, sem esperar o MRP">Gerar OF agora</button>}
+                    {aberta && dem.familia === "FINALIDADE" && q(dem.a_planejar) > 0 && <button className="erp-btn" onClick={() => abrirAtender(dem)} disabled={busy}
+                      title="Lança a saída do estoque para a finalidade">Atender</button>}
+                    {aberta && (temSaida || (dem.ordens?.length ?? 0) > 0
+                      ? <button className="erp-btn erp-btn-danger" onClick={() => setFechar({ acao: "encerrar", motivo: "" })} disabled={busy}>Encerrar saldo</button>
+                      : <button className="erp-btn erp-btn-danger" onClick={() => setFechar({ acao: "cancelar", motivo: "" })} disabled={busy}>Cancelar</button>)}
+                  </div>
                 </div>
-              ) : (
-                <table className="pla-modal-table">
-                  <thead>
-                    <tr>
-                      <th>Código</th>
-                      <th>Descrição</th>
-                      <th />
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {configuracoes.map((c, i) => (
-                      <tr key={c.codigo}>
-                        <td><code style={{ fontSize: 12, background: "#edf5ea", padding: "2px 6px", borderRadius: 4 }}>{c.codigo}</code></td>
-                        <td style={{ color: "#4a6a54" }}>{c.descricao || "—"}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <button type="button" className="pla-modal-usar" onClick={() => handleUsarConfiguracao(c.codigo)}>
-                            Usar
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            type="button" className="pla-remove-btn"
-                            onClick={() => setConfiguracoes((prev) => prev.filter((_, idx) => idx !== i))}
-                            title="Remover"
-                          >
-                            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                              <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              </div>
+              <div style={{ marginTop: 10 }}><Abas abas={ABAS} ativa={aba} onChange={setAba} /></div>
+              <div className="erp-detail-body">
+                <Aviso feedback={feedback} busy={busy} />
+                {aba === "resumo" && (<>
+                  <Kpis itens={[
+                    { label: "Quantidade", value: num(q(dem.quantity)) },
+                    dem.familia === "VENDA"
+                      ? { label: "Consumida pela venda", value: num(q(dem.consumida)), hint: dem.vence_em ? `pedidos até ${data(dem.vence_em)} consomem` : undefined }
+                      : { label: "Atendida (saída)", value: num(q(dem.atendida)), hint: "saídas do estoque para a finalidade" },
+                    { label: "MRP vai planejar", value: num(q(dem.a_planejar)), tom: q(dem.a_planejar) > 0 ? "info" : "ok", hint: pos.ajuda },
+                    { label: "Coberto por ordens", value: num(q(dem.coberta)), hint: q(dem.sem_ordem) > 0 ? `${num(q(dem.sem_ordem))} ainda sem ordem` : "nada sem ordem", onClick: () => setAba("ordens"), title: "Ver as ordens" },
+                  ]} />
+                  <div className="vpl-cols wide-left">
+                    <Painel titulo="Dados da demanda">
+                      <Detalhe itens={[
+                        { label: "Item", value: `${dem.item_business_code} — ${dem.item_name}`, forte: true },
+                        { label: "Máscara", value: dem.mask || "—" },
+                        { label: "Motivo", value: dem.motivo_descricao },
+                        { label: "Necessidade", value: data(dem.demand_date) },
+                        { label: "Prioridade", value: PRIORIDADES.find((p) => p.v === dem.prioridade)?.r ?? dem.prioridade },
+                        { label: "Almoxarifado de destino", value: dem.warehouse_nome || "—" },
+                        { label: "Centro de custo", value: dem.cost_center_code ?? "—" },
+                        { label: "Cliente", value: dem.customer_code ? `${dem.customer_code}${dem.customer_nome ? ` — ${dem.customer_nome}` : ""}` : "—" },
+                        { label: "Projeto / obra", value: dem.projeto || "—" },
+                        { label: "Programação", value: dem.programacao ? "faz parte de uma programação de entregas" : "—" },
+                        { label: "Observação", value: dem.observacao || "—" },
+                        ...(dem.situacao !== "ABERTA" ? [{ label: dem.situacao === "CANCELADA" ? "Cancelada" : "Encerrada", value: `${data(dem.encerrada_em)} — ${dem.motivo_encerramento ?? ""}` }] : []),
+                      ]} />
+                    </Painel>
+                    <Painel titulo="Como ela se encerra">
+                      {dem.familia === "VENDA" ? (
+                        <p className="erp-note">É <strong>expectativa de venda</strong>. Quando o pedido de venda do item chega, ele <strong>consome</strong> esta demanda em vez de somar: o MRP planeja o maior dos dois, nunca a soma.
+                          {dem.vence_em && <> Pedidos com entrega até <strong>{data(dem.vence_em)}</strong> ainda consomem; depois disso, sem venda, ela vence e sai do cálculo.</>}</p>
+                      ) : (
+                        <p className="erp-note">Tem <strong>finalidade própria</strong>: a venda não a consome. Ela segura o estoque até a saída para a finalidade — use <strong>Atender</strong>, que lança a saída no estoque. Se sobrar saldo que não vai mais sair, <strong>encerre o saldo</strong>.</p>
+                      )}
+                    </Painel>
+                  </div>
+                </>)}
+                {aba === "ordens" && (
+                  <Painel titulo="Ordens que cobrem a demanda" flush>
+                    {!(dem.ordens?.length) ? <Vazio titulo="Nenhuma ordem ainda" texto="A ordem aparece aqui quando a sugestão do MRP é firmada ou quando você usa Gerar OF agora." /> : (
+                      <table className="erp-grid">
+                        <thead><tr><th>Ordem</th><th>Situação</th><th className="num">Da demanda</th><th className="num">Planejada</th><th className="num">Produzida</th></tr></thead>
+                        <tbody>{dem.ordens.map((o, i) => {
+                          const s = situacaoOF(o.status);
+                          return (
+                            <tr key={i}>
+                              <td>{o.production_order_id ? `OF ${o.order_number ?? ""}` : `Planejada ${o.order_number ?? o.planned_order_code}`}</td>
+                              <td><Selo tom={s.tom}>{s.rotulo}</Selo></td>
+                              <td className="num">{num(q(o.quantidade))}</td><td className="num">{num(q(o.planejada))}</td><td className="num">{num(q(o.produzida))}</td>
+                            </tr>
+                          );
+                        })}</tbody>
+                      </table>
+                    )}
+                  </Painel>
+                )}
+                {aba === "consumo" && (<>
+                  <Painel titulo="Pedidos que consumiram esta demanda" flush
+                    acoes={<button className="erp-btn erp-btn-sm" onClick={verConsumoDoItem} disabled={busy} title="Previsão, demandas e vendas do item, com quem consumiu o quê">Ver o consumo do item</button>}>
+                    {dem.familia !== "VENDA" ? <Vazio titulo="Esta demanda não é consumida pela venda" texto="Demanda de finalidade própria (amostra, feira, consumo interno, assistência, projeto) é atendida pela saída de estoque, não pelo pedido." />
+                      : !(dem.consumo?.length) ? <Vazio titulo="Nenhum pedido consumiu esta demanda" texto={dem.posicao === "SOB_ENCOMENDA" ? "O item é planejado sob encomenda: o pedido não consome a demanda de estoque." : "Pedido confirmado do item com entrega dentro da janela de consumo aparece aqui."} /> : (
+                        <table className="erp-grid">
+                          <thead><tr><th>Pedido</th><th>Linha</th><th>Cliente</th><th>Entrega</th><th className="num">Consumiu</th></tr></thead>
+                          <tbody>{dem.consumo.map((c, i) => (
+                            <tr key={i}><td>{c.pedido}</td><td>{c.sequencia}</td><td>{c.cliente || "—"}</td><td>{data(c.data)}</td><td className="num">{num(q(c.quantidade))}</td></tr>
+                          ))}</tbody>
+                        </table>
+                      )}
+                  </Painel>
+                  {visao && (
+                    <Painel titulo={`Consumo do item ${visao.item_business_code}`} sub={visao.sob_encomenda
+                      ? "Sob encomenda: só o pedido gera necessidade; previsão e demanda de estoque não entram no MRP."
+                      : `Janela de consumo: ${visao.consumo_dias_antes} dias antes e ${visao.consumo_dias_depois} depois da entrega do pedido.`}>
+                      <Kpis itens={[
+                        { label: "Expectativa", value: num(q(visao.total_expectativa)), hint: "previsão + demanda de estoque" },
+                        { label: "Consumida pela venda", value: num(q(visao.total_consumido)) },
+                        { label: "MRP planeja da expectativa", value: num(q(visao.total_a_planejar)), tom: "info" },
+                        { label: "Venda acima da expectativa", value: num(q(visao.total_acima)), hint: `de ${num(q(visao.total_vendido))} vendidos`, tom: q(visao.total_acima) > 0 ? "warn" : "ok" },
+                      ]} />
+                      {visao.previsoes.length > 0 && (
+                        <table className="erp-grid" style={{ marginTop: 10 }}>
+                          <thead><tr><th>Previsão — semana</th><th className="num">Prevista</th><th className="num">Consumida</th><th className="num">Sobra para o MRP</th><th>Consumida por</th></tr></thead>
+                          <tbody>{visao.previsoes.map((p, i) => (
+                            <tr key={i}><td>{data(p.semana)}{p.mask ? ` · ${p.mask}` : ""}</td><td className="num">{num(q(p.quantidade))}</td><td className="num">{num(q(p.consumida))}</td>
+                              <td className="num">{num(q(p.resto))}</td><td>{(p.consumo ?? []).map((c) => `Pedido ${c.pedido}/${c.sequencia} (${num(q(c.quantidade))})`).join(", ") || "—"}</td></tr>
+                          ))}</tbody>
+                        </table>
+                      )}
+                      <table className="erp-grid" style={{ marginTop: 10 }}>
+                        <thead><tr><th>Demanda</th><th>Data</th><th className="num">Quantidade</th><th className="num">Consumida</th><th className="num">MRP planeja</th><th>Posição</th></tr></thead>
+                        <tbody>{visao.demandas.length === 0 ? <tr><td colSpan={6} className="erp-text-muted">Nenhuma demanda de expectativa de venda aberta.</td></tr>
+                          : visao.demandas.map((d) => (
+                            <tr key={d.code_demand}><td>Nº {d.code_demand}{d.mask ? ` · ${d.mask}` : ""}</td><td>{data(d.data)}</td><td className="num">{num(q(d.quantidade))}</td>
+                              <td className="num">{num(q(d.consumida))}</td><td className="num">{num(q(d.a_planejar))}</td><td><Selo tom={posicao(d.posicao).tom}>{posicao(d.posicao).rotulo}</Selo></td></tr>
+                          ))}</tbody>
+                      </table>
+                      <table className="erp-grid" style={{ marginTop: 10 }}>
+                        <thead><tr><th>Pedido</th><th>Cliente</th><th>Entrega</th><th className="num">Vendido</th><th className="num">Consumiu</th><th className="num">Acima da expectativa</th></tr></thead>
+                        <tbody>{visao.vendas.length === 0 ? <tr><td colSpan={6} className="erp-text-muted">Nenhum pedido confirmado do item.</td></tr>
+                          : visao.vendas.map((v, i) => (
+                            <tr key={i}><td>{v.pedido}/{v.sequencia}{v.mask ? ` · ${v.mask}` : ""}</td><td>{v.cliente || "—"}</td><td>{data(v.data)}</td><td className="num">{num(q(v.quantidade))}</td>
+                              <td className="num">{num(q(v.consumiu))}</td><td className="num">{num(q(v.acima))}</td></tr>
+                          ))}</tbody>
+                      </table>
+                    </Painel>
+                  )}
+                </>)}
+              </div>
+            </>)}
+          </section>
+        </div>
+      </div>
+
+      <Rodape>
+        <div className="erp-status-item">Abertas: <strong>{kpis.abertas}</strong></div>
+        {dem && <div className="erp-status-item">Demanda: <strong>{dem.code_demand}</strong></div>}
+      </Rodape>
+
+      {form && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="dem-titulo" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setForm(null); }}>
+          <div className="erp-modal" style={{ width: "min(760px, 96vw)" }}>
+            <div className="erp-modal-head"><div><strong id="dem-titulo">{form.code ? `Alterar demanda ${form.code}` : "Nova demanda independente"}</strong>
+              <div className="erp-field-hint">Entra no próximo MRP, que gera a OF (item fabricado) ou a compra (item comprado).</div></div>
+              <button className="erp-btn erp-btn-sm" onClick={() => setForm(null)} disabled={busy}>Fechar</button></div>
+            <div className="erp-modal-body">
+              <Aviso feedback={feedback} busy={busy} />
+              <div className="erp-fieldset-body" style={{ padding: 0 }}>
+                <div className="erp-field erp-c8"><label className="erp-label erp-req">Item</label>
+                  <LookupField<string> value={form.item || undefined} loader={loadItems} entityLabel="item" disabled={!!form.code && temSaida}
+                    onChange={(c) => setForm((f) => f && ({ ...f, item: String(c ?? "") }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label" htmlFor="dem-mask">Máscara</label>
+                  <input id="dem-mask" className="erp-input" placeholder="só item configurado" value={form.mask} onChange={(e) => setForm((f) => f && ({ ...f, mask: e.target.value }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label erp-req" htmlFor="dem-motivo">Motivo</label>
+                  <select id="dem-motivo" className="erp-input" value={form.motivo} onChange={(e) => setForm((f) => f && ({ ...f, motivo: e.target.value as Motivo }))}>
+                    <optgroup label="Expectativa de venda (a venda consome)">
+                      {MOTIVOS.filter((m) => m.familia === "VENDA").map((m) => <option key={m.id} value={m.id}>{m.rotulo}</option>)}
+                    </optgroup>
+                    <optgroup label="Finalidade própria (atendida pela saída)">
+                      {MOTIVOS.filter((m) => m.familia === "FINALIDADE").map((m) => <option key={m.id} value={m.id}>{m.rotulo}</option>)}
+                    </optgroup>
+                  </select>
+                  {motivoForm && <span className="erp-field-hint">{motivoForm.ajuda}</span>}</div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req" htmlFor="dem-qtd">Quantidade</label>
+                  <input id="dem-qtd" className="erp-input num" inputMode="decimal" placeholder="0,000" value={form.quantidade} onChange={(e) => setForm((f) => f && ({ ...f, quantidade: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req" htmlFor="dem-data">{nEntregas > 1 ? "Primeira entrega" : "Necessidade"}</label>
+                  <input id="dem-data" className="erp-input" type="date" value={form.data} onChange={(e) => setForm((f) => f && ({ ...f, data: e.target.value }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Almoxarifado de destino</label>
+                  <LookupField value={form.almox} loader={loadWarehouses} entityLabel="almoxarifado" clearable onChange={(c) => setForm((f) => f && ({ ...f, almox: c ? Number(c) : undefined }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Centro de custo</label>
+                  <LookupField value={form.centro} loader={loadCostCenters} entityLabel="centro de custo" clearable onChange={(c) => setForm((f) => f && ({ ...f, centro: c ? Number(c) : undefined }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Cliente (opcional)</label>
+                  <LookupField value={form.cliente} loader={loadCustomers} entityLabel="cliente" clearable onChange={(c) => setForm((f) => f && ({ ...f, cliente: c ? Number(c) : undefined }))} /></div>
+                <div className="erp-field erp-c6"><label className={`erp-label${form.motivo === "PROJETO" ? " erp-req" : ""}`} htmlFor="dem-proj">Projeto / obra</label>
+                  <input id="dem-proj" className="erp-input" maxLength={60} value={form.projeto} onChange={(e) => setForm((f) => f && ({ ...f, projeto: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label" htmlFor="dem-prio">Prioridade</label>
+                  <select id="dem-prio" className="erp-input" value={form.prioridade} onChange={(e) => setForm((f) => f && ({ ...f, prioridade: Number(e.target.value) }))}>
+                    {PRIORIDADES.map((p) => <option key={p.v} value={p.v}>{p.r}</option>)}
+                  </select></div>
+                <div className="erp-field erp-c8"><label className="erp-label" htmlFor="dem-obs">Observação</label>
+                  <input id="dem-obs" className="erp-input" value={form.observacao} onChange={(e) => setForm((f) => f && ({ ...f, observacao: e.target.value }))} /></div>
+              </div>
+              {!form.code && (
+                <div className="erp-fieldset" style={{ marginTop: 12 }}>
+                  <div className="erp-fieldset-head">Programação de entregas <span style={{ fontWeight: 400, opacity: 0.65 }}>— opcional: divide a quantidade em entregas</span></div>
+                  <div className="erp-fieldset-body">
+                    <div className="erp-field erp-c3"><label className="erp-label" htmlFor="dem-ent">Entregas</label>
+                      <input id="dem-ent" className="erp-input num" type="number" min={1} max={104} value={form.entregas} onChange={(e) => setForm((f) => f && ({ ...f, entregas: e.target.value }))} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label" htmlFor="dem-int">A cada (dias)</label>
+                      <input id="dem-int" className="erp-input num" type="number" min={1} value={form.intervalo} disabled={nEntregas <= 1} onChange={(e) => setForm((f) => f && ({ ...f, intervalo: e.target.value }))} /></div>
+                    <div className="erp-field erp-c6"><span className="erp-field-hint" style={{ marginTop: 22 }}>
+                      {nEntregas > 1 ? (parte > 0 ? `${nEntregas} demandas de ${num(parte, 4)} a cada ${Number(form.intervalo) || 0} dias, a partir de ${data(form.data)}.` : "Informe a quantidade total.") : "Uma demanda só, na data informada."}</span></div>
+                  </div>
+                </div>
               )}
             </div>
-            <div className="pla-modal-footer">
-              <button type="button" className="pla-btn pla-btn-ghost" onClick={() => setShowConfigModal(false)}>
-                Fechar
-              </button>
+            <div className="erp-modal-actions">
+              <button className="erp-btn" onClick={() => setForm(null)} disabled={busy}>Cancelar</button>
+              <button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{busy && <span className="erp-spin" />}{form.code ? "Salvar alteração" : "Cadastrar demanda"}</button>
             </div>
           </div>
         </div>
       )}
-    </>
+
+      {atender && dem && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="dem-atender" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setAtender(null); }}>
+          <div className="erp-modal" style={{ width: "min(560px, 94vw)" }}>
+            <div className="erp-modal-head"><div><strong id="dem-atender">Atender a demanda {dem.code_demand}</strong>
+              <div className="erp-field-hint">Lança a saída do estoque para {dem.motivo_descricao.toLowerCase()}. Estornar a saída na Central de Estoque devolve o saldo à demanda.</div></div>
+              <button className="erp-btn erp-btn-sm" onClick={() => setAtender(null)} disabled={busy}>Fechar</button></div>
+            <div className="erp-modal-body">
+              <Aviso feedback={feedback} busy={busy} />
+              <div className="erp-fieldset-body" style={{ padding: 0 }}>
+                <div className="erp-field erp-c4"><label className="erp-label erp-req" htmlFor="at-qtd">Quantidade</label>
+                  <input id="at-qtd" className="erp-input num" inputMode="decimal" value={atender.quantidade} onChange={(e) => setAtender((a) => a && ({ ...a, quantidade: e.target.value }))} />
+                  <span className="erp-field-hint">saldo: {num(q(dem.a_planejar))}</span></div>
+                <div className="erp-field erp-c8"><label className="erp-label erp-req">Almoxarifado de saída</label>
+                  <LookupField value={atender.almox} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => setAtender((a) => a && ({ ...a, almox: c ? Number(c) : undefined }))} /></div>
+                <div className="erp-field erp-c12"><label className="erp-label erp-req" htmlFor="at-tipo">Tipo de movimento</label>
+                  <select id="at-tipo" className="erp-input" value={atender.tipo} onChange={(e) => setAtender((a) => a && ({ ...a, tipo: e.target.value }))}>
+                    <option value="">{tipos.length ? "Escolha…" : "Nenhum tipo de saída manual cadastrado (VEST0200)"}</option>
+                    {tipos.map((t) => <option key={t.sigla} value={t.sigla}>{t.sigla} — {t.description}{t.requires_cost_center ? " (exige centro)" : ""}</option>)}
+                  </select></div>
+                <div className="erp-field erp-c12"><label className="erp-label" htmlFor="at-obs">Observação</label>
+                  <input id="at-obs" className="erp-input" value={atender.observacao} onChange={(e) => setAtender((a) => a && ({ ...a, observacao: e.target.value }))} /></div>
+              </div>
+            </div>
+            <div className="erp-modal-actions">
+              <button className="erp-btn" onClick={() => setAtender(null)} disabled={busy}>Cancelar</button>
+              <button className="erp-btn erp-btn-primary" onClick={confirmarAtender} disabled={busy}>{busy && <span className="erp-spin" />}Lançar saída</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {of && dem && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="dem-of" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setOf(null); }}>
+          <div className="erp-modal" style={{ width: "min(560px, 94vw)" }}>
+            <div className="erp-modal-head"><div><strong id="dem-of">Gerar OF da demanda {dem.code_demand}</strong>
+              <div className="erp-field-hint">Abre a OF agora, ligada à demanda. No próximo MRP ela entra como suprimento firme e o cálculo só complementa os componentes.
+                Sem ordem: <strong>{num(q(dem.sem_ordem))}</strong>{q(dem.coberta) > 0 ? <> (já há {num(q(dem.coberta))} em ordens)</> : null}. Uma quantidade maior (lote) vale, mas a demanda conta só o que estava sem ordem.</div></div>
+              <button className="erp-btn erp-btn-sm" onClick={() => setOf(null)} disabled={busy}>Fechar</button></div>
+            <div className="erp-modal-body">
+              <Aviso feedback={feedback} busy={busy} />
+              <div className="erp-fieldset-body" style={{ padding: 0 }}>
+                <div className="erp-field erp-c4"><label className="erp-label erp-req" htmlFor="of-qtd">Quantidade</label>
+                  <input id="of-qtd" className="erp-input num" inputMode="decimal" value={of.quantidade} onChange={(e) => setOf((o) => o && ({ ...o, quantidade: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label" htmlFor="of-ini">Início</label>
+                  <input id="of-ini" className="erp-input" type="date" value={of.inicio} onChange={(e) => setOf((o) => o && ({ ...o, inicio: e.target.value }))} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label" htmlFor="of-fim">Término</label>
+                  <input id="of-fim" className="erp-input" type="date" value={of.fim} onChange={(e) => setOf((o) => o && ({ ...o, fim: e.target.value }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label" htmlFor="of-prio">Prioridade</label>
+                  <select id="of-prio" className="erp-input" value={of.prioridade} onChange={(e) => setOf((o) => o && ({ ...o, prioridade: e.target.value }))}>
+                    <option value="LOW">Baixa</option><option value="NORMAL">Normal</option><option value="HIGH">Alta</option><option value="URGENTE">Urgente</option>
+                  </select></div>
+              </div>
+            </div>
+            <div className="erp-modal-actions">
+              <button className="erp-btn" onClick={() => setOf(null)} disabled={busy}>Cancelar</button>
+              <button className="erp-btn erp-btn-primary" onClick={confirmarOF} disabled={busy}>{busy && <span className="erp-spin" />}Abrir OF</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {fechar && dem && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="dem-fechar" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setFechar(null); }}>
+          <div className="erp-modal" style={{ width: "min(520px, 94vw)" }}>
+            <div className="erp-modal-head"><div><strong id="dem-fechar">{fechar.acao === "cancelar" ? `Cancelar a demanda ${dem.code_demand}` : `Encerrar o saldo da demanda ${dem.code_demand}`}</strong>
+              <div className="erp-field-hint">{fechar.acao === "cancelar" ? "A demanda sai do planejamento. O registro fica, com o motivo." : "O que já saiu ou já tem ordem fica no histórico; o saldo sai do planejamento."}</div></div>
+              <button className="erp-btn erp-btn-sm" onClick={() => setFechar(null)} disabled={busy}>Fechar</button></div>
+            <div className="erp-modal-body">
+              <Aviso feedback={feedback} busy={busy} />
+              <div className="erp-field erp-c12"><label className="erp-label erp-req" htmlFor="fe-mot">Motivo</label>
+                <input id="fe-mot" className="erp-input" value={fechar.motivo} onChange={(e) => setFechar((x) => x && ({ ...x, motivo: e.target.value }))} /></div>
+            </div>
+            <div className="erp-modal-actions">
+              <button className="erp-btn" onClick={() => setFechar(null)} disabled={busy}>Voltar</button>
+              <button className="erp-btn erp-btn-danger" onClick={confirmarFechar} disabled={busy || !fechar.motivo.trim()}>{busy && <span className="erp-spin" />}{fechar.acao === "cancelar" ? "Cancelar demanda" : "Encerrar saldo"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

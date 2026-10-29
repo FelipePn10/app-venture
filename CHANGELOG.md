@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## Novidades
+- **Demanda independente (VPLA0102) refeita:** produzir ou comprar sem pedido de venda, por motivo — expectativa de venda (estoque, reposição, antecipação) ou finalidade própria (amostra, feira, consumo interno, assistência, projeto). Programação de entregas, almoxarifado e cliente de destino, prioridade, **Atender** pela saída de estoque, **Gerar OF agora** para urgência e a lista das ordens ligadas à demanda.
+- **Consumo pela venda:** o pedido de venda consome a previsão e a demanda de estoque do item; o MRP planeja o maior dos dois, nunca a soma. A aba **Consumo** mostra quais pedidos consumiram cada demanda e cada semana de previsão.
+- **Política de planejamento por item (VPLA0310):** por item ou por classificação — consumo pela venda ou sob encomenda, janela de consumo, horizonte firme e tempo de segurança. O que não for definido segue os parâmetros da empresa (VPLA0300).
+
+## Melhorias
+- **MRP (VMRP0100):** o pedido de venda não conta mais duas vezes; rascunho e orçamento ficam fora do cálculo. A regra configurada de prazo e lote mínimo agora vale, com o novo campo **Condição da máscara**. O prazo do item vem da regra, do fornecedor preferencial (comprado) ou do roteiro (fabricado). Nova exceção **Horizonte firme**.
+- **Ordem de produção (VPRO0900):** a nova OF informa início, término, almoxarifado que recebe e centro de custo.
+- **Planos do MRP:** o plano de um item de pedido é escolhido pelo número do pedido e pela linha.
+- **Cenários:** aplicar a demanda ao plano real respeita o que já saiu da demanda.
+
 ## [v1.8.0] — 2026-10-28
 
 ## Novidades
