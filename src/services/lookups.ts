@@ -1,8 +1,9 @@
+import { enumLabel } from '@/utils/enumLabels';
 import { httpClient, unwrapArray, unwrapObject, parseNum, parseStr } from '@/services/fiscalShared';
 import { listCustomers } from '@/services/customerService';
 import { listItems } from '@/services/itemService';
 import { listSalesOrders } from '@/services/salesOrderService';
-import { listSuppliers } from '@/services/supplierService';
+import { listSuppliers, listSupplierTypes } from '@/services/supplierService';
 import { listRepresentatives, listRepresentativeSalesPlans } from '@/services/representativeService';
 import { listarGrupos, listarModificadores } from '@/services/pdmService';
 import { listMachines } from '@/services/machineService';
@@ -24,6 +25,8 @@ import { listCrpPlans } from '@/services/crpService';
  */
 export interface LookupOption {
   code: string | number;
+  /** O que mostrar no lugar do código, quando o código é só a chave interna. */
+  displayCode?: string | number;
   /** Rótulo principal (nome/descrição). */
   label: string;
   /** Linha secundária opcional (documento, UM, cidade…). */
@@ -69,6 +72,13 @@ const caches: Array<() => void> = [];
 export function resetLookups(): void {
   for (const reset of caches) reset();
 }
+
+// Cadastro gravado em outra tela precisa aparecer no campo de busca sem sair do
+// sistema: a lista memorizada dizia "nenhum cadastrado" até o próximo login.
+httpClient.interceptors.response.use((resposta) => {
+  if (['post', 'put', 'patch', 'delete'].includes((resposta.config.method ?? '').toLowerCase())) resetLookups();
+  return resposta;
+});
 
 /** GET genérico defensivo para endpoints sem serviço dedicado. */
 async function loadEndpoint(
@@ -124,7 +134,9 @@ async function loadEndpointById(
 /** Catálogos fiscais e de cadastro pela chave interna — ver `loadEndpointById`. */
 export const loadCfopsById = cached(() => loadEndpointById('/api/fiscal/support/cfops/', ['description', 'Description'], ['utilization']));
 export const loadLegalDevicesById = cached(() => loadEndpointById('/api/fiscal/support/dispositivos-legais/', ['description', 'Description'], ['type', 'Type']));
-export const loadInvoiceTypesById = cached(() => loadEndpointById('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']));
+export const loadInvoiceTypesById = cached(async () =>
+  (await loadEndpointById('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']))
+    .map((o) => ({ ...o, sub: o.sub ? enumLabel(o.sub) : o.sub })));
 export const loadMarketSegmentsById = cached(() => loadEndpointById('/api/customers/support/market-segments', ['description', 'Description', 'name', 'Name']));
 export const loadIcmsApuracaoLinesById = cached(() => loadEndpointById('/api/fiscal/support/linhas-apuracao-icms/', ['description', 'Description'], ['line_type']));
 export const loadIcmsAdjustmentCodesById = cached(() => loadEndpointById('/api/fiscal/support/codigos-ajuste-apuracao-icms/', ['description', 'Description'], ['uf']));
@@ -558,6 +570,11 @@ export const loadSuppliers = cached(async () =>
   })).filter((o) => o.code),
 );
 
+/** Tipos de fornecedor: a operação de entrada pode valer só para um deles. */
+export const loadSupplierTypes = cached(async () =>
+  (await listSupplierTypes()).filter((t) => t.code).map((t) => ({ code: String(t.code), label: t.description, sub: t.kind })),
+);
+
 export const loadRepresentatives = cached(async () =>
   (await listRepresentatives({ active_status: 'ACTIVE' })).filter((r) => r.is_active !== false && !r.is_blocked).map((r) => ({
     code: r.code ?? 0,
@@ -650,6 +667,11 @@ export const loadProductionOrders = cached(() =>
 );
 
 /** Pedidos de compra, para amarrar o título financeiro à compra que o originou. */
+/** Cargas de expedição, para ligar a nota avulsa à carga que ela acompanha. */
+export const loadShipmentLoads = cached(() =>
+  loadEndpoint('/api/shipments/loads', ['description', 'Description', 'status_label'], ['vehicle_plate', 'driver_name']),
+);
+
 export const loadPurchaseOrders = cached(() =>
   loadEndpoint('/api/purchase-order/list', ['status', 'Status'], ['emission_date', 'EmissionDate']),
 );
@@ -815,7 +837,7 @@ export const loadCfops = cached(async () => {
   const { listCfops } = await import('@/services/fiscalSupportService');
   return (await listCfops()).map((c) => ({
     code: c.code,
-    label: `${c.code} — ${c.description || 'sem descrição'}`,
+    label: c.description || 'sem descrição',
     sub: c.utilization || undefined,
     inactive: c.is_active === false,
   })).filter((o) => o.code);

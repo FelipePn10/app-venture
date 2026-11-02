@@ -7,6 +7,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { type Cfop, listCfops } from "@/services/fiscalSupportService";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCfops, loadEntryOperations, loadInvoiceTypes, loadSupplierTypes } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "operacoes" | "grupos";
@@ -97,7 +99,7 @@ export function Vfis0360Page(): JSX.Element {
   }
 
   async function validar() {
-    if (!validUf.code.trim() || !validUf.uf.trim()) { setFeedback({ type: "error", message: "Informe o código do tipo e a UF." }); return; }
+    if (!validUf.code.trim() || !validUf.uf.trim()) { setFeedback({ type: "error", message: "Escolha a operação e informe a UF." }); return; }
     setBusy(true); setFeedback(null);
     try {
       const r = await validateEntryOperation(validUf.code.trim(), validUf.uf.trim().toUpperCase());
@@ -164,16 +166,16 @@ export function Vfis0360Page(): JSX.Element {
               
                 <div className="erp-field erp-c2"><label className="erp-label">Código</label>
                   <input className="erp-input" value={editCode ?? ""} placeholder="gerado ao salvar" disabled /></div>
-                <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label>
+                <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label>
                   <input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Natureza (CFOP de entrada)</label>
-                  <input className="erp-input" value={form.nature_operation} placeholder="1101" inputMode="numeric" onChange={(e) => setNatureza(e.target.value)}
-                    title="O CFOP de entrada da operação. Na nota, o 1º dígito acompanha a UF do fornecedor (1 no estado, 2 fora, 3 exterior)." />
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Natureza (CFOP de entrada)</label>
+                  <LookupField<string> value={form.nature_operation || undefined} loader={loadCfops} entityLabel="CFOP" placeholder="Buscar CFOP" clearable onChange={(c) => setNatureza(c ? String(c) : "")} />
+                  <span className="erp-hint">Na nota, o 1º dígito acompanha a UF do fornecedor: 1 no estado, 2 fora, 3 exterior.</span>
                   {naturezaDigitos.length === 4 && (cfopNatureza
                     ? <span className="erp-field-hint">{cfopNatureza.description}</span>
                     : cfops.size > 0 && <span className="erp-hint" style={{ color: "var(--v-err)" }}>CFOP {naturezaDigitos} fora da tabela (VFIS0300)</span>)}</div>
-                <div className="erp-field erp-c2"><label className="erp-label">Tipo Nota</label>
-                  <input className="erp-input" value={form.invoice_type_code ?? ""} onChange={(e) => setF("invoice_type_code", e.target.value)} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Tipo Nota</label>
+                  <LookupField<string> value={form.invoice_type_code ? String(form.invoice_type_code) : undefined} loader={loadInvoiceTypes} entityLabel="tipo de nota" placeholder="Qualquer" clearable onChange={(c) => setF("invoice_type_code", c ? String(c) : "")} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Grupo Estado</label>
                   <select className="erp-input" value={form.state_group_code ?? ""} onChange={(e) => setF("state_group_code", e.target.value)}
                     title="Com grupo, a operação só vale para fornecedor das UFs do grupo; a nota de outra UF é recusada.">
@@ -181,7 +183,7 @@ export function Vfis0360Page(): JSX.Element {
                     {groups.map((g) => <option key={String(g.code)} value={String(g.code)}>{g.code} — {g.description}</option>)}
                   </select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Tipo Fornecedor</label>
-                  <input className="erp-input" value={form.supplier_type_code ?? ""} onChange={(e) => setF("supplier_type_code", e.target.value)} /></div>
+                  <LookupField<string> value={form.supplier_type_code ? String(form.supplier_type_code) : undefined} loader={loadSupplierTypes} entityLabel="tipo de fornecedor" placeholder="Qualquer" clearable onChange={(c) => setF("supplier_type_code", c ? String(c) : "")} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Classif. (tipo)</label>
                   <input className="erp-input" value={form.classification_type ?? ""} onChange={(e) => setF("classification_type", e.target.value)} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Classif. (código)</label>
@@ -204,7 +206,8 @@ export function Vfis0360Page(): JSX.Element {
 
               <div className="erp-results-bar" style={{ marginTop: 12 }}>
                 <div className="erp-results-bar-left"><span className="erp-results-bar-label">Validar UF × Natureza</span></div>
-                <input className="erp-input" style={{ width: 90, height: 30 }} placeholder="código" value={validUf.code} onChange={(e) => setValidUf((p) => ({ ...p, code: e.target.value }))} />
+                <div style={{ width: 260 }}><LookupField value={validUf.code ? Number(validUf.code) : undefined} loader={loadEntryOperations} entityLabel="operação de entrada" allowManualCode={false} placeholder="Operação"
+                  vazio="Nenhuma operação cadastrada ainda." onChange={(c) => setValidUf((p) => ({ ...p, code: c ? String(c) : "" }))} /></div>
                 <input className="erp-input" style={{ width: 60, height: 30 }} maxLength={2} placeholder="UF" value={validUf.uf} onChange={(e) => setValidUf((p) => ({ ...p, uf: e.target.value.toUpperCase() }))} />
                 <button className="erp-btn" onClick={() => void validar()} disabled={busy}>Validar</button>
               </div>

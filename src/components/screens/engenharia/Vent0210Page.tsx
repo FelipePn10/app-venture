@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { confirmar } from "@/components/ui/dialogos";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems } from "@/services/lookups";
@@ -133,6 +134,7 @@ function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
     costCenterCode: null,
     isCriticalMps: false,
     generatesInspection: false,
+    customerSupplied: false,
     level: 1,
     hasChildren: false,
   };
@@ -170,6 +172,7 @@ function toPayload(row: LocalRow, mask: string | null): CreateStructurePayload {
     cost_center_code:    row.costCenterCode,
     is_critical_mps:     row.isCriticalMps,
     generates_inspection: row.generatesInspection,
+    customer_supplied:   row.customerSupplied,
   };
 }
 
@@ -230,6 +233,9 @@ function listarProblemas(rows: LocalRow[]): string[] {
     }
     if (r.isCoproduct && r.isFixedQty) {
       problemas.push(`Item ${item}: co-produto e quantidade por ordem não podem ser marcados juntos.`);
+    }
+    if (r.isCoproduct && r.customerSupplied) {
+      problemas.push(`Item ${item}: co-produto sai da ordem; não pode ser também material fornecido pelo cliente.`);
     }
   }
 
@@ -314,6 +320,7 @@ const ComponentFlags = memo(function ComponentFlags({ row }: { row: LocalRow }) 
       )}
       {row.isCoproduct && <span className="fe-flag f-co" title="Co-produto: sai da ordem">↥</span>}
       {row.isFixedQty && <span className="fe-flag f-fixa" title="Quantidade por ordem, não por peça">▣</span>}
+      {row.customerSupplied && <span className="fe-flag f-cli" title="Fornecido pelo cliente (beneficiamento)">⇆</span>}
       {row.health === 'FANTASMA' && <span className="fe-flag f-fant" title="Fantasma: não gera ordem">👻</span>}
     </>
   );
@@ -683,9 +690,17 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
             onChange={(e) => onUpdate({ generatesInspection: e.target.checked })}/>
           Gera inspeção no processo
         </label>
+        <label className="fe-d-check-label" title="Beneficiamento: o cliente manda este material. Fica fora do MRP, da baixa automática e do custo.">
+          <input type="checkbox" className="fe-d-checkbox"
+            checked={row.customerSupplied}
+            onChange={(e) => onUpdate({ customerSupplied: e.target.checked })}/>
+          Fornecido pelo cliente (beneficiamento)
+        </label>
       </div>
       <span className="fe-d-hint">
-        {row.isCoproduct
+        {row.customerSupplied
+          ? 'Fornecido pelo cliente: não é comprado pelo MRP nem baixado do estoque próprio, não entra no custo, e a ordem do pai não dá entrada do produto no estoque — o material volta ao cliente na nota de beneficiamento.'
+          : row.isCoproduct
           ? 'Co-produto: sai da ordem em vez de ser consumido — o custo do pai é rateado com ele.'
           : row.isFixedQty
             ? 'Quantidade fixa: consumida uma vez por ordem, independente do tamanho do lote (ex.: material de setup).'
@@ -863,7 +878,7 @@ export function Vent0210Page(): JSX.Element {
   async function handleRowDoubleClick(row: LocalRow) {
     if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
     if (!row.childCode || row.isNew) return;
-    if (dirtyCount > 0 && !window.confirm(`Há ${dirtyCount} alteração(ões) não salva(s). Abrir o componente descarta o que não foi gravado. Continuar?`)) return;
+    if (dirtyCount > 0 && !(await confirmar({ titulo: "Alterações não salvas", mensagem: `Há ${dirtyCount} alteração(ões) não salva(s). Abrir o componente descarta o que não foi gravado.`, rotulo: "Descartar e abrir", tom: "perigo" }))) return;
     // O duplo clique dentro de um campo seleciona a palavra; sem limpar, a
     // seleção fica presa na tela nova.
     window.getSelection()?.removeAllRanges();
@@ -1168,6 +1183,7 @@ export function Vent0210Page(): JSX.Element {
         .fe-flag.f-co      { background: #f2eaff; color: #5a2f8a; border: 1px solid #d8c4f0; }
         .fe-flag.f-fixa    { background: #eaf6f6; color: #1c6a6a; border: 1px solid #bde0e0; }
         .fe-flag.f-fant    { background: #eef0f8; border: 1px solid #ccd2e8; }
+        .fe-flag.f-cli     { background: #fdf0e6; color: #8a4a12; border: 1px solid #f0cfae; }
         .fe-d-hint { display: block; font-size: 10.5px; color: #7a9a84; line-height: 1.4; margin-top: 3px; }
         .fe-d-linkbtn { align-self: flex-start; margin-top: 5px; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #2f7d47; text-decoration: underline; cursor: pointer; }
         .fe-d-linkbtn:hover { color: #1e6030; }

@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useState, useCallback, useMemo } from "react";
 import { reportCalls } from "@/services/technicalAssistanceService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
@@ -9,7 +10,7 @@ const cell = (v: unknown): string => {
   if (v == null) return "—";
   if (typeof v === "boolean") return v ? "Sim" : "Não";
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) return v.slice(0, 10);
-  if (typeof v === "object") return JSON.stringify(v);
+  if (typeof v === "object") return textoLegivel(v);
   return String(v);
 };
 const humanize = (k: string) => k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

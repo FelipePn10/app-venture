@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useMemo, useState } from "react";
 import { listAuditLog } from "@/services/auditLogService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
@@ -40,7 +41,7 @@ function pick(row: Obj, ...keys: string[]): unknown {
 function text(value: unknown): string {
   if (value == null || value === "") return "—";
   if (typeof value === "boolean") return value ? "Sim" : "Não";
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object") return textoLegivel(value);
   return String(value);
 }
 

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { type ContaBancaria, type ContaBancariaDTO, listContasBancarias, createContaBancaria } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { BANCOS, nomeDoBanco } from "@/utils/bancos";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -71,7 +72,9 @@ export function Vfin0100Page(): JSX.Element {
         <div className="erp-fieldset"><div className="erp-fieldset-head">Dados da conta</div><div className="erp-fieldset-body">
           
             <div className="erp-field erp-c2"><label className="erp-label erp-req">Banco</label>
-              <input className="erp-input" value={form.banco} placeholder="341" onChange={(e) => setF("banco", e.target.value)} /></div>
+              <input className="erp-input" list="vfin0100-bancos" inputMode="numeric" value={form.banco} placeholder="Buscar banco" onChange={(e) => setF("banco", e.target.value.replace(/\D/g, "").slice(0, 3))} />
+              <datalist id="vfin0100-bancos">{BANCOS.map((b) => <option key={b.codigo} value={b.codigo}>{b.nome}</option>)}</datalist>
+              {nomeDoBanco(form.banco) && <span className="erp-hint">{nomeDoBanco(form.banco)}</span>}</div>
             <div className="erp-field erp-c2"><label className="erp-label">Agência</label>
               <input className="erp-input" value={form.agencia} onChange={(e) => setF("agencia", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label erp-req">Conta</label>

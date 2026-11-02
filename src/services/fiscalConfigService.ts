@@ -33,6 +33,8 @@ export interface FiscalConfig {
   aliquota_credito_simples: number;
   /** cBenef do diferimento (CST 51), ex.: PR830001 no Paraná. */
   cbenef_diferimento: string;
+  cbenef_suspensao: string;
+  obs_retorno_industrializacao: string;
   focus_nfe_configured: boolean;
   focus_nfe_token?: string;
   focus_nfe_ambiente: FocusAmbiente;
@@ -83,6 +85,8 @@ function parseConfig(raw: unknown): FiscalConfig {
     exigir_regra_icms_ipi: parseBool(o, 'exigir_regra_icms_ipi', 'ExigirRegraICMSIPI'),
     aliquota_credito_simples: parseNum(o, 'aliquota_credito_simples', 'AliquotaCreditoSimples'),
     cbenef_diferimento: parseStr(o, 'cbenef_diferimento', 'CBenefDiferimento'),
+    cbenef_suspensao: parseStr(o, 'cbenef_suspensao', 'CBenefSuspensao'),
+    obs_retorno_industrializacao: parseStr(o, 'obs_retorno_industrializacao', 'ObsRetornoIndustrializacao'),
     focus_nfe_configured: parseBool(o, 'focus_nfe_configured', 'FocusNfeConfigured'),
     focus_nfe_token: parseStr(o, 'focus_nfe_token', 'FocusNfeToken'),
     focus_nfe_ambiente: (amb === 'producao' ? 'producao' : 'homologacao') as FocusAmbiente,

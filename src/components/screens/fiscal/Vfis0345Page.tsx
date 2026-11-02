@@ -8,6 +8,7 @@ import { type AccountDTO, type AccountingPlanDTO, listAccounts, listPlans } from
 import { type CentroDeCusto, listarCentros } from "@/services/costCenterGestaoService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { OpcoesLookup } from "@/components/ui/OpcoesLookup";
 import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -37,6 +38,7 @@ export function Vfis0345Page(): JSX.Element {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
   const [contas, setContas] = useState<AccountDTO[]>([]);
+  const opcoesDeConta = useMemo(() => contas.map((c) => ({ code: String(c.id), label: `${c.account_number} — ${c.description}` })), [contas]);
   const [centros, setCentros] = useState<CentroDeCusto[]>([]);
 
   useEffect(() => {
@@ -263,9 +265,7 @@ export function Vfis0345Page(): JSX.Element {
               {campo("descricao", "Descrição", "erp-c5", { req: true })}
               {campo("funcao", "Função na atividade", "erp-c4", { placeholder: "ex.: usinagem de peças" })}
               <div className="erp-field erp-c4"><label className="erp-label">Conta contábil do ativo</label>
-                <select className="erp-input" value={form.conta} onChange={(e) => setF("conta", e.target.value)}>
-                  <option value="">— a dos parâmetros —</option>{contas.map((c) => <option key={c.id} value={String(c.id)}>{c.account_number} — {c.description}</option>)}
-                </select></div>
+                <OpcoesLookup<string> value={form.conta || undefined} opcoes={opcoesDeConta} entityLabel="conta" placeholder="A dos parâmetros" onChange={(c) => setF("conta", c ?? "")} /></div>
               <div className="erp-field erp-c4"><label className="erp-label">Centro de custo de uso</label>
                 <select className="erp-input" value={form.centro} onChange={(e) => setF("centro", e.target.value)}>
                   <option value="">—</option>{centros.filter((c) => c.is_active).map((c) => <option key={c.id} value={String(c.id)}>{c.codigo} — {c.descricao}</option>)}
@@ -325,9 +325,7 @@ export function Vfis0345Page(): JSX.Element {
               <div className="erp-field erp-c3"><label className="erp-label">Código de ajuste do crédito (E111)</label>
                 <input className="erp-input" maxLength={8} value={par.codigo_ajuste ?? ""} placeholder="UF02xxxx" onChange={(e) => setPar({ ...par, codigo_ajuste: e.target.value.toUpperCase() })} /></div>
               <div className="erp-field erp-c5"><label className="erp-label">Conta do ativo padrão (bens da nota)</label>
-                <select className="erp-input" value={par.conta_ativo_id ? String(par.conta_ativo_id) : ""} onChange={(e) => setPar({ ...par, conta_ativo_id: e.target.value ? Number(e.target.value) : null })}>
-                  <option value="">—</option>{contas.map((c) => <option key={c.id} value={String(c.id)}>{c.account_number} — {c.description}</option>)}
-                </select></div>
+                <OpcoesLookup<string> value={par.conta_ativo_id ? String(par.conta_ativo_id) : undefined} opcoes={opcoesDeConta} entityLabel="conta" placeholder="Nenhuma" onChange={(c) => setPar({ ...par, conta_ativo_id: c ? Number(c) : null })} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Parcelas</label>
                 <input className="erp-input num" type="number" value={par.numero_parcelas} onChange={(e) => setPar({ ...par, numero_parcelas: Number(e.target.value) || 0 })} /></div>
               <div className="erp-field erp-c12"><span className="erp-field-hint">O código de ajuste é o de "outros créditos" da tabela 5.1.1 da UF da empresa (8 caracteres, o 4º é 2) — escolha o da sua UF na VFIS0510 ou confirme com o contador. Sem ele, o crédito do CIAP fica fora do E111 e a EFD avisa. 48 parcelas é a regra da LC 87/1996; mude só se a legislação da UF mandar.</span></div>

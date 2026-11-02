@@ -1,3 +1,4 @@
+import { confirmar } from "@/components/ui/dialogos";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   type EntradaDocumento, type SugestaoItem, type ConciliacaoPayload, type LinhaPedidoCompra,
@@ -11,11 +12,16 @@ import {
   loadItems, loadChartOfAccounts, loadFinancialCostCenters, loadEntryOperations, loadWarehouses, resetLookups, type LookupOption,
 } from "@/services/lookups";
 import {
-  chaveConta, lerChave, planoFinanceiro, chavesOrdenadas, distribuirProporcional, parcelasIguais,
+  chaveConta, lerChave, planoFinanceiro, chavesOrdenadas, distribuirProporcional,
   conferirMatriz, paraCentavos, deCentavos,
 } from "./entradaRateio";
 import { DevolucaoCompraPanel } from "./DevolucaoCompraPanel";
 import { hojeLocal } from "@/utils/dataLocal";
+import { PlanoParcelasEditor } from "@/components/ui/PlanoParcelasEditor";
+import { type BlocoPlano, calcularPlano, dataMaisDias, planoParcelasIguais } from "@/utils/planoParcelas";
+import { FORMAS_DE_PAGAMENTO, FORMA_PAGAMENTO_LABELS } from "@/services/financialService";
+import { getDadosFiscaisDoFornecedor } from "@/services/supplierService";
+import { codigoDaCondicao } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "itens" | "financeiro" | "divergencias" | "nota";
@@ -51,11 +57,6 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFraction
 const moneyCent = (c: number) => money(deCentavos(c));
 const qtd = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
-const addDias = (iso: string, dias: number) => {
-  const d = new Date(`${iso}T12:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
-};
 
 function itensDoDoc(doc: EntradaDocumento): ItemEdit[] {
   return doc.itens.map((it) => ({
@@ -93,8 +94,8 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
   const [sug, setSug] = useState<{ itemId: number; q: string; lista: SugestaoItem[]; carregando: boolean } | null>(null);
   const [ped, setPed] = useState<{ itemId: number; lista: LinhaPedidoCompra[]; carregando: boolean } | null>(null);
   const [planoEmLote, setPlanoEmLote] = useState<number | undefined>();
-  const [qtdParcelas, setQtdParcelas] = useState(3);
-  const [intervalo, setIntervalo] = useState(30);
+  const [blocos, setBlocos] = useState<BlocoPlano[]>(() => planoParcelasIguais(Math.max(1, doc.parcelas.length), 30));
+  const [condicao, setCondicao] = useState<number | undefined>();
   const [cancelando, setCancelando] = useState<{ motivo: string } | null>(null);
   const [devolvendo, setDevolvendo] = useState(false);
   // Item da nota que não existe no cadastro: cadastro direto da linha.
@@ -110,6 +111,17 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
     loadChartOfAccounts().then((os) => setPlanos(mapa(os))).catch(() => undefined);
     loadFinancialCostCenters().then((os) => setCentros(mapa(os))).catch(() => undefined);
   }, []);
+
+  // Nota sem duplicatas informadas: o plano começa pela condição do fornecedor.
+  useEffect(() => {
+    if (!doc.supplier_code || doc.parcelas.length > 1) return;
+    let vivo = true;
+    getDadosFiscaisDoFornecedor(doc.supplier_code)
+      .then((f) => (f.condicaoId ? codigoDaCondicao(f.condicaoId) : undefined))
+      .then((c) => { if (vivo && c) setCondicao(c); })
+      .catch(() => undefined);
+    return () => { vivo = false; };
+  }, [doc.supplier_code, doc.parcelas.length]);
 
   const status = (doc.status || "").toUpperCase();
   const parcelasTravadas = doc.parcelas.some((p) => p.conta_pagar_id);
@@ -279,35 +291,38 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
   }
 
   function redistribuir() {
-    setParcelas((ps) => {
-      const dist = distribuirProporcional(ps.map((p) => p.valorCent), alvos);
-      return ps.map((p, i) => ({ ...p, dist: dist[i] }));
-    });
+    if (!contas.length) { onFeedback({ type: "info", message: "Informe o plano de contas dos itens (aba Itens e conciliação) para distribuir as parcelas." }); return; }
+    if (!parcelas.length) { onFeedback({ type: "info", message: "Crie as parcelas antes de distribuir." }); return; }
+    const valores = parcelas.map((p) => p.valorCent);
+    const dist = distribuirProporcional(valores, alvos);
+    setParcelas((ps) => ps.map((p, i) => ({ ...p, dist: dist[i] })));
     setDistManual(false); setDirty(true);
+    const soma = valores.reduce((s, v) => s + v, 0);
+    if (soma !== aPagarCent) {
+      onFeedback({ type: "info", message: `Cada parcela foi distribuída, mas as parcelas somam ${moneyCent(soma)} e o valor a pagar é ${moneyCent(aPagarCent)}: acerte o valor das parcelas.` });
+    } else if (contas.length === 1) {
+      onFeedback({ type: "info", message: `Os itens têm um único plano de contas (${nomeConta(contas[0])}): o valor de cada parcela vai inteiro para ele.` });
+    } else {
+      onFeedback({ type: "success", message: `Cada parcela foi dividida entre os ${contas.length} planos de contas na proporção dos itens.` });
+    }
   }
 
-  function gerarParcelasIguais() {
-    const n = Math.max(1, Math.min(60, qtdParcelas));
-    // Parcelas pelo valor a pagar: com retenção, o fornecedor recebe o líquido.
-    const valores = parcelasIguais(aPagarCent, n);
+  /** A duplicata é o número do título no fornecedor; sem ela na nota, vale a da numeração da NF. */
+  const duplicataPadrao = (numero: number, total: number) => (total > 1 ? `${doc.numero_nf}/${numero}` : String(doc.numero_nf));
+
+  function aplicarPlano() {
+    const { parcelas: geradas, erro } = calcularPlano(blocos, aPagarCent);
+    if (erro) { onFeedback({ type: "error", message: erro }); return; }
     const base = doc.data_emissao || hojeLocal();
-    const dist = distribuirProporcional(valores, alvos);
-    setParcelas(valores.map((v, i) => ({
-      numero: i + 1, vencimento: addDias(base, intervalo * (i + 1)), valorCent: v, forma: "BOLETO", dist: dist[i],
+    const dist = distribuirProporcional(geradas.map((p) => p.valorCent), alvos);
+    const forma = parcelas[0]?.forma ?? "BOLETO";
+    setParcelas(geradas.map((p, i) => ({
+      numero: p.numero, documento: duplicataPadrao(p.numero, geradas.length), vencimento: dataMaisDias(base, p.dias), valorCent: p.valorCent, forma, dist: dist[i],
     })));
     setDistManual(false); setDirty(true);
+    onFeedback({ type: "success", message: `${geradas.length} ${geradas.length === 1 ? "parcela gerada" : "parcelas geradas"}. Grave a conferência para confirmar.` });
   }
 
-  function adicionarParcela() {
-    const usado = parcelas.reduce((s, p) => s + p.valorCent, 0);
-    const resto = Math.max(0, aPagarCent - usado);
-    const ultima = parcelas[parcelas.length - 1];
-    setParcelas((ps) => [...ps, {
-      numero: (ultima?.numero ?? 0) + 1, vencimento: ultima ? addDias(ultima.vencimento, 30) : doc.data_emissao,
-      valorCent: resto, forma: ultima?.forma ?? "BOLETO", dist: new Map(),
-    }]);
-    setDirty(true);
-  }
 
   function removerParcela(i: number) {
     setParcelas((ps) => ps.filter((_, j) => j !== i).map((p, j) => ({ ...p, numero: j + 1 })));
@@ -324,7 +339,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
         cfop_entrada: x.cfopManual && x.cfop ? x.cfop : undefined,
       })),
       parcelas: parcelas.map((p) => ({
-        numero: p.numero, documento: p.documento, data_vencimento: p.vencimento, valor: deCentavos(p.valorCent), forma_pagamento: p.forma,
+        numero: p.numero, documento: p.documento?.trim() || duplicataPadrao(p.numero, parcelas.length), data_vencimento: p.vencimento, valor: deCentavos(p.valorCent), forma_pagamento: p.forma ?? "BOLETO",
         distribuicao: contas
           .map((k) => ({ ...lerChave(k), v: p.dist.get(k) ?? 0 }))
           .filter((a) => a.v > 0)
@@ -360,13 +375,16 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
       return;
     }
     const movimenta = atual.itens.filter((it) => it.movimenta_estoque).length;
-    const ok = window.confirm(
-      `Aprovar a NF-e ${atual.numero_nf}/${atual.serie} de ${atual.razao_social_emitente} no valor de R$ ${money(atual.valor_total)}?\n\n`
-      + `• ${atual.parcelas.length} título(s) no contas a pagar (R$ ${money(atual.valor_a_pagar)}), com o rateio por plano de contas`
-      + (atual.retencoes.length ? `\n• ${atual.retencoes.length} título(s) de imposto retido a recolher (R$ ${money(atual.total_retencoes)})` : "")
-      + (movimenta ? `\n• entrada no estoque de ${movimenta} item(ns) (o que já foi recebido pelo pedido não entra de novo)` : "")
-      + `\n• créditos fiscais e, se configurado, os lançamentos contábeis`,
-    );
+    const ok = await confirmar({
+      titulo: "Aprovar nota de entrada",
+      assunto: `NF-e ${atual.numero_nf}/${atual.serie} · ${atual.razao_social_emitente} · R$ ${money(atual.valor_total)}`,
+      mensagem: "A aprovação gera:\n"
+        + `• ${atual.parcelas.length} título(s) no contas a pagar (R$ ${money(atual.valor_a_pagar)}), com o rateio por plano de contas`
+        + (atual.retencoes.length ? `\n• ${atual.retencoes.length} título(s) de imposto retido a recolher (R$ ${money(atual.total_retencoes)})` : "")
+        + (movimenta ? `\n• entrada no estoque de ${movimenta} item(ns) (o que já foi recebido pelo pedido não entra de novo)` : "")
+        + "\n• créditos fiscais e, se configurado, os lançamentos contábeis",
+      rotulo: "Aprovar", tom: "neutro",
+    });
     if (!ok) return;
     setBusy(true);
     try {
@@ -482,6 +500,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
               <>
                 <div className="erp-field erp-c4"><label className="erp-label">Operação de entrada da nota (padrão dos itens)</label>
                   <LookupField value={opNota} loader={loadEntryOperations} entityLabel="operação de entrada" allowManualCode={false}
+                    vazio="Nenhuma operação cadastrada. Cadastre em VFIS0360."
                     onChange={(c) => { setOpNota(c ? Number(c) : undefined); setDirty(true); }} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label">Plano de contas para os itens sem plano</label>
                   <LookupField value={planoEmLote} loader={loadChartOfAccounts} entityLabel="plano de contas" allowManualCode={false}
@@ -575,6 +594,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                               <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 2fr) minmax(200px, 2fr) minmax(220px, 2fr) 110px", gap: 8, alignItems: "end" }}>
                                 <div><label className="erp-label">Operação de entrada {!e.op && opNota ? "(a da nota)" : ""}</label>
                                   <LookupField value={e.op} loader={loadEntryOperations} entityLabel="operação de entrada" allowManualCode={false}
+                                    vazio="Nenhuma operação cadastrada. Cadastre em VFIS0360."
                                     onChange={(c) => setItem(idx, { op: c ? Number(c) : undefined })} /></div>
                                 <div><label className={`erp-label ${it.movimenta_estoque ? "erp-req" : ""}`}>Almoxarifado {it.movimenta_estoque ? "" : "(não movimenta)"}</label>
                                   <LookupField value={e.almox} loader={loadWarehouses} entityLabel="almoxarifado" allowManualCode={false}
@@ -725,14 +745,13 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
             )}
             {editavel && (
               <>
-                <div className="erp-field erp-c2"><label className="erp-label">Nº de parcelas</label>
-                  <input className="erp-input num" type="number" min={1} max={60} value={qtdParcelas} onChange={(e) => setQtdParcelas(Number(e.target.value))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Intervalo (dias)</label>
-                  <input className="erp-input num" type="number" min={0} value={intervalo} onChange={(e) => setIntervalo(Number(e.target.value))} /></div>
-                <div className="erp-field erp-c8" style={{ alignSelf: "end", display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button className="erp-btn" onClick={gerarParcelasIguais}>Gerar parcelas iguais</button>
-                  <button className="erp-btn" onClick={adicionarParcela}>+ Parcela</button>
-                  <button className="erp-btn" onClick={redistribuir} disabled={!contas.length}>Distribuir proporcionalmente</button>
+                <div className="erp-field erp-c12">
+                  <PlanoParcelasEditor totalCent={aPagarCent} dataBase={doc.data_emissao} blocos={blocos} onBlocos={setBlocos} condicao={condicao} onCondicao={setCondicao}
+                    diasAteEntrega={doc.data_entrada && doc.data_emissao ? Math.max(0, Math.round((Date.parse(doc.data_entrada.slice(0, 10)) - Date.parse(doc.data_emissao.slice(0, 10))) / 86_400_000)) : 0}
+                    onAplicar={aplicarPlano} onErro={(m) => onFeedback({ type: "error", message: m })} />
+                </div>
+                <div className="erp-field erp-c12" style={{ display: "flex", flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+                  <button className="erp-btn" onClick={redistribuir}>Distribuir proporcionalmente</button>
                 </div>
               </>
             )}
@@ -740,13 +759,13 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
             <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
               <table className="erp-grid">
                 <thead><tr>
-                  <th>Nº</th><th>Documento</th><th>Vencimento</th><th style={{ textAlign: "right" }}>Valor</th>
+                  <th>Nº</th><th title="Número da duplicata na nota do fornecedor. Sem duplicata na nota, vale o número da NF com a parcela.">Duplicata</th><th>Vencimento</th><th>Forma</th><th style={{ textAlign: "right" }}>Valor</th>
                   {contas.map((k) => <th key={k} style={{ textAlign: "right", minWidth: 130 }}>{nomeConta(k)}</th>)}
                   <th style={{ textAlign: "right" }}>Distribuído</th>
                   {editavel && <th />}
                 </tr></thead>
                 <tbody>
-                  {parcelas.length === 0 && <tr><td colSpan={6 + contas.length} className="erp-grid-empty">Sem parcelas.</td></tr>}
+                  {parcelas.length === 0 && <tr><td colSpan={7 + contas.length} className="erp-grid-empty">Sem parcelas.</td></tr>}
                   {parcelas.map((p, i) => {
                     const dist = contas.reduce((s, k) => s + (p.dist.get(k) ?? 0), 0);
                     const fecha = !contas.length || dist === p.valorCent;
@@ -754,8 +773,13 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                     return (
                       <tr key={i}>
                         <td>{p.numero}</td>
-                        <td>{editavel ? <input className="erp-input" style={{ height: 30, width: 90 }} value={p.documento ?? ""} onChange={(e) => setParcela(i, { documento: e.target.value })} /> : (p.documento || "—")}</td>
+                        <td>{editavel ? <input className="erp-input" style={{ height: 30, width: 90 }} value={p.documento ?? ""} placeholder={duplicataPadrao(p.numero, parcelas.length)} onChange={(e) => setParcela(i, { documento: e.target.value })} /> : (p.documento || duplicataPadrao(p.numero, parcelas.length))}</td>
                         <td>{editavel ? <input className="erp-input" type="date" style={{ height: 30 }} value={p.vencimento} onChange={(e) => setParcela(i, { vencimento: e.target.value })} /> : dataBR(p.vencimento)}</td>
+                        <td>{editavel
+                          ? <select className="erp-input" aria-label={`Forma de pagamento da parcela ${p.numero}`} style={{ height: 30, width: 130 }} value={p.forma ?? "BOLETO"} onChange={(e) => setParcela(i, { forma: e.target.value })}>
+                              {FORMAS_DE_PAGAMENTO.map((f) => <option key={f} value={f}>{FORMA_PAGAMENTO_LABELS[f]}</option>)}
+                            </select>
+                          : (FORMA_PAGAMENTO_LABELS[p.forma as keyof typeof FORMA_PAGAMENTO_LABELS] ?? p.forma ?? "—")}</td>
                         <td style={{ textAlign: "right" }}>{editavel
                           ? <input className="erp-input num" type="number" step="0.01" style={{ height: 30, width: 120 }} value={deCentavos(p.valorCent)}
                               onChange={(e) => setParcela(i, { valorCent: paraCentavos(Number(e.target.value)) })} />
@@ -778,7 +802,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3}><strong>Itens / parcelas</strong></td>
+                    <td colSpan={4}><strong>Itens / parcelas</strong></td>
                     <td style={{ textAlign: "right" }}><strong>{moneyCent(parcelas.reduce((s, p) => s + p.valorCent, 0))}</strong><br /><small>a pagar {moneyCent(aPagarCent)}</small></td>
                     {contas.map((k) => {
                       const col = parcelas.reduce((s, p) => s + (p.dist.get(k) ?? 0), 0);

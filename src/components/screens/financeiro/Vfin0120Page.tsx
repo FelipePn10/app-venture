@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type PlanoConta, type PlanoContaDTO, type PlanoTipo, type PlanoNatureza, type UsoCadastroResumo,
   listPlanoContasCadastro, createPlanoConta, updatePlanoConta, deletePlanoConta, usoPlanoConta,
@@ -7,6 +7,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { useAuthStore } from "@/store/authStore";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { OpcoesLookup } from "@/components/ui/OpcoesLookup";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const TIPOS: PlanoTipo[] = ["RECEITA", "DESPESA", "ATIVO", "PASSIVO", "PATRIMONIO"];
@@ -21,6 +22,7 @@ export function Vfin0120Page(): JSX.Element {
   const isAdmin = useAuthStore((state) => state.user?.role?.toUpperCase() === "ADMIN");
   const [form, setForm] = useState<PlanoContaDTO>(EMPTY);
   const [list, setList] = useState<PlanoConta[]>([]);
+  const contasPai = useMemo(() => list.map((p) => ({ code: p.codigo, label: p.descricao, sub: enumLabel(p.tipo) })), [list]);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
   // Conta em edição (null = nova) e o uso dela: em uso, só descrição e situação mudam.
@@ -128,8 +130,8 @@ export function Vfin0120Page(): JSX.Element {
               <input className="erp-input" value={form.codigo} placeholder="3.1.01" disabled={travado} onChange={(e) => setF("codigo", e.target.value)} /></div>
             <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label>
               <input className="erp-input" value={form.descricao} onChange={(e) => setF("descricao", e.target.value)} /></div>
-            <div className="erp-field erp-c2"><label className="erp-label">Código Pai</label>
-              <input className="erp-input" value={form.parent_code ?? ""} placeholder="3.1" disabled={travado} onChange={(e) => setF("parent_code", e.target.value)} /></div>
+            <div className="erp-field erp-c2"><label className="erp-label">Conta pai</label>
+              <OpcoesLookup<string> value={form.parent_code || undefined} opcoes={contasPai} entityLabel="conta" placeholder="Nenhuma" disabled={travado} onChange={(c) => setF("parent_code", c ?? "")} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Tipo</label>
               <select className="erp-input" value={form.tipo} disabled={travado} onChange={(e) => setF("tipo", e.target.value as PlanoTipo)}>
                 {TIPOS.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select></div>

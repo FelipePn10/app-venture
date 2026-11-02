@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
+import { confirmar } from "@/components/ui/dialogos";
 import {
   type NcmTaxTable,
   type IcmsInterno,
@@ -106,7 +108,11 @@ function CampoUF({ label, valor, onChange, obrigatorio }: {
   );
 }
 
+/** As tabelas são a lei, iguais para todas as empresas da instalação. */
+const SO_ADMIN = "Estas tabelas valem para todas as empresas e só o administrador as altera";
+
 export function Vfis0110Page(): JSX.Element {
+  const podeEditar = useAuthStore((st) => st.user?.role?.toUpperCase() === "ADMIN");
   const [tab, setTab] = useState<Tab>("ncm");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
@@ -173,7 +179,7 @@ export function Vfis0110Page(): JSX.Element {
   }
 
   async function removeNcm(ncm: string) {
-    if (!window.confirm(`Desativar a tributação do NCM ${ncmComMascara(ncm)}?\n\nNotas novas com este NCM passam a sair sem IPI, PIS e COFINS configurados.`)) return;
+    if (!(await confirmar({ titulo: "Desativar tributação do NCM", assunto: `NCM ${ncmComMascara(ncm)}`, mensagem: "Notas novas com este NCM passam a sair sem IPI, PIS e COFINS configurados.", rotulo: "Desativar", tom: "perigo" }))) return;
     setBusy(true); setFeedback(null);
     try {
       await deleteNcmTax(ncm);
@@ -267,6 +273,7 @@ export function Vfis0110Page(): JSX.Element {
           </div>
 
           <div className="erp-detail-body">
+            {!podeEditar && <div className="erp-feedback info">{SO_ADMIN}. Você pode consultar; as exceções da sua empresa (redução, ST, benefício) ficam na VFIS0320 — Parâmetros ICMS/IPI.</div>}
             {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
             {tab === "ncm" && (
@@ -339,7 +346,7 @@ export function Vfis0110Page(): JSX.Element {
                     </div>
 
                     <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8 }}>
-                      <button className="erp-btn erp-btn-primary" onClick={() => void saveNcm()} disabled={busy}>
+                      <button className="erp-btn erp-btn-primary" onClick={() => void saveNcm()} disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}>
                         {ncmForm.ncm && ncms.some((n) => n.ncm === ncmForm.ncm) ? "Salvar alteração" : "Cadastrar NCM"}
                       </button>
                       <button className="erp-btn" onClick={() => { setNcmForm(EMPTY_NCM); setFeedback(null); }} disabled={busy}>
@@ -390,8 +397,8 @@ export function Vfis0110Page(): JSX.Element {
                               <td className="num">{pct(n.aliq_cofins)}%</td>
                               <td>{n.cst_ipi}/{n.cst_pis}/{n.cst_cofins}</td>
                               <td style={{ display: "flex", gap: 6 }}>
-                                <button className="erp-btn erp-btn-sm" onClick={() => editarNcm(n)} disabled={busy}>Alterar</button>
-                                <button className="erp-btn erp-btn-sm erp-btn-danger" onClick={() => void removeNcm(n.ncm)} disabled={busy}>Desativar</button>
+                                <button className="erp-btn erp-btn-sm" onClick={() => editarNcm(n)} disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}>Alterar</button>
+                                <button className="erp-btn erp-btn-sm erp-btn-danger" onClick={() => void removeNcm(n.ncm)} disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}>Desativar</button>
                               </td>
                             </tr>
                           ))}
@@ -428,7 +435,7 @@ export function Vfis0110Page(): JSX.Element {
                     </div>
                     <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
                       <button className="erp-btn erp-btn-primary" style={{ width: "100%" }}
-                        onClick={() => void saveInterno()} disabled={busy}>Salvar UF</button>
+                        onClick={() => void saveInterno()} disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}>Salvar UF</button>
                     </div>
                   </div>
                 </div>
@@ -453,7 +460,7 @@ export function Vfis0110Page(): JSX.Element {
                               <td>{UF_NAMES[i.uf as keyof typeof UF_NAMES] ?? "—"}</td>
                               <td className="num">{pct(i.aliq_icms)}%</td>
                               <td className="num">{pct(i.aliq_fcp)}%</td>
-                              <td><button className="erp-btn erp-btn-sm" disabled={busy}
+                              <td><button className="erp-btn erp-btn-sm" disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}
                                 onClick={() => setInternoForm({ ...i })}>Alterar</button></td>
                             </tr>
                           ))}
@@ -489,7 +496,7 @@ export function Vfis0110Page(): JSX.Element {
                     </div>
                     <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}>
                       <button className="erp-btn erp-btn-primary" style={{ width: "100%" }}
-                        onClick={() => void saveInter()} disabled={busy}>Salvar alíquota</button>
+                        onClick={() => void saveInter()} disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}>Salvar alíquota</button>
                     </div>
                   </div>
                 </div>
@@ -524,7 +531,7 @@ export function Vfis0110Page(): JSX.Element {
                               <td style={{ fontWeight: 600 }}>{i.origin_uf}</td>
                               <td style={{ fontWeight: 600 }}>{i.destination_uf}</td>
                               <td className="num">{pct(i.aliq_icms)}%</td>
-                              <td><button className="erp-btn erp-btn-sm" disabled={busy}
+                              <td><button className="erp-btn erp-btn-sm" disabled={busy || !podeEditar} title={podeEditar ? undefined : SO_ADMIN}
                                 onClick={() => setInterForm({ ...i })}>Alterar</button></td>
                             </tr>
                           ))}

@@ -6,6 +6,28 @@
  */
 
 const LABELS: Record<string, string> = {
+  VENDA: 'Venda',
+  DEVOLUCAO: 'Devolução',
+  REMESSA: 'Remessa',
+  REMESSA_CONSIGNACAO: 'Remessa em consignação',
+  REMESSA_ARMAZENAGEM: 'Remessa para armazenagem',
+  REMESSA_BENEFICIAMENTO: 'Remessa para beneficiamento',
+  RETORNO_BENEFICIAMENTO: 'Retorno de beneficiamento',
+  SIMPLES_REMESSA: 'Simples remessa',
+  TRANSFERENCIA: 'Transferência',
+  VENDA_CONSIGNACAO: 'Venda em consignação',
+  COMPLEMENTAR_ICM: 'Complementar de ICMS',
+  COMPLEMENTAR_IPI: 'Complementar de IPI',
+  DEMONSTRACAO: 'Demonstração',
+  EMPRESTIMO: 'Empréstimo',
+  FATURAMENTO_ANTECIPADO: 'Faturamento antecipado',
+  PRESTACAO_SERVICOS: 'Prestação de serviços',
+  OUTROS: 'Outros',
+  ATUALIZA: 'Atualiza o estoque',
+  NAO_ATUALIZA: 'Não atualiza o estoque',
+  TRANSFERENCIA_EXTERNA: 'Transferência externa',
+  TRIBUTADO: 'Tributado',
+  ISENTO: 'Isento',
   // Situações genéricas
   DRAFT: 'Rascunho', OPEN: 'Aberto', CLOSED: 'Encerrado', PENDING: 'Pendente',
   ACTIVE: 'Ativo', INACTIVE: 'Inativo', APPROVED: 'Aprovado', REJECTED: 'Rejeitado',

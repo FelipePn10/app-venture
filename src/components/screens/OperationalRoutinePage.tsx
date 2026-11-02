@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { confirmar } from "@/components/ui/dialogos";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { currentUserId, errMessage, httpClient, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { downloadBlob } from "@/services/fileDownload";
 import { fieldLabel } from "@/utils/fieldLabels";
 import { useAuthStore } from "@/store/authStore";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadConsumerServiceCalls, loadCustomers, loadEmployees, loadItems, loadMachines, loadMarketSegments, loadRecurringAdjustments, loadRecurringSales, loadRepresentativeInterestClassifications, loadRepresentatives, loadSalesOrders, loadSalesPlans, loadSalesPricePolicies, loadSalesTables, loadSuppliers, loadTechnicalAssistanceCalls, loadWarehouses, loadPdmGroups, loadCharacteristics, loadOperations, loadCarriers, loadCostCenters, loadCostCentersById, loadMachinesById, loadMarketSegmentsById, type LookupLoader } from "@/services/lookups";
+import { loadConsumerServiceCalls, loadCustomers, loadFiscalExits, loadShipmentLoads, loadEmployees, loadItems, loadMachines, loadMarketSegments, loadRecurringAdjustments, loadRecurringSales, loadRepresentativeInterestClassifications, loadRepresentatives, loadSalesOrders, loadSalesPlans, loadSalesPricePolicies, loadSalesTables, loadSuppliers, loadTechnicalAssistanceCalls, loadWarehouses, loadPdmGroups, loadCharacteristics, loadOperations, loadCarriers, loadCostCenters, loadCostCentersById, loadMachinesById, loadMarketSegmentsById, type LookupLoader } from "@/services/lookups";
 import { listNotificationUsers } from "@/services/notificationService";
 
 export type RoutineField = {
@@ -86,6 +87,8 @@ const ENUM_OPTIONS: Record<string, string[]> = {
 
 
 const VALUE_LABELS: Record<string, string> = {
+  ciencia: "Ciência da operação", confirmacao: "Confirmação da operação",
+  desconhecimento: "Desconhecimento da operação", nao_realizada: "Operação não realizada",
   DRAFT: "Rascunho", ACTIVE: "Ativo", INACTIVE: "Inativo", SCHEDULED: "Programado",
   ARRIVED: "Recebido", IN_CONFERENCE: "Em conferência", RELEASED: "Liberado", BLOCKED: "Bloqueado",
   CANCELLED: "Cancelado", APPROVED: "Aprovado", OBSOLETE: "Obsoleto", PLANNED: "Planejado",
@@ -137,6 +140,8 @@ function isDateTimeField(name: string): boolean { return name.endsWith("_time") 
 
 function lookupFor(name: string, label = ""): LookupLoader | undefined {
   const key = `${name} ${label}`.toLowerCase();
+  if (/load_code|\bcarga\b/.test(key)) return loadShipmentLoads;
+  if (/fiscal_exit|nf-e de saída/.test(key)) return loadFiscalExits;
   if (/chamado do consumidor|consumer.?service.?call/.test(key)) return loadConsumerServiceCalls;
   if (/chamado de assistência|technical.?assistance.?call/.test(key)) return loadTechnicalAssistanceCalls;
   if (/user_code|responsible_user|usuário responsável|funcionário/.test(key)) return loadEmployees;
@@ -364,7 +369,7 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
         } else if (field.name === "__body" && value && typeof value === "object") Object.assign(body, value);
         else if (value !== undefined) body[field.name] = value;
       }
-      if (operation.destructive && !window.confirm(`Confirma a operação “${operation.label}”?`)) return;
+      if (operation.destructive && !(await confirmar({ titulo: operation.label, mensagem: "Esta operação altera dados e não se desfaz sozinha. Quer continuar?", rotulo: "Confirmar", tom: "perigo" }))) return;
       const upload = (operation.fields ?? []).find((field) => field.type === "file-upload");
       let requestData: unknown = body;
       if (upload) {

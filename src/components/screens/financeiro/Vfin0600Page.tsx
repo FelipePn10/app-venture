@@ -2,11 +2,11 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type Adiantamento, type AdiantamentoDTO, type AdiantamentoTipo,
   ADIANTAMENTO_TIPOS, ADIANTAMENTO_TIPO_LABELS, ADIANTAMENTO_STATUS_LABELS,
-  listAdiantamentos, createAdiantamento, aplicarAdiantamento, tipoDeTituloDoAdiantamento,
+  listAdiantamentos, createAdiantamento, aplicarAdiantamento, cancelarAdiantamento, tipoDeTituloDoAdiantamento,
 } from "@/services/adiantamentoService";
 import {
   type ContaPagar, type ContaReceber,
-  listContasPagar, listContasReceber, estaEmAberto,
+  listContasPagar, listContasReceber, estaEmAberto, saldoContaPagar, saldoContaReceber,
 } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -14,6 +14,7 @@ import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCustomers, loadSuppliers, loadBankAccounts } from "@/services/lookups";
 import { hojeLocal } from "@/utils/dataLocal";
+import { pedirTexto } from "@/components/ui/dialogos";
 
 /**
  * VFIN0600 — Adiantamentos de Clientes e Fornecedores.
@@ -36,6 +37,11 @@ import { hojeLocal } from "@/utils/dataLocal";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const today = () => hojeLocal();
+/** "2026-11-02" ou "2026-11-02T00:00:00Z" → "02/11/2026", sem passar por Date (que puxaria um dia para trás no fuso de Brasília). */
+const dataBR = (iso?: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "—";
+};
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const EMPTY: AdiantamentoDTO = {
@@ -87,6 +93,7 @@ export function Vfin0600Page(): JSX.Element {
   }, [tipoFiltro, parceiroFiltro]);
   useEffect(() => { void reload(); }, [reload]);
 
+  const validos = useMemo(() => lista.filter((a) => a.status !== "CANCELADO"), [lista]);
   const totais = useMemo(() => {
     const ativos = lista.filter((a) => a.is_active && a.status !== "CANCELADO");
     const pagar = ativos.filter((a) => a.tipo === "PAGAR");
@@ -151,12 +158,12 @@ export function Vfin0600Page(): JSX.Element {
       ? listContasPagar({ fornecedor_id: a.parceiro_id }).then((rows: ContaPagar[]) =>
           rows.filter((c) => estaEmAberto(c.status)).map<TituloElegivel>((c) => ({
             id: c.id, documento: c.numero_documento, vencimento: c.data_vencimento,
-            saldo: c.valor_bruto - (c.valor_pago ?? 0), parceiroID: c.fornecedor_id,
+            saldo: saldoContaPagar(c), parceiroID: c.fornecedor_id,
           })))
       : listContasReceber({ cliente_id: a.parceiro_id }).then((rows: ContaReceber[]) =>
           rows.filter((c) => estaEmAberto(c.status)).map<TituloElegivel>((c) => ({
             id: c.id, documento: c.numero_documento, vencimento: c.data_vencimento,
-            saldo: c.valor_bruto - (c.valor_recebido ?? 0), parceiroID: c.cliente_id,
+            saldo: saldoContaReceber(c), parceiroID: c.cliente_id,
           })));
     void carregar
       .then((rows) => {
@@ -171,6 +178,30 @@ export function Vfin0600Page(): JSX.Element {
       .catch((e) => setFeedback({ type: "error", message: errMessage(e, "Falha ao listar os títulos do parceiro.") }))
       .finally(() => setBusy(false));
   };
+
+  /** Cancela um adiantamento lançado por engano: o banco recebe o lançamento inverso. */
+  async function cancelar(a: Adiantamento) {
+    const motivo = await pedirTexto({
+      titulo: "Cancelar adiantamento",
+      mensagem: `O valor de ${money(a.valor_original)} volta para a conta bancária com um lançamento inverso no fluxo de caixa. Só é possível porque nada deste adiantamento foi aplicado ainda.`,
+      assunto: `Adiantamento #${a.id}${a.numero_documento ? ` — documento ${a.numero_documento}` : ""}`,
+      rotulo: "Motivo do cancelamento",
+      minimo: 5,
+      multilinha: true,
+      rotuloConfirmar: "Cancelar adiantamento",
+      tom: "perigo",
+    });
+    if (motivo === null) return;
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await cancelarAdiantamento(a.id, motivo.trim());
+      setFeedback({ type: "success", message: `Adiantamento #${a.id} cancelado. O valor foi estornado na conta bancária.` });
+      await reload();
+    } catch (e) {
+      setFeedback({ type: "error", message: errMessage(e, "Não foi possível cancelar o adiantamento.") });
+    } finally { setBusy(false); }
+  }
 
   async function confirmarAplicacao() {
     if (!aplicando) return;
@@ -343,7 +374,7 @@ export function Vfin0600Page(): JSX.Element {
                           <option value={0}>— escolha o título —</option>
                           {titulos.map((t) => (
                             <option key={t.id} value={t.id}>
-                              {t.documento} · vence {t.vencimento?.slice(0, 10)} · saldo {money(t.saldo)}
+                              {t.documento} · vence {dataBR(t.vencimento)} · saldo {money(t.saldo)}
                             </option>
                           ))}
                         </select>
@@ -401,7 +432,7 @@ export function Vfin0600Page(): JSX.Element {
                                 ? <EntityName code={a.parceiro_id} loader={a.tipo === "PAGAR" ? loadSuppliers : loadCustomers} />
                                 : "—"}</td>
                               <td>{a.numero_documento || "—"}</td>
-                              <td>{a.data_adiantamento?.slice(0, 10)}</td>
+                              <td>{dataBR(a.data_adiantamento)}</td>
                               <td className="num">{money(a.valor_original)}</td>
                               <td className="num">{money(a.valor_utilizado)}</td>
                               <td className="num">{money(a.saldo)}</td>
@@ -411,6 +442,11 @@ export function Vfin0600Page(): JSX.Element {
                                   <button className="erp-btn erp-btn-sm" disabled={busy}
                                     onClick={() => abrirAplicacao(a)}>Aplicar</button>
                                 )}
+                                {a.valor_utilizado < 0.005 && a.status !== "CANCELADO" && a.is_active && (
+                                  <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} style={{ marginLeft: 4 }}
+                                    title="Estorna a entrada/saída no banco. Só é possível enquanto nada do saldo foi aplicado."
+                                    onClick={() => void cancelar(a)}>Cancelar</button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -418,10 +454,10 @@ export function Vfin0600Page(): JSX.Element {
                         {lista.length > 0 && (
                           <tfoot>
                             <tr>
-                              <td colSpan={5}>{lista.length} adiantamento(s)</td>
-                              <td className="num">{money(lista.reduce((s, a) => s + a.valor_original, 0))}</td>
-                              <td className="num">{money(lista.reduce((s, a) => s + a.valor_utilizado, 0))}</td>
-                              <td className="num">{money(lista.reduce((s, a) => s + a.saldo, 0))}</td>
+                              <td colSpan={5}>{lista.length} adiantamento(s){lista.length > validos.length ? ` · ${lista.length - validos.length} cancelado(s) fora dos totais` : ""}</td>
+                              <td className="num">{money(validos.reduce((s, a) => s + a.valor_original, 0))}</td>
+                              <td className="num">{money(validos.reduce((s, a) => s + a.valor_utilizado, 0))}</td>
+                              <td className="num">{money(validos.reduce((s, a) => s + a.saldo, 0))}</td>
                               <td colSpan={2} />
                             </tr>
                           </tfoot>

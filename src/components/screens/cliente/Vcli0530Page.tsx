@@ -11,19 +11,19 @@ const NF_TYPES = ["VENDA", "DEVOLUCAO", "REMESSA", "REMESSA_CONSIGNACAO", "REMES
 
 const NF_FIELDS: FieldSpec[] = [
   { key: "description", label: "Descrição", col: 5, required: true },
-  { key: "type", label: "Natureza", kind: "select", options: NF_TYPES, col: 4 },
-  { key: "stock_movement", label: "Estoque", kind: "select", options: ["ATUALIZA", "NAO_ATUALIZA", "TRANSFERENCIA_EXTERNA"], col: 3 },
-  { key: "icms_type", label: "Situação ICMS", kind: "select", options: ["TRIBUTADO", "ISENTO", "OUTROS"], col: 3 },
+  { key: "type", label: "Natureza", kind: "select", options: NF_TYPES, col: 4, required: true, padrao: "VENDA" },
+  { key: "stock_movement", label: "Estoque", kind: "select", options: ["ATUALIZA", "NAO_ATUALIZA", "TRANSFERENCIA_EXTERNA"], col: 3, required: true, padrao: "ATUALIZA" },
+  { key: "icms_type", label: "Situação ICMS", kind: "select", options: ["TRIBUTADO", "ISENTO", "OUTROS"], col: 3, required: true, padrao: "TRIBUTADO" },
   { key: "icms_pct", label: "% ICMS", kind: "number", col: 2 }, { key: "icms_reduction_pct", label: "% Red. ICMS", kind: "number", col: 2 },
   { key: "ipi_pct", label: "% IPI", kind: "number", col: 2 }, { key: "pis_pct", label: "% PIS", kind: "number", col: 2 }, { key: "cofins_pct", label: "% COFINS", kind: "number", col: 2 },
   { key: "issqn_pct", label: "% ISSQN", kind: "number", col: 2 }, { key: "ir_pct", label: "% IR", kind: "number", col: 2 }, { key: "csll_pct", label: "% CSLL", kind: "number", col: 2 }, { key: "inss_pct", label: "% INSS", kind: "number", col: 2 },
-  { key: "generates_revenue", label: "Gera receita", kind: "bool", col: 3 }, { key: "updates_inventory", label: "Atualiza estoque", kind: "bool", col: 3 },
-  { key: "generates_financial_title", label: "Gera título", kind: "bool", col: 3 }, { key: "considers_goals", label: "Conta metas", kind: "bool", col: 3 },
+  { key: "generates_revenue", label: "Gera receita", kind: "bool", padrao: true, col: 3 }, { key: "updates_inventory", label: "Atualiza estoque", kind: "bool", padrao: true, col: 3 },
+  { key: "generates_financial_title", label: "Gera título", kind: "bool", padrao: true, col: 3 }, { key: "considers_goals", label: "Conta metas", kind: "bool", col: 3 },
   { key: "calc_substitution_tax", label: "Calc. ICMS-ST", kind: "bool", col: 3 }, { key: "calc_icms_deferral", label: "Calc. diferimento", kind: "bool", col: 3 },
-  { key: "calc_pis_cofins", label: "Calc. PIS/COFINS", kind: "bool", col: 3 }, { key: "calc_difal", label: "Calc. DIFAL", kind: "bool", col: 3 },
-  { key: "requires_sales_order", label: "Exige pedido", kind: "bool", col: 3 }, { key: "lists_fiscal_books", label: "Livros fiscais", kind: "bool", col: 3 },
-  { key: "baixa_pedido", label: "Baixa pedido", kind: "bool", col: 3 }, { key: "gera_titulo_dev", label: "Título devolução", kind: "bool", col: 3 }, { key: "exige_suframa", label: "Exige SUFRAMA", kind: "bool", col: 3 },
-  { key: "model_nf", label: "Modelo NF", kind: "select", options: ["55", "65"], col: 2 },
+  { key: "calc_pis_cofins", label: "Calc. PIS/COFINS", kind: "bool", col: 3 }, { key: "calc_difal", label: "Calc. DIFAL", kind: "bool", padrao: true, col: 3 },
+  { key: "requires_sales_order", label: "Exige pedido", kind: "bool", col: 3 }, { key: "lists_fiscal_books", label: "Livros fiscais", kind: "bool", padrao: true, col: 3 },
+  { key: "baixa_pedido", label: "Baixa pedido", kind: "bool", padrao: true, col: 3 }, { key: "gera_titulo_dev", label: "Título devolução", kind: "bool", col: 3 }, { key: "exige_suframa", label: "Exige SUFRAMA", kind: "bool", col: 3 },
+  { key: "model_nf", label: "Modelo NF", kind: "select", options: ["55", "65"], col: 2, padrao: "55" },
   { key: "cst_icms", label: "CST ICMS", col: 2 }, { key: "csosn_icms", label: "CSOSN", col: 2 }, { key: "cst_ipi", label: "CST IPI", col: 2 }, { key: "cst_pis", label: "CST PIS", col: 2 }, { key: "cst_cofins", label: "CST COFINS", col: 2 },
   { key: "ir_pct_presumption", label: "% Presunção IR", kind: "number", col: 3 }, { key: "csll_pct_presumption", label: "% Presunção CSLL", kind: "number", col: 3 },
 
@@ -33,7 +33,7 @@ const NF_FIELDS: FieldSpec[] = [
   { key: "lista_valor_contabil", label: "Lista o valor contábil", kind: "bool", col: 3 },
   { key: "lista_registro_saida", label: "Lista no registro de saída", kind: "bool", col: 3 },
   { key: "lista_icms_ipi", label: "Lista no livro de ICMS/IPI", kind: "bool", col: 3 },
-  { key: "sintegra_sped_fiscal", label: "Entra no SINTEGRA / SPED Fiscal", kind: "bool", col: 3 },
+  { key: "sintegra_sped_fiscal", label: "Entra no SINTEGRA / SPED Fiscal", kind: "bool", padrao: true, col: 3 },
   { key: "sisdeclara", label: "Entra no Sisdeclara", kind: "bool", col: 3 },
 
   // ── Cálculos especiais de ICMS e benefícios ─────────────────────────────
@@ -103,7 +103,7 @@ export function Vcli0530Page(): JSX.Element {
             <button className={`erp-tab ${tab === "imposto" ? "active" : ""}`} onClick={() => setTab("imposto")}>Tipo de Imposto</button>
           </div>
           {tab === "nf" && <SupportCrud resource="invoice-types" fields={NF_FIELDS}
-            columns={[{ key: "description", label: "Descrição" }, { key: "type", label: "Natureza" }, { key: "model_nf", label: "Modelo" }, { key: "generates_revenue", label: "Receita", kind: "bool" }]} />}
+            columns={[{ key: "description", label: "Descrição" }, { key: "type", label: "Natureza", kind: "enum" }, { key: "model_nf", label: "Modelo" }, { key: "generates_revenue", label: "Receita", kind: "bool" }]} />}
           {tab === "imposto" && <SupportCrud resource="tax-types" fields={TAX_FIELDS}
             columns={[{ key: "description", label: "Descrição" }, { key: "is_consumer", label: "Consumidor", kind: "bool" }]} />}
         </div>

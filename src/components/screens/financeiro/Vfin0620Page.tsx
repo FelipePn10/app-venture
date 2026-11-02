@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { confirmar } from "@/components/ui/dialogos";
 import {
   type ImportacaoOFX, type ConferenciaDoOFX, type ContaBancaria,
   importarOFX, conferirArquivoOFX, listContasBancarias,
@@ -80,10 +81,12 @@ export function Vfin0620Page(): JSX.Element {
     if (!arquivo || !conferencia?.valido) {
       setFeedback({ type: "error", message: "Escolha um arquivo OFX válido antes de importar." }); return;
     }
-    if (contaDivergente && !window.confirm(
-      `O arquivo é da conta ${conferencia.conta} e a conta escolhida é ${contaEscolhida?.conta}.\n\n`
-      + "Importar o extrato de uma conta em outra concilia pagamentos com movimentos que nunca existiram ali.\n\n"
-      + "Importar mesmo assim?")) {
+    if (contaDivergente && !(await confirmar({
+      titulo: "Conta diferente da escolhida",
+      assunto: `Arquivo: conta ${conferencia.conta} · Escolhida: conta ${contaEscolhida?.conta}`,
+      mensagem: "Importar o extrato de uma conta em outra concilia pagamentos com movimentos que nunca existiram ali.",
+      rotulo: "Importar mesmo assim", tom: "perigo",
+    }))) {
       return;
     }
     setBusy(true); setFeedback(null);

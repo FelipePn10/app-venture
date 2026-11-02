@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { pedirTexto } from "@/components/ui/dialogos";
 import {
   type CfgSet, type CfgVariable,
   listSets, createSet, updateSet, deleteSet,
@@ -94,7 +95,7 @@ export function ConjuntosTab({ aviso }: Props): JSX.Element {
               <span className="erp-list-sub">{s.description}</span>
               <div className="erp-list-meta">
                 <button className="erp-btn erp-btn-sm" title="Renomear"
-                  onClick={(e) => { e.stopPropagation(); const nome = window.prompt("Novo nome do conjunto:", s.description); if (nome?.trim()) void executar(async () => { await updateSet(s.id!, nome.trim()); setSets(await listSets()); }); }}>✎</button>
+                  onClick={(e) => { e.stopPropagation(); void pedirTexto({ titulo: "Renomear conjunto", rotulo: "Novo nome", valorInicial: s.description, rotuloConfirmar: "Renomear" }).then((nome) => { if (nome) void executar(async () => { await updateSet(s.id!, nome.trim()); setSets(await listSets()); }); }); }}>✎</button>
                 <button className="erp-btn erp-btn-danger erp-btn-sm" title="Desativar"
                   onClick={(e) => { e.stopPropagation(); void executar(async () => { await deleteSet(s.id!); setSets(await listSets()); if (selecionado?.id === s.id) { setSelecionado(null); setVariaveis([]); } }); }}>×</button>
               </div>

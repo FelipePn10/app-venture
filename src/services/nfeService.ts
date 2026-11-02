@@ -11,22 +11,26 @@ export type TipoRateio = 'VALOR' | 'PESO';
 
 export interface ExitItemDTO {
   sequence: number;
-  item_code: string;
+  /** Vazio em linha sem item do cadastro: o campo não vai na requisição. */
+  item_code?: string;
   ncm: string;
   cfop: string;
-  quantidade: number;
+  quantity: number;
   unit_price: number;
   total_price: number;
   origem_mercadoria: string;
   description: string;
+  unidade_comercial?: string;
+  codigo_produto?: string;
   mva_pct?: number;
   aliq_interna_destino_st?: number;
   red_base_st_pct?: number;
 }
 
 export interface CreateExitDTO {
-  numero_nf: number;
-  serie: string;
+  /** Número e série são da emissora, na autorização. Só para quem ainda os informa. */
+  numero_nf?: number;
+  serie?: string;
   data_emissao: string;
   data_saida: string;
   cnpj_destinatario: string;
@@ -112,6 +116,8 @@ export interface ExitStatus {
   chave_nfe?: string;
   protocolo?: string;
   motivo?: string;
+  danfe_url?: string;
+  xml_url?: string;
   /** Efeitos (títulos, estoque, pedido) que ficaram pendentes ao autorizar. */
   avisos?: string[];
 }
@@ -131,7 +137,7 @@ export function parseExit(raw: unknown): FiscalExit {
     valor_ipi: parseNum(o, 'valor_ipi', 'ValorIpi'),
     valor_pis: parseNum(o, 'valor_pis', 'ValorPis'),
     valor_cofins: parseNum(o, 'valor_cofins', 'ValorCofins'),
-    chave_nfe: parseStr(o, 'chave_nfe', 'ChaveNfe'),
+    chave_nfe: parseStr(o, 'chave_acesso', 'chave_nfe', 'ChaveNfe'),
     protocolo: parseStr(o, 'protocolo', 'Protocolo'),
     focus_ref: parseStr(o, 'focus_ref', 'FocusRef'),
     finalidade: parseNum(o, 'finalidade') || undefined,
@@ -149,6 +155,112 @@ export async function createExit(dto: CreateExitDTO): Promise<FiscalExit> {
   const { data } = await httpClient.post(`${BASE}/exits/create`, dto);
   return parseExit(data);
 }
+
+// ─── Dados para a nota avulsa ───────────────────────────────────────────────
+
+export interface CfopSugerido { cfop: string; natureza: string }
+
+export interface EnderecoDoDestinatario extends CfopSugerido {
+  tipo: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
+  /** O endereço que a nota usa se ninguém escolher outro. */
+  sugerido: boolean;
+  /** O que a SEFAZ exige e não está preenchido no cadastro. */
+  faltando: string[];
+}
+
+export interface DestinatarioDaNota {
+  customer_code: number;
+  nome: string;
+  documento: string;
+  tipo_pessoa: TipoPessoa;
+  ie: string;
+  email: string;
+  telefone: string;
+  finalidade_compra: string;
+  invoice_type_id?: number;
+  bloqueado: boolean;
+  enderecos: EnderecoDoDestinatario[];
+  cfop_sem_endereco: CfopSugerido;
+}
+
+function parseCfopSugerido(o: Obj): CfopSugerido {
+  return { cfop: parseStr(o, 'cfop'), natureza: parseStr(o, 'natureza') };
+}
+
+export async function getDestinatarioDaNota(customerCode: number): Promise<DestinatarioDaNota> {
+  const { data } = await httpClient.get(`${BASE}/exits/destinatario/${customerCode}`);
+  const o = unwrapObject(data);
+  return {
+    customer_code: parseNum(o, 'customer_code'),
+    nome: parseStr(o, 'nome'),
+    documento: parseStr(o, 'documento'),
+    tipo_pessoa: parseStr(o, 'tipo_pessoa') === 'F' ? 'F' : 'J',
+    ie: parseStr(o, 'ie'),
+    email: parseStr(o, 'email'),
+    telefone: parseStr(o, 'telefone'),
+    finalidade_compra: parseStr(o, 'finalidade_compra'),
+    invoice_type_id: parseNum(o, 'invoice_type_id') || undefined,
+    bloqueado: o['bloqueado'] === true,
+    enderecos: unwrapArray(o['enderecos']).map((raw) => {
+      const e = unwrapObject(raw);
+      return {
+        ...parseCfopSugerido(e),
+        tipo: parseStr(e, 'tipo'),
+        logradouro: parseStr(e, 'logradouro'),
+        numero: parseStr(e, 'numero'),
+        complemento: parseStr(e, 'complemento'),
+        bairro: parseStr(e, 'bairro'),
+        municipio: parseStr(e, 'municipio'),
+        uf: parseStr(e, 'uf'),
+        cep: parseStr(e, 'cep'),
+        sugerido: e['sugerido'] === true,
+        faltando: unwrapArray(e['faltando']).map(String),
+      };
+    }),
+    cfop_sem_endereco: parseCfopSugerido(unwrapObject(o['cfop_sem_endereco'])),
+  };
+}
+
+export async function sugerirCfopDaVenda(uf: string, ie: string, tipoPessoa: TipoPessoa): Promise<CfopSugerido> {
+  const { data } = await httpClient.get(`${BASE}/exits/sugestao-cfop`, { params: { uf, ie, tipo_pessoa: tipoPessoa } });
+  return parseCfopSugerido(unwrapObject(data));
+}
+
+export interface CreateExitFromLoadDTO {
+  load_code: number; serie: string; data_emissao: string; data_saida: string;
+  customer_code?: number; cnpj_destinatario: string; razao_social_destinatario: string;
+  ie_destinatario: string; uf_destinatario: string; tipo_pessoa: TipoPessoa;
+  cfop: string; natureza_operacao: string;
+  valor_frete: number; valor_seguro: number; valor_desconto: number;
+}
+
+export async function createExitFromLoad(dto: CreateExitFromLoadDTO): Promise<FiscalExit> {
+  const { data } = await httpClient.post(`${BASE}/exits/from-load`, dto);
+  return parseExit(data);
+}
+
+/** O cliente da carga, quando todos os romaneios dela são de um mesmo pedido/cliente. */
+export async function getClienteDaCarga(loadCode: number): Promise<number | undefined> {
+  const { data: carga } = await httpClient.get(`/api/shipments/loads/${loadCode}`);
+  const romaneios = unwrapArray(unwrapObject(carga)['shipments']).map((r) => parseNum(unwrapObject(r), 'shipment_code'));
+  const clientes = new Set<number>();
+  for (const code of romaneios) {
+    const { data: romaneio } = await httpClient.get(`/api/shipments/${code}`);
+    const pedido = parseNum(unwrapObject(romaneio), 'sales_order_code');
+    if (!pedido) return undefined;
+    const { data: ped } = await httpClient.get(`/api/sales-order/${pedido}`);
+    clientes.add(parseNum(unwrapObject(ped), 'customer_code'));
+  }
+  return clientes.size === 1 ? [...clientes][0] || undefined : undefined;
+}
+
 export async function authorizeExit(code: number): Promise<FiscalExit> {
   const { data } = await httpClient.post(`${BASE}/exits/${code}/authorize`, {});
   return parseExit(data);
@@ -208,8 +320,16 @@ export async function getExitStatus(id: number): Promise<ExitStatus> {
     chave_nfe: parseStr(o, 'chave_nfe', 'ChaveNfe'),
     protocolo: parseStr(o, 'protocolo', 'Protocolo'),
     motivo: parseStr(o, 'motivo', 'Motivo'),
+    danfe_url: parseStr(o, 'danfe_url') || undefined,
+    xml_url: parseStr(o, 'xml_url') || undefined,
     avisos: Array.isArray(o.avisos) ? (o.avisos as unknown[]).map(String) : [],
   };
+}
+/** Endereços do DANFE (PDF) e do XML de uma nota autorizada ou cancelada. */
+export async function getExitDocumentos(id: number): Promise<{ danfe_url: string; xml_url: string }> {
+  const { data } = await httpClient.get(`${BASE}/exits/${id}/danfe`);
+  const o = unwrapObject(data);
+  return { danfe_url: parseStr(o, 'danfe_url'), xml_url: parseStr(o, 'xml_url') };
 }
 /**
  * Prévia da NF-e: a nota montada exatamente como será transmitida, com a lista
@@ -696,4 +816,10 @@ export async function createCte(dto: CreateCteDTO): Promise<Cte> {
 export async function authorizeCte(code: number): Promise<Cte> {
   const { data } = await httpClient.post(`${BASE}/cte/${code}/authorize`, {});
   return parseCte(data);
+}
+
+/** Como chamar a nota numa mensagem: antes de autorizada ela ainda não tem número. */
+export function rotuloDaNota(nota: { numero_nf?: number; serie?: string }, semNumero = "A nota"): string {
+  if (!nota.numero_nf) return semNumero;
+  return `NF-e ${nota.numero_nf}${nota.serie ? `/${nota.serie}` : ""}`;
 }

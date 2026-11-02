@@ -214,7 +214,7 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
                 <table className="erp-grid">
                   <thead><tr><th>NF</th><th>Situação</th><th style={{ textAlign: "right" }}>Total</th></tr></thead>
                   <tbody>{previa.notas_do_pedido.map((n) => (
-                    <tr key={n.id}><td>{n.numero_nf}</td><td>{ROTULO_STATUS_NF[n.status] ?? n.status}</td><td style={{ textAlign: "right" }}>{money(n.valor_total)}</td></tr>
+                    <tr key={n.id}><td>{n.numero_nf || "—"}</td><td>{ROTULO_STATUS_NF[n.status] ?? n.status}</td><td style={{ textAlign: "right" }}>{money(n.valor_total)}</td></tr>
                   ))}</tbody>
                 </table>
               </div></div>

@@ -5,3 +5,4 @@ export { Badge } from './Badge';
 export { ActionBar } from './ActionBar';
 export { ExportButton, type ExportButtonProps, type ExportTable } from './ExportButton';
 export { ConfirmDialog } from './ConfirmDialog';
+export { confirmar, pedirTexto, type ConfirmarOpcoes, type PedirTextoOpcoes } from './dialogos';

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { confirmar } from "@/components/ui/dialogos";
 import {
   type SalesQuotationParametersDTO,
   type CommissionPatternDTO,
@@ -98,7 +99,7 @@ export function Vvnd0310Page(): JSX.Element {
   });
 
   const restaurarParametros = () => run(async () => {
-    if (!window.confirm("Restaurar os parâmetros padrão do sistema para esta empresa? As personalizações atuais serão removidas.")) return;
+    if (!(await confirmar({ titulo: "Restaurar parâmetros padrão", mensagem: "As personalizações atuais desta empresa serão removidas.", rotulo: "Restaurar", tom: "perigo" }))) return;
     setParams(await resetSalesQuotationParameters());
     setFeedback({ type: "success", message: "Parâmetros restaurados para os padrões do sistema." });
   });

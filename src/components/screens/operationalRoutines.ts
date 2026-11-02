@@ -6,6 +6,7 @@ const list = (path: string, fields: RoutineField[] = [], query: string[] = [], l
 const create = (path: string, example: string, adminOnly = false, label = "Cadastrar"): RoutineOperation => ({ label, method: "POST", path, fields: [json(example)], adminOnly });
 const remove = (path: string, fields: RoutineField[] = [id()], adminOnly = false, label = "Desativar / excluir"): RoutineOperation => ({ label, method: "DELETE", path, fields, destructive: true, adminOnly });
 const routine = (code: string, title: string, description: string, operations: RoutineOperation[]): OperationalRoutine => ({ code, title, description, guidance: "Selecione uma operação, preencha os dados e confira o retorno antes de avançar no fluxo.", operations });
+const UFS_BR = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
 const enumOpt = (name: string, label: string, options: string[]): RoutineField => ({ name, label, options });
 
 export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
@@ -263,13 +264,6 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Alterar motivo", method: "PUT", path: "/api/restriction-reason/{code}", fields: [id("code", "Código"), json('{"description":"Combinação não permitida","situation":"ACTIVE"}')] },
     remove("/api/restriction-reason/{code}", [id("code", "Código")]),
   ]),
-  // Antes chamava /import-nfe, a rota antiga que aprovava a nota na hora e
-  // tomava o código do produto do fornecedor (cProd) como código do item —
-  // estoque e custo no item errado sem conferência nenhuma. A importação pela
-  // chave deixa a nota pendente para conciliar e aprovar na VFIS0210.
-  VFIS0610: routine("VFIS0610", "Importação de NF-e de compra por chave", "Baixa a NF-e da SEFAZ pela chave e deixa a nota pendente de conferência; a conciliação dos itens, o plano de contas, as parcelas e a aprovação continuam na VFIS0210.", [
-    create("/api/fiscal/entries/import-key", '{"chave_acesso":"00000000000000000000000000000000000000000000"}', false, "Importar pela chave"),
-  ]),
   VADM0100: routine("VADM0100", "Trilha de auditoria", "Consulta alterações autenticadas por usuário, rota e período; acesso exclusivo de administrador.", [
     { label: "Consultar", method: "GET", path: "/api/audit-log", adminOnly: true, fields: [{ name: "user_id", label: "Usuário" }, { name: "route", label: "Rota" }, { name: "from", label: "De", type: "datetime-local" }, { name: "to", label: "Até", type: "datetime-local" }, { name: "limit", label: "Limite", type: "number", defaultValue: "100" }, { name: "offset", label: "Deslocamento", type: "number", defaultValue: "0" }], query: ["user_id", "route", "from", "to", "limit", "offset"] },
   ]),
@@ -312,9 +306,6 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Abrir política", method: "GET", path: "/api/customers/support/sales-price-policies/{code}", fields: [id("code", "Política comercial")] },
     { label: "Alterar política", method: "PUT", path: "/api/customers/support/sales-price-policies/{code}", fields: [id("code", "Política comercial"), json('{"description":"Política padrão","cost_source":"STANDARD_TOTAL","priority":1,"sequence":1,"policy_scope":"PREC","policy_types":"FREIGHT","markup_pct":0,"margin_pct":0,"max_margin_pct":0,"ideal_margin_pct":0,"margin_step_pct":0,"expenses_pct":0,"taxes_pct":0,"freight_pct":5,"commission_pct":0,"discount_pct":0,"min_margin_pct":0,"max_discount_pct":0,"incidences_json":{},"observation":"Frete comercial"}')] },
   ]),
-  VFIN0610: routine("VFIN0610", "Remessa bancária CNAB 240", "Gera e baixa o arquivo de remessa CNAB 240 com a configuração bancária e os títulos informados.", [
-    { label: "Gerar remessa", method: "POST", path: "/api/financial/cnab/remessa-240", downloadFilename: "remessa.rem", fields: [json('{"config":{"BankCode":"001","BankName":"BANCO DO BRASIL","CompanyName":"EMPRESA EXEMPLO LTDA","CompanyCNPJ":"00000000000191","Agencia":"1234","AgenciaDV":"5","Conta":"123456","ContaDV":"7","Convenio":"123456","SequenceNSA":1,"Carteira":"1","EspecieTitulo":"02","LayoutArquivo":"083","LayoutLote":"042"},"titulos":[{"nosso_numero":"123456789","numero_documento":"FAT-001","vencimento":"2026-08-14","valor":500,"emissao":"2026-07-14","sacado_nome":"CLIENTE","sacado_tipo":2,"sacado_documento":"00000000000191","sacado_endereco":"RUA CENTRAL 100","sacado_bairro":"CENTRO","sacado_cidade":"SAO PAULO","sacado_uf":"SP","sacado_cep":"01001000"}]}')], adminOnly: true },
-  ]),
   VSUP0660: routine("VSUP0660", "Parâmetros e contatos complementares do fornecedor", "Configura regras corporativas do cadastro de fornecedores e inclui telefones e e-mails em contatos já persistidos.", [
     { label: "Consultar parâmetros", method: "GET", path: "/api/suppliers/support/parameters/", fields: [] },
     { label: "Salvar parâmetros", method: "PUT", path: "/api/suppliers/support/parameters/", fields: [json('{"enterprise_code":1,"default_financial_account":"2.1.1","unique_item_code_per_supplier":true,"requires_financial_account":true,"purchase_supplier_type_id":1,"copy_obs_to_purchase_order":true,"copy_obs_to_entry_invoice":true,"homologation_default":false,"use_stock_uom":true,"generic_supplier_code":null,"default_due_base_date":"EMISSAO"}')] },
@@ -352,31 +343,30 @@ export const OPERATIONAL_ROUTINES: Record<string, OperationalRoutine> = {
     { label: "Excluir preço", method: "DELETE", path: "/api/customers/support/sales-tables/prices/{id}", fields: [id()], destructive: true },
     create("/api/customers/support/sales-tables/generate-prices", '{"sales_table_code":1,"policy_code":1,"item_codes":["100","101"],"warehouse_id":1,"reason":"Revisão periódica"}'),
   ]),
-  VCTB0600: routine("VCTB0600", "SPED ECD — Escrituração Contábil Digital", "Gera e baixa o arquivo texto da ECD com plano, lançamentos e dados cadastrais persistidos no backend.", [
-    { label: "Gerar SPED ECD", method: "POST", path: "/api/accounting/sped/ecd/", downloadFilename: "SPED_ECD.txt", fields: [json('{"plan_id":1,"empresa_id":1,"from":"2026-01-01","to":"2026-12-31","empresa":{"CNPJ":"00000000000191","CPF":"","Nome":"EMPRESA LTDA","UF":"SP","Email":"contabilidade@empresa.com.br","IE":"110042490114","CodigoMunicipio":"3550308","CEP":"01001000","Endereco":"PRACA DA SE","Numero":"100","Complemento":"","Bairro":"SE","Fone":"1130000000","NIRE":"35123456789","IndSitAtiv":"0","IndNireCert":"0","IndGrandePorte":"0","IndEscCons":"N","TipoECD":"0","HashECDSub":"","NumOrd":"1","NomeAudi":"","IndSitEsp":"0"},"livros":[{"NumOrd":"1","NatLivro":"G","NumLiv":"1","DescLiv":"LIVRO DIARIO GERAL","CodHash":"","NumHash":"","PerIni":"2026-01-01T00:00:00Z","PerFin":"2026-12-31T23:59:59Z","CodHashAnt":"","NumHashAnt":""}]}')] },
-  ]),
-  VFIS0620: routine("VFIS0620", "Manifestação do destinatário e inutilização", "Envia à SEFAZ eventos de manifestação de NF-e recebida e inutiliza faixas não utilizadas de numeração própria.", [
-    create("/api/fiscal/manifestacao", '{"chave_nfe":"00000000000000000000000000000000000000000000","tipo":"ciencia","justificativa":""}', false, "Manifestar NF-e"),
-    create("/api/fiscal/inutilizacao", '{"serie":1,"numero_inicial":100,"numero_final":105,"justificativa":"Faixa não utilizada por falha controlada de numeração"}', false, "Inutilizar numeração"),
+  VFIS0620: routine("VFIS0620", "Manifestação do destinatário e inutilização", "Envia à SEFAZ a manifestação sobre uma NF-e recebida e inutiliza faixas de numeração própria que não serão usadas.", [
+    { label: "Manifestar NF-e", method: "POST", path: "/api/fiscal/manifestacao", submitLabel: "Enviar manifestação", fields: [
+      { name: "chave_nfe", label: "Chave de acesso da NF-e recebida", required: true, placeholder: "44 dígitos", help: "Está no DANFE, abaixo do código de barras." },
+      { name: "tipo", label: "Manifestação", required: true, options: ["ciencia", "confirmacao", "desconhecimento", "nao_realizada"], help: "Ciência libera o XML completo para download; Confirmação encerra a nota como recebida. Desconhecimento e Operação não realizada exigem justificativa." },
+      { name: "justificativa", label: "Justificativa", type: "textarea", help: "Obrigatória (mínimo 15 caracteres) para Desconhecimento e Operação não realizada." },
+    ] },
+    { label: "Inutilizar numeração", method: "POST", path: "/api/fiscal/inutilizacao", submitLabel: "Inutilizar faixa", destructive: true, fields: [
+      { name: "serie", label: "Série", type: "number", required: true, defaultValue: "1" },
+      { name: "numero_inicial", label: "Número inicial", type: "number", required: true },
+      { name: "numero_final", label: "Número final", type: "number", required: true, help: "Para um número só, repita o número inicial. A inutilização não pode ser desfeita." },
+      { name: "justificativa", label: "Justificativa", type: "textarea", required: true, help: "Entre 15 e 255 caracteres, como a SEFAZ exige." },
+    ] },
   ]),
   VFIS0630: routine("VFIS0630", "Tabela IBPT e carga tributária aproximada", "Importa o arquivo oficial IBPT/SCI por UF e consulta a carga tributária vigente por NCM.", [
-    { label: "Importar tabela IBPT", method: "POST", path: "/api/fiscal/ibpt/import", adminOnly: true, fields: [{ name: "uf", label: "UF", required: true }, { name: "csv", label: "Arquivo CSV IBPT", type: "file-text", required: true, accept: ".csv,text/csv,text/plain", help: "Selecione o CSV oficial, separado por ponto e vírgula." }] },
-    { label: "Consultar alíquota", method: "GET", path: "/api/fiscal/ibpt/lookup", fields: [{ name: "ncm", label: "NCM", required: true }, { name: "uf", label: "UF", required: true }], query: ["ncm", "uf"] },
-  ]),
-  VFIS0640: routine("VFIS0640", "Faturamento fiscal de carga e DANFE", "Cria a NF-e de saída a partir de uma carga persistida e recupera os endereços oficiais do DANFE e XML autorizados.", [
-    create("/api/fiscal/exits/from-load", '{"load_code":100,"serie":"1","data_emissao":"2026-07-14","data_saida":"2026-07-14","cnpj_destinatario":"00000000000191","razao_social_destinatario":"CLIENTE LTDA","ie_destinatario":"ISENTO","uf_destinatario":"SP","tipo_pessoa":"J","cfop":"5102","natureza_operacao":"VENDA DE MERCADORIA","valor_frete":0,"valor_seguro":0,"valor_desconto":0,"origem_mercadoria":"0","item_overrides":[]}'),
-    { label: "Consultar DANFE", method: "GET", path: "/api/fiscal/exits/{id}/danfe", fields: [id("id", "NF-e de saída")] },
-  ]),
-  VFIS0120: routine("VFIS0120", "Exclusão controlada de tributação NCM", "Remove do cadastro fiscal uma tributação de NCM que não deve mais ser utilizada pela empresa.", [
-    { label: "Excluir tributação NCM", method: "DELETE", path: "/api/fiscal/tabelas/ncm/{ncm}", fields: [{ name: "ncm", label: "NCM", required: true }], destructive: true },
+    { label: "Importar tabela IBPT", method: "POST", path: "/api/fiscal/ibpt/import", adminOnly: true, fields: [{ name: "uf", label: "UF", required: true, options: UFS_BR }, { name: "csv", label: "Arquivo CSV IBPT", type: "file-text", required: true, accept: ".csv,text/csv,text/plain", help: "Selecione o CSV oficial, separado por ponto e vírgula." }] },
+    { label: "Consultar alíquota", method: "GET", path: "/api/fiscal/ibpt/lookup", fields: [{ name: "ncm", label: "NCM", required: true, placeholder: "8 dígitos" }, { name: "uf", label: "UF", required: true, options: UFS_BR }], query: ["ncm", "uf"] },
   ]),
   VFIS0660: routine("VFIS0660", "Consultas pontuais de parâmetros fiscais", "Localiza cadastros fiscais por chave, tipo, UF, item, NCM, período ou identificador sem alterar os registros.", [
     { label: "Dispositivo por código", method: "GET", path: "/api/fiscal/support/dispositivos-legais/{code}", fields: [id("code", "Dispositivo")] },
     { label: "Dispositivos por tipo", method: "GET", path: "/api/fiscal/support/dispositivos-legais/tipo/{type}", fields: [{ name: "type", label: "Tipo", required: true }] },
     { label: "CFOP por código", method: "GET", path: "/api/fiscal/support/cfops/{code}", fields: [id("code", "CFOP")] },
-    { label: "CFOPs por direção", method: "GET", path: "/api/fiscal/support/cfops/direcao/{direction}", fields: [{ name: "direction", label: "Direção", required: true, help: "Informe ENTRADA ou SAIDA conforme o cadastro." }] },
+    { label: "CFOPs por direção", method: "GET", path: "/api/fiscal/support/cfops/direcao/{direction}", fields: [{ name: "direction", label: "Direção", required: true, options: ["ENTRADA", "SAIDA"] }] },
     { label: "Parâmetro por ID", method: "GET", path: "/api/fiscal/support/parametros-icms-ipi/{id}", fields: [id()] },
-    { label: "Parâmetros por UF", method: "GET", path: "/api/fiscal/support/parametros-icms-ipi/uf/{uf}", fields: [{ name: "uf", label: "UF", required: true }] },
+    { label: "Parâmetros por UF", method: "GET", path: "/api/fiscal/support/parametros-icms-ipi/uf/{uf}", fields: [{ name: "uf", label: "UF", required: true, options: UFS_BR }] },
     { label: "Parâmetros por item", method: "GET", path: "/api/fiscal/support/parametros-icms-ipi/item/{itemCode}", fields: [id("itemCode", "Item")] },
     { label: "Parâmetros por NCM", method: "GET", path: "/api/fiscal/support/parametros-icms-ipi/ncm/{ncmCode}", fields: [{ name: "ncmCode", label: "NCM", required: true }] },
     { label: "Motivo DAPI por código", method: "GET", path: "/api/fiscal/support/motivos-transferencia-dapi/{code}", fields: [{ name: "code", label: "Motivo", required: true }] },

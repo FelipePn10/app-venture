@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { confirmar } from "@/components/ui/dialogos";
 import {
   type WorkCenterCost, type PurchaseCost, type StandardCost,
   type OverheadRule, type OverheadRuleDTO, type OverheadBase, type OverheadMethod,
@@ -205,7 +206,7 @@ export function Vcus0100Page(): JSX.Element {
   };
 
   const desativarRegra = (r: OverheadRule) => run(async () => {
-    if (!window.confirm(`Desativar a regra ${r.code}?\n\nAs próximas apurações deixam de aplicar este indireto. O histórico das apurações antigas continua apontando para ela.`)) return;
+    if (!(await confirmar({ titulo: "Desativar regra de indireto", assunto: `Regra ${r.code}`, mensagem: "As próximas apurações deixam de aplicar este indireto. O histórico das apurações antigas continua apontando para ela.", rotulo: "Desativar", tom: "perigo" }))) return;
     await deactivateOverheadRule(r.id);
     setRegras(await listOverheadRules());
     setFeedback({ type: "success", message: `Regra ${r.code} desativada.` });

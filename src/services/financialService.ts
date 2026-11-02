@@ -648,6 +648,11 @@ export async function createContaPagar(dto: ContaPagarDTO): Promise<ContaPagar> 
   const { data } = await httpClient.post(`${BASE}/contas-pagar/create`, dto);
   return parsePagar(data);
 }
+/** Um título em várias parcelas, gravadas juntas: as parcelas somam o valor líquido. */
+export async function createContaPagarParcelada(dto: ContaPagarDTO, parcelas: Array<{ data_vencimento: string; valor: number }>): Promise<number> {
+  const { data } = await httpClient.post(`${BASE}/contas-pagar/create-parcelada`, { ...dto, parcelas });
+  return Number((data as { parcelas?: number })?.parcelas ?? parcelas.length);
+}
 export async function approveContaPagar(id: number, motivoRejeicao: string | null): Promise<ContaPagar> {
   const { data } = await httpClient.post(`${BASE}/contas-pagar/${id}/approve`, { motivo_rejeicao: motivoRejeicao });
   return parsePagar(data);
@@ -885,4 +890,10 @@ function descreverArquivo(texto: string): string {
   if (texto.startsWith('<?xml')) return 'é um XML que não é OFX (nota fiscal, talvez)';
   if (texto.includes(';') || texto.includes(',')) return 'parece uma planilha ou CSV';
   return 'é um texto sem estrutura OFX';
+}
+
+/** Gera o arquivo de remessa CNAB 240 (VFIN0610). */
+export async function gerarRemessaCnab240(remessa: { config: Obj; titulos: Obj[] }): Promise<Blob> {
+  const { data } = await httpClient.post<Blob>('/api/financial/cnab/remessa-240', remessa, { responseType: 'blob' });
+  return data;
 }

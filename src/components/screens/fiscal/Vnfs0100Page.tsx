@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
+import { pedirTexto } from "@/components/ui/dialogos";
 import { type NfseDTO, listNfse, createNfse, authorizeNfse, cancelNfse } from "@/services/nfseService";
 import { errMessage } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCustomers } from "@/services/lookups";
+import { getDestinatarioDaNota } from "@/services/nfeService";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Mode = "list" | "create";
@@ -29,6 +33,7 @@ export function Vnfs0100Page(): JSX.Element {
   const [mode, setMode] = useState<Mode>("list");
   const [list, setList] = useState<NfseDTO[]>([]);
   const [form, setForm] = useState<NfseDTO>(EMPTY);
+  const [tomadorCode, setTomadorCode] = useState<number | undefined>();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -41,6 +46,24 @@ export function Vnfs0100Page(): JSX.Element {
   useEffect(() => { void reload(); }, [reload]);
 
   function setF<K extends keyof NfseDTO>(k: K, v: NfseDTO[K]) { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); }
+
+  /** O tomador vem do cadastro; o que for específico desta nota continua editável. */
+  async function escolherTomador(code?: number) {
+    setTomadorCode(code);
+    if (!code) return;
+    setBusy(true); setFeedback(null);
+    try {
+      const d = await getDestinatarioDaNota(code);
+      const e = d.enderecos.find((x) => x.sugerido) ?? d.enderecos[0];
+      setForm((p) => ({
+        ...p, tomador_cnpj_cpf: d.documento, tomador_razao_social: d.nome, tomador_email: d.email,
+        tomador_uf: e?.uf ?? "", tomador_logradouro: e?.logradouro ?? "", tomador_numero: e?.numero ?? "", tomador_complemento: e?.complemento ?? "",
+        tomador_bairro: e?.bairro ?? "", tomador_cep: e?.cep ?? "",
+      }));
+      if (!e) setFeedback({ type: "info", message: "Este cliente não tem endereço cadastrado: preencha abaixo. A prefeitura recusa o RPS sem o endereço do tomador." });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e, "Não foi possível ler o cadastro do cliente.") }); }
+    finally { setBusy(false); }
+  }
 
   async function salvar() {
     if (!form.numero_rps || !form.tomador_razao_social.trim() || !form.valor_servicos) { setFeedback({ type: "error", message: "RPS, tomador e valor dos serviços são obrigatórios." }); return; }
@@ -55,9 +78,12 @@ export function Vnfs0100Page(): JSX.Element {
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function cancelar(id: number) {
-    const j = window.prompt("Justificativa do cancelamento (mín. 15 caracteres):");
+    const j = await pedirTexto({
+      titulo: "Cancelar NFS-e", mensagem: "A justificativa vai para a prefeitura e fica registrada na nota.",
+      rotulo: "Justificativa do cancelamento", multilinha: true, minimo: 15, maximo: 255,
+      rotuloConfirmar: "Cancelar nota", rotuloVoltar: "Voltar", tom: "perigo",
+    });
     if (j === null) return;
-    if (j.trim().length < 15) { setFeedback({ type: "error", message: "Justificativa deve ter ao menos 15 caracteres." }); return; }
     setBusy(true); setFeedback(null);
     try { await cancelNfse(id, j.trim()); setFeedback({ type: "success", message: `NFS-e ${id} cancelada.` }); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
@@ -115,6 +141,9 @@ export function Vnfs0100Page(): JSX.Element {
             </div></div>
 
             <div className="erp-fieldset"><div className="erp-fieldset-head">Tomador</div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c6"><label className="erp-label">Cliente</label>
+                <LookupField value={tomadorCode} loader={loadCustomers} entityLabel="cliente" placeholder="Buscar no cadastro para preencher o tomador" allowManualCode={false}
+                  onChange={(c) => void escolherTomador(c ? Number(c) : undefined)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">CNPJ/CPF</label><input className="erp-input" value={form.tomador_cnpj_cpf} onChange={(e) => setF("tomador_cnpj_cpf", e.target.value)} /></div>
               <div className="erp-field erp-c5"><label className="erp-label erp-req">Razão social</label><input className="erp-input" value={form.tomador_razao_social} onChange={(e) => setF("tomador_razao_social", e.target.value)} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Cód. município</label><input className="erp-input" value={form.tomador_codigo_municipio} onChange={(e) => setF("tomador_codigo_municipio", e.target.value)} /></div>

@@ -180,6 +180,18 @@ export async function getSupplier(code: number): Promise<Obj> {
   const { data } = await httpClient.get(`${BASE}/${code}`);
   return unwrapObject(data);
 }
+/** O que uma nota precisa saber do fornecedor; a UF vem do endereço principal do cadastro. */
+export async function getDadosFiscaisDoFornecedor(code: number): Promise<{ documento: string; nome: string; ie: string; uf: string; inativo: boolean; condicaoId?: number }> {
+  const f = await getSupplier(code);
+  const enderecos = Array.isArray(f.addresses) ? f.addresses as Array<{ uf?: string; is_default?: boolean }> : [];
+  const principal = enderecos.find((e) => e.is_default && e.uf) ?? enderecos.find((e) => e.uf);
+  return {
+    documento: String(f.document_number ?? "").replace(/\D/g, ""), nome: String(f.name ?? ""), ie: String(f.state_registration ?? ""),
+    uf: (principal?.uf ?? "").trim().toUpperCase(), inativo: f.is_active === false,
+    condicaoId: parseNum(f, 'payment_condition_id', 'PaymentConditionID') || undefined,
+  };
+}
+
 export async function createSupplier(dto: SupplierDTO): Promise<SupplierDTO> {
   const { data } = await httpClient.post(BASE, { created_by: currentUserId(), ...dto });
   return parseSupplier(data);

@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   type RepresentativeDTO,
@@ -206,7 +207,7 @@ export function Vvnd0400Page(): JSX.Element {
             const keys = Object.keys(reportRows[0]);
             return {
               columns: keys.map((key) => key),
-              rows: reportRows.map((row) => keys.map((key) => { const value = row[key]; return typeof value === "object" ? JSON.stringify(value) : String(value ?? ""); })),
+              rows: reportRows.map((row) => keys.map((key) => { const value = row[key]; return typeof value === "object" ? textoLegivel(value) : String(value ?? ""); })),
               subtitle: selected ? `Representante ${selected.code}` : "Relatório geral",
             };
           }

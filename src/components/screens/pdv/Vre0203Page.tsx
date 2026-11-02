@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { pedirTexto } from "@/components/ui/dialogos";
 import { getFutureCommissions } from "@/services/recurringSalesService";
 import { errMessage, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -56,10 +57,19 @@ export function Vre0203Page(): JSX.Element {
   });
 
   const transition = (entry: CommercialCommissionEntryDTO, action: "CONCILIADA" | "PAGA") => run(async () => {
-    const reason = window.prompt(action === "CONCILIADA" ? "Motivo da conciliação:" : "Motivo do pagamento:");
-    if (!reason?.trim()) return;
-    const paymentReference = action === "PAGA" ? window.prompt("Referência do pagamento (opcional):") ?? undefined : undefined;
-    await transitionCommercialCommission(entry.code, action, reason.trim(), paymentReference);
+    const reason = await pedirTexto({
+      titulo: action === "CONCILIADA" ? "Conciliar comissão" : "Pagar comissão",
+      rotulo: action === "CONCILIADA" ? "Motivo da conciliação" : "Motivo do pagamento",
+      multilinha: true, rotuloConfirmar: "Continuar",
+    });
+    if (reason === null) return;
+    let paymentReference: string | undefined;
+    if (action === "PAGA") {
+      const referencia = await pedirTexto({ titulo: "Pagar comissão", rotulo: "Referência do pagamento", opcional: true, dica: "Opcional: número do comprovante ou da transferência.", rotuloConfirmar: "Registrar pagamento" });
+      if (referencia === null) return;
+      paymentReference = referencia || undefined;
+    }
+    await transitionCommercialCommission(entry.code, action, reason, paymentReference);
     setLedger(await listCommercialCommissions({ from, to, representative_code: representative, status: ledgerStatus || undefined, limit: 500 }));
     setFeedback({ type: "success", message: action === "CONCILIADA" ? "Comissão conciliada." : "Comissão marcada como paga." });
   });

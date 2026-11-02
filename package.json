@@ -42,6 +42,8 @@
     "test:beneficiamento": "node scripts/test-beneficiamento-contrato.mjs",
     "test:screen-search": "node scripts/test-screen-search.mjs",
     "test:rateio-entrada": "node scripts/test-rateio-entrada.mjs",
+    "test:plano-parcelas": "node scripts/test-plano-parcelas.mjs",
+    "test:chave-nfe": "node scripts/test-chave-nfe.mjs",
     "test:sped-efd": "node scripts/test-sped-efd.mjs",
     "test:commercial-regressions": "node scripts/validate-commercial-regressions.mjs",
     "test:commercial-round2": "node scripts/validate-commercial-round2.mjs",
