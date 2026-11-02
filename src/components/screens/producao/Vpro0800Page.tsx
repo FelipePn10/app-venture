@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useState, useCallback, useEffect } from "react";
 import {
   type RestrictionDTO, type RestrictionOperator, OPERATORS,
@@ -42,7 +43,7 @@ export function Vpro0800Page(): JSX.Element {
     let parsed: Record<string, unknown>;
     try { parsed = JSON.parse(ctx); } catch { setFeedback({ type: "error", message: "Contexto não é um JSON válido." }); return; }
     setBusy(true); setFeedback(null);
-    try { const r = await evaluateRestriction(Number(evalId), parsed); setFeedback({ type: "info", message: `Resultado: ${JSON.stringify(r)}` }); }
+    try { const r = await evaluateRestriction(Number(evalId), parsed); setFeedback({ type: "info", message: `Resultado: ${textoLegivel(r)}` }); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 

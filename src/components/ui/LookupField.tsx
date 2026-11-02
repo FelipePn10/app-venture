@@ -31,6 +31,10 @@ interface LookupFieldProps<T extends string | number> {
    * a gravação é recusada.
    */
   includeInactive?: boolean;
+  /** O valor pode ser um texto digitado, que não está na lista: mostra como foi escrito, sem o "#" de código por resolver. */
+  textoLivre?: boolean;
+  /** Mensagem quando não há nenhum registro: diz onde cadastrar. */
+  vazio?: string;
 }
 
 /**
@@ -49,7 +53,7 @@ function mesmoCodigo(a: string | number, b: string | number | undefined | null):
 
 export function LookupField<T extends string | number = number>({
   value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true, allowManualCode = true,
-  includeInactive = false,
+  includeInactive = false, textoLivre = false, vazio,
 }: LookupFieldProps<T>): JSX.Element {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -175,7 +179,8 @@ export function LookupField<T extends string | number = number>({
 
   const openPanel = () => {
     if (disabled) return;
-    void load();
+    // Lista vazia pode ter ganhado registros desde a última carga.
+    void load(options.length === 0);
     setOpen(true); setQuery("");
     setTimeout(() => inputRef.current?.focus(), 0);
   };
@@ -184,9 +189,9 @@ export function LookupField<T extends string | number = number>({
   const clear = (e: React.MouseEvent) => { e.stopPropagation(); onChange(undefined); };
 
   const display = selected
-    ? `${selected.code} — ${selected.label}`
+    ? `${selected.displayCode ?? selected.code} — ${selected.label}`
     : value
-      ? `#${value}${loading ? " …" : ""}`
+      ? `${textoLivre ? "" : "#"}${value}${loading ? " …" : ""}`
       : "";
 
   return (
@@ -217,11 +222,11 @@ export function LookupField<T extends string | number = number>({
               </div>
             )}
             {!loading && !error && filtered.length === 0 && (
-              <div className="erp-lookup-msg">{disponiveis.length === 0 ? (options.length === 0 ? `Nenhum ${entityLabel} cadastrado.` : `Nenhum ${entityLabel} ativo.`) : "Nenhum resultado."}</div>
+              <div className="erp-lookup-msg">{disponiveis.length === 0 ? (options.length === 0 ? (vazio ?? `Nenhum ${entityLabel} cadastrado.`) : `Nenhum ${entityLabel} ativo.`) : "Nenhum resultado."}</div>
             )}
             {filtered.map((o) => (
               <button type="button" key={o.code} className={`erp-lookup-item${mesmoCodigo(o.code, value) ? " sel" : ""}`} onClick={() => choose(o)}>
-                <span className="erp-lookup-item-code">{o.code}</span>
+                <span className="erp-lookup-item-code">{o.displayCode ?? o.code}</span>
                 <span className="erp-lookup-item-main">
                   <span className="erp-lookup-item-label">{o.label}{o.inactive && <span className="erp-lookup-item-off">inativo</span>}</span>
                   {o.sub && <span className="erp-lookup-item-sub">{o.sub}</span>}

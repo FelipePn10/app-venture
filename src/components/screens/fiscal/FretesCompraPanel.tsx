@@ -5,6 +5,9 @@ import {
 } from "@/services/freteCompraService";
 import { errMessage } from "@/services/fiscalShared";
 import { hojeLocal } from "@/utils/dataLocal";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadSuppliers } from "@/services/lookups";
+import { getDadosFiscaisDoFornecedor } from "@/services/supplierService";
 
 /**
  * Frete sobre compras (VFIS0210 › Fretes). O CT-e da transportadora entra pelo
@@ -59,6 +62,16 @@ export function FretesCompraPanel({ entradas, onFeedback, onAbrirEntrada }: {
   useEffect(() => { void recarregar(filtro); }, [recarregar, filtro]);
 
   const aprovadas = entradas.filter((e) => ["APPROVED", "WRITTEN_OFF"].includes((e.status || "").toUpperCase()));
+  const [transportadora, setTransportadora] = useState<number | undefined>();
+  async function escolherTransportadora(code?: number) {
+    setTransportadora(code);
+    if (!code) return;
+    try {
+      const f = await getDadosFiscaisDoFornecedor(code);
+      setForm((p) => (p ? { ...p, cnpj_transportadora: f.documento, nome_transportadora: f.nome } : p));
+    } catch (e) { onFeedback({ type: "error", message: errMessage(e, "Não foi possível buscar os dados da transportadora.") }); }
+  }
+
   const setF = <K extends keyof FretePayload>(k: K, v: FretePayload[K]) => setForm((p) => (p ? { ...p, [k]: v } : p));
 
   async function abrir(id: number) {
@@ -174,6 +187,9 @@ export function FretesCompraPanel({ entradas, onFeedback, onAbrirEntrada }: {
               <input className="erp-input" value={form.serie} maxLength={3} onChange={(e) => setF("serie", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label erp-req">Emissão</label>
               <input className="erp-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
+            <div className="erp-field erp-c7"><label className="erp-label">Transportadora do cadastro</label>
+              <LookupField value={transportadora} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Buscar para preencher CNPJ e nome" allowManualCode={false} clearable
+                onChange={(c) => void escolherTransportadora(c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ da transportadora</label>
               <input className="erp-input" value={form.cnpj_transportadora} onChange={(e) => setF("cnpj_transportadora", e.target.value)} /></div>
             <div className="erp-field erp-c4"><label className="erp-label erp-req">Transportadora</label>

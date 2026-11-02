@@ -1,39 +1,24 @@
-import { useState, useCallback, useEffect } from "react";
-import {
-  type FiscalExit, type CreateExitDTO, type ExitItemDTO, type TipoPessoa, type PreviaNFe,
-  listExits, createExit, authorizeExit, cancelExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
-  previewExit,
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { rotuloDaNota,
+  type FiscalExit, type PreviaNFe, type ExitStatus,
+  listExits, authorizeExit, cancelExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
+  previewExit, getExitDocumentos,
 } from "@/services/nfeService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
-import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
-import { LookupField } from "@/components/ui/LookupField";
-import { loadInvoiceTypesById } from "@/services/lookups";
-import { FINALIDADES_COMPRA } from "@/services/customerService";
 import { FaturarPedidoPanel } from "./FaturarPedidoPanel";
+import { NovaNotaForm } from "./NovaNotaForm";
 import { SeriesDaNotaPanel } from "./SeriesDaNotaPanel";
 import { definirClassTribDaLinha } from "@/services/reformaTributariaService";
+import { confirmar, pedirTexto } from "@/components/ui/dialogos";
+import { abrirDocumento } from "@/utils/abrirDocumento";
+import { chaveEmGrupos, documentoComMascara } from "@/utils/documentoFiscal";
+import { DanfePrevia } from "./DanfePrevia";
 
 type FeedbackState = { type: "success" | "error" | "info" | "warn"; message: string } | null;
 type Mode = "list" | "create" | "pedido";
 const ORIGEM_CLASSTRIB: Record<string, string> = {
   ITEM_DA_NOTA: "da linha", CFOP: "do CFOP", CLASSIFICACAO_FISCAL: "da classificação", PADRAO: "padrão",
-};
-
-// Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
-const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-
-const EMPTY_ITEM: ExitItemDTO = {
-  sequence: 1, item_code: "", ncm: "", cfop: "", quantidade: 1,
-  unit_price: 0, total_price: 0, origem_mercadoria: "0", description: "",
-};
-
-const EMPTY_FORM: CreateExitDTO = {
-  numero_nf: 0, serie: "001", data_emissao: today(), data_saida: today(),
-  cnpj_destinatario: "", razao_social_destinatario: "", ie_destinatario: "",
-  uf_destinatario: "", tipo_pessoa: "J", cfop: "6101", natureza_operacao: "Venda de mercadoria",
-  valor_produtos: 0, valor_frete: 0, valor_seguro: 0, valor_desconto: 0,
-  itens: [{ ...EMPTY_ITEM }],
 };
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -77,23 +62,40 @@ function statusPill(status: string): JSX.Element {
 
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 
-/** Informações complementares (infCpl) do JSON que será transmitido. */
-function infCplDaPrevia(payload: string): string {
-  try {
-    const v = (JSON.parse(payload) as Record<string, unknown>)["informacoes_adicionais_contribuinte"];
-    return typeof v === "string" ? v : "";
-  } catch { return ""; }
+/** Situação devolvida pela consulta à SEFAZ, na língua de quem opera. */
+const SITUACAO_SEFAZ: Record<string, { rotulo: string; badge: string }> = {
+  autorizado: { rotulo: "Autorizada", badge: "erp-badge-green" },
+  autorizada: { rotulo: "Autorizada", badge: "erp-badge-green" },
+  cancelado: { rotulo: "Cancelada", badge: "erp-badge-red" },
+  cancelada: { rotulo: "Cancelada", badge: "erp-badge-red" },
+  processando_autorizacao: { rotulo: "Em processamento na SEFAZ", badge: "erp-badge-blue" },
+  rejeitado: { rotulo: "Rejeitada", badge: "erp-badge-amber" },
+  erro_autorizacao: { rotulo: "Rejeitada", badge: "erp-badge-amber" },
+  denegado: { rotulo: "Denegada", badge: "erp-badge-red" },
+  denegada: { rotulo: "Denegada", badge: "erp-badge-red" },
+  nao_encontrado: { rotulo: "Não chegou à SEFAZ", badge: "erp-badge-amber" },
+};
+
+/** Carta de correção só é gravada depois de a SEFAZ registrar o evento. */
+function rotuloDaCce(status: string): string {
+  const s = (status || "").trim().toUpperCase();
+  if (s === "ENVIADA" || s === "AUTORIZADO" || s === "AUTORIZADA") return "Registrada na SEFAZ";
+  if (s === "CANCELADA") return "Cancelada";
+  return status ? "Em análise" : "—";
 }
+
+type VisaoStatus = { nota: FiscalExit; resultado: ExitStatus | null };
 
 export function Vfis0200Page(): JSX.Element {
   const [mode, setMode] = useState<Mode>("list");
   const [list, setList] = useState<FiscalExit[]>([]);
-  const [form, setForm] = useState<CreateExitDTO>(EMPTY_FORM);
   const [lastCreated, setLastCreated] = useState<FiscalExit | null>(null);
   const [cceView, setCceView] = useState<{ id: number; list: Obj[] } | null>(null);
+  const [statusView, setStatusView] = useState<VisaoStatus | null>(null);
+  const [busca, setBusca] = useState("");
+  const [filtroSituacao, setFiltroSituacao] = useState<"" | SituacaoNF>("");
   const [pendView, setPendView] = useState<{ id: number; list: PendenciaNFe[] } | null>(null);
   const [previa, setPrevia] = useState<PreviaNFe | null>(null);
-  const [verPayload, setVerPayload] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
 
@@ -106,55 +108,7 @@ export function Vfis0200Page(): JSX.Element {
 
   useEffect(() => { void reload(); }, [reload]);
 
-  function novo() { setForm({ ...EMPTY_FORM, itens: [{ ...EMPTY_ITEM }] }); setMode("create"); setFeedback(null); }
-
-  const setF = <K extends keyof CreateExitDTO>(k: K, v: CreateExitDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
-
-  function setItem(idx: number, patch: Partial<ExitItemDTO>) {
-    setForm((p) => {
-      const itens = p.itens.map((it, i) => {
-        if (i !== idx) return it;
-        const merged = { ...it, ...patch };
-        merged.total_price = Number((merged.quantidade * merged.unit_price).toFixed(2));
-        return merged;
-      });
-      const valor_produtos = Number(itens.reduce((s, it) => s + it.total_price, 0).toFixed(2));
-      return { ...p, itens, valor_produtos };
-    });
-  }
-  function addItem() { setForm((p) => ({ ...p, itens: [...p.itens, { ...EMPTY_ITEM, sequence: p.itens.length + 1 }] })); }
-  function removeItem(idx: number) {
-    setForm((p) => {
-      const itens = p.itens.filter((_, i) => i !== idx).map((it, i) => ({ ...it, sequence: i + 1 }));
-      const valor_produtos = Number(itens.reduce((s, it) => s + it.total_price, 0).toFixed(2));
-      return { ...p, itens, valor_produtos };
-    });
-  }
-
-  async function salvar() {
-    if (!form.cnpj_destinatario.trim() || !form.uf_destinatario.trim()) {
-      setFeedback({ type: "error", message: "CNPJ e UF do destinatário são obrigatórios." }); return;
-    }
-    if (!validateCNPJOrCPF(form.cnpj_destinatario)) {
-      setFeedback({ type: "error", message: "CNPJ/CPF do destinatário inválido (dígito verificador não confere)." }); return;
-    }
-    if (form.itens.length === 0 || form.itens.some((i) => !i.ncm.trim() || !i.cfop.trim())) {
-      setFeedback({ type: "error", message: "Cada item precisa de NCM e CFOP." }); return;
-    }
-    setBusy(true); setFeedback(null);
-    try {
-      const created = await createExit(form);
-      setLastCreated(created);
-      setFeedback({
-        type: "success",
-        message: `NF-e ${created?.numero_nf ?? form.numero_nf} criada em rascunho. `
-          + `Impostos calculados — ICMS R$ ${money(created?.valor_icms)} • IPI R$ ${money(created?.valor_ipi)} `
-          + `• PIS R$ ${money(created?.valor_pis)} • COFINS R$ ${money(created?.valor_cofins)} • Total R$ ${money(created?.valor_total)}.`,
-      });
-      setMode("list");
-      await reload();
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
+  function novo() { setMode("create"); setFeedback(null); }
 
   async function verCces(id: number) {
     setBusy(true); setFeedback(null);
@@ -174,7 +128,7 @@ export function Vfis0200Page(): JSX.Element {
   }
 
   async function abrirPrevia(id: number) {
-    setBusy(true); setFeedback(null); setVerPayload(false);
+    setBusy(true); setFeedback(null);
     try { setPrevia(await previewExit(id)); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -195,48 +149,73 @@ export function Vfis0200Page(): JSX.Element {
         setPrevia(conferida);
         setFeedback({
           type: "error",
-          message: `A NF-e ${conferida.numero_nf} não pode ser emitida: ${conferida.pendencias.filter((p) => p.nivel === "IMPEDE").length} pendência(s) impedem a transmissão. Veja a prévia.`,
+          message: `${rotuloDaNota(conferida)} não pode ser emitida: ${conferida.pendencias.filter((p) => p.nivel === "IMPEDE").length} pendência(s) impedem a transmissão. Veja a prévia.`,
         });
         return;
       }
-      const atencoes = conferida.pendencias.filter((p) => p.nivel === "ATENCAO");
-      const resumo = atencoes.length
-        ? `\n\nAtenção:\n${atencoes.map((p) => `• ${p.mensagem}`).join("\n")}`
-        : "";
-      const ok = window.confirm(
-        `Emitir a NF-e ${conferida.numero_nf > 0 ? `${conferida.numero_nf}/${conferida.serie}` : "(número atribuído na emissão)"} para ${conferida.destinatario.nome} `
-        + `no valor de R$ ${money(conferida.totais.valor_total_nf)}?\n\n`
-        + `Ambiente: ${conferida.ambiente.toUpperCase()}. Nota autorizada só se desfaz por cancelamento.${resumo}`,
-      );
+      const atencoes = conferida.pendencias.filter((p) => p.nivel === "ATENCAO" && p.campo !== "ambiente");
+      const producao = conferida.ambiente.toLowerCase().startsWith("prod");
+      const ok = await confirmar({
+        titulo: "Transmitir nota à SEFAZ",
+        assunto: `NF-e ${conferida.numero_nf > 0 ? `${conferida.numero_nf}/${conferida.serie}` : "(número atribuído na emissão)"} · ${conferida.destinatario.nome} · R$ ${money(conferida.totais.valor_total_nf)}`,
+        mensagem: `Ambiente: ${producao ? "PRODUÇÃO, nota com valor fiscal" : "HOMOLOGAÇÃO, nota de teste sem valor fiscal"}.\nNota autorizada só se desfaz por cancelamento.`
+          + (atencoes.length ? `\n\nAtenção:\n${atencoes.map((p) => `• ${p.mensagem}`).join("\n")}` : ""),
+        rotulo: "Transmitir", tom: producao ? "aviso" : "neutro",
+      });
       if (!ok) return;
       const r = await authorizeExit(code);
       setPrevia(null);
-      setFeedback(comAvisos(`NF-e ${code} enviada para autorização.`, r.warnings, code));
+      const nome = r.numero_nf > 0 ? `NF-e ${r.numero_nf}` : "A nota";
+      setFeedback(comAvisos(situacaoDaNota(r.status) === "autorizada" ? `${nome} autorizada pela SEFAZ.` : `${nome} enviada para autorização.`, r.warnings, code));
       await reload();
     }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
-  async function cancelar(code: number) {
-    const j = window.prompt("Justificativa do cancelamento (mín. 15 caracteres):");
+  const resumoDaNota = (nf: FiscalExit) => `NF-e ${nf.numero_nf > 0 ? `${nf.numero_nf}/${nf.serie}` : "sem número"} · ${nf.razao_social_destinatario} · R$ ${money(nf.valor_total)}`;
+
+  async function cancelar(nf: FiscalExit) {
+    const j = await pedirTexto({
+      titulo: "Cancelar nota fiscal",
+      assunto: resumoDaNota(nf),
+      mensagem: "O cancelamento vai à SEFAZ e não se desfaz. A nota deixa de valer; títulos, estoque e pedido voltam. O prazo legal é de 24 horas a partir da autorização.",
+      rotulo: "Justificativa do cancelamento",
+      dica: "Fica registrada na SEFAZ.",
+      multilinha: true, minimo: 15, maximo: 255,
+      rotuloConfirmar: "Cancelar nota", rotuloVoltar: "Voltar", tom: "perigo",
+    });
     if (j === null) return;
-    if (j.trim().length < 15) { setFeedback({ type: "error", message: "A justificativa deve ter no mínimo 15 caracteres." }); return; }
     setBusy(true); setFeedback(null);
-    try { const r = await cancelExit(code, j.trim()); setFeedback(comAvisos(`NF-e ${code} cancelada.`, r.warnings, code)); await reload(); }
+    try { const r = await cancelExit(nf.id, j); setFeedback(comAvisos(`NF-e ${nf.numero_nf} cancelada.`, r.warnings, nf.id)); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
-  async function cce(code: number) {
-    const t = window.prompt("Texto da Carta de Correção (mín. 15 caracteres):");
+  async function cce(nf: FiscalExit) {
+    const t = await pedirTexto({
+      titulo: "Nova carta de correção",
+      assunto: resumoDaNota(nf),
+      mensagem: "A carta corrige dados da nota já autorizada. Ela não pode alterar valores, impostos, quantidade, CFOP, destinatário nem a data de emissão ou de saída. Vale a última carta registrada, então repita nela o que continua valendo.",
+      rotulo: "O que está sendo corrigido",
+      multilinha: true, minimo: 15, maximo: 1000,
+      rotuloConfirmar: "Enviar carta", rotuloVoltar: "Voltar",
+    });
     if (t === null) return;
-    if (t.trim().length < 15) { setFeedback({ type: "error", message: "O texto deve ter no mínimo 15 caracteres." }); return; }
     setBusy(true); setFeedback(null);
     try {
-      await cartaCorrecaoExit(code, t.trim());
-      setFeedback({ type: "success", message: `CC-e emitida para NF-e ${code}.` });
-      if (cceView?.id === code) setCceView({ id: code, list: await listCartasCorrecao(code) });
+      await cartaCorrecaoExit(nf.id, t);
+      setFeedback({ type: "success", message: `Carta de correção da ${rotuloDaNota(nf)} registrada na SEFAZ.` });
+      if (cceView?.id === nf.id) setCceView({ id: nf.id, list: await listCartasCorrecao(nf.id) });
     }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  async function abrirDanfe(nf: FiscalExit) {
+    setBusy(true); setFeedback(null);
+    try {
+      const { danfe_url } = await getExitDocumentos(nf.id);
+      if (!danfe_url) { setFeedback({ type: "info", message: `O DANFE da ${rotuloDaNota(nf, "nota")} ainda não está disponível. Consulte o Status em instantes.` }); return; }
+      await abrirDocumento(danfe_url);
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
   // Nota autorizada/cancelada cujos títulos, estoque ou pedido não entraram: o
@@ -248,7 +227,7 @@ export function Vfis0200Page(): JSX.Element {
   }
 
   // A tela fala o número da nota (o que está no DANFE), não o id interno.
-  const numeroDa = (id: number) => list.find((n) => n.id === id)?.numero_nf || id;
+  const numeroDa = (id: number) => list.find((n) => n.id === id)?.numero_nf || "sem número";
 
   async function verPendencias(id: number) {
     try { setPendView({ id, list: await getExitPendencias(id) }); }
@@ -268,20 +247,31 @@ export function Vfis0200Page(): JSX.Element {
     } finally { setBusy(false); }
   }
 
-  async function consultarStatus(id: number) {
-    setBusy(true); setFeedback(null);
+  async function consultarStatus(nf: FiscalExit) {
+    setFeedback(null);
+    // Sem envio registrado não há o que perguntar à SEFAZ: a janela já diz isso.
+    if (!nf.focus_ref && situacaoDaNota(nf.status) !== "rejeitada") { setStatusView({ nota: nf, resultado: null }); return; }
+    setBusy(true);
     try {
-      const st = await getExitStatus(id);
-      const m = `Status SEFAZ da NF-e ${numeroDa(id)}: ${st.status || "desconhecido"}.`;
-      // Rejeitada: mostra o motivo da SEFAZ, que é o que a pessoa precisa corrigir.
-      if (st.motivo && /rejeit|erro|deneg|nao_encontrado/i.test(st.status)) {
-        setFeedback({ type: "error", message: `${m} Motivo: ${st.motivo}` });
-      } else {
-        setFeedback(st.avisos?.length ? comAvisos(m, st.avisos, id) : { type: "info", message: m });
-      }
-      await reload();
+      const resultado = await getExitStatus(nf.id);
+      setStatusView({ nota: nf, resultado });
+      const atual = await listExits();
+      setList(atual);
+      const fresca = atual.find((n) => n.id === nf.id);
+      if (fresca) setStatusView({ nota: fresca, resultado });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
+
+  const notasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const digitos = termo.replace(/\D/g, "");
+    return list.filter((n) => {
+      if (filtroSituacao && situacaoDaNota(n.status) !== filtroSituacao) return false;
+      if (!termo) return true;
+      return n.razao_social_destinatario.toLowerCase().includes(termo)
+        || (digitos !== "" && (String(n.numero_nf).includes(digitos) || n.cnpj_destinatario.replace(/\D/g, "").includes(digitos)));
+    });
+  }, [list, busca, filtroSituacao]);
 
   return (
     <div className="erp-screen">
@@ -301,14 +291,6 @@ export function Vfis0200Page(): JSX.Element {
           <span className="erp-tgroup-label">Visão</span>
           <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
         </div>
-        {mode === "create" && (
-          <div className="erp-tgroup">
-            <span className="erp-tgroup-label">Ações</span>
-            <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>
-              {busy ? <><div className="erp-spin" />Salvando...</> : "Criar Rascunho"}
-            </button>
-          </div>
-        )}
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VFIS0200 — NF-e de Saída" filename="vfis0200" />
@@ -327,11 +309,11 @@ export function Vfis0200Page(): JSX.Element {
             onCriada={(nf) => {
               setLastCreated(nf);
               setMode("list");
-              setFeedback({
+              // Abrir a prévia limpa o aviso: a mensagem vem depois, e aparece dentro dela.
+              void reload().then(() => abrirPrevia(nf.id)).then(() => setFeedback({
                 type: "success",
-                message: `NF-e ${nf.numero_nf} criada em rascunho a partir do pedido (total R$ ${money(nf.valor_total)}). Confira a prévia e autorize.`,
-              });
-              void reload().then(() => abrirPrevia(nf.id));
+                message: `Nota criada em rascunho a partir do pedido (total R$ ${money(nf.valor_total)}). Confira a prévia e autorize.`,
+              }));
             }}
           />
         )}
@@ -340,98 +322,54 @@ export function Vfis0200Page(): JSX.Element {
           <>
             {lastCreated && (
               <div className="erp-metrics">
-                <div className="erp-metric"><div className="erp-metric-label">Última NF-e ({lastCreated.numero_nf})</div><div className="erp-metric-value">{money(lastCreated.valor_total)}</div></div>
+                <div className="erp-metric"><div className="erp-metric-label">Última nota criada</div><div className="erp-metric-value">{money(lastCreated.valor_total)}</div></div>
                 <div className="erp-metric"><div className="erp-metric-label">ICMS</div><div className="erp-metric-value">{money(lastCreated.valor_icms)}</div></div>
                 <div className="erp-metric"><div className="erp-metric-label">IPI</div><div className="erp-metric-value">{money(lastCreated.valor_ipi)}</div></div>
                 <div className="erp-metric"><div className="erp-metric-label">PIS</div><div className="erp-metric-value">{money(lastCreated.valor_pis)}</div></div>
                 <div className="erp-metric"><div className="erp-metric-label">COFINS</div><div className="erp-metric-value">{money(lastCreated.valor_cofins)}</div></div>
               </div>
             )}
-            {pendView && (
-              <div className="erp-fieldset" style={{ marginBottom: 12 }}>
-                <div className="erp-card-header">
-                  <div className="erp-card-header-left"><span className="erp-card-title">Efeitos pendentes da NF-e {numeroDa(pendView.id)}</span></div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {pendView.list.some((p) => p.situacao === "PENDENTE") && (
-                      <button className="erp-btn erp-btn-primary" disabled={busy} onClick={() => void reprocessar(pendView.id)}>Reprocessar agora</button>
-                    )}
-                    <button className="erp-btn" onClick={() => setPendView(null)}>Fechar</button>
-                  </div>
-                </div>
-                <div className="erp-fieldset-body">
-                  <table className="erp-grid">
-                    <thead><tr><th>Etapa</th><th>Situação</th><th>Tentativas</th><th>Último erro</th><th>Próxima tentativa</th></tr></thead>
-                    <tbody>
-                      {pendView.list.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma pendência: títulos, estoque e pedido desta NF-e estão em dia.</td></tr>}
-                      {pendView.list.map((p, i) => (
-                        <tr key={i}>
-                          <td>{p.etapa === "CANCELAMENTO" ? "Cancelamento" : "Autorização"}</td>
-                          <td>{p.situacao === "PENDENTE" ? <span className="erp-badge erp-badge-amber">Pendente</span> : <span className="erp-badge erp-badge-green">Resolvida</span>}</td>
-                          <td>{p.tentativas}</td>
-                          <td>{p.ultimo_erro || "—"}</td>
-                          <td>{p.situacao === "PENDENTE" && p.proxima_tentativa ? new Date(p.proxima_tentativa).toLocaleString("pt-BR") : "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            {cceView && (
-              <div className="erp-fieldset" style={{ marginBottom: 12 }}>
-                <div className="erp-card-header">
-                  <div className="erp-card-header-left"><span className="erp-card-title">CC-e da NF-e {cceView.id}</span></div>
-                  <button className="erp-btn" onClick={() => setCceView(null)}>Fechar</button>
-                </div>
-                <div className="erp-fieldset-body">
-                  <table className="erp-grid">
-                    <thead><tr><th style={{ width: 50 }}>Seq</th><th>Texto da correção</th><th>Status</th><th>Data</th></tr></thead>
-                    <tbody>
-                      {cceView.list.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhuma CC-e emitida para esta NF-e.</td></tr>}
-                      {cceView.list.map((c, i) => (
-                        <tr key={i}>
-                          <td>{parseNum(c, "numero_seq", "NumeroSeq") ?? i + 1}</td>
-                          <td>{parseStr(c, "texto_correcao", "TextoCorrecao")}</td>
-                          <td>{statusPill(parseStr(c, "status", "Status"))}</td>
-                          <td>{(parseStr(c, "created_at", "CreatedAt") || "").slice(0, 10) || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Notas Fiscais   — <span style={{fontWeight:400,opacity:0.65}}>{list.length} NF-e</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Notas Fiscais   — <span style={{fontWeight:400,opacity:0.65}}>{notasFiltradas.length === list.length ? `${list.length} NF-e` : `${notasFiltradas.length} de ${list.length} NF-e`}</span></div><div className="erp-fieldset-body">
+              <div className="erp-field erp-c6"><label className="erp-label" htmlFor="vfis-busca">Buscar</label>
+                <input id="vfis-busca" className="erp-input" placeholder="Número, destinatário ou CNPJ" value={busca} onChange={(e) => setBusca(e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label" htmlFor="vfis-situacao">Situação</label>
+                <select id="vfis-situacao" className="erp-input" value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value as "" | SituacaoNF)}>
+                  <option value="">Todas</option>
+                  {(["rascunho", "aguardando", "autorizada", "rejeitada", "cancelada"] as const).map((v) => <option key={v} value={v}>{ROTULO_SITUACAO[v]}</option>)}
+                </select></div>
+              <div className="erp-field erp-c12">
                 <table className="erp-grid">
                   <thead>
-                    <tr><th>#</th><th>Série</th><th>Destinatário</th><th>Status</th><th>Total</th><th>Emissão</th><th style={{ width: 280 }}>Ações</th></tr>
+                    <tr><th>Número</th><th>Série</th><th>Destinatário</th><th>Situação</th><th className="num">Total</th><th>Emissão</th><th style={{ width: 430 }}>Ações</th></tr>
                   </thead>
                   <tbody>
-                    {list.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma NF-e de saída.</td></tr>}
-                    {list.map((nf) => {
+                    {notasFiltradas.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">{list.length === 0 ? "Nenhuma NF-e de saída." : "Nenhuma nota com este filtro."}</td></tr>}
+                    {notasFiltradas.map((nf) => {
                       const sit = situacaoDaNota(nf.status);
-                      const isDraft = sit === "rascunho" || sit === "aguardando";
                       const isAuth = sit === "autorizada";
+                      const transmitida = !!nf.focus_ref;
                       return (
                         <tr key={nf.id}>
-                          <td style={{ fontWeight: 600 }}>{nf.numero_nf}{nf.finalidade === 4 && <><br /><span className="erp-badge erp-badge-amber" title={nf.nfe_referenciada ? `Devolução da NF-e ${nf.nfe_referenciada}` : "Devolução de compra"}>Devolução</span></>}</td>
+                          <td style={{ fontWeight: 600 }}>{nf.numero_nf > 0 ? nf.numero_nf : "—"}{nf.finalidade === 4 && <><br /><span className="erp-badge erp-badge-amber" title={nf.nfe_referenciada ? `Devolução da NF-e ${nf.nfe_referenciada}` : "Devolução de compra"}>Devolução</span></>}</td>
                           <td>{nf.serie}</td>
-                          <td>{nf.razao_social_destinatario}<br /><small style={{ color: "var(--v-text-muted)" }}>{nf.cnpj_destinatario}</small></td>
+                          <td>{nf.razao_social_destinatario}<br /><small style={{ color: "var(--v-text-muted)" }}>{documentoComMascara(nf.cnpj_destinatario)}</small></td>
                           <td>{statusPill(nf.status)}</td>
-                          <td>{money(nf.valor_total)}</td>
-                          <td>{nf.data_emissao?.slice(0, 10) || "—"}</td>
+                          <td className="num">{money(nf.valor_total)}</td>
+                          <td>{dataBR(nf.data_emissao)}</td>
                           <td>
-                            {isDraft && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void abrirPrevia(nf.id)}>Prévia</button>}
-                            {isDraft && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void autorizar(nf.id)}>Autorizar</button>}
-                            {sit === "rejeitada" && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void abrirPrevia(nf.id)}
-                              title="A SEFAZ rejeitou: corrija o motivo (veja o status) e transmita de novo">Prévia</button>}
-                            {sit === "rejeitada" && <button className="erp-btn erp-btn-sm" onClick={() => void autorizar(nf.id)}
-                              title="Retransmite a nota rejeitada depois da correção">Reenviar</button>}
-                            {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void cce(nf.id)}>Nova CC-e</button>}
-                            {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
-                            {isAuth && <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelar(nf.id)}>Cancelar</button>}
-                            <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void consultarStatus(nf.id)}>Status</button>
-                            {(isAuth || sit === "cancelada") && <button className="erp-btn erp-btn-sm" title="Títulos, estoque e pedido desta nota" onClick={() => void verPendencias(nf.id)}>Efeitos</button>}
+                            <div className="erp-row-actions">
+                              {(sit === "rascunho" || sit === "rejeitada" || sit === "aguardando") && <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy} onClick={() => void abrirPrevia(nf.id)}
+                                title="Confira a nota antes de transmitir">Prévia</button>}
+                              {sit === "rascunho" && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void autorizar(nf.id)}>Autorizar</button>}
+                              {(sit === "rejeitada" || sit === "aguardando") && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void autorizar(nf.id)}
+                                title={sit === "rejeitada" ? "Transmite de novo depois da correção" : "Consulte o Status antes: a nota pode já ter chegado à SEFAZ"}>Reenviar</button>}
+                              {(isAuth || sit === "cancelada") && transmitida && <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy} title="Abre o PDF da nota" onClick={() => void abrirDanfe(nf)}>DANFE</button>}
+                              {isAuth && transmitida && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void cce(nf)}>Nova CC-e</button>}
+                              {(isAuth || sit === "cancelada") && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
+                              {sit !== "rascunho" && <button className="erp-btn erp-btn-sm" disabled={busy} title="Consulta a situação da nota na SEFAZ" onClick={() => void consultarStatus(nf)}>Status</button>}
+                              {(isAuth || sit === "cancelada") && <button className="erp-btn erp-btn-sm" disabled={busy} title="Títulos, estoque e pedido desta nota" onClick={() => void verPendencias(nf.id)}>Efeitos</button>}
+                              {isAuth && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => void cancelar(nf)}>Cancelar</button>}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -445,160 +383,19 @@ export function Vfis0200Page(): JSX.Element {
         )}
 
         {mode === "create" && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Cabeçalho   — <span style={{fontWeight:400,opacity:0.65}}>Os impostos são calculados ao criar</span></div><div className="erp-fieldset-body">
-                
-                  <div className="erp-field erp-c2"><label className="erp-label">Número NF</label>
-                    <input className="erp-input num" type="number" value={form.numero_nf || ""} onChange={(e) => setF("numero_nf", Number(e.target.value))} />
-                    <span className="erp-hint">Deixe em branco: o sistema usa o próximo número da sequência da empresa. Informe à mão só para retomar uma numeração existente.</span></div>
-                  <div className="erp-field erp-c1"><label className="erp-label erp-req">Série</label>
-                    <input className="erp-input" value={form.serie} onChange={(e) => setF("serie", e.target.value)} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label erp-req">CFOP</label>
-                    <input className="erp-input" value={form.cfop} onChange={(e) => setF("cfop", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>
-                    <input className="erp-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Saída</label>
-                    <input className="erp-input" type="date" value={form.data_saida} onChange={(e) => setF("data_saida", e.target.value)} /></div>
-                  <div className="erp-field erp-c1"><label className="erp-label">Pessoa</label>
-                    <select className="erp-input" value={form.tipo_pessoa} onChange={(e) => setF("tipo_pessoa", e.target.value as TipoPessoa)}>
-                      <option value="J">J</option><option value="F">F</option></select></div>
-                  <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ/CPF Destinatário</label>
-                    <input className="erp-input" value={form.cnpj_destinatario} onChange={(e) => setF("cnpj_destinatario", e.target.value)} />
-                    {form.cnpj_destinatario.trim() && (
-                      <span className="erp-field-hint" style={{ color: validateCNPJOrCPF(form.cnpj_destinatario) ? "#1e6030" : "#b91c1c" }}>
-                        {validateCNPJOrCPF(form.cnpj_destinatario) ? "✓ válido" : "✗ inválido"}
-                      </span>
-                    )}</div>
-                  <div className="erp-field erp-c5"><label className="erp-label">Razão Social Destinatário</label>
-                    <input className="erp-input" value={form.razao_social_destinatario} onChange={(e) => setF("razao_social_destinatario", e.target.value)} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label">IE Destinatário</label>
-                    <input className="erp-input" value={form.ie_destinatario ?? ""} placeholder="ISENTO se não-contrib." onChange={(e) => setF("ie_destinatario", e.target.value)} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label erp-req">UF Destino</label>
-                    <input className="erp-input" maxLength={2} value={form.uf_destinatario} onChange={(e) => setF("uf_destinatario", e.target.value.toUpperCase())} /></div>
-                  <div className="erp-field erp-c6"><label className="erp-label">Natureza da Operação</label>
-                    <input className="erp-input" value={form.natureza_operacao} onChange={(e) => setF("natureza_operacao", e.target.value)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label>
-                    <select className="erp-input" value={form.finalidade_compra ?? ""} onChange={(e) => setF("finalidade_compra", e.target.value || undefined)}>
-                      {FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "Do pedido ou do cliente" : f.label}</option>)}
-                    </select>
-                    <span className="erp-hint">Uso, consumo ou ativo: consumidor final (IPI na base do ICMS, sem diferimento).</span></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Tipo de nota</label>
-                    <LookupField value={form.invoice_type_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable onChange={(c) => setF("invoice_type_id", c ? Number(c) : undefined)} />
-                    <span className="erp-hint">Os indicadores do tipo de nota (calcula ST, diferimento, PIS/COFINS, DIFAL, ICMS isento) entram no cálculo.</span></div>
-                  <div className="erp-field erp-c12"><label className="erp-label">Informações complementares</label>
-                    <textarea className="erp-input" rows={2} maxLength={2000} value={form.informacoes_complementares ?? ""}
-                      placeholder="Texto que sai no campo de informações complementares da NF-e"
-                      onChange={(e) => setF("informacoes_complementares", e.target.value || undefined)} />
-                    <span className="erp-hint">O sistema acrescenta sozinho o que a lei exige: no Simples Nacional, a identificação de optante e o crédito de ICMS; nos benefícios, a base legal cadastrada na regra de ICMS/IPI.</span></div>
-                  <div className="erp-field erp-c2"><label className="erp-label">Frete</label>
-                    <input className="erp-input num" type="number" step="0.01" value={form.valor_frete} onChange={(e) => setF("valor_frete", Number(e.target.value))} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label">Seguro</label>
-                    <input className="erp-input num" type="number" step="0.01" value={form.valor_seguro} onChange={(e) => setF("valor_seguro", Number(e.target.value))} /></div>
-                  <div className="erp-field erp-c2"><label className="erp-label">Desconto</label>
-                    <input className="erp-input num" type="number" step="0.01" value={form.valor_desconto} onChange={(e) => setF("valor_desconto", Number(e.target.value))} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Carga de expedição</label>
-                    <input className="erp-input num" type="number" value={form.shipment_load_code ?? ""}
-                      onChange={(e) => setF("shipment_load_code", e.target.value ? Number(e.target.value) : undefined)} />
-                    <span className="erp-hint">Preenchido sozinho quando a nota nasce do romaneio; informe aqui só na emissão avulsa.</span></div>
-                
-              </div>
-            </div>
-
-            <div className="erp-fieldset">
-              <div className="erp-fieldset-head">Destinatário: cliente e endereço   — <span style={{fontWeight:400,opacity:0.65}}>A NF-e exige o endereço completo do destinatário</span></div>
-              <div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label">Cliente (cód.)</label>
-                  <input className="erp-input num" type="number" value={form.customer_code ?? ""}
-                    onChange={(e) => setF("customer_code", e.target.value ? Number(e.target.value) : undefined)} />
-                  <span className="erp-hint">Informando o cliente, o sistema completa nome, CNPJ, IE e o endereço pelo cadastro (entrega, ou cobrança na falta dele) e resolve a condição de pagamento.</span></div>
-                <div className="erp-field erp-c12">
-                  <p className="erp-note">
-                    Os campos abaixo só precisam ser preenchidos numa entrega pontual em endereço
-                    diferente do cadastro. O que você digitar aqui prevalece; o que ficar em branco
-                    é completado pelo cadastro do cliente. Use a Prévia para conferir o resultado
-                    antes de emitir.
-                  </p>
-                </div>
-                <div className="erp-field erp-c4"><label className="erp-label">Logradouro</label>
-                  <input className="erp-input" value={form.dest_logradouro ?? ""}
-                    onChange={(e) => setF("dest_logradouro", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Número</label>
-                  <input className="erp-input" value={form.dest_numero ?? ""}
-                    onChange={(e) => setF("dest_numero", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Complemento</label>
-                  <input className="erp-input" value={form.dest_complemento ?? ""}
-                    onChange={(e) => setF("dest_complemento", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Bairro</label>
-                  <input className="erp-input" value={form.dest_bairro ?? ""}
-                    onChange={(e) => setF("dest_bairro", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c4"><label className="erp-label">Município</label>
-                  <input className="erp-input" value={form.dest_municipio ?? ""}
-                    onChange={(e) => setF("dest_municipio", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">CEP</label>
-                  <input className="erp-input" value={form.dest_cep ?? ""}
-                    onChange={(e) => setF("dest_cep", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">E-mail</label>
-                  <input className="erp-input" value={form.dest_email ?? ""}
-                    onChange={(e) => setF("dest_email", e.target.value || undefined)} />
-                  <span className="erp-hint">Por onde o cliente recebe a nota.</span></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Telefone</label>
-                  <input className="erp-input" value={form.dest_telefone ?? ""}
-                    onChange={(e) => setF("dest_telefone", e.target.value || undefined)} /></div>
-              </div>
-            </div>
-
-            <div className="erp-fieldset">
-              <div className="erp-fieldset-head">Cupom fiscal substituído   — <span style={{fontWeight:400,opacity:0.65}}>Preencha só quando esta nota substitui um cupom emitido no balcão</span></div>
-              <div className="erp-fieldset-body">
-                <div className="erp-field erp-c3"><label className="erp-label">Número do cupom</label>
-                  <input className="erp-input" value={form.fiscal_coupon_number ?? ""}
-                    onChange={(e) => setF("fiscal_coupon_number", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Data do cupom</label>
-                  <input className="erp-input" type="date" value={form.fiscal_coupon_date ?? ""}
-                    onChange={(e) => setF("fiscal_coupon_date", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Série do ECF</label>
-                  <input className="erp-input" value={form.fiscal_coupon_ecf_serial ?? ""}
-                    onChange={(e) => setF("fiscal_coupon_ecf_serial", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c12">
-                  <p className="erp-note">
-                    O cliente compra no balcão, leva o cupom e depois pede a nota. Registrar
-                    número, data e ECF do cupom aqui é o que amarra os dois documentos para a
-                    fiscalização — sem isso, a mesma venda aparece duas vezes.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Itens   — <span style={{fontWeight:400,opacity:0.65}}>Produtos: R$ {money(form.valor_produtos)}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
-                <table className="erp-grid">
-                  <thead>
-                    <tr><th style={{ width: 40 }}>Seq</th><th>Cód. Item</th><th>NCM</th><th>CFOP</th><th>Origem</th><th>Descrição</th>
-                      <th>Qtd</th><th>Unit.</th><th>Total</th><th style={{ width: 60 }}></th></tr>
-                  </thead>
-                  <tbody>
-                    {form.itens.map((it, idx) => (
-                      <tr key={idx}>
-                        <td>{it.sequence}</td>
-                        <td><input className="erp-input" style={{ height: 30, width: 80 }}  value={it.item_code || ""} onChange={(e) => setItem(idx, { item_code: e.target.value })} /></td>
-                        <td><input className="erp-input" style={{ height: 30, width: 100 }} value={it.ncm} onChange={(e) => setItem(idx, { ncm: e.target.value })} /></td>
-                        <td><input className="erp-input" style={{ height: 30, width: 70 }} value={it.cfop} onChange={(e) => setItem(idx, { cfop: e.target.value })} /></td>
-                        <td><input className="erp-input" style={{ height: 30, width: 50 }} value={it.origem_mercadoria} onChange={(e) => setItem(idx, { origem_mercadoria: e.target.value })} /></td>
-                        <td><input className="erp-input" style={{ height: 30, minWidth: 140 }} value={it.description} onChange={(e) => setItem(idx, { description: e.target.value })} /></td>
-                        <td><input className="erp-input num" style={{ height: 30, width: 70 }} type="number" value={it.quantidade} onChange={(e) => setItem(idx, { quantidade: Number(e.target.value) })} /></td>
-                        <td><input className="erp-input num" style={{ height: 30, width: 90 }} type="number" step="0.01" value={it.unit_price} onChange={(e) => setItem(idx, { unit_price: Number(e.target.value) })} /></td>
-                        <td>{money(it.total_price)}</td>
-                        <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeItem(idx)} disabled={form.itens.length === 1}>✕</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="erp-fieldset-body" style={{ paddingTop: 12 }}>
-                <button className="erp-btn" onClick={addItem}>+ Adicionar item</button>
-              </div>
-            </div>
-            </div>
-          </>
+          <NovaNotaForm
+            onCancelar={() => setMode("list")}
+            onCriada={(nf) => {
+              setLastCreated(nf);
+              setMode("list");
+              // Abrir a prévia limpa o aviso: a mensagem vem depois, e aparece dentro dela.
+              void reload().then(() => abrirPrevia(nf.id)).then(() => setFeedback({
+                type: "success",
+                message: `Nota criada em rascunho. Impostos calculados: ICMS R$ ${money(nf.valor_icms)}, IPI R$ ${money(nf.valor_ipi)}, `
+                  + `PIS R$ ${money(nf.valor_pis)}, COFINS R$ ${money(nf.valor_cofins)}. Total R$ ${money(nf.valor_total)}. Confira a prévia e transmita.`,
+              }));
+            }}
+          />
         )}
       </div></section></div>
 
@@ -629,6 +426,8 @@ export function Vfis0200Page(): JSX.Element {
             </div>
 
             <div className="erp-modal-body">
+              {/* O aviso da página fica atrás do modal: repete aqui o que importa agora. */}
+              {feedback && <div className={`erp-feedback ${feedback.type}`} style={{ marginBottom: 12 }}>{feedback.message}</div>}
               {/* Conferência primeiro: é o que decide se dá para emitir. */}
               <div className="erp-fieldset" style={{ marginBottom: 12 }}>
                 <div className="erp-fieldset-head">
@@ -664,33 +463,6 @@ export function Vfis0200Page(): JSX.Element {
                       </table>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div className="erp-fieldset" style={{ marginBottom: 12 }}>
-                <div className="erp-fieldset-head">Emitente e destinatário</div>
-                <div className="erp-fieldset-body">
-                  {([["Emitente", previa.emitente], ["Destinatário", previa.destinatario]] as const).map(([rotulo, parte]) => (
-                    <div className="erp-field erp-c6" key={rotulo}>
-                      <label className="erp-label">{rotulo}</label>
-                      <div className="erp-note" style={{ lineHeight: 1.6 }}>
-                        <strong>{parte.nome || <em style={{ color: "var(--v-err)" }}>— sem nome —</em>}</strong><br />
-                        {parte.documento || <em style={{ color: "var(--v-err)" }}>— sem CNPJ/CPF —</em>}
-                        {parte.ie ? ` · IE ${parte.ie}` : " · sem IE"}<br />
-                        {parte.logradouro || <em style={{ color: "var(--v-err)" }}>— sem logradouro —</em>}
-                        {parte.numero ? `, ${parte.numero}` : ""}
-                        {parte.complemento ? ` — ${parte.complemento}` : ""}<br />
-                        {parte.bairro || <em style={{ color: "var(--v-err)" }}>— sem bairro —</em>}
-                        {" · "}
-                        {parte.municipio || <em style={{ color: "var(--v-err)" }}>— sem município —</em>}
-                        {parte.uf ? `/${parte.uf}` : ""}
-                        {parte.codigo_municipio ? ` (IBGE ${parte.codigo_municipio})` : ""}<br />
-                        CEP {parte.cep || <em style={{ color: "var(--v-err)" }}>—</em>}
-                        {parte.email ? ` · ${parte.email}` : ""}
-                        {parte.telefone ? ` · ${parte.telefone}` : ""}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
 
@@ -765,13 +537,6 @@ export function Vfis0200Page(): JSX.Element {
                 editavel={["DRAFT", "REJECTED"].includes(previa.status.toUpperCase())}
                 onMudou={() => { void previewExit(previa.fiscal_exit_id).then(setPrevia).catch(() => undefined); }} />
 
-              {infCplDaPrevia(previa.payload_enviado) && (
-                <div className="erp-fieldset" style={{ marginBottom: 12 }}>
-                  <div className="erp-fieldset-head">Informações complementares — <span style={{ fontWeight: 400, opacity: 0.65 }}>o texto que vai impresso na nota</span></div>
-                  <div className="erp-fieldset-body"><div className="erp-field erp-c12"><p className="erp-note" style={{ whiteSpace: "pre-wrap" }}>{infCplDaPrevia(previa.payload_enviado)}</p></div></div>
-                </div>
-              )}
-
               <div className="erp-fieldset" style={{ marginBottom: 12 }}>
                 <div className="erp-fieldset-head">Totais</div>
                 <div className="erp-fieldset-body">
@@ -822,19 +587,8 @@ export function Vfis0200Page(): JSX.Element {
               </div>
 
               <div className="erp-fieldset">
-                <div className="erp-card-header">
-                  <div className="erp-card-header-left"><span className="erp-card-title">Documento que será transmitido</span></div>
-                  <button className="erp-btn erp-btn-sm" onClick={() => setVerPayload((v) => !v)}>
-                    {verPayload ? "Ocultar" : "Mostrar"}
-                  </button>
-                </div>
-                {verPayload && (
-                  <div className="erp-fieldset-body"><div className="erp-field erp-c12">
-                    <pre className="erp-note" style={{ maxHeight: 280, overflow: "auto", fontSize: 11, whiteSpace: "pre" }}>
-                      {previa.payload_enviado}
-                    </pre>
-                  </div></div>
-                )}
+                <div className="erp-fieldset-head">Documento que será transmitido   — <span style={{ fontWeight: 400, opacity: 0.65 }}>a nota como o cliente vai receber</span></div>
+                <div className="erp-fieldset-body"><div className="erp-field erp-c12"><DanfePrevia previa={previa} /></div></div>
               </div>
             </div>
 
@@ -849,6 +603,102 @@ export function Vfis0200Page(): JSX.Element {
                 {busy ? <><div className="erp-spin" />Emitindo...</> : "Emitir NF-e"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {statusView && (() => {
+        const { nota, resultado } = statusView;
+        const situacao = resultado ? SITUACAO_SEFAZ[(resultado.status || "").toLowerCase()] : undefined;
+        const chave = resultado?.chave_nfe || nota.chave_nfe;
+        const protocolo = resultado?.protocolo || nota.protocolo;
+        return (
+          <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="vfis-status" onMouseDown={(e) => { if (e.target === e.currentTarget) setStatusView(null); }}>
+            <div className="erp-modal erp-confirm-dialog">
+              <div className="erp-modal-head"><strong id="vfis-status">Situação da NF-e {nota.numero_nf > 0 ? `${nota.numero_nf}/${nota.serie}` : "sem número"}</strong></div>
+              <div className="erp-modal-body">
+                {!resultado && <div className="erp-feedback info" style={{ marginBottom: 12 }}>Esta nota não tem envio registrado à SEFAZ por este sistema. A situação abaixo é a que está gravada aqui, e não há o que consultar.</div>}
+                <dl className="erp-dados">
+                  <dt>Situação</dt>
+                  <dd>{resultado && situacao ? <span className={`erp-badge ${situacao.badge}`}>{situacao.rotulo}</span> : statusPill(nota.status)}</dd>
+                  <dt>Destinatário</dt><dd>{nota.razao_social_destinatario}</dd>
+                  <dt>Valor total</dt><dd>R$ {money(nota.valor_total)}</dd>
+                  {chave && <><dt>Chave de acesso</dt><dd className="erp-dados-chave">{chaveEmGrupos(chave)}</dd></>}
+                  {protocolo && <><dt>Protocolo</dt><dd>{protocolo}</dd></>}
+                  {resultado?.motivo && <><dt>Motivo</dt><dd>{resultado.motivo}</dd></>}
+                </dl>
+                {!!resultado?.avisos?.length && <div className="erp-feedback warn" style={{ marginTop: 12 }}>{resultado.avisos.join(" ")}</div>}
+              </div>
+              <div className="erp-modal-actions">
+                {resultado?.xml_url && <button className="erp-btn" onClick={() => void abrirDocumento(resultado.xml_url!)}>Baixar XML</button>}
+                {resultado?.danfe_url && <button className="erp-btn" onClick={() => void abrirDocumento(resultado.danfe_url!)}>Abrir DANFE</button>}
+                <button className="erp-btn erp-btn-primary" onClick={() => setStatusView(null)}>Fechar</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {pendView && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="vfis-efeitos" onMouseDown={(e) => { if (e.target === e.currentTarget) setPendView(null); }}>
+          <div className="erp-modal erp-modal-lg" style={{ width: "min(860px, 96vw)" }}>
+            <div className="erp-modal-head"><div><strong id="vfis-efeitos">Efeitos da NF-e {numeroDa(pendView.id)}</strong>
+              <div className="erp-field-hint">O que a nota move depois da SEFAZ: títulos a receber, estoque e pedido de venda.</div></div></div>
+            <div className="erp-modal-body">
+              {feedback && <div className={`erp-feedback ${feedback.type}`} style={{ marginBottom: 12 }}>{feedback.message}</div>}
+              {pendView.list.length === 0
+                ? <div className="erp-feedback success">Tudo em dia: títulos, estoque e pedido desta nota já foram atualizados.</div>
+                : (
+                  <table className="erp-grid">
+                    <thead><tr><th>Etapa</th><th>Situação</th><th className="num">Tentativas</th><th>O que aconteceu</th><th>Próxima tentativa</th></tr></thead>
+                    <tbody>
+                      {pendView.list.map((p, i) => (
+                        <tr key={i}>
+                          <td>{p.etapa === "CANCELAMENTO" ? "Cancelamento" : "Autorização"}</td>
+                          <td>{p.situacao === "PENDENTE" ? <span className="erp-badge erp-badge-amber">Pendente</span> : <span className="erp-badge erp-badge-green">Concluída</span>}</td>
+                          <td className="num">{p.tentativas}</td>
+                          <td>{p.ultimo_erro || "—"}</td>
+                          <td>{p.situacao === "PENDENTE" && p.proxima_tentativa ? new Date(p.proxima_tentativa).toLocaleString("pt-BR") : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+            </div>
+            <div className="erp-modal-actions">
+              {pendView.list.some((p) => p.situacao === "PENDENTE") && (
+                <button className="erp-btn" disabled={busy} onClick={() => void reprocessar(pendView.id)}>Reprocessar agora</button>
+              )}
+              <button className="erp-btn erp-btn-primary" onClick={() => setPendView(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cceView && (
+        <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="vfis-cce" onMouseDown={(e) => { if (e.target === e.currentTarget) setCceView(null); }}>
+          <div className="erp-modal erp-modal-lg" style={{ width: "min(860px, 96vw)" }}>
+            <div className="erp-modal-head"><strong id="vfis-cce">Cartas de correção da NF-e {numeroDa(cceView.id)}</strong></div>
+            <div className="erp-modal-body">
+              {cceView.list.length === 0
+                ? <div className="erp-grid-empty">Nenhuma carta de correção emitida para esta nota.</div>
+                : (
+                  <table className="erp-grid">
+                    <thead><tr><th style={{ width: 50 }}>Nº</th><th>Texto da correção</th><th style={{ width: 170 }}>Situação</th><th style={{ width: 100 }}>Data</th></tr></thead>
+                    <tbody>
+                      {cceView.list.map((c, i) => (
+                        <tr key={i}>
+                          <td>{parseNum(c, "numero_seq", "NumeroSeq") || i + 1}</td>
+                          <td style={{ whiteSpace: "pre-wrap" }}>{parseStr(c, "texto_correcao", "TextoCorrecao")}</td>
+                          <td><span className="erp-badge erp-badge-green">{rotuloDaCce(parseStr(c, "status", "Status"))}</span></td>
+                          <td>{dataBR(parseStr(c, "created_at", "CreatedAt"))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+            </div>
+            <div className="erp-modal-actions"><button className="erp-btn erp-btn-primary" onClick={() => setCceView(null)}>Fechar</button></div>
           </div>
         </div>
       )}

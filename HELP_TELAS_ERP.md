@@ -97,9 +97,11 @@ o recebimento abre o **lote de inspeção** (VINS0300) com o material retido →
 → **decisão de uso** (libera, rejeita, retrabalho, sucata) → não conformidade e
 CAPA (VINS0500) → certificado ao cliente (VINS0700).
 
-**Beneficiamento (material do cliente).** NF-e de remessa do cliente (VBEN0100) →
-produção → nota de serviço com a devolução do material (VBEN0100 → VFIS0200) →
-saldo do cliente em VBEN0200.
+**Beneficiamento (material do cliente).** Produto com o material marcado como
+fornecido pelo cliente (VENT0210) → pedido de venda do serviço (VVND0200) → NF-e
+de remessa do cliente ligada ao pedido (VBEN0100) → produção apontando só horas
+(VBEN0300) → nota única com o serviço e a devolução do material (VBEN0100 →
+VFIS0200) → inventário e movimentação do material do cliente em VBEN0200.
 
 **Tributação da venda.** Configuração fiscal (VFIS0100) → tabelas (VFIS0110) e
 classificação fiscal do item (VFIS0350) → **regras de ICMS/IPI por cenário**
@@ -355,8 +357,9 @@ regra de cada linha.
 | [VEST0100](#vest0100--central-de-estoque) | Central de Estoque | Posição e ATP por situação, extrato (kardex), lançamentos com tipo e centro de custo, transferências, requisições ao almoxarifado, reservas, separação, lotes, reposição e análises (giro, cobertura, parados). |
 | [VEST0200](#vest0200--inventário-e-tipos-de-movimento) | Inventário e Tipos de Movimento | Inventário físico com foto do saldo, contagem e recontagem, diferenças valorizadas e fechamento que lança os ajustes; tipos de movimento com as regras do lançamento manual. |
 | [VEXP0100](#vexp0100--expedição--romaneio) | Expedição / Romaneio | Montar romaneio de expedição: itens, conferência e despacho (OPEN→SEPARATED→CONFERRED→SHIPPED). |
-| [VBEN0100](#vben0100--beneficiamento--remessas-e-retorno-fiscal) | Beneficiamento — Remessas e Retorno Fiscal | Receber a NF-e de remessa do cliente (CFOP 5901), acompanhar saldo por linha, lançar retorno (5902), sobra e sucata (5903) com rastreabilidade, bloquear material sem pedido ou divergente e encerrar com aprovação. |
-| [VBEN0200](#vben0200--estoque-de-terceiros--material-do-cliente) | Estoque de Terceiros — Material do Cliente | Saldo do material que pertence ao cliente e está em poder da empresa, por cliente proprietário, item da nota e NF-e de remessa, ordenado pelo prazo fiscal de retorno. Não entra na valoração do estoque próprio. |
+| [VBEN0100](#vben0100--beneficiamento--remessas-e-retorno-fiscal) | Beneficiamento — Remessas e Retorno Fiscal | Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria. |
+| [VBEN0200](#vben0200--estoque-de-terceiros--material-do-cliente) | Estoque de Terceiros — Material do Cliente | Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio. |
+| [VBEN0300](#vben0300--horas-de-beneficiamento) | Horas de Beneficiamento | Horas trabalhadas nas ordens de fabricação de beneficiamento, por cliente e pedido: apontamentos e horas lançadas nas operações do roteiro. |
 | [VEXP0110](#vexp0110--gestão-de-cargas-de-expedição) | Gestão de Cargas de Expedição | Montagem, liberação, carregamento e despacho de cargas. |
 | [VEXP0120](#vexp0120--instruções-e-caixas-de-despacho) | Instruções e Caixas de Despacho | Orientações de entrega e posições físicas da expedição. |
 | [VEST0400](#vest0400--consultas-de-estoque-por-almoxarifado) | Consultas de Estoque por Almoxarifado | Movimentos e saldos persistidos por almoxarifado. |
@@ -1979,7 +1982,8 @@ perdas e vigências que o MRP explode e o custo soma.
    componente gravado, mesmo sem filhos ainda.
 4. A coluna **Sinais** mostra o que muda o comportamento no planejamento:
    quantidade por fórmula, componente fora de vigência, componente com
-   alternativo.
+   alternativo, co-produto, quantidade por ordem e material fornecido pelo
+   cliente.
 
 **Regras e cuidados.**
 - **Unidade diferente da de estoque:** a tela mostra o que o planejamento vai
@@ -1989,9 +1993,14 @@ perdas e vigências que o MRP explode e o custo soma.
   corrigir de uma passada só. Combinações que o MRP não consegue explodir são
   recusadas.
 - As fórmulas podem ser copiadas e coladas entre componentes dentro da tela.
+- **Fornecido pelo cliente (beneficiamento):** marque no componente que o
+  cliente manda para a empresa processar. Ele não é comprado pelo MRP, não é
+  baixado do estoque próprio nem entra no custo, e a ordem de fabricação do pai
+  **não dá entrada do produto no estoque** — o material volta ao cliente na nota
+  de beneficiamento (VBEN0100). Não pode ser marcado junto com co-produto.
 
 **Telas relacionadas.** VBOM0100, VENG0500 (onde usado, explosão), VENT0200,
-VCFG0100 (máscara do configurado).
+VCFG0100 (máscara do configurado), VBEN0100.
 
 ---
 
@@ -3630,39 +3639,90 @@ que peso e em que transporte.
 processar (industrialização por encomenda) e devolvê-lo na nota fiscal certa. O
 material de terceiro tem controle próprio, separado do estoque da empresa.
 
+**Antes de começar.** Cadastre o produto com a estrutura e o roteiro (VENT0210) e
+marque o material que o cliente manda como **Fornecido pelo cliente
+(beneficiamento)**. Implante o **pedido de venda** do serviço para o cliente
+(VVND0200), com a natureza de beneficiamento.
+
 **Fluxo.**
-1. **Receber NF-e de remessa do cliente** (CFOP 5901): cliente proprietário,
-   número da NF-e, emissão, recebimento, prazo de retorno, pedido de
-   beneficiamento, valor e chave de acesso. Confira item a item (quantidade da
-   nota × conferida; divergência com motivo). Uma remessa com problema entra
-   **bloqueada** e não pode ir para a produção até ser regularizada.
-2. **Lançar movimento:** consumo, sobra, sucata (exige destinação), ajuste (exige
-   justificativa), com a ordem de fabricação. Você escolhe o **tipo** do
-   movimento; o CFOP é aplicado pelo sistema.
-3. **Faturar o beneficiamento:** uma nota com o **serviço** (CFOP 5124) e a
-   **devolução do material** (5902) — sobra e sucata devolvidas saem em 5903.
-   Informe o valor e o código do serviço e o que retorna. A nota nasce em
-   rascunho; transmita pela VFIS0200.
-4. **Liberar**, **Bloquear** (com motivo) ou **Encerrar** a remessa.
+1. **+ Receber remessa:** cliente proprietário, **pedido de beneficiamento** (a
+   busca mostra só os pedidos abertos desse cliente), número da NF-e, emissão,
+   recebimento, prazo de retorno, valor e chave de acesso. Confira item a item
+   (quantidade da nota × conferida; divergência exige motivo). Em **Item do cadastro**,
+   busque o item: descrição, NCM, unidade e CST vêm dele, e o código e o valor do
+   cliente vêm da última remessa, quando houver. **Item do cliente** lista os materiais
+   já recebidos desse cliente, ou aceita um código novo. Colar a chave preenche o número
+   da nota. Sem pedido, ou com divergência, a remessa
+   entra **bloqueada** e não pode ir para a produção.
+2. **Vincular pedido:** quando o material chega antes do pedido, vincule-o depois.
+   Se a remessa estava bloqueada só por falta de pedido, o material é liberado.
+3. **Movimentos** (na grade de itens): retorno, sobra, sucata (exige destinação) e
+   ajuste (exige justificativa), com a busca da ordem de fabricação. Você escolhe
+   o **tipo** do movimento; o CFOP é aplicado pelo sistema.
+4. **Faturar:** a aba **Faturamento** já vem preenchida — a linha do pedido com o
+   saldo a faturar, o serviço com descrição, quantidade e preço do pedido, e a
+   devolução do **saldo inteiro** de cada item. Ajuste o que for preciso e use
+   **Gerar nota**: sai uma nota única com o **serviço** (CFOP 5124) e a
+   **devolução do material** (5902; sobra e sucata em 5903). A nota nasce em
+   rascunho e a remessa mostra **Nota em rascunho**: use **Transmitir** ali mesmo
+   ou pela VFIS0200. Se a SEFAZ rejeitar, a remessa mostra o motivo; **Descartar**
+   devolve o saldo e tira o atendido do pedido, para corrigir o dado (a inscrição
+   estadual do cliente, por exemplo) e faturar de novo. A cobrança (duplicata e conta a receber) é
+   **só do serviço** — o material volta ao cliente e não é cobrado. Quando a nota
+   é autorizada, a linha do pedido é dada por atendida.
+5. **Liberar material**, **Bloquear** (com motivo) ou **Encerrar** a remessa
+   (encerrar com saldo ainda aqui exige motivo).
 
-**Consultar.** Por cliente, NF-e, situação e prazo de retorno ("vencendo até").
-A coluna **Falta** e o prazo dizem o que precisa voltar primeiro.
+**Consultar.** A lista à esquerda filtra por cliente (barra de ferramentas) e
+pelas abas rápidas **Com material aqui**, **Prazo até 5 dias**, **Bloqueadas** e
+**Encerradas**; a busca acha por NF-e, pedido ou item. Os indicadores do topo
+levam ao filtro correspondente. A aba **Histórico e auditoria** mostra quem
+alterou o quê, quando, o valor antes e depois e o motivo.
 
-**Telas relacionadas.** VBEN0200, VFIS0200, VPRO0900.
+**Telas relacionadas.** VBEN0200, VBEN0300, VFIS0200, VVND0200, VENT0210, VPRO0900.
 
 ---
 
 #### VBEN0200 — Estoque de Terceiros — Material do Cliente
 
 **Para que serve.** Ver o material do cliente que está na empresa, separado do
-estoque próprio (os dois nunca se somam).
+estoque próprio (os dois nunca se somam), e a movimentação dele.
 
-**Como usar.** Filtre por cliente proprietário e pelo código do item **como aparece
-na nota do cliente** (é com ele que o retorno fiscal sai). A lista vem ordenada
-pelo **prazo fiscal mais próximo** — o que precisa voltar primeiro — com saldo,
-remessas e o item interno correspondente.
+**Inventário (saldo atual).** O saldo por cliente proprietário e pelo código do
+item **como aparece na nota do cliente** (é com ele que o retorno fiscal sai),
+ordenado pelo **prazo fiscal mais próximo** — o que precisa voltar primeiro —, com
+as remessas e o item interno correspondente.
 
-**Telas relacionadas.** VBEN0100, VEST0100.
+**Movimentação (entrada e saída).** Escolha o período e o tipo: entradas
+(recebimento da remessa), saídas (retorno, sobra, sucata, ajuste) ou um tipo só.
+Cada linha traz a NF-e do cliente, o item, a quantidade, o CFOP, a nota de saída
+com a situação e a ordem de fabricação. Marque **Mostrar estornados** para ver os
+movimentos desfeitos pelo cancelamento da nota de saída.
+
+Filtre por cliente e por item na barra de ferramentas. **Exportar** gera a lista da
+aba aberta.
+
+**Telas relacionadas.** VBEN0100, VBEN0300, VEST0100.
+
+---
+
+#### VBEN0300 — Horas de Beneficiamento
+
+**Para que serve.** No beneficiamento a produção não consome estoque próprio: o
+que a empresa vende é o trabalho. Esta tela mostra as **horas trabalhadas** em
+cada ordem de fabricação de beneficiamento, por cliente e pedido.
+
+**Como usar.** Escolha o período e, se quiser, o cliente e o pedido (com o cliente
+escolhido, a busca de pedido mostra só os dele). Entra a ordem do produto que tem,
+na estrutura, material **fornecido pelo cliente**, com hora registrada no período.
+Para cada ordem aparecem as **horas apontadas** (início e fim dos apontamentos), o
+número de apontamentos e as **horas lançadas nas operações** do roteiro; quando as
+duas diferem, a célula fica destacada — alguém apontou num lugar e não no outro.
+
+Ordem aberta à mão aparece **sem cliente**: use **Vincular pedido** na linha para
+ligá-la ao pedido de venda.
+
+**Telas relacionadas.** VBEN0100, VPRO0900, VPRO0210.
 
 ---
 
@@ -4141,6 +4201,10 @@ custo, forma de pagamento, emissão, vencimento, valor bruto, desconto, valor
 líquido e parcela (n de N).
 - **Rateio por plano de contas:** ligado, o título vai para vários planos (ex.:
   matéria-prima e EPI da mesma nota). A soma tem de fechar com o valor bruto.
+- **Parcelar este título:** marcado, troca vencimento e parcela por um plano de
+  parcelas que combina percentual e parcelas, como 30% de entrada mais 2 parcelas ou
+  3 parcelas e 40% ao final. Nasce um título por parcela, numerado como "DOC 1/3", e
+  desconto e rateio são repartidos sem perder centavos. Ou todos são criados, ou nenhum.
 
 **Aprovar e pagar.**
 1. O título nasce **aguardando aprovação**. Aprove (ou rejeite, com motivo) na
@@ -4257,18 +4321,41 @@ e usar esse saldo depois para abater títulos.
 3. **Aplicar:** escolha o título a abater (a tela oferece **só** os títulos do mesmo
    parceiro e do lado certo) e o valor.
 
+4. **Cancelar:** desfaz um adiantamento lançado por engano, enquanto nada dele foi
+   aplicado. Peça o motivo; o valor volta para a conta bancária com um lançamento
+   inverso no fluxo de caixa e o adiantamento fica **Cancelado**, sem saldo.
+
 **Regras.** Adiantamento pago a fornecedor só abate conta a pagar; recebido de
-cliente só abate conta a receber. O valor aplicado não passa do saldo do
-adiantamento nem do saldo do título.
+cliente só abate conta a receber, e sempre do **mesmo parceiro**. O valor aplicado
+não passa do saldo do adiantamento nem do que falta pagar no título (já
+descontados pagamentos, descontos e outros abatimentos). Título quitado ou
+cancelado não recebe aplicação. Adiantamento com aplicação não pode ser cancelado.
+
+**Contabilidade.** Com a contabilização de pagamentos (ou de recebimentos) ligada
+na VCTB0200, o adiantamento é contabilizado sozinho: pago a fornecedor entra em
+*Adiantamentos a fornecedores* contra o banco; recebido de cliente, no banco contra
+*Adiantamentos de clientes*. A aplicação passa o valor para Fornecedores/Clientes (ou
+para a despesa/receita do título avulso), e o cancelamento estorna a entrada. Sem
+essas contas configuradas, a tela avisa o que falta e não lança.
 
 ---
 
 #### VFIN0610 — Remessa Bancária CNAB 240
 
-*Rotina de operações (administrador).*
+**Para que serve.** Gerar o arquivo de remessa CNAB 240 dos títulos em aberto e
+baixá-lo para enviar ao banco. Só o administrador gera a remessa.
 
-**Para que serve.** Gerar o arquivo de remessa CNAB 240 (com a configuração do banco
-e os títulos) e baixá-lo para enviar ao banco.
+**Passo a passo.**
+1. Escolha a **conta bancária**: banco, agência e conta vêm do cadastro; a empresa,
+   da Configuração Fiscal.
+2. Informe o que foi combinado com o banco: **convênio**, carteira, espécie do título
+   e o **número da remessa** (cada arquivo enviado usa o número seguinte).
+3. Marque os **títulos**. O pagador de cada um vem do cadastro do cliente.
+4. **Gerar remessa** baixa o arquivo. Se faltar CNPJ ou endereço de um cliente, a tela
+   diz qual é, para corrigir antes.
+
+**Atenção.** Gerar o arquivo não marca o título como enviado, e o retorno do banco é
+outra etapa. Antes do primeiro uso, valide o arquivo com o banco.
 
 ---
 
@@ -4325,6 +4412,9 @@ alterada na **VEMP0100** (botão *Alterar na VEMP0100*).
   diferimento** (no PR, por exemplo, o código do diferimento parcial), juros ao
   mês, multa de atraso e os dias de vencimento de ICMS, IPI e PIS/COFINS. Os
   percentuais são digitados em % (19,5 = 19,5%).
+  Para o beneficiamento fora de SP, preencha com a contabilidade o **cBenef da
+  suspensão** e o **Texto legal da nota de retorno de industrialização**: sem o
+  texto, a nota de retorno não é gerada.
 
 **Telas relacionadas.** VEMP0100 (identificação), VFIS0320, VFIS0325.
 
@@ -4343,11 +4433,29 @@ alterada na **VEMP0100** (botão *Alterar na VEMP0100*).
 
 As alíquotas aparecem e são digitadas em **%**.
 
-**Telas relacionadas.** VFIS0350, VFIS0320, VFIS0120.
+**Quem altera.** As tabelas são a lei e valem para **todas as empresas** do sistema:
+só o administrador altera; os demais consultam. Exceções da empresa (redução,
+substituição, benefício) são cadastradas na VFIS0320.
+
+**Qual alíquota a nota usa.** A regra da VFIS0320 vence; sem regra, vale esta
+tabela (a alíquota interna do estado do emitente, a interestadual e a do NCM); e
+só se o estado não estiver aqui vale o ICMS interno da Configuração Fiscal
+(VFIS0100).
+
+**Desativar** (na linha do NCM) tira a tributação do NCM — o atalho antigo
+VFIS0120 abre esta tela.
+
+**Telas relacionadas.** VFIS0350, VFIS0320, VFIS0100.
 
 ---
 
 #### VFIS0200 — NF-e de Saída
+
+**Número e série.** A nota recebe número e série na autorização, seguindo a sequência configurada para a empresa no painel da Focus NF-e. Até lá ela aparece sem número.
+
+**Tipo de nota.** Vem do cadastro em VCLI0530, aba Tipo de NF de Saída, e decide se a nota gera título, mexe no estoque, baixa o pedido e entra como receita. Bonificação e remessa, por exemplo, saem sem pagamento.
+
+**Conferência antes de sair.** A prévia e a transmissão conferem emitente, destinatário, datas (emissão no futuro ou com mais de 30 dias impede), nota de origem, NCM, CFOP e as contas de linha e total. O que impede aparece em Pendências, com o que fazer.
 
 **Para que serve.** Emitir, transmitir e acompanhar a NF-e de saída: venda,
 devolução, remessa, beneficiamento.
@@ -4357,19 +4465,45 @@ devolução, remessa, beneficiamento.
   representante, condição de pagamento e as linhas com o que falta faturar.
   Fature tudo ou parte (desmarque linhas ou reduza quantidades); o resto continua
   pendente. Cada pedido mostra as notas já emitidas para ele.
-- **+ Nova NF-e:** cabeçalho (número, série, CFOP, emissão, saída, natureza da
-  operação, **finalidade da compra**, **tipo de nota**), destinatário (pessoa,
-  CNPJ/CPF, razão social, IE, UF, endereço — ou o cliente do cadastro), itens
-  (item, NCM, CFOP, origem, quantidade, preço), frete, seguro, desconto, carga de
-  expedição e informações complementares. Substitui cupom fiscal quando for o
-  caso.
+- **+ Nova NF-e:** a nota avulsa, em três partes:
+  - **Destinatário:** em **Cliente cadastrado**, busque o cliente por nome, código
+    ou CNPJ: razão social, CNPJ/CPF, inscrição estadual, endereço e contato vêm do
+    cadastro. Com mais de um endereço, escolha em **Endereço da nota**. Para uma
+    entrega pontual, use **Alterar endereço só nesta nota**; o cadastro não muda. Em
+    **Sem cadastro**, digite o CNPJ ou CPF (**Buscar** completa os dados pelo CNPJ)
+    e o endereço. Se o documento já for de um cliente, a tela oferece usar o cadastro.
+  - **Itens:** busque o item por código ou descrição: descrição, NCM, unidade, origem,
+    CFOP e o preço da tabela de venda vêm sozinhos, e tudo pode ser ajustado na
+    linha. Sem item do cadastro, escreva a descrição e preencha o NCM.
+  - **Dados da nota:** o **CFOP** é sugerido pela UF e pela inscrição estadual do
+    destinatário (item comprado sai como revenda); depois vêm natureza da operação,
+    emissão, saída, série, número (em branco, usa o próximo), **finalidade da
+    compra**, **tipo de nota**, frete, seguro, desconto, carga de expedição e
+    informações complementares. Marque a opção do cupom quando a nota substituir
+    um cupom fiscal.
 
-**Prévia (conferência).** Antes de transmitir, **Prévia** mostra o que vai para a
-SEFAZ: emitente e destinatário, itens com ICMS, IPI, ST/DIFAL, PIS/COFINS e IBS/CBS
-(com o cClassTrib, ajustável por linha), totais, pagamento e as **pendências** —
-cada uma com nível (*impede* ou *atenção*) e **como resolver**. Exemplos: item sem
+  O total fica sempre à vista, e **Criar rascunho** aponta o que falta antes de
+  criar a nota. Criada, ela abre direto na prévia.
+
+**Prévia (conferência).** Antes de transmitir, **Prévia** mostra as **pendências**,
+cada uma com nível (*impede* ou *atenção*) e **como resolver**, os itens com ICMS,
+IPI, ST/DIFAL, PIS/COFINS e IBS/CBS (com o cClassTrib, ajustável por linha), os
+totais e o pagamento. No fim, **Documento que será transmitido** traz a própria nota
+no layout do DANFE, como o cliente vai receber; o que falta sai em vermelho, e a
+chave e o protocolo só existem depois da autorização. Exemplos: item sem
 regra quando a empresa exige; CST com benefício sem o cBenef (PR, RS, RJ, SC, GO e
 DF exigem).
+
+**Ações na lista.** Busque por número, destinatário ou CNPJ e filtre pela situação.
+- **Status:** abre a situação da nota na SEFAZ, com chave, protocolo e motivo. Nota
+  sem envio registrado por este sistema não tem o que consultar, e a janela avisa.
+- **DANFE:** abre o PDF da nota transmitida. **Baixar XML** fica na janela de Status.
+- **Nova CC-e:** de 15 a 1000 caracteres. Não corrige valores, impostos, quantidade,
+  CFOP, destinatário nem datas. **Ver CC-e** lista as cartas registradas.
+- **Efeitos:** mostra se títulos, estoque e pedido foram atualizados e permite
+  **Reprocessar agora** quando algo ficou pendente.
+- **Cancelar:** justificativa de 15 a 255 caracteres. O cancelamento vai à SEFAZ; sem
+  o token da empresa em VFIS0100, a nota transmitida não é cancelada.
 
 **Números de série.** Linha de item que controla série mostra, na prévia, as
 séries em estoque para marcar — uma por unidade. Sem elas a nota não sai. As
@@ -4400,6 +4534,12 @@ sistema baixa o estoque, gera os títulos a receber e marca o pedido como fatura
 
 #### VFIS0210 — NF-e de Entrada
 
+**Conferência do XML.** A nota é recusada quando foi emitida para outra empresa, quando a chave de acesso não confere com número, série, emitente, UF ou mês, quando a SEFAZ não a autorizou ou, em produção, quando é de homologação.
+
+**Lançamento manual.** Informe também ICMS-ST e outras despesas, quando houver. A chave é conferida com os dados digitados, e as somas de produtos, IPI, ICMS e total precisam fechar com a nota. Em Pendências aparece tudo o que impede a aprovação.
+
+**Parcelas.** Monte o parcelamento pelo plano de parcelas, combinando percentual e parcelas, e use Distribuir proporcionalmente para repartir no plano de contas.
+
 **Para que serve.** Dar entrada nas notas dos fornecedores: importar, conciliar com
 o cadastro, distribuir as parcelas por plano de contas e aprovar — o que gera o
 contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
@@ -4410,7 +4550,21 @@ contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
 - **Notas recebidas na SEFAZ:** as notas emitidas contra o CNPJ da empresa chegam
   antes da mercadoria. **Manifeste** (a confirmação encerra o prazo; o
   desconhecimento protege contra nota fria) e importe.
-- **Lançamento manual** (nota sem XML, modelo 1/1A, serviço avulso).
+- **Lançamento manual** (nota sem XML, modelo 1/1A, serviço avulso). Escolha o
+  **fornecedor cadastrado** e razão social, CNPJ, inscrição estadual e UF vêm do
+  cadastro; **sem cadastro**, busque o CNPJ na Receita. Colar a chave preenche número,
+  série e modelo. Ao escolher o item, NCM, unidade e descrição vêm do cadastro, e o
+  CFOP é sugerido pela UF. Plano de contas, centro de custo e almoxarifado ficam na
+  segunda linha de cada item. A mesma nota do mesmo fornecedor não entra duas vezes.
+  - **Código no fornecedor:** informe o código impresso na nota. Com o vínculo já
+    cadastrado (VSUP0110), o item do cadastro vem sozinho. Código novo: escolha o item
+    e deixe **Lembrar vínculo** marcado para a próxima nota já reconhecer.
+  - **Preço, ICMS % e IPI %:** valem os da nota do fornecedor. O sistema sugere o
+    preço (pedido de compra em aberto ou última compra) e as alíquotas (tabelas
+    fiscais); o que você digita prevalece. Confira com a nota: fornecedor do Simples,
+    por exemplo, pode não destacar ICMS.
+  - **Pagamento:** o plano vem da condição de pagamento do fornecedor e pode ser
+    combinado à vontade (veja *Plano de parcelas* abaixo).
 
 **Passo a passo.**
 1. **Itens e conciliação:** cada produto da nota é ligado ao item do cadastro.
@@ -4424,7 +4578,10 @@ contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
 3. **Parcelas × plano de contas:** as duplicatas do XML (sem duplicata, uma à
    vista). Cada parcela é distribuída pelos planos na proporção dos itens; dá para
    mudar (ex.: 1ª parcela toda EPI). **Gerar parcelas iguais**, **Distribuir
-   proporcionalmente** e **Fechar** (a última conta leva os centavos).
+   proporcionalmente** e **Fechar** (a última conta leva os centavos). O plano de
+   parcelas pode ser aplicado aqui com **Aplicar às parcelas**. A coluna **Duplicata**
+   é o número da duplicata do fornecedor: vem do XML e, em nota sem duplicata, é
+   preenchida como número da nota/parcela.
 4. **Retenções na fonte**, quando houver (viram títulos a recolher).
 5. **Conferência:** as divergências contra o pedido (preço, quantidade, imposto)
    com o esperado e o que veio na nota.
@@ -4433,8 +4590,17 @@ contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
    a entrada no estoque, a baixa do pedido e a contabilização. O material de item
    com roteiro de inspeção vai para o almoxarifado de inspeção (VINS0300).
 
+**Plano de parcelas.** Monte o pagamento em blocos, cada um com percentual ou valor,
+o número de parcelas e os dias: por exemplo, 30% de entrada e o restante em 2
+parcelas, ou 3 parcelas e 40% ao final. Um bloco pode ficar com **o que sobrar**. Se
+os blocos não fecharem com o total, a tela avisa e não aplica.
+
+**Operação de entrada.** As opções vêm do cadastro em VFIS0360; operação nova já
+aparece na lista, sem precisar entrar de novo no sistema.
+
 **Cancelar a NF.** Com motivo (pelo menos 10 caracteres): estorna estoque e
-cancela os títulos.
+cancela os títulos. O material sai pelo mesmo valor com que entrou, e o custo médio do
+item volta ao que era antes da nota.
 
 **Devolver ao fornecedor.** Na nota aprovada, informe o que devolver; nasce a NF-e
 de devolução (CFOP de devolução, nota original referenciada) em rascunho.
@@ -4450,6 +4616,9 @@ consumido vai para despesa, e nasce o título da transportadora.
 ---
 
 #### VFIS0220 — CT-e (Conhecimento de Transporte)
+
+Remetente e destinatário podem vir do cadastro de clientes: a busca acima dos campos
+preenche documento, nome, município e UF.
 
 **Para que serve.** Registrar e emitir CT-e: número, série, CFOP, datas, emitente
 (transportadora), tipo de rateio, frete, seguro, outros, ICMS e a NF-e de entrada
@@ -4683,6 +4852,9 @@ rascunho.
 
 #### VNFS0100 — NFS-e (Nota Fiscal de Serviço)
 
+Em **Tomador**, o campo **Cliente** busca no cadastro e preenche documento, razão
+social, endereço e e-mail; o que for específico desta nota continua editável.
+
 **Para que serve.** Emitir a nota fiscal de serviço.
 
 **Como usar.** **RPS:** número, série, emissão, optante do Simples e município do
@@ -4698,9 +4870,17 @@ caracteres.
 
 *Rotina de operações.*
 
-**Para que serve.** **Manifestar** uma NF-e recebida (ciência, confirmação,
-desconhecimento ou operação não realizada) e **inutilizar** uma faixa de numeração
-própria não usada (série, número inicial e final e justificativa).
+**Para que serve.** **Manifestar** uma NF-e recebida e **inutilizar** uma faixa de
+numeração própria que não será usada.
+
+**Manifestar NF-e.** Informe a chave de acesso (44 dígitos) e escolha a
+manifestação: *Ciência da operação* libera o XML completo; *Confirmação da
+operação* encerra a nota como recebida; *Desconhecimento* e *Operação não
+realizada* pedem justificativa de pelo menos 15 caracteres.
+
+**Inutilizar numeração.** Série, número inicial e final (para um número só, repita o
+inicial) e justificativa de 15 a 255 caracteres. A inutilização **não pode ser
+desfeita**.
 
 **Dica.** A manifestação também é feita na VFIS0210, em *Notas recebidas na SEFAZ*.
 
@@ -4710,18 +4890,29 @@ própria não usada (série, número inicial e final e justificativa).
 
 *Rotina de operações.*
 
-**Para que serve.** Importar o arquivo oficial do IBPT (CSV por UF — administrador) e
-consultar a carga tributária aproximada de um NCM (a que vai impressa na nota de
-consumidor).
+**Para que serve.** Importar o arquivo oficial do IBPT (CSV por UF, escolhida na
+lista — administrador) e consultar a carga tributária aproximada de um NCM (a que vai
+impressa na nota de consumidor).
 
 ---
 
 #### VFIS0640 — Faturamento de Carga e DANFE
 
-*Rotina de operações.*
+**Para que serve.** Criar a NF-e de saída de uma carga e abrir o DANFE de uma nota
+autorizada.
 
-**Para que serve.** Criar a NF-e de saída a partir de uma carga e consultar o
-endereço do DANFE e do XML autorizados.
+**Passo a passo.**
+1. Escolha a **carga**. Itens, quantidades e preços vêm dos romaneios dela; descrição,
+   NCM, unidade e origem vêm do cadastro do item.
+2. Confira o **cliente**. Quando todos os romaneios são de um mesmo cliente, ele já vem
+   preenchido, com CNPJ, inscrição estadual e endereço do cadastro.
+3. Confira série, datas, **CFOP** (sugerido pelo destino) e natureza da operação.
+   Informe frete, seguro e desconto, se houver.
+4. **Criar NF-e da carga** gera a nota como rascunho. Confira e transmita em VFIS0200.
+
+**Quando a tela recusa.** Carga cancelada, expedida ou já faturada; romaneio sem itens;
+item sem preço (ligue o romaneio a um pedido de venda); item sem NCM (preencha em
+VENT0200, aba Fiscal).
 
 ---
 
@@ -4745,10 +4936,8 @@ ICMS, IPI, PIS e COFINS na transição.
 
 #### VFIS0120 — Exclusão de Tributação NCM
 
-*Rotina de operações.*
-
-**Para que serve.** Remover a tributação de um NCM que a empresa não deve mais usar.
-A exclusão é definitiva para o cadastro fiscal — confira na VFIS0110 antes.
+**Unificada na VFIS0110.** O código abre as Tabelas Tributárias: use **Desativar** na
+linha do NCM (só administrador).
 
 ---
 
@@ -4782,12 +4971,9 @@ confira antes de transmitir. O arquivo sai na codificação que o PVA lê.
 
 #### VFIS0610 — Importação de NF-e por Chave
 
-*Rotina de operações.*
-
-**Para que serve.** Baixar da SEFAZ a NF-e de compra pela chave de acesso (44
-dígitos). A nota entra **pendente de conferência**: a conciliação dos itens, o plano
-de contas, as parcelas e a aprovação são feitos na **VFIS0210**, que também tem o
-botão *Importar pela chave*.
+**Unificada na VFIS0210.** O código abre a NF-e de Entrada: use **Pela chave**. A nota
+entra pendente de conferência, para conciliar os itens, o plano de contas, as
+parcelas e aprovar ali mesmo.
 
 ---
 
@@ -4855,17 +5041,23 @@ contabilização automática.
   ligação **plano de contas financeiro × conta contábil** (a conta debitada na
   entrada) e **conta bancária × conta contábil** (o caixa da baixa). Com isso, a
   NF de entrada aprovada, os pagamentos e os recebimentos se contabilizam sozinhos.
+  Em *Pagamentos e recebimentos* ficam também as contas de **Adiantamentos a
+  fornecedores** e **Adiantamentos de clientes**, usadas pelos adiantamentos da
+  VFIN0600.
 
-**Telas relacionadas.** VCTB0600, VFIN0120, VFIS0210.
+**Telas relacionadas.** VCTB0600, VFIN0120, VFIS0210, VFIN0600.
 
 ---
 
 #### VCTB0600 — SPED ECD
 
-*Rotina de operações.*
-
 **Para que serve.** Gerar e baixar o arquivo da ECD (Escrituração Contábil Digital)
-com o plano, os lançamentos e os dados cadastrais do período.
+com o plano, os lançamentos e os dados cadastrais do período. Só o administrador gera
+o arquivo.
+
+**Passo a passo.** Escolha o **plano de contas** (cadastrado em VCTB0200) e o período,
+informe NIRE, e-mail e número do livro, e clique em **Gerar**. Os dados da empresa vêm
+da Configuração Fiscal. Valide o arquivo no programa da Receita antes de entregar.
 
 ---
 

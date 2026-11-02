@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { confirmar } from "@/components/ui/dialogos";
 import {
   type PurchaseOrderDTO, type PurchaseOrderItemDTO,
   FREIGHT_TYPES, FREIGHT_VALUE_TYPES, FREIGHT_VALUE_MODES, UTILIZATION_TYPES, DEMAND_TYPES,
@@ -212,9 +213,9 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
     });
   }
 
-  function removerLinha(i: PurchaseOrderItemDTO) {
+  async function removerLinha(i: PurchaseOrderItemDTO) {
     if (!aberto || !i.code) return;
-    if (!window.confirm(`Remover a linha ${i.sequence} (item ${i.item_code}) do pedido?`)) return;
+    if (!(await confirmar({ titulo: "Remover linha do pedido", assunto: `Linha ${i.sequence} · item ${i.item_code}`, mensagem: "A linha sai deste pedido de compra.", rotulo: "Remover", tom: "perigo" }))) return;
     void executar(async () => {
       aplicarPedido(await cancelOrderItem(aberto, i.code!));
       await carregarLista();
@@ -395,10 +396,13 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
                 setFeedback({ type: "success", message: "Alçada autorizada — o pedido pode seguir ao fornecedor." });
               })}>Autorizar alçada</button>
             <button className="erp-btn erp-btn-danger" disabled={busy}
-              onClick={() => { if (window.confirm(`Cancelar o pedido ${aberto}?`)) void executar(async () => {
-                await cancelOrder(aberto); setFeedback({ type: "success", message: "Pedido cancelado." });
-                novo(); await carregarLista();
-              }); }}>Cancelar pedido</button>
+              onClick={() => void (async () => {
+                if (!(await confirmar({ titulo: "Cancelar pedido de compra", assunto: `Pedido ${aberto}`, mensagem: "O pedido deixa de valer e não segue ao fornecedor.", rotulo: "Cancelar pedido", tom: "perigo" }))) return;
+                await executar(async () => {
+                  await cancelOrder(aberto); setFeedback({ type: "success", message: "Pedido cancelado." });
+                  novo(); await carregarLista();
+                });
+              })()}>Cancelar pedido</button>
           </div>
         )}
         </>)}
@@ -872,7 +876,7 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
                                     ) : (
                                       <>
                                         {podeEditar && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => editarLinha(i)}>Editar</button>}{" "}
-                                        {podeEditar && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => removerLinha(i)}>Remover</button>}
+                                        {podeEditar && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => void removerLinha(i)}>Remover</button>}
                                         {podeEliminar && (
                                           <button className="erp-btn erp-btn-sm" disabled={busy}
                                             title="Registrar o contato com o fornecedor e a data prometida"

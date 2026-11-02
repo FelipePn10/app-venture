@@ -8,6 +8,7 @@ import { type UsoCostCenterResumo, createCostCenter, deleteCostCenter, updateCos
 import { type PlanoConta, listPlanoContas } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { OpcoesLookup } from "@/components/ui/OpcoesLookup";
 import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -54,6 +55,7 @@ export function Vctb0102Page(): JSX.Element {
   const [centros, setCentros] = useState<CentroDeCusto[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioDaEmpresa[]>([]);
   const [contas, setContas] = useState<PlanoConta[]>([]);
+  const opcoesDeConta = useMemo(() => contas.map((p) => ({ code: String(p.id), label: `${p.codigo} — ${p.descricao}` })), [contas]);
 
   const recarregar = useCallback(async () => {
     try { setCentros(await listarCentros()); }
@@ -336,9 +338,8 @@ export function Vctb0102Page(): JSX.Element {
               <div className="erp-field erp-c3" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check" title="A requisição de compra com item deste centro só vira pedido depois que o aprovador aprovar.">
                 <input type="checkbox" checked={form.aprovaRequisicoes} onChange={(e) => setF("aprovaRequisicoes", e.target.checked)} /> Aprova as requisições de compra</label></div>
               <div className="erp-field erp-c3"><label className="erp-label">Conta contábil padrão</label>
-                <select className="erp-input" value={form.conta} onChange={(e) => setF("conta", e.target.value)} title="Vale na nota de entrada quando o item tem este centro e nenhuma conta">
-                  <option value="">—</option>{contas.map((p) => <option key={p.id} value={String(p.id)}>{p.codigo} — {p.descricao}</option>)}
-                </select></div>
+                <OpcoesLookup<string> value={form.conta || undefined} opcoes={opcoesDeConta} entityLabel="conta" placeholder="Nenhuma" onChange={(c) => setF("conta", c ?? "")} />
+                <span className="erp-hint">Vale na nota de entrada quando o item tem este centro e nenhuma conta.</span></div>
               {uso?.em_uso && <div className="erp-field erp-c12"><span className="erp-field-hint">Em uso: {uso.usos.map((u) => `${u.onde} (${u.quantidade})`).join(", ")}.</span></div>}
             </div></div>
 

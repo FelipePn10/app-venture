@@ -7,7 +7,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadEstablishments } from "@/services/lookups";
+import { loadCfops, loadEstablishments, loadItems } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -106,9 +106,9 @@ export function Vfis0550Page(): JSX.Element {
             <div className="erp-field erp-c3"><label className="erp-label">CNPJ Emitente</label>
               <input className="erp-input" value={form.orig_emitter_cnpj ?? ""} onChange={(e) => setF("orig_emitter_cnpj", e.target.value)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Item</label>
-              <input className="erp-input" value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value)} /></div>
+              <LookupField<string> value={form.item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Buscar item" allowManualCode={false} clearable onChange={(c) => setF("item_code", c ? String(c) : "")} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">CFOP</label>
-              <input className="erp-input" value={form.cfop ?? ""} onChange={(e) => setF("cfop", e.target.value)} /></div>
+              <LookupField<string> value={form.cfop || undefined} loader={loadCfops} entityLabel="CFOP" placeholder="Buscar CFOP" clearable onChange={(c) => setF("cfop", c ? String(c) : "")} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">CST</label>
               <input className="erp-input" value={form.cst_icms ?? ""} onChange={(e) => setF("cst_icms", e.target.value)} /></div>
           

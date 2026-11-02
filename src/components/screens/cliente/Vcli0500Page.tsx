@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { pedirTexto } from "@/components/ui/dialogos";
 import { enumLabel } from "@/utils/enumLabels";
 import {
   type CustomerDTO, type SupportRef, type CustomerDocType, type PaymentCondVisibility, type AddressType, type FinalidadeCompra,
@@ -159,7 +160,10 @@ export function Vcli0500Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       if (form.blocked) { await unblockCustomer(form.code); setFeedback({ type: "success", message: "Cliente desbloqueado." }); }
-      else { const r = window.prompt("Motivo do bloqueio:"); if (r === null) { setBusy(false); return; } await blockCustomer(form.code, r); setFeedback({ type: "success", message: "Cliente bloqueado." }); }
+      else {
+        const r = await pedirTexto({ titulo: "Bloquear cliente", rotulo: "Motivo do bloqueio", assunto: form.name || undefined, multilinha: true, rotuloConfirmar: "Bloquear", tom: "aviso" });
+        if (r === null) return;
+        await blockCustomer(form.code, r); setFeedback({ type: "success", message: "Cliente bloqueado." }); }
       await abrir(form.code); await reload();
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }

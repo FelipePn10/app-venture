@@ -1,13 +1,14 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   type Cte, type CreateCteDTO, type CteEmissionData, type TipoRateio,
-  CTE_TOMADORES, CTE_TIPOS, listCtes, createCte, authorizeCte,
+  CTE_TOMADORES, CTE_TIPOS, listCtes, createCte, authorizeCte, getDestinatarioDaNota,
 } from "@/services/nfeService";
 import { enumLabel } from "@/utils/enumLabels";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadFiscalEntries } from "@/services/lookups";
+import { loadCfops, loadCustomers, loadFiscalEntries, loadSuppliers } from "@/services/lookups";
+import { getDadosFiscaisDoFornecedor } from "@/services/supplierService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 // Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
@@ -53,6 +54,16 @@ export function Vfis0220Page(): JSX.Element {
   }, []);
   useEffect(() => { void reload(); }, [reload]);
 
+  const [transportadora, setTransportadora] = useState<number | undefined>();
+  async function escolherTransportadora(code?: number) {
+    setTransportadora(code);
+    if (!code) return;
+    try {
+      const f = await getDadosFiscaisDoFornecedor(code);
+      setForm((p) => ({ ...p, cnpj_emitente: f.documento, razao_social_emitente: f.nome, uf_emitente: f.uf || p.uf_emitente }));
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e, "Não foi possível buscar os dados da transportadora.") }); }
+  }
+
   const setF = <K extends keyof CreateCteDTO>(k: K, v: CreateCteDTO[K]) => {
     setForm((p) => {
       const next = { ...p, [k]: v };
@@ -72,6 +83,18 @@ export function Vfis0220Page(): JSX.Element {
   };
   const setParte = (parte: "remetente" | "destinatario", campo: string, valor: string) => {
     setEmissao((p) => ({ ...p, [parte]: { ...p[parte], [campo]: valor } })); setFeedback(null);
+  };
+  /** Remetente ou destinatário vindos do cadastro de clientes; os campos seguem editáveis. */
+  const [clienteDaParte, setClienteDaParte] = useState<{ remetente?: number; destinatario?: number }>({});
+  const escolherCliente = async (parte: "remetente" | "destinatario", code?: number) => {
+    setClienteDaParte((c) => ({ ...c, [parte]: code }));
+    if (!code) return;
+    try {
+      const d = await getDestinatarioDaNota(code);
+      const e = d.enderecos.find((x) => x.sugerido) ?? d.enderecos[0];
+      setEmissao((p) => ({ ...p, [parte]: { ...p[parte], cnpj: d.documento, nome: d.nome, municipio: e?.municipio ?? "", uf: e?.uf ?? "" } }));
+      setFeedback(null);
+    } catch (err) { setFeedback({ type: "error", message: errMessage(err, "Não foi possível ler o cadastro do cliente.") }); }
   };
 
   /** Envia à SEFAZ o CT-e selecionado na lista. */
@@ -175,11 +198,14 @@ export function Vfis0220Page(): JSX.Element {
                   <div className="erp-field erp-c1"><label className="erp-label">Série</label>
                     <input className="erp-input" value={form.serie} onChange={(e) => setF("serie", e.target.value)} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">CFOP</label>
-                    <input className="erp-input" value={form.cfop} onChange={(e) => setF("cfop", e.target.value)} /></div>
+                    <LookupField<string> value={form.cfop || undefined} loader={loadCfops} entityLabel="CFOP" placeholder="Buscar CFOP" clearable onChange={(c) => setF("cfop", c ? String(c) : "")} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Emissão</label>
                     <input className="erp-input" type="date" value={form.data_emissao} onChange={(e) => setF("data_emissao", e.target.value)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Entrada</label>
                     <input className="erp-input" type="date" value={form.data_entrada} onChange={(e) => setF("data_entrada", e.target.value)} /></div>
+                  <div className="erp-field erp-c6"><label className="erp-label">Transportadora do cadastro</label>
+                    <LookupField value={transportadora} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Buscar para preencher CNPJ, razão social e UF" allowManualCode={false} clearable
+                      onChange={(c) => void escolherTransportadora(c ? Number(c) : undefined)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label erp-req">CNPJ Emitente</label>
                     <input className="erp-input" value={form.cnpj_emitente} onChange={(e) => setF("cnpj_emitente", e.target.value)} /></div>
                   <div className="erp-field erp-c5"><label className="erp-label">Razão Social (Transportadora)</label>
@@ -255,7 +281,9 @@ export function Vfis0220Page(): JSX.Element {
                   <div className="erp-field erp-c2"><label className="erp-label">Valor da carga</label>
                     <input className="erp-input num" type="number" step="0.01" value={emissao.valor_carga ?? 0} onChange={(e) => setE("valor_carga", Number(e.target.value))} /></div>
 
-                  <div className="erp-field erp-c12"><label className="erp-label">Remetente (quem entrega a carga ao transportador)</label></div>
+                  <div className="erp-field erp-c12"><label className="erp-label">Remetente (quem entrega a carga ao transportador)</label>
+                    <LookupField value={clienteDaParte.remetente} loader={loadCustomers} entityLabel="cliente" placeholder="Buscar no cadastro de clientes para preencher" allowManualCode={false}
+                      onChange={(c) => void escolherCliente("remetente", c ? Number(c) : undefined)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">CNPJ/CPF</label>
                     <input className="erp-input" value={emissao.remetente.cnpj ?? ""} onChange={(e) => setParte("remetente", "cnpj", e.target.value)} /></div>
                   <div className="erp-field erp-c5"><label className="erp-label">Nome</label>
@@ -265,7 +293,9 @@ export function Vfis0220Page(): JSX.Element {
                   <div className="erp-field erp-c1"><label className="erp-label">UF</label>
                     <input className="erp-input" maxLength={2} value={emissao.remetente.uf ?? ""} onChange={(e) => setParte("remetente", "uf", e.target.value.toUpperCase())} /></div>
 
-                  <div className="erp-field erp-c12"><label className="erp-label">Destinatário (quem recebe a carga)</label></div>
+                  <div className="erp-field erp-c12"><label className="erp-label">Destinatário (quem recebe a carga)</label>
+                    <LookupField value={clienteDaParte.destinatario} loader={loadCustomers} entityLabel="cliente" placeholder="Buscar no cadastro de clientes para preencher" allowManualCode={false}
+                      onChange={(c) => void escolherCliente("destinatario", c ? Number(c) : undefined)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">CNPJ/CPF</label>
                     <input className="erp-input" value={emissao.destinatario.cnpj ?? ""} onChange={(e) => setParte("destinatario", "cnpj", e.target.value)} /></div>
                   <div className="erp-field erp-c5"><label className="erp-label">Nome</label>

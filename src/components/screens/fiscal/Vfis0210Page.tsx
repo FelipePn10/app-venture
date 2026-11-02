@@ -7,6 +7,7 @@ import {
 } from "@/services/nfeEntradaService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { confirmar } from "@/components/ui/dialogos";
 import { EntradaDocumentoView } from "./EntradaDocumentoView";
 import { EntradaManualForm } from "./EntradaManualForm";
 import { NotasRecebidasPanel } from "./NotasRecebidasPanel";
@@ -118,7 +119,15 @@ export function Vfis0210Page(): JSX.Element {
     finally { setBusy(false); }
   }
 
-  async function aprovarDaLista(id: number) {
+  async function aprovarDaLista(nf: FiscalEntry) {
+    const id = nf.id;
+    const ok = await confirmar({
+      titulo: "Aprovar a nota?",
+      mensagem: "A aprovação gera os títulos no contas a pagar, dá entrada no estoque e contabiliza a nota.",
+      assunto: `NF-e ${nf.numero_nf} — ${nf.razao_social_emitente} — R$ ${money(nf.valor_total)}`,
+      rotulo: "Aprovar",
+    });
+    if (!ok) return;
     setBusy(true); setFeedback(null);
     try {
       const d = await aprovarEntrada(id);
@@ -259,7 +268,7 @@ export function Vfis0210Page(): JSX.Element {
                                 <td>{statusEntradaPill(nf.status)}</td>
                                 <td>
                                   <button className="erp-btn erp-btn-sm" onClick={() => void abrir(nf.id)}>{st === "PENDING" || st === "CONFERRED" ? "Conferir" : "Abrir"}</button>
-                                  {st === "CONFERRED" && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void aprovarDaLista(nf.id)}>Aprovar</button>}
+                                  {st === "CONFERRED" && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void aprovarDaLista(nf)} disabled={busy}>Aprovar</button>}
                                 </td>
                               </tr>
                             );

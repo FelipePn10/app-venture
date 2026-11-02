@@ -249,13 +249,15 @@ export interface ParametrosContabilizacao {
   ibs_recolher_account_id?: number;
   cbs_vendas_account_id?: number;
   cbs_recolher_account_id?: number;
+  adiantamento_fornecedores_account_id?: number;
+  adiantamento_clientes_account_id?: number;
 }
 
 /** Os três interruptores do ciclo além da entrada. */
 export const FLAGS_CONTABILIZACAO: Array<{ campo: 'contabilizar_entrada' | 'contabilizar_pagamentos' | 'contabilizar_recebimentos' | 'contabilizar_saidas'; rotulo: string }> = [
   { campo: 'contabilizar_entrada', rotulo: 'Aprovação da NF de entrada (e frete)' },
-  { campo: 'contabilizar_pagamentos', rotulo: 'Pagamento de fornecedor e recolhimento de retenções' },
-  { campo: 'contabilizar_recebimentos', rotulo: 'Recebimento de cliente' },
+  { campo: 'contabilizar_pagamentos', rotulo: 'Pagamento de fornecedor, recolhimento de retenções e adiantamento a fornecedor' },
+  { campo: 'contabilizar_recebimentos', rotulo: 'Recebimento e adiantamento de cliente' },
   { campo: 'contabilizar_saidas', rotulo: 'NF-e de saída (receita, impostos e CMV)' },
 ];
 
@@ -278,6 +280,8 @@ export const CAMPOS_CONTA_PARAMETRO: Array<{ campo: keyof ParametrosContabilizac
   { campo: 'clientes_account_id', rotulo: 'Clientes (ativo)', grupo: 'Pagamentos e recebimentos' },
   { campo: 'juros_recebidos_account_id', rotulo: 'Juros recebidos (receita)', grupo: 'Pagamentos e recebimentos' },
   { campo: 'descontos_concedidos_account_id', rotulo: 'Descontos concedidos (despesa)', grupo: 'Pagamentos e recebimentos' },
+  { campo: 'adiantamento_fornecedores_account_id', rotulo: 'Adiantamentos a fornecedores (ativo)', grupo: 'Pagamentos e recebimentos' },
+  { campo: 'adiantamento_clientes_account_id', rotulo: 'Adiantamentos de clientes (passivo)', grupo: 'Pagamentos e recebimentos' },
   { campo: 'receita_vendas_account_id', rotulo: 'Receita de vendas', grupo: 'NF-e de saída' },
   { campo: 'icms_vendas_account_id', rotulo: 'ICMS sobre vendas (dedução)', grupo: 'NF-e de saída' },
   { campo: 'icms_recolher_account_id', rotulo: 'ICMS a recolher', grupo: 'NF-e de saída' },
@@ -341,6 +345,8 @@ function parseParametros(raw: unknown): ParametrosContabilizacao | null {
     ibs_recolher_account_id: opt('ibs_recolher_account_id'),
     cbs_vendas_account_id: opt('cbs_vendas_account_id'),
     cbs_recolher_account_id: opt('cbs_recolher_account_id'),
+    adiantamento_fornecedores_account_id: opt('adiantamento_fornecedores_account_id'),
+    adiantamento_clientes_account_id: opt('adiantamento_clientes_account_id'),
   };
 }
 
@@ -370,4 +376,10 @@ export async function vincularContaBancariaContabil(contaBancariaId: number, con
 export async function createDemonstrative(dto: { code: string; description: string; term_text?: string }): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/demonstratives`, dto);
   return unwrapObject(data);
+}
+
+/** Gera o arquivo da ECD (VCTB0600). */
+export async function gerarEcd(pedido: Obj): Promise<Blob> {
+  const { data } = await httpClient.post<Blob>(`${BASE}/sped/ecd/`, pedido, { responseType: 'blob' });
+  return data;
 }

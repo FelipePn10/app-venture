@@ -26,7 +26,10 @@
   padding: 3px 8px; border: 1px solid var(--v-green-border); border-radius: 4px;
   background: var(--v-green-soft); color: var(--v-green); box-shadow: var(--v-shadow-sm);
   font: 700 10px/1.2 var(--v-font); letter-spacing: .5px; font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
+/* A tela já mostra o código no título: o selo flutuante só cobriria os botões da barra. */
+body:has(.erp-crumb-code) .screen-host-routine-code { display: none; }
 
 /* ── TITLE BAR ─────────────────────────────────────────────────────────────── */
 .erp-titlebar {
@@ -677,3 +680,101 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
   .vpro-tools-main { grid-template-columns: minmax(0, 1fr); }
   .vpro-tools-main > .erp-list-panel { border-right: 0; border-bottom: 1px solid var(--v-border-strong); }
 }
+
+/* Diálogos (components/ui/dialogos.tsx): acima de qualquer modal da tela. */
+.erp-dialogo-backdrop { z-index: 21000; }
+.erp-dialogo { display: flex; flex-direction: column; }
+.erp-dialogo .erp-modal-head { justify-content: flex-start; font-size: 14px; color: var(--v-ink); border-left: 4px solid var(--v-border-strong); }
+.erp-dialogo-aviso .erp-modal-head { border-left-color: #c98a12; }
+.erp-dialogo-perigo .erp-modal-head { border-left-color: var(--v-err); }
+.erp-dialogo-neutro .erp-modal-head { border-left-color: var(--v-green); }
+.erp-dialogo .erp-modal-body { display: flex; flex-direction: column; gap: 12px; }
+.erp-dialogo-texto { margin: 0; font-size: 13px; line-height: 1.55; color: var(--v-text-2); white-space: pre-wrap; }
+.erp-dialogo-assunto { padding: 8px 11px; border: 1px solid var(--v-border); border-radius: var(--v-r-sm, 4px); background: var(--v-surface-2); font-size: 13px; font-weight: 600; color: var(--v-ink); }
+.erp-dialogo-area { height: auto; min-height: 92px; padding-top: 8px; padding-bottom: 8px; resize: vertical; line-height: 1.45; }
+.erp-dialogo-rodape { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.erp-dialogo-contador { flex: none; font-variant-numeric: tabular-nums; }
+.erp-dialogo-contador.fora { color: var(--v-err); font-weight: 600; }
+
+/* Botões de ação na linha da grade: colados e desalinhados sem isto. */
+.erp-grid td > .erp-btn + .erp-btn { margin-left: 6px; }
+.erp-grid td > .erp-btn { margin-top: 2px; margin-bottom: 2px; }
+.erp-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.erp-row-actions > .erp-btn { margin: 0; flex: none; }
+
+/* Prévia da nota no layout do DANFE. É papel: fundo branco e tinta preta também
+   no tema escuro, como o documento que o cliente recebe. */
+.danfe-rolagem { overflow-x: auto; padding: 14px; background: var(--v-surface-3); border-radius: var(--v-r-sm, 4px); }
+.danfe-folha { position: relative; overflow: hidden; width: 100%; min-width: 900px; max-width: 1040px; margin: 0 auto; padding: 16px 18px 20px; background: #fff; color: #111; box-shadow: 0 1px 6px rgba(0,0,0,.22); font-family: Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.3; }
+.danfe-tarja { position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%) rotate(-24deg); font-size: 58px; font-weight: 800; letter-spacing: 3px; color: rgba(190, 30, 30, .1); white-space: nowrap; pointer-events: none; user-select: none; }
+.danfe-folha h4 { margin: 9px 0 2px; font-size: 9.5px; font-weight: 700; letter-spacing: .2px; text-transform: uppercase; color: #111; }
+.danfe-linha { display: flex; border: 1px solid #111; border-top-width: 0; }
+.danfe-folha h4 + .danfe-linha, .danfe-canhoto { border-top-width: 1px; }
+.danfe-canhoto { display: flex; border: 1px solid #111; }
+.danfe-picote { margin: 8px 0; border-top: 1px dashed #666; }
+.danfe-campo { display: flex; flex-direction: column; min-width: 0; min-height: 28px; padding: 2px 5px; border-left: 1px solid #111; }
+.danfe-campo:first-child { border-left: 0; }
+.danfe-rotulo { font-size: 7.5px; text-transform: uppercase; letter-spacing: .1px; color: #333; }
+.danfe-valor { margin-top: 1px; font-size: 11px; font-weight: 600; color: #111; overflow-wrap: anywhere; }
+.danfe-valor.texto { font-weight: 400; white-space: pre-wrap; }
+.danfe-valor.falta, .danfe-folha .falta { color: #b91c1c; font-weight: 700; font-style: italic; }
+.danfe-campo.direita .danfe-valor { text-align: right; font-variant-numeric: tabular-nums; }
+.danfe-canhoto-nf { display: flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 130px; padding: 2px 6px; border-left: 1px solid #111; font-size: 10px; }
+.danfe-cabecalho { border-top-width: 1px; }
+.danfe-emitente { display: flex; flex: 4; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 8px 10px; text-align: center; }
+.danfe-razao { font-size: 14px; font-weight: 800; text-transform: uppercase; }
+.danfe-titulo { display: flex; flex: 2; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px; border-left: 1px solid #111; text-align: center; font-size: 9px; }
+.danfe-titulo > strong:first-child { font-size: 17px; letter-spacing: 1px; }
+.danfe-numero { font-size: 11px; }
+.danfe-es { display: flex; align-items: center; gap: 8px; text-align: left; }
+.danfe-es b { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #111; font-size: 13px; }
+.danfe-chave { display: flex; flex: 4; flex-direction: column; min-width: 0; border-left: 1px solid #111; }
+.danfe-chave .danfe-campo { border-left: 0; border-top: 1px solid #111; }
+.danfe-chave p { margin: 0; padding: 3px 6px; border-top: 1px solid #111; font-size: 8.5px; text-align: center; }
+.danfe-codbarras { display: grid; place-items: center; height: 44px; margin: 5px 8px; background: repeating-linear-gradient(90deg, #d4d4d4 0 2px, transparent 2px 5px, #d4d4d4 5px 6px, transparent 6px 9px); }
+.danfe-codbarras span { padding: 1px 6px; background: #fff; font-size: 8.5px; color: #555; }
+.danfe-duplicatas { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid #111; }
+.danfe-duplicatas > div { display: grid; grid-template-columns: auto auto; column-gap: 8px; padding: 2px 7px; border: 1px solid #999; font-size: 9.5px; }
+.danfe-duplicatas strong { grid-column: 1 / -1; text-align: right; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.danfe-itens { width: 100%; border-collapse: collapse; border: 1px solid #111; }
+.danfe-itens th { padding: 3px 3px; border: 1px solid #111; background: #f1f1f1; font-size: 7.5px; font-weight: 700; text-transform: uppercase; text-align: center; color: #111; }
+.danfe-itens td { padding: 3px 3px; border-right: 1px solid #111; border-bottom: 1px dotted #999; font-size: 9.5px; text-align: center; color: #111; font-variant-numeric: tabular-nums; }
+.danfe-itens .esq { text-align: left; overflow-wrap: anywhere; }
+.danfe-itens .dir { text-align: right; }
+.danfe-itens .vazio { padding: 14px; color: #b91c1c; font-weight: 700; }
+.danfe-adicionais { border-top-width: 1px; min-height: 86px; }
+
+/* Dados em pares rótulo/valor dentro de modal. */
+.erp-dados { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin: 0; font-size: 13px; }
+.erp-dados dt { color: var(--v-text-3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; padding-top: 2px; }
+.erp-dados dd { margin: 0; color: var(--v-text); min-width: 0; overflow-wrap: anywhere; }
+.erp-dados-chave { font-variant-numeric: tabular-nums; }
+
+/* Nova NF-e: destinatário, linhas de item e barra de totais sempre à vista. */
+.erp-nota-modo { display: flex; gap: 18px; align-items: center; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.erp-nota-modo label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.erp-nota-itens { table-layout: fixed; width: 100%; }
+.erp-grid.erp-nota-itens td { vertical-align: top; padding-left: 4px; padding-right: 4px; }
+.erp-nota-itens .erp-cell-input { padding: 0 6px; }
+.erp-nota-itens .erp-cell-input + .erp-field-hint, .erp-nota-itens .erp-lookup + .erp-cell-input { margin-top: 4px; }
+.erp-nota-itens .erp-lookup + .erp-cell-input { display: block; }
+.erp-nota-total { line-height: 30px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.erp-nota-aviso { display: block; margin-top: 4px; font-size: 11px; color: var(--v-warn); }
+.erp-nota-acoes { position: sticky; bottom: -17px; z-index: 5; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-top: 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--v-border-strong); border-radius: 6px; box-shadow: 0 -4px 12px rgba(13, 31, 20, .08); font-size: 13px; }
+.erp-nota-acoes .erp-nota-valor { font-variant-numeric: tabular-nums; font-weight: 600; }
+.erp-nota-acoes .erp-nota-erro { flex-basis: 100%; color: var(--v-err); font-weight: 600; }
+.erp-nota-acoes .erp-nota-botoes { display: flex; gap: 8px; margin-left: auto; }
+.erp-entrada-contas { display: grid; grid-template-columns: minmax(120px, 1.1fr) 68px 68px repeat(3, minmax(0, 1.5fr)); gap: 8px; }
+.erp-entrada-contas .erp-label { display: block; margin-bottom: 2px; }
+.erp-plano { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.erp-plano-topo { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 12px; align-items: end; }
+.erp-plano-condicao .erp-label, .erp-plano-atalhos .erp-label { display: block; margin-bottom: 2px; }
+.erp-plano-atalhos > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.erp-plano-tabelas { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+.erp-plano-resto { display: block; line-height: 30px; padding: 0 6px; white-space: nowrap; font-size: 12px; color: var(--v-text-muted); text-align: right; }
+.erp-plano-previa { padding: 8px 10px; border: 1px solid var(--v-border-strong); border-radius: 6px; background: #fff; font-size: 12px; }
+.erp-plano-previa ol { margin: 6px 0 8px; padding: 0; list-style: none; max-height: 190px; overflow-y: auto; }
+.erp-plano-previa li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 3px 0; font-variant-numeric: tabular-nums; }
+.erp-plano-previa li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.erp-plano-erro { margin: 6px 0 8px; color: var(--v-err); font-weight: 600; }
+@media (max-width: 1100px) { .erp-plano-tabelas, .erp-plano-topo { grid-template-columns: minmax(0, 1fr); } }

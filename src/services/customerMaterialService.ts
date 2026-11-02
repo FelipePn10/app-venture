@@ -61,9 +61,18 @@ export interface RemittanceItemDTO {
   address?: string | null;
 }
 
+export interface PendingExitDTO {
+  id: number;
+  number: number;
+  series: string;
+  status: string;
+  rejection_reason?: string | null;
+}
+
 export interface RemittanceDTO {
   id: number;
   customer_code: number;
+  customer_name?: string;
   nfe_number: number;
   nfe_series: string;
   nfe_key?: string | null;
@@ -76,6 +85,10 @@ export interface RemittanceDTO {
   total_value: string;
   status: RemittanceStatus;
   sales_order_code?: number | null;
+  /** Número do pedido: é o que se mostra. O código é só a ligação interna. */
+  sales_order_number?: number | null;
+  /** A nota da remessa que ainda não foi autorizada: o material continua aqui. */
+  pending_exit?: PendingExitDTO | null;
   blocked: boolean;
   block_reason?: string | null;
   close_reason?: string | null;
@@ -120,7 +133,8 @@ export interface BalanceDTO {
 export interface NewRemittanceItem {
   line_number?: number;
   customer_item_code: string;
-  item_code?: number | null;
+  /** Código comercial: pode ter letra, e quem o traduz para a chave interna é a API. */
+  item_code?: string | number | null;
   description: string;
   ncm: string;
   cst?: string | null;
@@ -210,12 +224,18 @@ export interface DestinatarioDaNota {
 }
 
 export interface PedidoDeFaturamento {
+  /**
+   * Com pedido de beneficiamento vinculado, o que vier vazio é completado pela
+   * linha do pedido, e a quantidade não pode passar do saldo da linha. A linha é
+   * obrigatória só quando o pedido tem mais de uma com saldo.
+   */
   servico: {
     codigo_item?: string;
-    descricao: string;
+    descricao?: string;
     unidade?: string;
-    quantidade: string;
-    valor_unitario: string;
+    quantidade?: string;
+    valor_unitario?: string;
+    sales_order_item_code?: number | null;
   };
   devolucoes: DevolucaoNaNota[];
   /**
@@ -364,8 +384,170 @@ export function movementKey(itemId: number, tipo: MovementType, quantidade: stri
   return `${itemId}-${tipo}-${quantidade}-${janela}`;
 }
 
+// ── Pedido de beneficiamento ──────────────────────────────────────────────────
+
+/** Uma linha do pedido de venda com o que ainda pode ser faturado. */
+export interface LinhaDoPedidoDTO {
+  code: number;
+  sequence: number;
+  item_code: number;
+  item_business_code: string;
+  description: string;
+  uom: string;
+  requested_qty: string;
+  attended_qty: string;
+  cancelled_qty: string;
+  /** Já em outra nota ainda não autorizada: não pode ser faturado de novo. */
+  in_draft_qty: string;
+  balance_qty: string;
+  unit_price: string;
+  status: string;
+}
+
+export interface PedidoDTO {
+  code: number;
+  order_number: number;
+  customer_code: number;
+  status: string;
+  lines: LinhaDoPedidoDTO[];
+}
+
+/** O faturamento já preenchido: serviço da linha do pedido e devolução do saldo inteiro. */
+export interface PropostaDeFaturamentoDTO {
+  remittance: RemittanceDTO;
+  sales_order: PedidoDTO | null;
+  servico: {
+    codigo_item: string;
+    descricao: string;
+    unidade: string;
+    quantidade: string;
+    valor_unitario: string;
+    sales_order_item_code?: number | null;
+  };
+  devolucoes: DevolucaoNaNota[];
+  /** Por que o serviço não pôde ser sugerido (várias linhas, sem saldo, sem pedido). */
+  aviso?: string;
+}
+
+export async function getInvoiceProposal(remittanceId: number): Promise<PropostaDeFaturamentoDTO> {
+  const { data } = await httpClient.get(`${BASE}/${remittanceId}/invoice-proposal`);
+  const p = unwrapObject(data) as unknown as PropostaDeFaturamentoDTO;
+  return { ...p, devolucoes: p.devolucoes ?? [], sales_order: p.sales_order ?? null };
+}
+
+/**
+ * Liga a remessa ao pedido de beneficiamento depois do recebimento. O servidor
+ * confere o pedido (desta empresa, do mesmo cliente, não cancelado nem faturado)
+ * e, se a remessa estava bloqueada só por falta de pedido, libera o material.
+ */
+export async function linkSalesOrder(remittanceId: number, salesOrderCode: number): Promise<RemittanceDTO> {
+  const { data } = await httpClient.post(`${BASE}/${remittanceId}/sales-order`, { sales_order_code: salesOrderCode });
+  return unwrapObject(data) as unknown as RemittanceDTO;
+}
+
+/** Desfaz a nota em rascunho ou rejeitada e devolve o saldo ao cliente. */
+export async function discardBeneficiamentoNote(fiscalExitId: number, reason: string): Promise<void> {
+  await httpClient.post(`${BASE}/notes/${fiscalExitId}/discard`, { reason });
+}
+
+/** Dá o pedido à OF aberta à mão, que o MRP não liga a um pedido. */
+export async function linkHoursSalesOrder(productionOrderId: number, salesOrderCode: number): Promise<void> {
+  await httpClient.post(`${BASE}/hours/${productionOrderId}/sales-order`, { sales_order_code: salesOrderCode });
+}
+
+// ── Relatórios ────────────────────────────────────────────────────────────────
+
+/**
+ * Movimento com a origem (nota do cliente, linha) e a nota de saída que o
+ * documentou. A ENTRADA vem como `RECEIPT` na data do recebimento, com o `id` da
+ * linha da remessa: identifique a linha pelo par tipo + id.
+ */
+export interface MovementReportDTO extends Omit<MovementDTO, 'movement_type'> {
+  movement_type: MovementType | 'RECEIPT';
+  remittance_id: number;
+  customer_code: number;
+  customer_name: string;
+  nfe_number: number;
+  nfe_series: string;
+  customer_item_code: string;
+  description: string;
+  ncm: string;
+  uom: string;
+  production_order_number?: number | null;
+  exit_nf_number?: number | null;
+  exit_nf_series?: string | null;
+  exit_nf_status?: string | null;
+}
+
+export interface MovementReportFilter {
+  customer_code?: number;
+  remittance_id?: number;
+  from?: string;
+  to?: string;
+  types?: Array<MovementType | 'RECEIPT'>;
+  include_reversed?: boolean;
+  q?: string;
+  limit?: number;
+}
+
+/** Movimentação de entrada e saída do material de terceiros no período. */
+export async function listMovementReport(filter: MovementReportFilter = {}): Promise<MovementReportDTO[]> {
+  const params = new URLSearchParams();
+  if (filter.customer_code) params.set('customer_code', String(filter.customer_code));
+  if (filter.remittance_id) params.set('remittance_id', String(filter.remittance_id));
+  if (filter.from) params.set('from', filter.from);
+  if (filter.to) params.set('to', filter.to);
+  if (filter.types?.length) params.set('type', filter.types.join(','));
+  if (filter.include_reversed) params.set('include_reversed', 'true');
+  if (filter.q?.trim()) params.set('q', filter.q.trim());
+  if (filter.limit) params.set('limit', String(filter.limit));
+  const texto = params.toString();
+  const { data } = await httpClient.get(`${BASE}/movements${texto ? `?${texto}` : ''}`);
+  return unwrapArray(data) as unknown as MovementReportDTO[];
+}
+
+/** Horas trabalhadas numa OF de beneficiamento (item com componente do cliente). */
+export interface HorasDTO {
+  production_order_id: number;
+  order_number: number;
+  status: string;
+  item_code: number;
+  item_business_code: string;
+  item_description: string;
+  planned_qty: string;
+  produced_qty: string;
+  customer_code?: number | null;
+  customer_name: string;
+  sales_order_code?: number | null;
+  sales_order_number?: number | null;
+  /** Soma dos apontamentos (início e fim) — a base do custo real da OF. */
+  appointed_hours: string;
+  appointments: number;
+  /** Horas lançadas nas operações do roteiro. */
+  operation_hours: string;
+  first_record?: string | null;
+  last_record?: string | null;
+}
+
+export async function listBeneficiamentoHours(filter: {
+  customer_code?: number;
+  sales_order_code?: number;
+  from?: string;
+  to?: string;
+} = {}): Promise<HorasDTO[]> {
+  const params = new URLSearchParams();
+  if (filter.customer_code) params.set('customer_code', String(filter.customer_code));
+  if (filter.sales_order_code) params.set('sales_order_code', String(filter.sales_order_code));
+  if (filter.from) params.set('from', filter.from);
+  if (filter.to) params.set('to', filter.to);
+  const texto = params.toString();
+  const { data } = await httpClient.get(`${BASE}/hours${texto ? `?${texto}` : ''}`);
+  return unwrapArray(data) as unknown as HorasDTO[];
+}
+
 /** Rótulos em português para os enums do backend. */
-export const MOVEMENT_LABELS: Record<MovementType, string> = {
+export const MOVEMENT_LABELS: Record<MovementType | 'RECEIPT', string> = {
+  RECEIPT: 'Recebimento',
   RETURN: 'Retorno com faturamento',
   LEFTOVER: 'Sobra devolvida',
   SCRAP: 'Sucata',
@@ -483,10 +665,25 @@ export const AUDIT_FIELD_LABELS: Record<string, string> = {
   reversed_at: 'Estornado em',
   reversed_by: 'Estornado por',
   reversal_reason: 'Motivo do estorno',
+  customer_code: 'Cliente',
+  issue_date: 'Emissão',
+  received_at: 'Recebimento',
+  line_number: 'Linha',
+  production_order_id: 'Ordem de fabricação',
+};
+
+/** Dado de controle interno: o autor e a data já estão na própria linha do histórico. */
+const CAMPOS_FORA_DO_HISTORICO = new Set([
+  'id', 'enterprise_id', 'remittance_id', 'remittance_item_id', 'idempotency_key',
+  'created_at', 'created_by', 'updated_at', 'updated_by', 'closed_by', 'reversed_by', 'divergence_settled_by',
+]);
+
+const DESTINO_NO_HISTORICO: Record<string, string> = {
+  CLIENTE: 'Devolvida ao cliente', DESCARTE: 'Descarte', RETENCAO: 'Retida', OUTRA: 'Outra',
 };
 
 export function auditFieldLabel(campo: string): string {
-  return AUDIT_FIELD_LABELS[campo] ?? campo;
+  return AUDIT_FIELD_LABELS[campo] ?? 'Outro dado';
 }
 
 /** Valor vazio no histórico é "—": distingue campo apagado de campo em branco. */
@@ -495,7 +692,31 @@ export function auditValue(estado: Record<string, unknown> | null | undefined, c
   const v = estado[campo];
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'boolean') return v ? 'sim' : 'não';
-  return String(v);
+  if (campo === 'movement_type') return MOVEMENT_LABELS[v as MovementType] ?? String(v);
+  if (campo === 'status') return STATUS_NO_HISTORICO[String(v)] ?? String(v);
+  if (campo === 'scrap_destination') return DESTINO_NO_HISTORICO[String(v)] ?? String(v);
+  return formatarValorDeAuditoria(campo, v);
+}
+
+const STATUS_NO_HISTORICO: Record<string, string> = {
+  ABERTA: 'Aberta', PARCIAL: 'Retorno parcial', ENCERRADA: 'Encerrada', CANCELADA: 'Cancelada',
+};
+
+/** Código, número de documento e chave não levam separador de milhar. */
+const CAMPO_DE_CODIGO = /(_code|_id|_number|^id|^cfop$|^ncm$|^cst$|_series|_key)$/;
+
+function formatarValorDeAuditoria(campo: string, v: unknown): string {
+  const texto = String(v);
+  if (CAMPO_DE_CODIGO.test(campo)) return texto;
+  if (/^-?\d+(\.\d+)?$/.test(texto)) {
+    return Number(texto).toLocaleString('pt-BR', { maximumFractionDigits: 6 });
+  }
+  if (/^\d{4}-\d{2}-\d{2}T/.test(texto)) {
+    const quando = new Date(texto);
+    if (!Number.isNaN(quando.getTime())) return quando.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto.split('-').reverse().join('/');
+  return texto;
 }
 
 /**
@@ -504,7 +725,7 @@ export function auditValue(estado: Record<string, unknown> | null | undefined, c
  * de histórico não se lê.
  */
 export function auditChangedFields(evento: AuditEventDTO): string[] {
-  if (evento.action === 'UPDATE') return evento.changed_fields ?? [];
+  if (evento.action === 'UPDATE') return (evento.changed_fields ?? []).filter((c) => !CAMPOS_FORA_DO_HISTORICO.has(c));
   const estado = evento.after ?? evento.before ?? {};
   const resumo: Record<string, string[]> = {
     customer_material_remittances: ['nfe_number', 'nfe_series', 'status', 'total_value'],

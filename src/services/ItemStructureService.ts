@@ -106,6 +106,12 @@ export interface StructureComponent {
   /** Entra na linha crítica analisada pelo plano mestre. */
   isCriticalMps: boolean;
   generatesInspection: boolean;
+  /**
+   * Material fornecido pelo cliente (beneficiamento): fica fora do MRP, da baixa
+   * automática e do custo, e a OF do pai não dá entrada do produto no estoque
+   * próprio — o material é do cliente e volta para ele.
+   */
+  customerSupplied: boolean;
   // Tree extras
   level: number;
   hasChildren: boolean;
@@ -142,6 +148,7 @@ export interface CreateStructurePayload {
   cost_center_code?: number | null;
   is_critical_mps?: boolean;
   generates_inspection?: boolean;
+  customer_supplied?: boolean;
 }
 
 // ─── Raw shapes from backend ──────────────────────────────────────────────────
@@ -190,6 +197,7 @@ interface RawComponent {
   cost_center_code?: number | null;
   is_critical_mps?: boolean;
   generates_inspection?: boolean;
+  customer_supplied?: boolean;
 }
 
 interface RawTreeNode {
@@ -274,6 +282,7 @@ function mapComponent(r: RawComponent, level: number, hasChildren: boolean): Str
     costCenterCode:    r.cost_center_code ?? null,
     isCriticalMps:     r.is_critical_mps ?? false,
     generatesInspection: r.generates_inspection ?? false,
+    customerSupplied:  r.customer_supplied ?? false,
     level,
     hasChildren,
   };

@@ -8,7 +8,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCustomers, loadInvoiceTypesById, loadLegalDevicesById, loadSuppliers } from "@/services/lookups";
+import { loadCustomers, loadInvoiceTypesById, loadItems, loadLegalDevicesById, loadNcmTables, loadSuppliers } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const OPS: OperationType[] = ["AMBAS", "ENTRADA", "SAIDA", "CUSTOS"];
@@ -118,9 +118,9 @@ export function Vfis0320Page(): JSX.Element {
             <div className="erp-field erp-c2"><label className="erp-label erp-req">UF</label>
               <input className="erp-input" maxLength={2} value={form.uf} onChange={(e) => setF("uf", e.target.value.toUpperCase())} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">NCM</label>
-              <input className="erp-input" value={form.ncm_code ?? ""} onChange={(e) => setF("ncm_code", e.target.value)} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label">Código Item</label>
-              <input className="erp-input num"  value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value ? e.target.value : undefined)} /></div>
+              <LookupField<string> value={form.ncm_code || undefined} loader={loadNcmTables} entityLabel="NCM" placeholder="Todos" clearable onChange={(c) => setF("ncm_code", c ? String(c).replace(/\D/g, "") : "")} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Item</label>
+              <LookupField<string> value={form.item_code ? String(form.item_code) : undefined} loader={loadItems} entityLabel="item" placeholder="Todos" allowManualCode={false} clearable onChange={(c) => setF("item_code", c ? String(c) : undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Máscara do item</label>
               <input className="erp-input" value={form.item_config_mask ?? ""} placeholder="item configurado" onChange={(e) => setF("item_config_mask", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">Tipo Operação</label>
@@ -354,6 +354,8 @@ export function Vfis0320Page(): JSX.Element {
         <div className="erp-fieldset"><div className="erp-fieldset-head">Parâmetros — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body">
           <div className="erp-field erp-c12"><p className="erp-note" style={{ margin: 0 }}>
             Redução, substituição e diferimento de ICMS (a antiga VFIS0330) ficam aqui, na regra — é a única que a nota usa.
+            Ordem de precedência: a regra desta tela vence; sem regra, valem as <strong>Tabelas Tributárias (VFIS0110)</strong> — ICMS
+            interno da UF, interestadual e IPI/PIS/COFINS do NCM —; e, por último, a alíquota da Configuração Fiscal (VFIS0100).
             Para conferir qual regra vale numa venda, use o <strong>Simulador de Tributação (VFIS0325)</strong>.
           </p></div>
           <div className="erp-field erp-c12">

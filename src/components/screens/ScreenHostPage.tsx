@@ -18,6 +18,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 const Vent0800Page = lazy(() => import("./almoxarifado/Vent0800Page").then((m) => ({ default: m.Vent0800Page })));
 const Vben0100Page = lazy(() => import("./almoxarifado/Vben0100Page").then((m) => ({ default: m.Vben0100Page })));
 const Vben0200Page = lazy(() => import("./almoxarifado/Vben0200Page").then((m) => ({ default: m.Vben0200Page })));
+const Vben0300Page = lazy(() => import("./almoxarifado/Vben0300Page").then((m) => ({ default: m.Vben0300Page })));
 
 const Vent0200Page = lazy(() => import("./engenharia/Vent0200Page").then((m) => ({ default: m.Vent0200Page })));
 const Vent0210Page = lazy(() => import("./engenharia/Vent0210Page").then((m) => ({ default: m.Vent0210Page })));
@@ -88,6 +89,9 @@ const Vfin0500Page = lazy(() => import("./financeiro/Vfin0500Page").then((m) => 
 // VFIN0600 e VFIN0620 eram rotinas genéricas de JSON. VFIN0620 aceitava qualquer
 // arquivo e respondia sucesso; VFIN0600 exigia digitar o corpo da requisição à mão.
 const Vfin0600Page = lazy(() => import("./financeiro/Vfin0600Page").then((m) => ({ default: m.Vfin0600Page })));
+const Vfis0640Page = lazy(() => import("./fiscal/Vfis0640Page").then((m) => ({ default: m.Vfis0640Page })));
+const Vfin0610Page = lazy(() => import("./financeiro/Vfin0610Page").then((m) => ({ default: m.Vfin0610Page })));
+const Vctb0600Page = lazy(() => import("./contabilidade/Vctb0600Page").then((m) => ({ default: m.Vctb0600Page })));
 const Vfin0620Page = lazy(() => import("./financeiro/Vfin0620Page").then((m) => ({ default: m.Vfin0620Page })));
 const Vfis0100Page = lazy(() => import("./fiscal/Vfis0100Page").then((m) => ({ default: m.Vfis0100Page })));
 const Vfis0110Page = lazy(() => import("./fiscal/Vfis0110Page").then((m) => ({ default: m.Vfis0110Page })));
@@ -304,6 +308,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSUP0140: <Vsup0140Page />,
   VBEN0100: <Vben0100Page />,
   VBEN0200: <Vben0200Page />,
+  VBEN0300: <Vben0300Page />,
   // VSUP0200 foi incorporada à VPDC0200; atalhos antigos abrem as sugestões do MRP lá.
   VSUP0200: <Vpdc0200Page key="VSUP0200" visaoInicial="sugestoes" />,
   VPDC0200: <Vpdc0200Page />,
@@ -323,6 +328,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VCAL0100: <Vcal0100Page />,
   VPRI0100: <Vpri0100Page />,
   VCTB0200: <Vctb0200Page />,
+  VCTB0600: <Vctb0600Page />,
   VNFS0100: <Vnfs0100Page />,
 
   // Fiscal & Financeiro
@@ -337,6 +343,8 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VFIN0400: <Vfin0400Page />,
   VFIN0500: <Vfin0500Page />,
   VFIN0600: <Vfin0600Page />,
+  VFIS0640: <Vfis0640Page />,
+  VFIN0610: <Vfin0610Page />,
   VFIN0620: <Vfin0620Page />,
   VFIS0100: <Vfis0100Page />,
   VFIS0110: <Vfis0110Page />,
@@ -350,6 +358,11 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   // VFIS0330 (redução/substituição/diferimento) foi unificada nos parâmetros
   // de ICMS/IPI: o atalho antigo abre a VFIS0320.
   VFIS0330: <Vfis0320Page />,
+  // VFIS0120 (exclusão de tributação NCM) é o "Desativar" da VFIS0110, e a
+  // VFIS0610 (importação pela chave) é o "Pela chave" da VFIS0210: os atalhos
+  // antigos abrem a tela própria, com conferência e confirmação.
+  VFIS0120: <Vfis0110Page />,
+  VFIS0610: <Vfis0210Page />,
   VFIS0340: <Vfis0340Page />,
   VFIS0345: <Vfis0345Page />,
   VFIS0350: <Vfis0350Page />,

@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useState, useCallback } from "react";
 import {
   type GenerateForecastDTO,
@@ -116,7 +117,7 @@ export function Vpre0251Page(): JSX.Element {
             <div className="erp-fieldset-body">
               <div className="erp-grid-wrap" style={{ width: "100%" }}>
                 <table className="erp-grid">
-                  <tbody>{Object.entries(result).map(([k, v]) => (<tr key={k}><td style={{ fontWeight: 600 }}>{k}</td><td>{typeof v === "object" ? JSON.stringify(v) : String(v)}</td></tr>))}</tbody>
+                  <tbody>{Object.entries(result).map(([k, v]) => (<tr key={k}><td style={{ fontWeight: 600 }}>{k}</td><td>{typeof v === "object" ? textoLegivel(v) : String(v)}</td></tr>))}</tbody>
                 </table>
               </div>
             </div>

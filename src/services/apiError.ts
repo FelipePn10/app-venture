@@ -168,7 +168,7 @@ export function humanizeApiError(e: unknown, fallback = 'Ocorreu um erro inesper
       //    não mostra o cru — usa a mensagem por status.
       if (looksTechnical(raw)) return messageForStatus(e.response.status);
       // 3) Mensagem de negócio legível vinda do backend: mantém.
-      return raw;
+      return capitalize(raw);
     }
     return messageForStatus(e.response.status);
   }
@@ -201,7 +201,7 @@ function translateCommonValidation(text: string): string | undefined {
 
 /** Heurística: a string parece um erro técnico/cru que não deve ir à tela? */
 function looksTechnical(text: string): boolean {
-  return /SQLSTATE|ERROR:|panic:|goroutine|nil pointer|violates|pq:|sql: |\bat 0x|undefined \(|Traceback/i.test(
+  return /SQLSTATE|ERROR:|panic:|goroutine|nil pointer|violates|pq:|sql: |\bat 0x|undefined \(|Traceback|dial tcp|connection refused|context deadline|context canceled|invalid character|json: |unmarshal|marshaling|http request|no such host|tls: |i\/o timeout|closed pool|\bpgx\b|https?:\/\/|^\s*[{[]/i.test(
     text,
   );
 }

@@ -15,13 +15,21 @@ const dedicated = {
   VEST0300: { page: 'Vlot0100Page', service: 'lotMaskService.ts', path: '/api/lot-masks' },
   VFIN0600: { page: 'Vfin0600Page', service: 'adiantamentoService.ts', path: '/api/financial/adiantamentos' },
   VFIN0620: { page: 'Vfin0620Page', service: 'financialService.ts', path: '/conciliacao/' , base: '/api/financial' },
+  VFIN0610: { page: 'Vfin0610Page', service: 'financialService.ts', path: '/cnab/remessa-240', base: '/api/financial' },
+  VCTB0600: { page: 'Vctb0600Page', service: 'accountingService.ts', path: '/sped/ecd/', base: '/api/accounting' },
+  VFIS0640: { page: 'Vfis0640Page', service: 'nfeService.ts', path: '/exits/from-load', base: '/api/fiscal' },
+  // Códigos antigos que abrem a tela própria (replacedBy no catálogo).
+  VFIS0610: { page: 'Vfis0210Page', service: 'nfeEntradaService.ts', path: '/import-key', base: '/api/fiscal/entries' },
+  VFIS0120: { page: 'Vfis0110Page', service: 'taxTableService.ts', path: '/ncm/', base: '/api/fiscal/tabelas' },
 };
 // O serviço monta `${BASE}/...`: a rota do grupo conta como declarada quando
 // o serviço da tela própria usa a base (e, na conciliação, o trecho da rota).
 const dedicatedPaths = Object.values(dedicated)
   .filter((d) => readFileSync(new URL(`../src/services/${d.service}`, import.meta.url), 'utf8').includes(d.path))
   .map((d) => (d.base ? `${d.base}${d.path}` : `${d.path}/`)).join('\n');
-const routeSources = `${routines}\n${fiscalConfigService}\n${dedicatedPaths}`;
+// A VFIS0640 também abre o DANFE, pelo mesmo serviço da nota.
+const danfePath = readFileSync(new URL('../src/services/nfeService.ts', import.meta.url), 'utf8').includes('/danfe') ? '/danfe' : '';
+const routeSources = `${routines}\n${fiscalConfigService}\n${dedicatedPaths}\n${danfePath}`;
 
 const codes = [
   'VSUP0600', 'VAVF0300', 'VSUP0610', 'VSUP0620', 'VIMP0300', 'VAVF0203',

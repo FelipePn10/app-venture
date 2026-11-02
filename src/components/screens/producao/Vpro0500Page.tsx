@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
+import { confirmar, pedirTexto } from "@/components/ui/dialogos";
+import { textoLegivel } from "@/utils/textoLegivel";
 import {
   type MaintPlanDTO, type MaintFrequency, type MaintOrderDTO, type MaintOrderStatus,
   FREQUENCIES,
@@ -18,6 +20,8 @@ function orderPill(s?: string): JSX.Element {
   const cls = x === "DONE" ? "erp-badge-green" : x === "IN_PROGRESS" ? "erp-badge-blue" : x === "CANCELLED" ? "erp-badge-red" : "erp-badge-amber";
   return <span className={`erp-badge ${cls}`}>{s || "—"}</span>;
 }
+
+const ROTULO_SITUACAO_ORDEM: Record<MaintOrderStatus, string> = { PLANNED: "planejada", IN_PROGRESS: "em andamento", DONE: "concluída", CANCELLED: "cancelada" };
 
 export function Vpro0500Page(): JSX.Element {
   const [plans, setPlans] = useState<MaintPlanDTO[]>([]);
@@ -46,7 +50,7 @@ export function Vpro0500Page(): JSX.Element {
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function removerPlano(id: number) {
-    if (!window.confirm("Desativar este plano?")) return;
+    if (!(await confirmar({ titulo: "Desativar plano", mensagem: "As próximas gerações de ordens deixam de considerar este plano.", rotulo: "Desativar", tom: "perigo" }))) return;
     setBusy(true); setFeedback(null);
     try { await deletePlan(id); if (selected?.id === id) setSelected(null); setFeedback({ type: "success", message: "Plano desativado." }); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
@@ -67,14 +71,14 @@ export function Vpro0500Page(): JSX.Element {
   async function avancar(o: MaintOrderDTO, status: MaintOrderStatus) {
     if (!o.id || !selected?.id) return;
     let actual: number | undefined;
-    if (status === "DONE") { const v = window.prompt("Horas reais de parada:", String(selected.estimated_hours)); if (v === null) return; actual = Number(v); }
+    if (status === "DONE") { const v = await pedirTexto({ titulo: "Concluir manutenção", mensagem: "Informe quanto tempo o equipamento ficou parado.", rotulo: "Horas reais de parada", tipo: "number", valorInicial: String(selected.estimated_hours), rotuloConfirmar: "Concluir" }); if (v === null) return; actual = Number(v); }
     setBusy(true); setFeedback(null);
-    try { await advanceOrder(o.id, status, actual); setFeedback({ type: "success", message: `Ordem ${o.id} → ${status}.` }); await reloadOrders(selected.id); }
+    try { await advanceOrder(o.id, status, actual); setFeedback({ type: "success", message: `Ordem ${o.id}: ${ROTULO_SITUACAO_ORDEM[status]}.` }); await reloadOrders(selected.id); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function gerar() {
     setBusy(true); setFeedback(null);
-    try { const r = await generateOrders(Number(horizon) || 30); setFeedback({ type: "success", message: `Geração concluída (horizonte ${horizon} dias). ${JSON.stringify(r)}` }); if (selected?.id) await reloadOrders(selected.id); }
+    try { const r = await generateOrders(Number(horizon) || 30); setFeedback({ type: "success", message: `Geração concluída (horizonte de ${horizon} dias). ${textoLegivel(r)}` }); if (selected?.id) await reloadOrders(selected.id); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 

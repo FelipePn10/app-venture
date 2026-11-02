@@ -11,6 +11,8 @@ type Active = { input: HTMLInputElement; entity: Entity; label: string; useId: b
 
 function identify(label: string): Entity | undefined {
   const text = label.toLowerCase().replace(/\s+/g, " ").trim();
+  // Texto livre que só começa igual: aqui o código de um cadastro estaria errado.
+  if (/predominante|do cliente|do fornecedor/.test(text)) return undefined;
   if (/^(máquina|maquina)( |$)/.test(text)) return "machine";
   if (/^(item|item insumo|item cotação|código item|matéria-prima|produto|componente)( |$)/.test(text)) return "item";
   if (/^fornecedor( |$)/.test(text)) return "supplier";
@@ -37,7 +39,9 @@ export function EntityLookupAssist(): JSX.Element | null {
   useEffect(() => {
     const buttons = new Set<HTMLButtonElement>();
     const enhance = () => document.querySelectorAll<HTMLElement>(".erp-field").forEach((field) => {
-      const input = field.querySelector<HTMLInputElement>('input[type="number"], input[type="text"]:not([readonly])');
+      // Input sem `type` é texto, mas o seletor [type="text"] não o encontra: os campos
+      // de item, quase todos escritos assim, ficavam sem a lupa.
+      const input = field.querySelector<HTMLInputElement>('input[type="number"], input[type="text"]:not([readonly]), input:not([type]):not([readonly])');
       const label = field.querySelector<HTMLLabelElement>("label");
       if (!input || !label || input.readOnly || input.disabled || field.querySelector(".erp-entity-lookup-btn")) return;
       const entity = identify(label.textContent || "");

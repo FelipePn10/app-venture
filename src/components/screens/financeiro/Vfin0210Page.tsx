@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { confirmar } from "@/components/ui/dialogos";
 import {
   type ContaReceber, saldoContaReceber, type ContaReceberDTO, type AgingBucket, type BaixaRecebimentoDTO, type ListFilters,
   listContasReceber, createContaReceber, baixarContaReceber, cancelContaReceber, agingReceber, agingTotal,
@@ -182,7 +183,7 @@ export function Vfin0210Page(): JSX.Element {
   }
 
   async function cancelar(c: ContaReceber) {
-    if (!window.confirm(`Cancelar o título ${c.numero_documento} de ${money(c.valor_bruto)}?\n\nO título sai da carteira e do fluxo projetado.`)) return;
+    if (!(await confirmar({ titulo: "Cancelar título", assunto: `Título ${c.numero_documento} · ${money(c.valor_bruto)}`, mensagem: "O título sai da carteira e do fluxo projetado.", rotulo: "Cancelar título", tom: "perigo" }))) return;
     setBusy(true); setFeedback(null);
     try {
       await cancelContaReceber(c.id);

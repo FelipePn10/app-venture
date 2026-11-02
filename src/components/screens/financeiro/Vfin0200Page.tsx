@@ -1,8 +1,9 @@
 import { PrevisaoPagamentosPanel } from "@/components/screens/suprimento/pedido/PrevisaoPagamentosPanel";
+import { confirmar, pedirTexto } from "@/components/ui/dialogos";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type ContaPagar, saldoContaPagar, type ContaPagarDTO, type AgingBucket, type BaixaPagamentoDTO, type ListFilters,
-  listContasPagar, createContaPagar, baixarContaPagar, cancelContaPagar, agingPagar, approveContaPagar, agingTotal,
+  listContasPagar, createContaPagar, createContaPagarParcelada, baixarContaPagar, cancelContaPagar, agingPagar, approveContaPagar, agingTotal,
   STATUS_TITULO_PAGAR, FORMAS_DE_PAGAMENTO, FORMA_PAGAMENTO_LABELS, TIPOS_DE_DOCUMENTO, rotuloTipoDocumento,
   diasDeAtraso, estaEmAberto, temFiltroAtivo,
 } from "@/services/financialService";
@@ -17,6 +18,8 @@ import {
 import { CarteiraFiltros } from "./CarteiraFiltros";
 import { ContasPagarPorPlanoView } from "./ContasPagarPorPlano";
 import { hojeLocal } from "@/utils/dataLocal";
+import { PlanoParcelasEditor } from "@/components/ui/PlanoParcelasEditor";
+import { type BlocoPlano, calcularPlano, dataMaisDias, planoEntradaMaisParcelas } from "@/utils/planoParcelas";
 
 /**
  * VFIN0200 — Contas a Pagar.
@@ -95,6 +98,9 @@ export function Vfin0200Page(): JSX.Element {
    * o valor bruto.
    */
   const [ratear, setRatear] = useState(false);
+  const [parcelar, setParcelar] = useState(false);
+  const [blocos, setBlocos] = useState<BlocoPlano[]>(() => planoEntradaMaisParcelas());
+  const [condicaoPlano, setCondicaoPlano] = useState<number | undefined>();
   const [rateios, setRateios] = useState<Array<{ plano_contas_id?: number; centro_custo_id?: number; valor: number }>>([]);
   const [form, setForm] = useState<ContaPagarDTO>(EMPTY);
   const [list, setList] = useState<ContaPagar[]>([]);
@@ -139,9 +145,9 @@ export function Vfin0200Page(): JSX.Element {
   async function salvar() {
     if (!form.numero_documento.trim()) { setFeedback({ type: "error", message: "Informe o número do documento." }); return; }
     if (!form.valor_bruto || form.valor_bruto <= 0) { setFeedback({ type: "error", message: "O valor bruto tem de ser maior que zero." }); return; }
-    if (form.data_vencimento < form.data_emissao) { setFeedback({ type: "error", message: "O vencimento é anterior à emissão." }); return; }
+    if (!parcelar && form.data_vencimento < form.data_emissao) { setFeedback({ type: "error", message: "O vencimento é anterior à emissão." }); return; }
     if ((form.desconto ?? 0) > form.valor_bruto) { setFeedback({ type: "error", message: "O desconto é maior que o valor bruto do título." }); return; }
-    if ((form.parcela_numero ?? 1) > (form.parcela_total ?? 1)) {
+    if (!parcelar && (form.parcela_numero ?? 1) > (form.parcela_total ?? 1)) {
       setFeedback({ type: "error", message: `Parcela ${form.parcela_numero} de ${form.parcela_total}: o número da parcela não pode passar do total.` });
       return;
     }
@@ -159,10 +165,17 @@ export function Vfin0200Page(): JSX.Element {
         rateios: partes.map((r) => ({ plano_contas_id: r.plano_contas_id as number, centro_custo_id: r.centro_custo_id, valor: r.valor })),
       };
     }
+    const planoFinal = calcularPlano(blocos, Math.round((form.valor_bruto - (form.desconto ?? 0)) * 100));
+    if (parcelar && planoFinal.erro) { setFeedback({ type: "error", message: `Parcelamento: ${planoFinal.erro}` }); return; }
     setBusy(true); setFeedback(null);
     try {
-      await createContaPagar(dto);
-      setFeedback({ type: "success", message: `Título ${form.numero_documento} criado. Aguardando aprovação para pagamento.` });
+      if (parcelar) {
+        const qtd = await createContaPagarParcelada(dto, planoFinal.parcelas.map((p) => ({ data_vencimento: dataMaisDias(form.data_emissao, p.dias), valor: p.valorCent / 100 })));
+        setFeedback({ type: "success", message: `Título ${form.numero_documento} criado em ${qtd} parcelas. Aguardando aprovação para pagamento.` });
+      } else {
+        await createContaPagar(dto);
+        setFeedback({ type: "success", message: `Título ${form.numero_documento} criado. Aguardando aprovação para pagamento.` });
+      }
       setMode("list"); await reload(filtros);
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -218,9 +231,12 @@ export function Vfin0200Page(): JSX.Element {
   async function rejeitar(c: ContaPagar) {
     // Rejeição sem motivo é decisão que ninguém consegue explicar depois — e é o
     // fornecedor que cobra a explicação.
-    const motivo = window.prompt(`Por que o título ${c.numero_documento} está sendo rejeitado?\n\nO motivo fica registrado e é o que se responde ao fornecedor.`);
+    const motivo = await pedirTexto({
+      titulo: "Rejeitar título", assunto: `Título ${c.numero_documento}`,
+      mensagem: "O motivo fica registrado e é o que se responde ao fornecedor.",
+      rotulo: "Por que está sendo rejeitado?", multilinha: true, rotuloConfirmar: "Rejeitar", tom: "perigo",
+    });
     if (motivo === null) return;
-    if (!motivo.trim()) { setFeedback({ type: "error", message: "A rejeição exige motivo." }); return; }
     setBusy(true); setFeedback(null);
     try {
       await approveContaPagar(c.id, motivo.trim());
@@ -230,7 +246,7 @@ export function Vfin0200Page(): JSX.Element {
   }
 
   async function cancelar(c: ContaPagar) {
-    if (!window.confirm(`Cancelar o título ${c.numero_documento} de ${money(c.valor_bruto)}?\n\nO título sai da carteira e do fluxo projetado.`)) return;
+    if (!(await confirmar({ titulo: "Cancelar título", assunto: `Título ${c.numero_documento} · ${money(c.valor_bruto)}`, mensagem: "O título sai da carteira e do fluxo projetado.", rotulo: "Cancelar título", tom: "perigo" }))) return;
     setBusy(true); setFeedback(null);
     try {
       await cancelContaPagar(c.id);
@@ -256,7 +272,7 @@ export function Vfin0200Page(): JSX.Element {
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Cadastro</span>
           <button className="erp-btn erp-btn-new" disabled={busy}
-            onClick={() => { setForm(EMPTY); setRatear(false); setRateios([]); setMode("create"); setFeedback(null); }}>+ Novo título</button>
+            onClick={() => { setForm(EMPTY); setRatear(false); setParcelar(false); setRateios([]); setMode("create"); setFeedback(null); }}>+ Novo título</button>
           <button className="erp-btn" disabled={busy}
             onClick={() => { setMode("list"); void reload(filtros); }}>Carteira</button>
         </div>
@@ -295,7 +311,7 @@ export function Vfin0200Page(): JSX.Element {
             <button role="tab" aria-selected={mode === "previsto"} className={`erp-tab${mode === "previsto" ? " active" : ""}`}
               onClick={() => { setMode("previsto"); setFeedback(null); }}>Previsto por pedidos de compra</button>
             <button role="tab" aria-selected={mode === "create"} className={`erp-tab${mode === "create" ? " active" : ""}`}
-              onClick={() => { setForm(EMPTY); setRatear(false); setRateios([]); setMode("create"); setFeedback(null); }}>Novo título</button>
+              onClick={() => { setForm(EMPTY); setRatear(false); setParcelar(false); setRateios([]); setMode("create"); setFeedback(null); }}>Novo título</button>
           </div>
 
           <div className="erp-detail-body">
@@ -563,12 +579,12 @@ export function Vfin0200Page(): JSX.Element {
                     <input className="erp-input" type="date" value={form.data_emissao}
                       onChange={(e) => setF("data_emissao", e.target.value)} />
                   </div>
-                  <div className="erp-field erp-c2">
+                  {!parcelar && <div className="erp-field erp-c2">
                     <label className="erp-label erp-req">Vencimento</label>
                     <input className={`erp-input${form.data_vencimento < form.data_emissao ? " erp-input-invalid" : ""}`}
                       type="date" value={form.data_vencimento}
                       onChange={(e) => setF("data_vencimento", e.target.value)} />
-                  </div>
+                  </div>}
                   <div className="erp-field erp-c2">
                     <label className="erp-label erp-req">Valor bruto</label>
                     <input className="erp-input num" type="number" step="0.01" min="0" value={form.valor_bruto || ""}
@@ -584,7 +600,7 @@ export function Vfin0200Page(): JSX.Element {
                     <input className="erp-input num" readOnly
                       value={money(Math.max(0, form.valor_bruto - (form.desconto ?? 0)))} />
                   </div>
-                  <div className="erp-field erp-c1">
+                  {!parcelar && <><div className="erp-field erp-c1">
                     <label className="erp-label">Parcela</label>
                     <input className="erp-input num" type="number" min="1" value={form.parcela_numero || 1}
                       onChange={(e) => setF("parcela_numero", Number(e.target.value))} />
@@ -593,12 +609,24 @@ export function Vfin0200Page(): JSX.Element {
                     <label className="erp-label">de</label>
                     <input className="erp-input num" type="number" min="1" value={form.parcela_total || 1}
                       onChange={(e) => setF("parcela_total", Number(e.target.value))} />
-                  </div>
+                  </div></>}
                   <div className="erp-field erp-c12">
                     <label className="erp-label">Observação</label>
                     <input className="erp-input" value={form.observacao ?? ""}
                       onChange={(e) => setF("observacao", e.target.value)} />
                   </div>
+                  <div className="erp-field erp-c12">
+                    <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input type="checkbox" checked={parcelar} onChange={(e) => setParcelar(e.target.checked)} />
+                      Parcelar este título (entrada em %, parcelas e saldo no final)
+                    </label>
+                  </div>
+                  {parcelar && (
+                    <div className="erp-field erp-c12">
+                      <PlanoParcelasEditor totalCent={Math.round((form.valor_bruto - (form.desconto ?? 0)) * 100)} dataBase={form.data_emissao} blocos={blocos} onBlocos={setBlocos}
+                        condicao={condicaoPlano} onCondicao={setCondicaoPlano} onErro={(m) => setFeedback({ type: "error", message: m })} />
+                    </div>
+                  )}
                   <div className="erp-field erp-c12">
                     <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <input type="checkbox" checked={ratear} onChange={(e) => {

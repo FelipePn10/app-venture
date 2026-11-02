@@ -55,7 +55,10 @@ export function distribuirProporcional(parcelasCent: number[], totais: Map<strin
   const totalClassificado = contas.reduce((s, k) => s + (totais.get(k) ?? 0), 0);
   const totalParcelas = parcelasCent.reduce((s, v) => s + v, 0);
   const base = Math.max(totalClassificado, totalParcelas);
-  const fechaLinha = totalClassificado === totalParcelas;
+  // Parcelas somando menos que as contas: a última não pode levar o que falta,
+  // senão recebe mais do que vale. A conta só fecha depois de acertar as parcelas.
+  const parcelasCobrem = totalParcelas >= totalClassificado;
+  const fechaLinha = totalClassificado === totalParcelas || !parcelasCobrem;
   const acumulado = new Map<string, number>();
   return parcelasCent.map((valor, pi) => {
     const linha = new Map<string, number>();
@@ -64,7 +67,7 @@ export function distribuirProporcional(parcelasCent: number[], totais: Map<strin
     let somaLinha = 0;
     contas.forEach((k, ci) => {
       let v: number;
-      if (ultimaParcela) v = (totais.get(k) ?? 0) - (acumulado.get(k) ?? 0);
+      if (ultimaParcela && parcelasCobrem) v = (totais.get(k) ?? 0) - (acumulado.get(k) ?? 0);
       else if (fechaLinha && ci === contas.length - 1) v = valor - somaLinha;
       else v = Math.round((valor * (totais.get(k) ?? 0)) / base);
       if (v < 0) v = 0;

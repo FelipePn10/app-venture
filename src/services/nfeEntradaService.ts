@@ -661,6 +661,8 @@ export async function importarRecebida(chave: string): Promise<EntradaDocumento>
 export interface EntradaManualItem {
   sequence: number;
   item_code?: string;
+  supplier_item_code?: string;
+  lembrar_vinculo?: boolean;
   description?: string;
   ncm: string;
   cfop: string;
@@ -691,6 +693,8 @@ export interface EntradaManualPayload {
   valor_produtos: number;
   valor_frete: number;
   valor_seguro: number;
+  valor_icms_st?: number;
+  valor_outras?: number;
   valor_desconto: number;
   valor_ipi: number;
   valor_icms: number;
@@ -710,7 +714,34 @@ export interface EntradaManualPayload {
     base_icms: number; aliq_icms: number; base_ipi: number; aliq_ipi: number; valor_pis: number; valor_cofins: number;
     gera_credito_icms: boolean; gera_credito_ipi: boolean; gera_credito_pis: boolean; gera_credito_cofins: boolean;
   }>;
-  parcelas?: Array<{ numero: number; data_vencimento: string; valor: number; documento?: string }>;
+  parcelas?: Array<{ numero: number; data_vencimento: string; valor: number; documento?: string; forma_pagamento?: string }>;
+}
+
+/** O que o ERP sabe do item comprado: ponto de partida para conferir com a nota. */
+export interface SugestaoItemEntrada {
+  encontrado: boolean;
+  item_code?: string;
+  nome?: string;
+  uom?: string;
+  ncm?: string;
+  cfop?: string;
+  codigo_fornecedor?: string;
+  preco_unitario?: number;
+  origem_preco?: string;
+  /** Percentual: 18 = 18%. */
+  aliq_icms?: number;
+  aliq_ipi?: number;
+}
+
+export async function sugerirItemDaEntrada(q: { supplier_code?: number; item_code?: string; codigo_fornecedor?: string; uf_emitente?: string }): Promise<SugestaoItemEntrada> {
+  const { data } = await httpClient.get(`${BASE}/sugestao-item`, { params: q });
+  const o = unwrapObject(data) ?? {};
+  return {
+    encontrado: o['encontrado'] === true,
+    item_code: optStr(o, 'item_code'), nome: optStr(o, 'nome'), uom: optStr(o, 'uom'), ncm: optStr(o, 'ncm'), cfop: optStr(o, 'cfop'),
+    codigo_fornecedor: optStr(o, 'codigo_fornecedor'), preco_unitario: optNum(o, 'preco_unitario'), origem_preco: optStr(o, 'origem_preco'),
+    aliq_icms: optNum(o, 'aliq_icms'), aliq_ipi: optNum(o, 'aliq_ipi'),
+  };
 }
 
 export async function criarEntradaManual(payload: EntradaManualPayload): Promise<EntradaDocumento> {

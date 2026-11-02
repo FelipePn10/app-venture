@@ -8,7 +8,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import {
-  loadEstablishments, loadCfopsById, loadIcmsApuracaoLinesById, loadIcmsAdjustmentCodesById,
+  loadEstablishments, loadItems, loadCfopsById, loadIcmsApuracaoLinesById, loadIcmsAdjustmentCodesById,
 } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -194,9 +194,10 @@ export function Vfis0560Page(): JSX.Element {
             <div className="erp-fieldset-head" style={{display:"flex",alignItems:"center",gap:8}}><span>Itens — Nota {selected.id}</span><span style={{flex:1}} /> <button className="erp-btn" onClick={() => setSelected(null)}>Fechar</button></div>
             <div className="erp-fieldset"><div className="erp-fieldset-body">
               
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label>
-                  <input className="erp-input" value={itemForm.item_code} onChange={(e) => setI("item_code", e.target.value)} /></div>
-                <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label>
+                  <LookupField<string> value={itemForm.item_code || undefined} loader={loadItems} entityLabel="item" allowManualCode={false}
+                    onChange={(c, o) => setItemForm((f) => ({ ...f, item_code: c ? String(c) : "", description: o?.label ?? f.description, unit: o?.sub ?? f.unit }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">Descrição</label>
                   <input className="erp-input" value={itemForm.description} onChange={(e) => setI("description", e.target.value)} /></div>
                 <div className="erp-field erp-c1"><label className="erp-label">Qtd</label>
                   <input className="erp-input num" type="number" value={itemForm.quantity} onChange={(e) => setI("quantity", Number(e.target.value))} /></div>

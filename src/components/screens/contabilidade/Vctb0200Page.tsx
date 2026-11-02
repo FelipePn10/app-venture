@@ -9,6 +9,7 @@ import {
 import { listPlanoContas, listContasBancarias, type PlanoConta, type ContaBancaria } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { OpcoesLookup } from "@/components/ui/OpcoesLookup";
 import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
@@ -32,6 +33,12 @@ const PARAMETROS_VAZIOS: ParametrosContabilizacao = {
   plan_id: 0, fornecedores_account_id: 0, contabilizar_entrada: false,
   contabilizar_pagamentos: false, contabilizar_recebimentos: false, contabilizar_saidas: false,
 };
+
+/** Plano de contas passa fácil de cem contas: busca pelo número ou pelo nome, em vez de rolar um `select`. */
+function ContaLookup({ valor, onChange, contas, vazio, rotulo }: { valor: number | undefined; onChange: (id: number | undefined) => void; contas: AccountDTO[]; vazio: string; rotulo: (a: AccountDTO) => string }): JSX.Element {
+  const opcoes = useMemo(() => contas.filter((a) => a.id).map((a) => ({ code: a.id as number, label: rotulo(a) })), [contas, rotulo]);
+  return <OpcoesLookup<number> value={valor} onChange={onChange} opcoes={opcoes} entityLabel="conta" placeholder={vazio} />;
+}
 
 export function Vctb0200Page(): JSX.Element {
   const [tab, setTab] = useState<Tab>("plans");
@@ -158,11 +165,8 @@ export function Vctb0200Page(): JSX.Element {
   }
 
   const analiticasDoParametro = contasDoParametro.filter((a) => a.is_analytic);
-  const selectConta = (valor: number | undefined, onChange: (id: number | undefined) => void, contas: AccountDTO[], vazio = "— nenhuma —") => (
-    <select className="erp-input" value={valor ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}>
-      <option value="">{vazio}</option>
-      {contas.map((a) => <option key={a.id} value={a.id}>{rotuloConta(a)}</option>)}
-    </select>
+  const selectConta = (valor: number | undefined, onChange: (id: number | undefined) => void, contas: AccountDTO[], vazio = "Nenhuma") => (
+    <ContaLookup valor={valor} onChange={onChange} contas={contas} vazio={vazio} rotulo={rotuloConta} />
   );
 
   return (

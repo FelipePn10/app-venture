@@ -7,6 +7,10 @@ import {
 const fmt = (c) => (c / 100).toFixed(2);
 const falhar = (m) => { throw new Error(m); };
 
+// Parcela de 200 numa nota de 500: fica distribuída em 200, nunca em 500.
+const menor = distribuirProporcional([20000], totaisPorConta([{ plano: 10, valorContabil: 300 }, { plano: 20, valorContabil: 200 }]));
+if ([...menor[0].values()].reduce((a, b) => a + b, 0) !== 20000 || menor[0].get(chaveConta(10)) !== 12000) falhar(`parcela menor que o total: ${[...menor[0].values()]}`);
+
 // Nota de 100 mil: 50 mil de matéria-prima (plano 10) e 50 mil de EPI (plano 20), 3 parcelas.
 const itens = [{ plano: 10, valorContabil: 50000 }, { plano: 20, valorContabil: 50000 }];
 const totais = totaisPorConta(itens);

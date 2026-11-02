@@ -2,6 +2,73 @@
 
 ## Unreleased
 
+## Novidades
+- **Adiantamentos (VFIN0600):** novo botão **Cancelar** para adiantamento lançado por engano (pede o motivo e devolve o valor ao banco); datas em dd/mm/aaaa; o saldo do título oferecido para aplicação desconta pagamentos, descontos e abatimentos; cancelados ficam fora dos totais.
+- **Adiantamentos contabilizados (VCTB0200):** duas contas novas na contabilização automática — Adiantamentos a fornecedores e Adiantamentos de clientes.
+- **Tabelas Tributárias (VFIS0110):** só o administrador altera (valem para todas as empresas); a tela explica e indica a VFIS0320 para exceções da empresa. A VFIS0320 mostra a ordem de precedência das alíquotas.
+- **Manifestação e inutilização (VFIS0620):** campos guiados no lugar do formulário técnico — chave, manifestação escolhida na lista e justificativa; inutilização com série, faixa e justificativa.
+- **Tabela IBPT (VFIS0630) e Consultas fiscais (VFIS0660):** UF e direção escolhidas em lista.
+- **Atalhos antigos:** VFIS0120 abre a VFIS0110 e VFIS0610 abre a VFIS0210, onde a mesma função tem conferência.
+- **Número da NF-e pela emissora (VFIS0200):** a Nova NF-e não pede mais número nem série: quem numera é a Focus, na autorização, seguindo a sequência configurada para a empresa. Até lá a nota aparece sem número em todas as telas.
+- **Tipo de nota com efeito de verdade (VCLI0530 e VFIS0200):** o tipo escolhido decide se a nota gera título, mexe no estoque, baixa o pedido e entra como receita. Bonificação e remessa saem "sem pagamento" e sem conta a receber.
+- **Travas antes de sair a nota (VFIS0200):** emitente, destinatário, datas, nota de origem, NCM, CFOP e as contas de linha e total são conferidos na prévia e na transmissão.
+- **Travas na entrada (VFIS0210):** XML de outro destinatário, com chave que não confere, não autorizado ou de homologação em produção é recusado. No lançamento manual, a chave é conferida com número, série, modelo, emitente, UF e mês, e as somas precisam fechar com a nota.
+- **ICMS-ST e outras despesas no lançamento manual (VFIS0210):** a nota com esses valores agora fecha com o total do fornecedor.
+- **Pendências completas (VFIS0210):** a tela mostra tudo o que impede a aprovação, inclusive unidade sem conversão, imposto e centro de custo. O botão "+ Parcela", repetido com o plano de parcelas, saiu.
+- **Plano de parcelas com percentual e parcelas (VFIN0200 e VFIS0210):** combine, por exemplo, 30% de entrada mais 2 parcelas, ou 3 parcelas e 40% ao final. Um bloco pode ficar com o que sobrar, e a tela avisa quando o plano não fecha.
+- **Sugestões no lançamento manual (VFIS0210):** informando o item ou o código do fornecedor, a linha sugere preço (pedido em aberto ou última compra), ICMS, IPI e CFOP. O que você digita prevalece.
+- **Código do fornecedor na nota manual (VFIS0210):** reconhece o item pelo vínculo e, com **Lembrar vínculo**, memoriza um código novo para a próxima nota.
+- **Lançamento manual da NF-e de entrada refeito (VFIS0210):** fornecedor num campo só, com os dados vindos do cadastro; a chave preenche número e série; o item traz NCM, unidade e descrição; a mesma nota do mesmo fornecedor é recusada.
+- **Receber remessa (VBEN0100):** busca de item e de material do cliente, com descrição, NCM, unidade e valor preenchidos.
+- **Faturamento de carga (VFIS0640) em tela própria:** o cliente e o endereço vêm do cadastro, sem digitar de novo.
+- **Remessa CNAB 240 (VFIN0610) e SPED ECD (VCTB0600) em telas próprias**, com os dados de empresa, conta e pagador vindos dos cadastros.
+- **Busca no lugar de código digitado** em telas fiscais, financeiras e contábeis (VFIS0220, VFIS0320, VFIS0345, VFIS0360, VFIS0550, VFIS0670, VFIN0100, VFIN0120, VCTB0102, VCTB0200).
+- **Nova NF-e refeita (VFIS0200):** o destinatário agora é um campo só: escolhido o cliente, CNPJ, inscrição estadual, endereço e contato vêm do cadastro. Escolhido o item, a linha traz descrição, NCM, unidade, origem, CFOP e preço. O CFOP acompanha o estado do destinatário.
+- **NFS-e e CT-e:** tomador, remetente e destinatário podem ser buscados no cadastro de clientes, sem digitar de novo.
+- **Prévia da nota no formato do DANFE (VFIS0200):** "Documento que será transmitido" agora mostra a nota como o cliente recebe, com todos os quadros, no lugar do texto técnico.
+- **Janelas do sistema padronizadas:** confirmações e pedidos de justificativa (cancelar nota, CC-e, rejeitar título e outras telas) deixam de usar a caixa do sistema operacional. A janela mostra o registro afetado, conta os caracteres e só libera o botão com o texto válido.
+- **VFIS0200:** busca e filtro por situação, botão **DANFE**, **Baixar XML**, e Status, Efeitos e CC-e abrindo em janela em vez de um painel no topo da lista. Botões de ação alinhados e espaçados em toda grade do sistema.
+- **Horas de Beneficiamento (VBEN0300):** relatório das horas apontadas por ordem de fabricação, com cliente, pedido e período, sem consumo de estoque.
+- **Movimentação de terceiros (VBEN0200):** nova aba com as entradas e saídas do material do cliente, por período e tipo, ao lado do inventário.
+- **Pedido de beneficiamento (VBEN0100):** a remessa é ligada ao pedido de venda do cliente. O faturamento traz o serviço da linha do pedido e a dá por atendida quando a nota é autorizada.
+- **Componente fornecido pelo cliente (VENT0210):** marcado na estrutura, fica fora do MRP, do custo e da baixa de material; ao concluir a ordem, o produto não entra no estoque próprio.
+
+- **Nota de retorno na própria remessa (VBEN0100):** a remessa mostra a nota em rascunho ou rejeitada, com o motivo, e permite **Transmitir** ou **Descartar**. Descartar devolve o saldo e tira o atendido do pedido.
+- **Vincular pedido à ordem aberta à mão (VBEN0300):** as horas passam a aparecer no cliente certo.
+- **Beneficiamento fora de SP (VFIS0100):** novos campos **cBenef da suspensão** e **Texto legal da nota de retorno de industrialização**, a definir com a contabilidade.
+
+## Melhorias
+- **Beneficiamento (VBEN0100 e VBEN0200):** telas refeitas no novo padrão visual, com busca de cliente, pedido, item e ordem de fabricação.
+- **Histórico e auditoria (VBEN0100):** valores, situações e tipos de movimento aparecem formatados, em vez do valor gravado.
+- **Mensagens do beneficiamento:** erros e avisos passam a dizer o que fazer, sem termos técnicos. Token recusado aponta para a Configuração Fiscal, e a nota autorizada com efeito pendente avisa na própria tela.
+- **Chave de acesso da remessa (VBEN0100):** a chave com menos de 44 dígitos ou com erro de digitação é recusada no recebimento.
+- **Recebimento da remessa (VBEN0100):** data de emissão no futuro, CFOP e NCM inválidos são recusados na hora, em vez de voltarem como rejeição da SEFAZ na nota de retorno. NCM copiado com pontos é aceito.
+- **Estoque de Terceiros (VBEN0200):** avisa quando a movimentação passa de 5.000 linhas e os totais ficam incompletos.
+- **Horas de Beneficiamento (VBEN0300):** as datas só valem ao clicar em **Consultar**, sem refazer a consulta a cada dígito.
+- **Exportação de remessas (VBEN0100):** traz o nome do cliente e a situação da nota; remessa encerrada sai com saldo zero.
+
+## Correções
+- **Distribuir proporcionalmente (VFIS0210):** o botão não dava retorno quando não havia nada a mudar, e uma parcela menor que a nota recebia o valor inteiro. Agora cada parcela fecha no próprio valor, e a tela diz o que fez ou por que não fez.
+- **Listas desatualizadas:** o que era cadastrado em uma tela (como a operação de entrada em VFIS0360) só aparecia nas buscas das outras depois de entrar de novo no sistema.
+- **Divergência falsa de imposto (VFIS0210):** a nota manual gravava alíquota zero e acusava divergência mesmo com o imposto certo.
+- **Documento da parcela (VFIS0210):** a parcela de nota manual agora traz o número da duplicata e a forma de pagamento mostrada na tela.
+- **Validar UF × Natureza (VFIS0360):** usa busca no lugar do código digitado.
+- **Cancelar nota de entrada:** o custo médio do item ficava inflado pelo preço da nota cancelada. Agora volta ao que era, assim como no estorno de movimento de estoque.
+- O selo com o código da rotina não cobre mais os botões do canto direito da barra.
+- Na remessa de beneficiamento, código de item com letras não se perde mais ao salvar.
+- **Nota avulsa com quantidade zerada:** a quantidade digitada na Nova NF-e não era gravada, e a nota saía com ICMS zero. Agora é gravada, e a linha sem quantidade é recusada com o motivo.
+- **Número de nota repetido:** informar à mão um número já usado criava outra nota com ele. Agora a tela avisa e não cria.
+- **Pedido da remessa (VBEN0100):** com nota pendente, não dá mais para trocar o pedido; a nota autorizada depois atenderia o pedido antigo.
+- **Horas de Beneficiamento (VBEN0300):** ordem sem pedido não conta mais como cliente no total, o período não repete o mesmo dia e pedido cancelado não pode ser ligado à ordem.
+- **Beneficiamento (VBEN0200 e VBEN0300):** a resposta atrasada de uma consulta anterior não troca mais a tela pelo resultado de outro cliente.
+- **Faturamento de beneficiamento:** duplicata, conta a receber e receita passam a considerar só o serviço; o material devolvido não é mais cobrado do cliente.
+- **MRP (VMRP0100):** a ordem firme conta só pelo que falta entregar. Com a ordem de fabricação concluída ou cancelada, o próximo pedido do item volta a ser planejado.
+- **MRP e beneficiamento:** a peça pronta que aguarda a nota de retorno não é produzida de novo.
+- **Horas de Beneficiamento (VBEN0300):** a ordem gerada pelo MRP mostra o cliente e o pedido que a originaram.
+- **Nota de retorno:** o texto legal e a referência à nota do cliente passam a sair na nota; cliente sem inscrição estadual é avisado antes de gerar a nota, e o diferimento total não é mais rejeitado pela SEFAZ.
+- **MRP (VMRP0100):** a ordem firme de compra conta só pelo que falta receber.
+- **Estoque de Terceiros (VBEN0200):** remessa encerrada sai do inventário, e os movimentos mostram o número da ordem de fabricação e o valor da nota do cliente.
+
 ## [v1.9.0] — 2026-10-29
 
 ## Novidades

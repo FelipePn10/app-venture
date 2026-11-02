@@ -235,5 +235,5 @@ export const FIELD_LABELS: Record<string, string> = {
 
 /** Rótulo de um campo; sem tradução, devolve o nome legível do próprio campo. */
 export function fieldLabel(key: string): string {
-  return FIELD_LABELS[key] ?? key.split("_").map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part)).join(" ");
+  return FIELD_LABELS[key] ?? key.replace(/([a-z])([A-Z])/g, "$1_$2").split("_").map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part)).join(" ");
 }

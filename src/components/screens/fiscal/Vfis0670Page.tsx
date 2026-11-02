@@ -6,6 +6,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuthStore } from "@/store/authStore";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadCfops } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "aliquotas" | "cfop" | "tabela";
@@ -223,7 +225,7 @@ export function Vfis0670Page(): JSX.Element {
               </div></div></div>
               <div className="erp-fieldset"><div className="erp-fieldset-head">Vincular CFOP</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">CFOP de saída</label>
-                  <input className="erp-input num" maxLength={5} value={formCfop.cfop} onChange={(e) => setFormCfop((p) => ({ ...p, cfop: e.target.value }))} placeholder="5910" /></div>
+                  <LookupField<string> value={formCfop.cfop || undefined} loader={loadCfops} entityLabel="CFOP" placeholder="Buscar CFOP" clearable onChange={(c) => setFormCfop((p) => ({ ...p, cfop: c ? String(c) : "" }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label erp-req">cClassTrib</label>
                   <input className="erp-input num" list="vfis0670-classtrib" maxLength={6} value={formCfop.cclass_trib} onChange={(e) => setFormCfop((p) => ({ ...p, cclass_trib: e.target.value }))} placeholder="410001" />
                   <datalist id="vfis0670-classtrib">{tabela.filter((c) => c.aceita_nfe && c.suportado_emissao).map((c) => <option key={c.cclass_trib} value={c.cclass_trib}>{c.descricao.slice(0, 90)}</option>)}</datalist>

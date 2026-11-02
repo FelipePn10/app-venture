@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useState } from "react";
 import { type MrpReport, type ReportParams, reportAvailability, reportExplosion, reportGroupedNeeds, reportProfile, reportReorderPoint } from "@/services/mrpReportsService";
 import { fieldLabel } from "@/utils/fieldLabels";
@@ -35,7 +36,7 @@ const ehCodigo = (k: string) => k === "level" || k.endsWith("_code");
 function celula(chave: string, v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "boolean") return v ? "Sim" : "Não";
-  if (typeof v === "object") return JSON.stringify(v);
+  if (typeof v === "object") return textoLegivel(v);
   const s = String(v);
   if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(s)) return data(s);
   if (!ehCodigo(chave) && /^-?\d+(\.\d+)?$/.test(s)) return Number(s).toLocaleString("pt-BR", { maximumFractionDigits: 4 });

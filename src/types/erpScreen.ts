@@ -1220,8 +1220,9 @@ export const ERP_SCREENS: ErpScreen[] = [
   // Beneficiamento — material do cliente em poder da empresa. Telas NOVAS: o
   // estoque próprio (VEST0100) segue como está. Prefixo VBEN, e não VTER, porque
   // VTER* é o sentido oposto (serviço que MANDAMOS para fora).
-  { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901), acompanhar saldo por linha, lançar retorno (5902), sobra e sucata (5903) com rastreabilidade, bloquear material sem pedido ou divergente e encerrar com aprovação.", module: "almoxarifado" },
-  { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Saldo do material que pertence ao cliente e está em poder da empresa, por cliente proprietário, item da nota e NF-e de remessa, ordenado pelo prazo fiscal de retorno. Não entra na valoração do estoque próprio.", module: "almoxarifado" },
+  { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria.", module: "almoxarifado" },
+  { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio.", module: "almoxarifado" },
+  { code: "VBEN0300", title: "Horas de Beneficiamento", description: "Horas trabalhadas nas ordens de fabricação de beneficiamento, por cliente e pedido: apontamentos e horas lançadas nas operações do roteiro.", module: "almoxarifado" },
   { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento", replacedBy: "VPCT0100" },
   { code: "VSUP0640", title: "Registros Operacionais de Compras", description: "Ocorrências normalizadas de compra, recebimento e inspeção.", module: "suprimento" },
   { code: "VSUP0650", title: "Histórico de Movimentos de Compra", description: "Rastreabilidade consolidada de movimentos por fornecedor e item.", module: "suprimento" },
@@ -1252,13 +1253,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VAPR0100", title: "Aprovações", description: "Solicitações por alçada (crédito do pedido, política comercial do orçamento) e políticas de aprovação.", module: "cadastros" },
   { code: "VADM0200", title: "Perfis de Acesso", description: "Perfis da empresa com permissão por módulo e ação, e os perfis de cada usuário.", module: "cadastros" },
   { code: "VFIS0670", title: "Reforma Tributária (IBS/CBS)", description: "Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e tabela oficial de classificação tributária.", module: "fiscal" },
-  { code: "VFIS0120", title: "Exclusão de Tributação NCM", description: "Remover tributação NCM obsoleta de forma controlada.", module: "fiscal" },
+  { code: "VFIS0120", title: "Exclusão de Tributação NCM", description: "Unificada em VFIS0110 — Tabelas Tributárias: use o botão Desativar na linha do NCM.", module: "fiscal", replacedBy: "VFIS0110" },
   { code: "VFIS0660", title: "Consultas de Parâmetros Fiscais", description: "Consultar cadastros fiscais por chaves e filtros específicos.", module: "fiscal" },
   { code: "VUTL0560", title: "Consulta de UF e Região", description: "Localizar UF e região comercial por suas chaves.", module: "contabilidade" },
   { code: "VSAC0200", title: "Relatórios e Anexos do Atendimento", description: "Etiquetas, relatórios e documentos do chamado.", module: "assistencia" },
   { code: "VREP0600", title: "Complementos do Representante", description: "Segmentos, planos, interesses e correspondência.", module: "comercial" },
   { code: "VEST0400", title: "Consultas de Estoque por Almoxarifado", description: "Movimentos e saldos persistidos por almoxarifado.", module: "almoxarifado" },
   { code: "VFIS0600", title: "SPED EFD ICMS/IPI", description: "EFD do mês gerada das notas de entrada, saída e CT-e, com a apuração do ICMS e do IPI.", module: "fiscal" },
-  { code: "VFIS0610", title: "Importação de NF-e por Chave", description: "Importação da NF-e de compra, baixa do pedido e entrada em estoque.", module: "fiscal" },
+  { code: "VFIS0610", title: "Importação de NF-e por Chave", description: "Unificada em VFIS0210 — NF-e de Entrada: use Pela chave; a nota fica pendente para conciliar e aprovar.", module: "fiscal", replacedBy: "VFIS0210" },
   { code: "VADM0100", title: "Trilha de Auditoria", description: "Consulta administrativa de alterações por usuário, rota e período.", module: "cadastros" },
 ];

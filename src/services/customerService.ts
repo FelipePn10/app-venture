@@ -306,6 +306,13 @@ function parseInstallment(raw: unknown): InstallmentDTO {
   };
 }
 
+/** O fornecedor guarda o id da condição; os campos de busca trabalham com o código. */
+export async function codigoDaCondicao(id: number): Promise<number | undefined> {
+  const { data } = await httpClient.get(`${SUPPORT}/payment-conditions`);
+  const achada = unwrapArray(data).map((r) => unwrapObject(r)).find((o) => o && parseNum(o, 'id', 'ID') === id);
+  return achada ? parseNum(achada, 'code', 'Code') || undefined : undefined;
+}
+
 export async function listPaymentConditionInstallments(conditionCode: number): Promise<InstallmentDTO[]> {
   const { data } = await httpClient.get(`${SUPPORT}/payment-conditions/${conditionCode}/installments`);
   return unwrapArray(data).map(parseInstallment);

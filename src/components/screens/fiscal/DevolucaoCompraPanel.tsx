@@ -80,7 +80,7 @@ export function DevolucaoCompraPanel({ entradaId, onFeedback, onFechar }: {
         } : {}),
       });
       setCriada(nf);
-      onFeedback({ type: "success", message: `NF-e de devolução ${nf.numero_nf || nf.id} criada em rascunho (${money(nf.valor_total)}). Autorize para efetivar.` });
+      onFeedback({ type: "success", message: `Nota de devolução criada em rascunho (${money(nf.valor_total)}). Autorize para efetivar.` });
     } catch (e) { onFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -168,7 +168,7 @@ export function DevolucaoCompraPanel({ entradaId, onFeedback, onFechar }: {
 
         {criada && (
           <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span>NF-e de devolução <strong>{criada.numero_nf || `#${criada.id}`}</strong> — {money(criada.valor_total)} — situação <strong>{ROTULO_SITUACAO[(criada.status || "").toUpperCase()] ?? criada.status}</strong></span>
+            <span>NF-e de devolução <strong>{criada.numero_nf || "sem número até a autorização"}</strong> — {money(criada.valor_total)} — situação <strong>{ROTULO_SITUACAO[(criada.status || "").toUpperCase()] ?? criada.status}</strong></span>
             <span style={{ flex: 1 }} />
             {(criada.status || "").toUpperCase() !== "AUTHORIZED" && (
               <button className="erp-btn erp-btn-primary" onClick={() => void autorizar()} disabled={busy}>{busy ? "Enviando…" : "Autorizar na SEFAZ"}</button>

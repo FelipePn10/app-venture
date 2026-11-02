@@ -11,6 +11,7 @@ import {
   MAX_BRANDING_LOGO_BYTES,
 } from "@/services/fiscalConfigService";
 import { errMessage } from "@/services/fiscalShared";
+import { listIcmsInterno, type IcmsInterno } from "@/services/taxTableService";
 import { openErpScreenWindow } from "@/utils/windowManager";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuthStore } from "@/store/authStore";
@@ -36,6 +37,8 @@ const EMPTY: FiscalConfig = {
   exigir_regra_icms_ipi: false,
   aliquota_credito_simples: 0,
   cbenef_diferimento: "",
+  cbenef_suspensao: "",
+  obs_retorno_industrializacao: "",
   focus_nfe_configured: false,
   focus_nfe_token: "",
   focus_nfe_ambiente: "homologacao",
@@ -90,6 +93,10 @@ export function Vfis0100Page(): JSX.Element {
   }, []);
 
   useEffect(() => { void load(); void loadLogo(); }, [load, loadLogo]);
+  // A alíquota interna vale pela tabela da VFIS0110; a daqui é só a reserva.
+  const [tabelaIcms, setTabelaIcms] = useState<IcmsInterno[]>([]);
+  useEffect(() => { listIcmsInterno().then(setTabelaIcms).catch(() => setTabelaIcms([])); }, []);
+  const ufTabela = tabelaIcms.find((t) => t.uf === (form.uf_empresa || "").toUpperCase() && t.aliq_icms > 0);
   useEffect(() => () => { if (logoUrl) URL.revokeObjectURL(logoUrl); }, [logoUrl]);
 
   const setField = useCallback(<K extends keyof FiscalConfig>(key: K, value: FiscalConfig[K]) => {
@@ -293,6 +300,11 @@ export function Vfis0100Page(): JSX.Element {
                 <label className="erp-label">ICMS interno (%)</label>
                 <input className="erp-input num" type="number" step="0.01" value={emPct(form.icms_interno_aliquota)}
                   onChange={(e) => setPct("icms_interno_aliquota", e.target.value)} />
+                <span className="erp-field-hint">
+                  {ufTabela
+                    ? <>Em vigor: {(ufTabela.aliq_icms * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de {ufTabela.uf}, da tabela de ICMS interno por UF (VFIS0110). Este campo só vale se a UF sair da tabela.</>
+                    : <>A UF da empresa não está na tabela de ICMS interno por UF (VFIS0110): vale esta alíquota.</>}
+                </span>
               </div>
               <div className="erp-field erp-c4">
                 <label className="erp-label">Diferimento ICMS (%)</label>
@@ -304,6 +316,19 @@ export function Vfis0100Page(): JSX.Element {
                 <input className="erp-input" maxLength={10} value={form.cbenef_diferimento} placeholder="ex.: PR830001"
                   onChange={(e) => setField("cbenef_diferimento", e.target.value.toUpperCase())} />
                 <span className="erp-field-hint">Código de benefício que a SEFAZ exige na venda com diferimento (CST 51). No Paraná: PR830001.</span>
+              </div>
+              <div className="erp-field erp-c4">
+                <label className="erp-label">cBenef da suspensão</label>
+                <input className="erp-input" maxLength={10} value={form.cbenef_suspensao} placeholder="confirme com o contador"
+                  onChange={(e) => setField("cbenef_suspensao", e.target.value.toUpperCase())} />
+                <span className="erp-field-hint">Código de benefício do material que volta ao cliente no beneficiamento (CST 50), na UF que o exige.</span>
+              </div>
+              <div className="erp-field erp-c12">
+                <label className="erp-label">Texto legal da nota de retorno de industrialização</label>
+                <textarea className="erp-input" rows={2} value={form.obs_retorno_industrializacao}
+                  placeholder="Em São Paulo, vazio usa a Portaria CAT 22/2007"
+                  onChange={(e) => setField("obs_retorno_industrializacao", e.target.value)} />
+                <span className="erp-field-hint">Sai nos dados adicionais da nota de beneficiamento. Fora de São Paulo é obrigatório: sem ele a nota não é gerada.</span>
               </div>
               <div className="erp-field erp-c3">
                 <label className="erp-label">Juros ao mês (%)</label>

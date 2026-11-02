@@ -1,3 +1,4 @@
+import { textoLegivel } from "@/utils/textoLegivel";
 import { useCallback, useEffect, useState } from "react";
 import {
   type EventoItem, type PainelItem, type ParametrosGov, type Pendente, type RegraCampo, type StatusCadastro, type UsoItem, type Visao,
@@ -13,7 +14,7 @@ import { loadItems } from "@/services/lookups";
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const dataHora = (s?: string) => (s ? new Date(s).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 const COR: Record<StatusCadastro, string> = { EM_CADASTRO: "erp-badge-amber", LIBERADO: "erp-badge-green", BLOQUEADO: "erp-badge-red", DESCONTINUADO: "erp-badge-gray" };
-const valor = (v: unknown) => (v === undefined || v === null ? "—" : typeof v === "object" ? JSON.stringify(v) : String(v));
+const valor = (v: unknown) => (v === undefined || v === null ? "—" : typeof v === "object" ? textoLegivel(v) : String(v));
 const ROTULO_EVENTO: Record<string, string> = { CRIACAO: "Criação", ALTERACAO: "Alteração", STATUS: "Status", LIBERACAO: "Liberação", ESTORNO_LIBERACAO: "Estorno da liberação" };
 
 /**

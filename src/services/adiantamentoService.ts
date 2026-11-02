@@ -116,6 +116,15 @@ export async function aplicarAdiantamento(id: number, dto: AplicarAdiantamentoDT
   return data;
 }
 
+/**
+ * Cancela um adiantamento que ainda não foi aplicado: o backend lança o inverso
+ * no fluxo de caixa e devolve o valor à conta bancária. Exige motivo.
+ */
+export async function cancelarAdiantamento(id: number, motivo: string): Promise<unknown> {
+  const { data } = await httpClient.post(`${BASE}/${id}/cancelar`, { motivo });
+  return data;
+}
+
 /** O título que um adiantamento pode abater: mesmo lado da operação. */
 export function tipoDeTituloDoAdiantamento(tipo: AdiantamentoTipo): 'PAGAR' | 'RECEBER' {
   return tipo === 'PAGAR' ? 'PAGAR' : 'RECEBER';

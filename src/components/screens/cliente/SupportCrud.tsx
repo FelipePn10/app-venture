@@ -19,12 +19,14 @@ export interface FieldSpec {
   kind?: "text" | "number" | "bool" | "select" | "textarea" | "date";
   options?: string[];
   placeholder?: string;
+  /** Valor do campo em cadastro novo. */
+  padrao?: boolean | string;
 }
 
 export interface ColumnSpec {
   key: string;
   label: string;
-  kind?: "bool" | "number";
+  kind?: "bool" | "number" | "enum";
 }
 
 interface Props {
@@ -39,7 +41,7 @@ type FormState = Record<string, unknown>;
 
 function initForm(fields: FieldSpec[]): FormState {
   const f: FormState = {};
-  for (const fs of fields) f[fs.key] = fs.kind === "bool" ? false : "";
+  for (const fs of fields) f[fs.key] = fs.padrao ?? (fs.kind === "bool" ? false : "");
   return f;
 }
 
@@ -162,7 +164,7 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
                 <tr key={i}>
                   {columns.map((c) => (
                     <td key={c.key}>
-                      {c.kind === "bool" ? (parseBool(rec, c.key) ? "Sim" : "Não") : c.kind === "number" ? parseNum(rec, c.key) : parseStr(rec, c.key)}
+                      {c.kind === "bool" ? (parseBool(rec, c.key) ? "Sim" : "Não") : c.kind === "number" ? parseNum(rec, c.key) : c.kind === "enum" ? enumLabel(parseStr(rec, c.key)) : parseStr(rec, c.key)}
                     </td>
                   ))}
                   {editable && <td><button className="erp-btn erp-btn-sm" onClick={() => edit(rec)}>Editar</button></td>}
