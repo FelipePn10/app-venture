@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.9.1] — 2026-11-02
+
 ## Novidades
 - **Adiantamentos (VFIN0600):** novo botão **Cancelar** para adiantamento lançado por engano (pede o motivo e devolve o valor ao banco); datas em dd/mm/aaaa; o saldo do título oferecido para aplicação desconta pagamentos, descontos e abatimentos; cancelados ficam fora dos totais.
 - **Adiantamentos contabilizados (VCTB0200):** duas contas novas na contabilização automática — Adiantamentos a fornecedores e Adiantamentos de clientes.
