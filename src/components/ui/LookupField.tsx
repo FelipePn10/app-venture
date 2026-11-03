@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { LookupLoader, LookupOption } from "@/services/lookups";
 import { errMessage } from "@/services/fiscalShared";
+import { geracaoDasListas } from "@/services/lookupInvalidation";
 
 /** Minúsculas e sem acento: "Técnica" e "tecnica" são a mesma busca. */
 function normalizarBusca(texto: string): string {
@@ -73,6 +74,8 @@ export function LookupField<T extends string | number = number>({
    * falhando, virava retentativa infinita.
    */
   const tentouRef = useRef(false);
+  /** Geração das listas na última carga: se mudou, um cadastro foi gravado desde então. */
+  const geracaoRef = useRef(-1);
 
   /**
    * Carrega a lista. `forcar` ignora a tentativa anterior — é o "tentar de
@@ -85,6 +88,7 @@ export function LookupField<T extends string | number = number>({
   const load = useCallback(async (forcar = false) => {
     if (!forcar && tentouRef.current) return;
     tentouRef.current = true;
+    geracaoRef.current = geracaoDasListas();
     setLoading(true); setError("");
     try {
       setOptions(await loader());
@@ -179,8 +183,9 @@ export function LookupField<T extends string | number = number>({
 
   const openPanel = () => {
     if (disabled) return;
-    // Lista vazia pode ter ganhado registros desde a última carga.
-    void load(options.length === 0);
+    // Lista vazia pode ter ganhado registros desde a última carga — e a cheia
+    // também, quando algum cadastro foi gravado (nesta ou em outra janela).
+    void load(options.length === 0 || geracaoRef.current !== geracaoDasListas());
     setOpen(true); setQuery("");
     setTimeout(() => inputRef.current?.focus(), 0);
   };

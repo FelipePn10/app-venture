@@ -1,4 +1,5 @@
 import { enumLabel } from '@/utils/enumLabels';
+import { aoInvalidarListas, invalidarListas } from '@/services/lookupInvalidation';
 import { httpClient, unwrapArray, unwrapObject, parseNum, parseStr } from '@/services/fiscalShared';
 import { listCustomers } from '@/services/customerService';
 import { listItems } from '@/services/itemService';
@@ -67,10 +68,11 @@ function cached(fn: LookupLoader): LookupLoader {
   return wrapped;
 }
 const caches: Array<() => void> = [];
+aoInvalidarListas(() => { for (const reset of caches) reset(); });
 
-/** Invalida todos os caches de lookup (ex.: troca de ambiente/login). */
+/** Invalida todos os caches de lookup, nesta janela e nas outras rotinas abertas. */
 export function resetLookups(): void {
-  for (const reset of caches) reset();
+  invalidarListas();
 }
 
 // Cadastro gravado em outra tela precisa aparecer no campo de busca sem sair do

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## Correções
+- **Busca de cadastros entre telas abertas:** o item (ou cliente, fornecedor etc.) gravado numa tela passa a aparecer na hora na busca das outras telas que já estavam abertas. Antes, por exemplo, o item cadastrado na VENT0200 não aparecia em "Item do cadastro" na VBEN0100 até fechar e reabrir a tela.
+
 ## [v1.10.0] — 2026-11-03
 
 ## Novidades
