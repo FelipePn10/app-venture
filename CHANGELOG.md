@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## Novidades
+- **Política de lote (VPLA0310):** **lote por período** (dia, semana ou mês — as necessidades do item no período viram uma ordem só, na data da primeira; a empresa tem o seu no parâmetro 50) e **lote máximo** na política do item (a necessidade acima dele vira várias ordens). A consulta "política que vale para um item" mostra os dois com a origem.
+- **Exceções do MRP (VMRP0100):** a demanda de estoque que venceu sem venda e a de amostra/feira/projeto atrasada com saldo aparecem como exceção, com **Encerrar saldo** na própria linha.
+- **Demanda independente (VPLA0102):** o que a OF de uma demanda de amostra, feira, consumo interno, assistência ou projeto entrega fica **reservado** para ela — nenhum pedido de venda pega. A saída pelo **Atender** consome a reserva; encerrar a demanda a libera. A tela mostra o reservado.
+
+## Melhorias
+- **Valores exatos:** o financeiro e a nota fiscal de entrada passam a calcular com valores decimais exatos em todo o caminho (antes passavam por ponto flutuante na entrada). Nada muda na tela; conferido com as notas reais.
+
+## Correções
+- **MRP:** o almoxarifado de destino e o centro de custo da demanda independente chegam à ordem planejada e à OF (o centro também à requisição, com a aprovação do centro). A OF firmada pelo MRP podia ficar com o centro de custo errado.
+
 ## [v1.9.1] — 2026-11-02
 
 ## Novidades

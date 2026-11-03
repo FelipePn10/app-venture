@@ -2791,7 +2791,7 @@ use a **programação** (ex.: 100 peças em 4 entregas a cada 7 dias).
 | Família | Motivos | Como se encerra |
 |---|---|---|
 | Expectativa de venda | Produção para estoque, Reposição, Antecipação de venda | O **pedido de venda consome** a demanda (só o pedido confirmado ou faturado; rascunho e orçamento não consomem): o MRP planeja o maior dos dois, nunca a soma. Pedido com entrega até 30 dias depois da data da demanda consome (parâmetros 46/47 da VPLA0300). Passada a janela sem venda, ela **vence** e sai do cálculo |
-| Finalidade própria | Amostra, Feira, Consumo interno, Assistência, Projeto | A venda não consome. Ela segura o estoque até a saída: **Atender** lança a saída no estoque (com o tipo de movimento) e baixa o saldo da demanda. Estornar a saída na Central de Estoque devolve o saldo |
+| Finalidade própria | Amostra, Feira, Consumo interno, Assistência, Projeto | A venda não consome. Ela segura o estoque até a saída: o que a OF da demanda entrega fica **reservado** para ela (nenhum pedido de venda pega). **Atender** lança a saída no estoque (com o tipo de movimento), consome a reserva e baixa o saldo da demanda. Estornar a saída na Central de Estoque devolve o saldo; encerrar a demanda libera a reserva |
 
 **A demanda aberta mostra** o que a venda já consumiu, o que já saiu para a
 finalidade, o que o **MRP vai planejar** e quanto disso já está **coberto por
@@ -2845,7 +2845,7 @@ planejador.
 | **Cobertura** | Para cada item: até quando o estoque cobre e até quando estoque + ordens firmes cobrem, com farol (crítico, atenção, coberto). Filtre por planejador ou tipo e firme a planejada que cobre a falta sem sair da tela |
 | **Sugestões** | O resultado do cálculo: item, tipo (fabricação/compra), quantidade, necessidade, início e término, máquina e tempo. Filtre por item, tipo e atraso e **firme em lote**. *Para quem é* mostra os pedidos e demandas que a sugestão atende |
 | **Ordens planejadas** | As ordens já criadas, com as transições **Firmar**, **Liberar** e **Voltar para planejada** (em lote) |
-| **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como). **Horizonte firme**: a sugestão precisava começar dentro do horizonte firme (VPLA0310/VPLA0300) e foi para o fim dele; a mensagem diz quanto ela chega depois da necessidade — firme a ordem à mão se precisar antes e marque como tratada |
+| **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como). **Horizonte firme**: a sugestão precisava começar dentro do horizonte firme (VPLA0310/VPLA0300) e foi para o fim dele; a mensagem diz quanto ela chega depois da necessidade — firme a ordem à mão se precisar antes e marque como tratada. **Demanda vencida** (estoque que passou da janela de consumo sem venda) e **demanda atrasada** (amostra, feira, projeto com saldo e data vencida): **Encerrar saldo** encerra a demanda (VPLA0102) ali mesmo |
 | **Rastreamento** | De cada pedido ou demanda até as compras dos componentes, e de uma ordem até quem depende dela — "esta compra serve a quem?" e "o que falta para este pedido sair?" |
 | **Perfil do item** | O perfil por data: demanda, planejadas, firmes e estoque projetado — e quando o estoque fura. Também as regras configuradas do item: **Campo** `lead_time` (prazo em dias úteis) ou `lote_minimo`, o **Valor** e, se a regra for só para uma configuração, a **Condição da máscara** (igual, diferente ou faixa "mínimo-máximo"). Sem condição, a regra vale para o item inteiro |
 | **Planos** | Cadastro dos planos (código, nome, abrangência, classificação) e as empresas inter-fábrica de cada plano. Na abrangência *um item de ordem*, busque o pedido pelo **número** e escolha a linha |
@@ -3020,6 +3020,8 @@ próprio de ser planejado, em vez dos parâmetros da empresa (VPLA0300).
 | **Consumo: dias antes / depois** | A janela em que um pedido consome a previsão e a demanda de estoque, contada da entrega do pedido. Com 0 dias antes e 15 depois, o pedido só consome o que vem depois dele. |
 | **Horizonte firme** | Dias corridos, a partir de hoje, em que o MRP não cria ordem nova para o item. A sugestão vai para o fim do horizonte e o MRP avisa. Para atender antes, firme a ordem à mão. |
 | **Tempo de segurança** | Dias úteis que a ordem chega antes da necessidade. |
+| **Lote por período** | **Por dia**, **por semana** (segunda a domingo) ou **por mês**: as necessidades do item no mesmo período viram uma ordem só, na data da primeira. Sem agrupamento, uma ordem por necessidade. A empresa tem o seu no parâmetro 50 (VPLA0300). |
+| **Lote máximo** | Só na política do item. A necessidade acima dele vira várias ordens, cada uma com no máximo esse valor (ajustado ao lote múltiplo do item); a última leva o resto. |
 
 **Herança.** Campo vazio herda. A ordem é: a política do **item**; depois a da
 **classificação** mais detalhada do item (a subfamília vence a família); por fim

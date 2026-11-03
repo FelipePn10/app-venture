@@ -5,6 +5,8 @@ import type { Tom } from "../planFormat";
  * Os tipos de mensagem do MRP, com o que o planejador faz em cada um.
  * FIRM_FENCE: a sugestão precisava começar dentro do horizonte firme (VPLA0310)
  * e foi para o fim dele — só se trata (firmar à mão, acelerar, avisar).
+ * DEMANDA_VENCIDA / DEMANDA_ATRASADA: demanda independente (VPLA0102) vencida
+ * sem venda ou de finalidade atrasada — encerra-se o saldo da própria linha.
  */
 const TIPOS_EXCECAO: Record<string, { rotulo: string; tom: Tom }> = {
   EXPEDITE: { rotulo: "Acelerar", tom: "danger" },
@@ -13,6 +15,8 @@ const TIPOS_EXCECAO: Record<string, { rotulo: string; tom: Tom }> = {
   CANCEL: { rotulo: "Cancelar ordem", tom: "warn" },
   EXCESS_PROJECTED: { rotulo: "Excesso de estoque", tom: "warn" },
   FIRM_FENCE: { rotulo: "Horizonte firme", tom: "warn" },
+  DEMANDA_VENCIDA: { rotulo: "Demanda vencida", tom: "warn" },
+  DEMANDA_ATRASADA: { rotulo: "Demanda atrasada", tom: "danger" },
 };
 export const tipoExcecao = (t: string) => TIPOS_EXCECAO[t]?.rotulo ?? enumLabel(t);
 /** Mensagens que pedem ação imediata ficam em vermelho; excesso e cancelamento, em amarelo. */

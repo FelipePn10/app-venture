@@ -4,6 +4,7 @@ import {
   firmSuggestion, getExceptions, handleException, listPlannedOrders, listSuggestions, runMrp, transitionPlannedOrders,
 } from "@/services/mrpService";
 import { type ProductionPlanDTO, listProductionPlans } from "@/services/productionPlanService";
+import { encerrarDemanda } from "@/services/demandaService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { type Aba, Abas, Aviso, Cabecalho, Detalhe, Kpis, Painel, Rodape, Selo, Vazio } from "./planUi";
@@ -115,6 +116,17 @@ export function Vmrp0100Page(): JSX.Element {
     setFeedback({ type: "success", message: `${codes.length} ordem(ns) ${verbo}.` });
   });
 
+  const encerrarDemandaDaExcecao = async (code: number, demanda: number, motivo: string) => {
+    let ok = false;
+    await run(async () => {
+      await encerrarDemanda(demanda, motivo);
+      await handleException(code, "TRATAR", { note: `Demanda ${demanda} encerrada: ${motivo}` });
+      await carregarResultado(plano);
+      ok = true;
+      setFeedback({ type: "success", message: `Demanda ${demanda} encerrada: o saldo sai do planejamento.` });
+    });
+    return ok;
+  };
   const tratarExcecao = async (code: number, acao: MrpExceptionAction, opts: { newDate?: string; note?: string }) => {
     let ok = false;
     await run(async () => {
@@ -226,7 +238,7 @@ export function Vmrp0100Page(): JSX.Element {
             {aba === "rastreamento" && <RastreamentoTab plano={plano} versao={versao} alvo={alvo} onLimparAlvo={() => setAlvo(undefined)} />}
             {aba === "planejadas" && <PlanejadasTab ordens={planejadas} plano={plano} busy={busy} onTransicionar={transicionar}
               onVerOrigem={(o) => { const c = o.code ?? o.planned_code; if (c) verOrigem({ kind: "ORDEM_FIRME", code: c, rotulo: `a ordem ${o.order_number ?? c} (${o.item_code})` }); }} />}
-            {aba === "excecoes" && <ExcecoesTab excecoes={excecoes} busy={busy} onVerPerfil={verPerfil} onTratar={tratarExcecao}
+            {aba === "excecoes" && <ExcecoesTab excecoes={excecoes} busy={busy} onVerPerfil={verPerfil} onTratar={tratarExcecao} onEncerrarDemanda={encerrarDemandaDaExcecao}
               onVerOrigem={(e) => e.source_code && verOrigem({ kind: "ORDEM_FIRME", code: e.source_code, rotulo: `a ordem ${e.source_order_number ?? e.source_code} (${e.item_code})` })} />}
             {aba === "perfil" && <PerfilTab plano={plano} itensDoPlano={itensDoPlano} itemInicial={itemPerfil} />}
             {aba === "planos" && <PlanosTab planos={planos} plano={plano} onEscolher={(c) => setPlano(c)} onRecarregar={carregarPlanos} />}

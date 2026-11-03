@@ -13,6 +13,15 @@ export const ESTRATEGIAS: { id: Estrategia; rotulo: string; ajuda: string }[] = 
 ];
 export const estrategiaDe = (e?: string) => ESTRATEGIAS.find((x) => x.id === e);
 
+export type LotePeriodo = "NENHUM" | "DIA" | "SEMANA" | "MES";
+export const LOTE_PERIODOS: { id: LotePeriodo; rotulo: string }[] = [
+  { id: "NENHUM", rotulo: "Sem agrupamento (uma ordem por necessidade)" },
+  { id: "DIA", rotulo: "Por dia" },
+  { id: "SEMANA", rotulo: "Por semana (segunda a domingo)" },
+  { id: "MES", rotulo: "Por mês" },
+];
+export const lotePeriodoDe = (p?: string) => LOTE_PERIODOS.find((x) => x.id === p);
+
 export interface Politica {
   id: number;
   escopo: Escopo;
@@ -26,6 +35,9 @@ export interface Politica {
   consumo_dias_depois?: number;
   horizonte_firme_dias?: number;
   tempo_seguranca_dias?: number;
+  lote_periodo?: LotePeriodo;
+  /** Texto decimal (só política de item). */
+  lote_maximo?: string;
   observacao?: string;
   updated_at: string;
 }
@@ -38,6 +50,8 @@ export interface PoliticaDTO {
   consumo_dias_depois?: number;
   horizonte_firme_dias?: number;
   tempo_seguranca_dias?: number;
+  lote_periodo?: LotePeriodo;
+  lote_maximo?: string;
   observacao?: string;
 }
 
@@ -50,8 +64,11 @@ export interface PoliticaEfetiva {
   consumo_dias_depois: number;
   horizonte_firme_dias: number;
   tempo_seguranca_dias: number;
+  lote_periodo: LotePeriodo;
+  /** "0" = sem lote máximo. */
+  lote_maximo: string;
   /** De onde veio cada valor: "do item", "da classificação X" ou "parâmetro da empresa". */
-  origem: { estrategia: string; janela: string; horizonte_firme: string; tempo_seguranca: string };
+  origem: { estrategia: string; janela: string; horizonte_firme: string; tempo_seguranca: string; lote_periodo: string; lote_maximo: string };
 }
 
 const lista = <T,>(d: unknown): T[] => (Array.isArray(d) ? (d as T[]) : []);
