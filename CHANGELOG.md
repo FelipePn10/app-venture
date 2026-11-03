@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.10.0] — 2026-11-03
+
 ## Novidades
 - **Política de lote (VPLA0310):** **lote por período** (dia, semana ou mês — as necessidades do item no período viram uma ordem só, na data da primeira; a empresa tem o seu no parâmetro 50) e **lote máximo** na política do item (a necessidade acima dele vira várias ordens). A consulta "política que vale para um item" mostra os dois com a origem.
 - **Exceções do MRP (VMRP0100):** a demanda de estoque que venceu sem venda e a de amostra/feira/projeto atrasada com saldo aparecem como exceção, com **Encerrar saldo** na própria linha.
