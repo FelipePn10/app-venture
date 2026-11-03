@@ -62,6 +62,8 @@ export interface Demanda {
   posicao: Posicao;
   consumida: string;
   atendida: string;
+  /** Produzido pela OF da demanda e reservado para ela até a saída (finalidade própria). */
+  reservada: string;
   a_planejar: string;
   /** O que as ordens ligadas (não canceladas) cobrem. */
   coberta: string;
@@ -124,7 +126,7 @@ const texto = (v: unknown) => (v == null ? "0" : String(v));
 const lista = <T,>(d: unknown): T[] => (Array.isArray(d) ? (d as T[]) : []);
 function norm(d: Demanda): Demanda {
   return {
-    ...d, quantity: texto(d.quantity), consumida: texto(d.consumida), atendida: texto(d.atendida), a_planejar: texto(d.a_planejar),
+    ...d, quantity: texto(d.quantity), consumida: texto(d.consumida), atendida: texto(d.atendida), reservada: texto(d.reservada), a_planejar: texto(d.a_planejar),
     coberta: texto(d.coberta), sem_ordem: texto(d.sem_ordem),
     demand_date: (d.demand_date ?? "").slice(0, 10), vence_em: d.vence_em ? d.vence_em.slice(0, 10) : undefined,
     ordens: (d.ordens ?? []).map((o) => ({ ...o, quantidade: texto(o.quantidade), planejada: texto(o.planejada), produzida: texto(o.produzida) })),

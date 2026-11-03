@@ -265,7 +265,8 @@ export function Vpla0102Page(): JSX.Element {
                     { label: "Quantidade", value: num(q(dem.quantity)) },
                     dem.familia === "VENDA"
                       ? { label: "Consumida pela venda", value: num(q(dem.consumida)), hint: dem.vence_em ? `pedidos até ${data(dem.vence_em)} consomem` : undefined }
-                      : { label: "Atendida (saída)", value: num(q(dem.atendida)), hint: "saídas do estoque para a finalidade" },
+                      : { label: "Atendida (saída)", value: num(q(dem.atendida)),
+                          hint: q(dem.reservada) > 0 ? `${num(q(dem.reservada))} produzida(s) e reservada(s) para ela` : "saídas do estoque para a finalidade" },
                     { label: "MRP vai planejar", value: num(q(dem.a_planejar)), tom: q(dem.a_planejar) > 0 ? "info" : "ok", hint: pos.ajuda },
                     { label: "Coberto por ordens", value: num(q(dem.coberta)), hint: q(dem.sem_ordem) > 0 ? `${num(q(dem.sem_ordem))} ainda sem ordem` : "nada sem ordem", onClick: () => setAba("ordens"), title: "Ver as ordens" },
                   ]} />
@@ -291,7 +292,7 @@ export function Vpla0102Page(): JSX.Element {
                         <p className="erp-note">É <strong>expectativa de venda</strong>. Quando o pedido de venda do item chega, ele <strong>consome</strong> esta demanda em vez de somar: o MRP planeja o maior dos dois, nunca a soma.
                           {dem.vence_em && <> Pedidos com entrega até <strong>{data(dem.vence_em)}</strong> ainda consomem; depois disso, sem venda, ela vence e sai do cálculo.</>}</p>
                       ) : (
-                        <p className="erp-note">Tem <strong>finalidade própria</strong>: a venda não a consome. Ela segura o estoque até a saída para a finalidade — use <strong>Atender</strong>, que lança a saída no estoque. Se sobrar saldo que não vai mais sair, <strong>encerre o saldo</strong>.</p>
+                        <p className="erp-note">Tem <strong>finalidade própria</strong>: a venda não a consome. Ela segura o estoque até a saída para a finalidade: o que a OF dela entrega fica <strong>reservado</strong> para ela, e nenhum pedido de venda pega. Use <strong>Atender</strong>, que lança a saída e consome a reserva. Se sobrar saldo que não vai mais sair, <strong>encerre o saldo</strong> (a reserva é liberada).</p>
                       )}
                     </Painel>
                   </div>

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type Escopo, type Estrategia, type Politica, type PoliticaDTO, type PoliticaEfetiva, ESTRATEGIAS, alterarPolitica, criarPolitica,
   estrategiaDe, excluirPolitica, listarClassificacoes, listarPoliticas, politicaEfetiva,
+  type LotePeriodo, LOTE_PERIODOS, lotePeriodoDe,
 } from "@/services/politicaPlanejamentoService";
 import { loadItems } from "@/services/lookups";
 import { LookupField } from "@/components/ui/LookupField";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { Aviso, Cabecalho, Detalhe, Kpis, Painel, Selo, Vazio } from "./planUi";
-import { normalizar } from "./planFormat";
+import { normalizar, num } from "./planFormat";
+import { decimalParaApi } from "@/services/demandaService";
 import { useAcao } from "./planHooks";
 
 /**
@@ -19,9 +21,9 @@ import { useAcao } from "./planHooks";
 
 type Form = {
   id?: number; escopo: Escopo; item: string; classificacao?: number; estrategia: Estrategia | "";
-  antes: string; depois: string; horizonte: string; seguranca: string; observacao: string;
+  antes: string; depois: string; horizonte: string; seguranca: string; lotePeriodo: LotePeriodo | ""; loteMaximo: string; observacao: string;
 };
-const FORM_VAZIO = (): Form => ({ escopo: "ITEM", item: "", estrategia: "", antes: "", depois: "", horizonte: "", seguranca: "", observacao: "" });
+const FORM_VAZIO = (): Form => ({ escopo: "ITEM", item: "", estrategia: "", antes: "", depois: "", horizonte: "", seguranca: "", lotePeriodo: "", loteMaximo: "", observacao: "" });
 const ESCOPOS: { id: Escopo | ""; rotulo: string }[] = [{ id: "", rotulo: "Todas" }, { id: "ITEM", rotulo: "Por item" }, { id: "CLASSIFICACAO", rotulo: "Por classificação" }];
 
 /** "" herda (undefined); número de 0 a 365. */
@@ -62,6 +64,7 @@ export function Vpla0310Page(): JSX.Element {
     setForm({
       id: p.id, escopo: p.escopo, item: p.item_business_code ?? "", classificacao: p.classification_id, estrategia: p.estrategia ?? "",
       antes: t(p.consumo_dias_antes), depois: t(p.consumo_dias_depois), horizonte: t(p.horizonte_firme_dias), seguranca: t(p.tempo_seguranca_dias),
+      lotePeriodo: p.lote_periodo ?? "", loteMaximo: p.lote_maximo ? String(p.lote_maximo).replace(".", ",") : "",
       observacao: p.observacao ?? "",
     });
   };
@@ -72,7 +75,10 @@ export function Vpla0310Page(): JSX.Element {
     if (!form.id && form.escopo === "CLASSIFICACAO" && !form.classificacao) { setFeedback({ type: "error", message: "Escolha a classificação." }); return; }
     const campos = { antes: dias(form.antes), depois: dias(form.depois), horizonte: dias(form.horizonte), seguranca: dias(form.seguranca) };
     if (Object.values(campos).includes("erro")) { setFeedback({ type: "error", message: "Os dias vão de 0 a 365 (número inteiro). Deixe vazio para herdar." }); return; }
-    if (!form.estrategia && Object.values(campos).every((v) => v === undefined)) {
+    const maximo = decimalParaApi(form.loteMaximo);
+    if (maximo && !(Number(maximo) > 0)) { setFeedback({ type: "error", message: "O lote máximo precisa ser maior que zero. Deixe vazio para não ter." }); return; }
+    if (maximo && form.escopo !== "ITEM") { setFeedback({ type: "error", message: "Lote máximo é quantidade do item: informe na política do item." }); return; }
+    if (!form.estrategia && !form.lotePeriodo && !maximo && Object.values(campos).every((v) => v === undefined)) {
       setFeedback({ type: "error", message: "Preencha ao menos um campo: os vazios seguem a classificação ou os parâmetros da empresa." });
       return;
     }
@@ -80,6 +86,7 @@ export function Vpla0310Page(): JSX.Element {
       estrategia: form.estrategia || undefined,
       consumo_dias_antes: campos.antes as number | undefined, consumo_dias_depois: campos.depois as number | undefined,
       horizonte_firme_dias: campos.horizonte as number | undefined, tempo_seguranca_dias: campos.seguranca as number | undefined,
+      lote_periodo: form.lotePeriodo || undefined, lote_maximo: maximo || undefined,
       observacao: form.observacao.trim() || undefined,
     };
     void run(async () => {
@@ -170,6 +177,8 @@ export function Vpla0310Page(): JSX.Element {
                     { label: "Janela de consumo — dias depois da venda", value: herda(sel.consumo_dias_depois) },
                     { label: "Horizonte firme", value: herda(sel.horizonte_firme_dias, " dias corridos") },
                     { label: "Tempo de segurança", value: herda(sel.tempo_seguranca_dias, " dias úteis") },
+                    { label: "Lote por período", value: lotePeriodoDe(sel.lote_periodo)?.rotulo ?? herda(undefined) },
+                    ...(sel.escopo === "ITEM" ? [{ label: "Lote máximo", value: sel.lote_maximo ? num(Number(sel.lote_maximo)) : "sem lote máximo" }] : []),
                     { label: "Observação", value: sel.observacao || "—" },
                   ]} />
                   {sel.estrategia && <p className="erp-note">{estrategiaDe(sel.estrategia)?.ajuda}</p>}
@@ -197,6 +206,8 @@ export function Vpla0310Page(): JSX.Element {
                     { label: "Janela de consumo", value: <>{efetiva.consumo_dias_antes} dias antes, {efetiva.consumo_dias_depois} depois <span className="erp-text-muted">({efetiva.origem.janela})</span></> },
                     { label: "Horizonte firme", value: <>{efetiva.horizonte_firme_dias ? `${efetiva.horizonte_firme_dias} dias corridos` : "desligado"} <span className="erp-text-muted">({efetiva.origem.horizonte_firme})</span></> },
                     { label: "Tempo de segurança", value: <>{efetiva.tempo_seguranca_dias ? `${efetiva.tempo_seguranca_dias} dias úteis` : "nenhum"} <span className="erp-text-muted">({efetiva.origem.tempo_seguranca})</span></> },
+                    { label: "Lote por período", value: <>{lotePeriodoDe(efetiva.lote_periodo)?.rotulo ?? efetiva.lote_periodo} <span className="erp-text-muted">({efetiva.origem.lote_periodo})</span></> },
+                    { label: "Lote máximo", value: Number(efetiva.lote_maximo) > 0 ? <>{num(Number(efetiva.lote_maximo))} <span className="erp-text-muted">({efetiva.origem.lote_maximo})</span></> : "sem lote máximo" },
                   ]} />
                 </div>)}
               </Painel>
@@ -242,7 +253,17 @@ export function Vpla0310Page(): JSX.Element {
                   <input id="pol-hor" className="erp-input num" inputMode="numeric" placeholder="herda" value={form.horizonte} onChange={(e) => setForm((f) => f && ({ ...f, horizonte: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label" htmlFor="pol-seg">Tempo de segurança (dias úteis)</label>
                   <input id="pol-seg" className="erp-input num" inputMode="numeric" placeholder="herda" value={form.seguranca} onChange={(e) => setForm((f) => f && ({ ...f, seguranca: e.target.value }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label" htmlFor="pol-lper">Lote por período</label>
+                  <select id="pol-lper" className="erp-input" value={form.lotePeriodo} onChange={(e) => setForm((f) => f && ({ ...f, lotePeriodo: e.target.value as LotePeriodo | "" }))}>
+                    <option value="">Herdar</option>
+                    {LOTE_PERIODOS.map((x) => <option key={x.id} value={x.id}>{x.rotulo}</option>)}
+                  </select></div>
+                <div className="erp-field erp-c6"><label className="erp-label" htmlFor="pol-lmax">Lote máximo</label>
+                  <input id="pol-lmax" className="erp-input num" inputMode="decimal" placeholder={form.escopo === "ITEM" ? "sem lote máximo" : "só na política do item"} disabled={form.escopo !== "ITEM"}
+                    value={form.loteMaximo} onChange={(e) => setForm((f) => f && ({ ...f, loteMaximo: e.target.value }))} /></div>
                 <div className="erp-field erp-c12"><span className="erp-field-hint">
+                  <strong>Lote por período:</strong> as necessidades do item no mesmo dia, semana ou mês viram uma ordem, na data da primeira.{" "}
+                  <strong>Lote máximo:</strong> a necessidade acima dele vira várias ordens (cada uma múltipla do lote múltiplo do item).{" "}
                   <strong>Janela de consumo:</strong> uma venda consome a previsão e a demanda de estoque com data entre tantos dias antes e tantos dias depois dela.{" "}
                   <strong>Horizonte firme:</strong> de hoje até hoje + esses dias, o MRP não cria ordem nova (a sugestão vai para o fim do horizonte e o MRP avisa).{" "}
                   <strong>Tempo de segurança:</strong> a ordem chega esses dias úteis antes da necessidade.</span></div>

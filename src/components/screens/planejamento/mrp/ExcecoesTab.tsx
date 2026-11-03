@@ -7,7 +7,10 @@ import { data, dataHora, hojeISO, normalizar } from "../planFormat";
 const REPROGRAMAVEIS = new Set(["EXPEDITE", "RESCHEDULE_IN", "RESCHEDULE_OUT"]);
 const TRATAMENTO: Record<string, string> = { REPROGRAMADA: "Reprogramada", CANCELADA: "Ordem cancelada", TRATADA: "Tratada" };
 type FiltroSituacao = "pendentes" | "tratadas" | "todas";
-type Edicao = { code: number; acao: MrpExceptionAction; data: string; nota: string };
+/** ENCERRAR_DEMANDA: encerra o saldo da demanda independente da mensagem (VPLA0102). */
+type AcaoDaLinha = MrpExceptionAction | "ENCERRAR_DEMANDA";
+type Edicao = { code: number; acao: AcaoDaLinha; data: string; nota: string; demanda?: number };
+const DE_DEMANDA = new Set(["DEMANDA_VENCIDA", "DEMANDA_ATRASADA"]);
 
 /** Data sugerida no passado vira hoje: não se reprograma para ontem. */
 /** Até três origens por extenso; o resto vira "+N" (a lista completa fica no title). */
@@ -28,13 +31,15 @@ function destinoPadrao(e: MrpException): string {
  * mensagem foi analisada. A tratada sai da lista de pendentes e mostra quem
  * tratou e como.
  */
-export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem }: {
+export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem, onEncerrarDemanda }: {
   excecoes: MrpException[];
   busy: boolean;
   onVerPerfil: (item: string) => void;
   /** Rastreamento: a que pedido/demanda serve a ordem da mensagem. */
   onVerOrigem: (e: MrpException) => void;
   onTratar: (code: number, acao: MrpExceptionAction, opts: { newDate?: string; note?: string }) => Promise<boolean>;
+  /** Encerra o saldo da demanda e marca a mensagem como tratada. */
+  onEncerrarDemanda: (code: number, demanda: number, motivo: string) => Promise<boolean>;
 }): JSX.Element {
   const [tipo, setTipo] = useState<string>("");
   const [busca, setBusca] = useState("");
@@ -57,6 +62,10 @@ export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem
 
   const confirmar = async () => {
     if (!edicao) return;
+    if (edicao.acao === "ENCERRAR_DEMANDA") {
+      if (edicao.demanda && await onEncerrarDemanda(edicao.code, edicao.demanda, edicao.nota)) setEdicao(null);
+      return;
+    }
     const ok = await onTratar(edicao.code, edicao.acao, {
       newDate: edicao.acao === "REPROGRAMAR" ? edicao.data : undefined,
       note: edicao.nota,
@@ -98,6 +107,7 @@ export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem
                 const daOrdem = e.source_type === "PLANNED_ORDER" && e.source_order_number;
                 const podeReprogramar = !e.handling_action && e.code && daOrdem && REPROGRAMAVEIS.has(e.message_type);
                 const podeCancelar = !e.handling_action && e.code && daOrdem && e.message_type === "CANCEL";
+                const daDemanda = DE_DEMANDA.has(e.message_type) && e.source_type === "DEMANDA_INDEPENDENTE" && e.source_code;
                 return (
                   <Fragment key={e.code ?? `${e.item_code}-${e.message_type}-${i}`}>
                     <tr className={aberta ? "selected" : undefined}>
@@ -118,6 +128,8 @@ export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem
                           onClick={() => setEdicao({ code: e.code!, acao: "REPROGRAMAR", data: destinoPadrao(e), nota: "" })}>Reprogramar</button>}
                         {podeCancelar && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy}
                           onClick={() => setEdicao({ code: e.code!, acao: "CANCELAR", data: "", nota: "" })}>Cancelar ordem</button>}
+                        {!e.handling_action && e.code && daDemanda && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy}
+                          onClick={() => setEdicao({ code: e.code!, acao: "ENCERRAR_DEMANDA", data: "", nota: "", demanda: e.source_code! })}>Encerrar saldo</button>}
                         {!e.handling_action && e.code && <button className="erp-btn erp-btn-sm" disabled={busy}
                           onClick={() => setEdicao({ code: e.code!, acao: "TRATAR", data: "", nota: "" })}>Marcar tratada</button>}
                       </td>
@@ -130,16 +142,17 @@ export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem
                               <div className="erp-field"><label className="erp-label" htmlFor="ex-data">Nova necessidade</label>
                                 <input id="ex-data" className="erp-input" type="date" min={hojeISO()} value={aberta.data} onChange={(ev) => setEdicao({ ...aberta, data: ev.target.value })} /></div>
                             )}
-                            <div className="erp-field vpl-grow"><label className="erp-label" htmlFor="ex-nota">{aberta.acao === "TRATAR" ? "O que foi feito (obrigatório)" : "Observação"}</label>
+                            <div className="erp-field vpl-grow"><label className="erp-label" htmlFor="ex-nota">{aberta.acao === "TRATAR" ? "O que foi feito (obrigatório)" : aberta.acao === "ENCERRAR_DEMANDA" ? "Motivo do encerramento (obrigatório)" : "Observação"}</label>
                               <input id="ex-nota" className="erp-input" value={aberta.nota} onChange={(ev) => setEdicao({ ...aberta, nota: ev.target.value })}
                                 placeholder={aberta.acao === "TRATAR" ? "Ex.: fornecedor confirmou entrega antecipada" : "Opcional"} /></div>
                             <div style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
                               <button className="erp-btn" onClick={() => setEdicao(null)} disabled={busy}>Voltar</button>
-                              <button className={`erp-btn ${aberta.acao === "CANCELAR" ? "erp-btn-danger" : "erp-btn-primary"}`} disabled={busy || (aberta.acao === "TRATAR" && !aberta.nota.trim()) || (aberta.acao === "REPROGRAMAR" && !aberta.data)}
+                              <button className={`erp-btn ${aberta.acao === "CANCELAR" || aberta.acao === "ENCERRAR_DEMANDA" ? "erp-btn-danger" : "erp-btn-primary"}`} disabled={busy || ((aberta.acao === "TRATAR" || aberta.acao === "ENCERRAR_DEMANDA") && !aberta.nota.trim()) || (aberta.acao === "REPROGRAMAR" && !aberta.data)}
                                 onClick={() => void confirmar()}>
-                                {aberta.acao === "REPROGRAMAR" ? "Confirmar reprogramação" : aberta.acao === "CANCELAR" ? "Confirmar cancelamento" : "Marcar como tratada"}</button>
+                                {aberta.acao === "REPROGRAMAR" ? "Confirmar reprogramação" : aberta.acao === "CANCELAR" ? "Confirmar cancelamento" : aberta.acao === "ENCERRAR_DEMANDA" ? `Encerrar a demanda ${aberta.demanda}` : "Marcar como tratada"}</button>
                             </div>
                           </div>
+                          {aberta.acao === "ENCERRAR_DEMANDA" && <p className="erp-note" style={{ margin: "8px 0 0" }}>O saldo da demanda {aberta.demanda} sai do planejamento; o que já foi consumido ou atendido fica no histórico.</p>}
                           {aberta.acao === "CANCELAR" && <p className="erp-note" style={{ margin: "8px 0 0" }}>A ordem planejada {e.source_order_number} será cancelada e deixa de contar como suprimento no próximo cálculo.</p>}
                         </td>
                       </tr>
