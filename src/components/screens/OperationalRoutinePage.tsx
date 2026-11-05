@@ -431,7 +431,7 @@ export function OperationalRoutinePage({ routine }: { routine: OperationalRoutin
     <div className="erp-toolbar">
       <div className="erp-tgroup"><span className="erp-tgroup-label">Operação</span>
         <select className="erp-tselect" value={operationIndex} onChange={(event) => { setOperationIndex(Number(event.target.value)); setResult(null); setFeedback(null); }}>
-          {routine.operations.map((item, index) => <option key={`${item.method}-${item.path}`} value={index}>{item.label}</option>)}
+          {routine.operations.map((item, index) => <option key={`${item.method}-${item.path}-${index}`} value={index}>{item.label}</option>)}
         </select>
       </div>
       <div className="erp-tgroup"><button className="erp-btn erp-btn-primary" onClick={execute} disabled={busy || (operation.adminOnly && userRole !== "ADMIN")} title={operation.adminOnly && userRole !== "ADMIN" ? "Operação exclusiva do perfil ADMIN" : undefined}>{busy ? "Processando…" : operation.submitLabel ?? operation.label}</button></div>

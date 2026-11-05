@@ -1,3 +1,5 @@
+import { loadItems } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
 import { useState, useCallback } from "react";
 import { type SupplierContract, getContract, consumeContract, updateContractStatus } from "@/services/supplierContractService";
 import { errMessage } from "@/services/fiscalShared";
@@ -64,7 +66,7 @@ export function Vcon0202Page(): JSX.Element {
                   {(contrato.items ?? []).length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem linhas.</td></tr>}
                   {(contrato.items ?? []).map((it, i) => (
                     <tr key={i} className={sel?.item_code === it.item_code && sel?.mask === (it.mask ?? "") ? "erp-row-sel" : ""}>
-                      <td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{num(it.contracted_qty)}</td><td>{num(it.consumed_qty)}</td>
+                      <td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td><td>{it.mask || "—"}</td><td>{num(it.contracted_qty)}</td><td>{num(it.consumed_qty)}</td>
                       <td style={{ fontWeight: 600 }}>{num(it.remaining_qty)}</td>
                       <td><button className="erp-btn" onClick={() => setSel({ item_code: it.item_code, mask: it.mask ?? "" })} disabled={busy}>Selecionar</button></td>
                     </tr>

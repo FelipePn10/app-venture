@@ -1128,6 +1128,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Inventário físico com foto do saldo, contagem e recontagem, diferenças valorizadas e fechamento que lança os ajustes; tipos de movimento com as regras do lançamento manual.",
     module: "almoxarifado",
   },
+  {
+    code: "VEST0150",
+    title: "Coletor de Estoque",
+    description: "Tela para leitor de código de barras: consulta, separação de ondas, contagem de inventário, movimentação entre endereços e etiquetas.",
+    module: "almoxarifado",
+  },
   // ── Vendas & Expedição (novas)
   {
     code: "VEXP0100",

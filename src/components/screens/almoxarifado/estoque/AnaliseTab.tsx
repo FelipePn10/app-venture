@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { apurarCurvaABC, getAnaliseEstoque, getLotesAVencer, type AnaliseDTO, type LoteAVencerDTO, type ResumoABCDTO } from "@/services/stockService";
+import { apurarCurvaABC, getAnaliseEstoque, getLotesAVencer, type AnaliseDTO, type LoteAVencerDTO, type ResumoABCDTO, getIdadeDosLotes, type IdadeLoteDTO } from "@/services/stockService";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadWarehouses } from "@/services/lookups";
+import { loadItems, loadWarehouses } from "@/services/lookups";
 import { dataBR, num, qtd, reais, useAcao } from "./comum";
+import { AcuracidadeSecao } from "./AcuracidadeSecao";
 import { FeedbackBox, Resumo } from "./ui";
 
 type Filtro = "todos" | "parados" | "sem_cobertura" | "cobertura_alta";
@@ -11,6 +12,7 @@ type Filtro = "todos" | "parados" | "sem_cobertura" | "cobertura_alta";
  * Análises: giro (consumo anualizado ÷ valor em estoque), cobertura (meses que
  * o saldo dura no consumo médio), itens parados, curva ABC e lotes a vencer —
  * o que o MC44/MC46 do SAP e os relatórios de estoque do Protheus respondem.
+ * Parado olha o último movimento real: contar e transferir não renovam o item.
  */
 export function AnaliseTab() {
   const { busy, feedback, setFeedback, run } = useAcao();
@@ -25,8 +27,10 @@ export function AnaliseTab() {
   const visiveis = useMemo(() => (lista ?? []).filter((a) =>
     filtro === "parados" ? a.idle : filtro === "sem_cobertura" ? a.quantity > 0 && a.consumed_qty === 0 : filtro === "cobertura_alta" ? (a.coverage_months ?? 0) > 12 : true,
   ), [lista, filtro]);
+  const [idade, setIdade] = useState<IdadeLoteDTO[] | null>(null);
   const valorParado = (lista ?? []).filter((a) => a.idle).reduce((s, a) => s + a.value, 0);
   const valorTotal = (lista ?? []).reduce((s, a) => s + a.value, 0);
+  const provisao = (lista ?? []).reduce((s, a) => s + a.provision_value, 0);
 
   return (<>
     <FeedbackBox feedback={feedback} />
@@ -38,26 +42,48 @@ export function AnaliseTab() {
         <select className="erp-input" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)}>
           <option value="todos">Todos</option><option value="parados">Parados</option><option value="sem_cobertura">Com saldo e sem consumo</option><option value="cobertura_alta">Cobertura acima de 12 meses</option>
         </select></div>
-      {lista && <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><Resumo>Estoque {reais(valorTotal)} · parado <strong>{reais(valorParado)}</strong></Resumo></div>}
+      {lista && <div className="erp-field erp-c3" style={{ alignSelf: "end" }}><Resumo>Estoque {reais(valorTotal)} · parado <strong>{reais(valorParado)}</strong>{provisao > 0 ? <> · provisão <strong>{reais(provisao)}</strong></> : null}</Resumo></div>}
       {lista && (
         <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
           <table className="erp-grid">
-            <thead><tr><th>Item</th><th>Descrição</th><th>ABC</th><th className="num">Saldo</th><th className="num">Valor</th><th className="num">Consumo</th><th className="num">Consumo/mês</th><th className="num">Cobertura</th><th className="num">Giro/ano</th><th>Último mov.</th></tr></thead>
+            <thead><tr><th>Item</th><th>Descrição</th><th>ABC</th><th className="num">Saldo</th><th className="num">Valor</th><th className="num">Consumo</th><th className="num">Consumo/mês</th><th className="num">Cobertura</th><th className="num">Demanda aberta</th><th className="num">Falta</th><th className="num">Provisão</th><th className="num">Giro/ano</th><th>Último mov.</th></tr></thead>
             <tbody>
-              {visiveis.length === 0 && <tr><td colSpan={10} className="erp-grid-empty">Nenhum item nesse filtro.</td></tr>}
+              {visiveis.length === 0 && <tr><td colSpan={13} className="erp-grid-empty">Nenhum item nesse filtro.</td></tr>}
               {visiveis.map((a) => (
                 <tr key={a.item_code} style={{ background: a.idle ? "var(--v-warn-bg, #fff7e6)" : undefined }}>
                   <td><strong>{a.business_code}</strong></td><td>{a.name}</td><td>{a.abc_class ?? "—"}</td>
                   <td className="num">{qtd(a.quantity)} {a.uom}</td><td className="num">{reais(a.value)}</td>
                   <td className="num">{qtd(a.consumed_qty)}</td><td className="num">{qtd(a.avg_monthly_consumption)}</td>
                   <td className="num">{a.coverage_months != null ? `${num(a.coverage_months, 1)} m` : "—"}</td>
+                  <td className="num">{qtd(a.open_demand)}</td>
+                  <td className="num" style={{ color: a.shortage > 0 ? "var(--v-err)" : undefined }}>{a.shortage > 0 ? qtd(a.shortage) : "—"}</td>
+                  <td className="num">{a.provision_value > 0 ? reais(a.provision_value) : "—"}</td>
                   <td className="num">{a.turnover != null ? num(a.turnover, 2) : "—"}</td>
-                  <td>{a.last_movement_at ? `${dataBR(a.last_movement_at)}${a.idle ? ` · parado ${a.idle_days} d` : ""}` : "—"}</td>
+                  <td>{a.last_movement_at ? `${dataBR(a.last_movement_at)}${a.idle ? ` · parado ${a.idle_days} d` : ""}` : a.idle ? "Nunca girou" : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+    </div></div>
+
+    <AcuracidadeSecao />
+
+    <div className="erp-fieldset"><div className="erp-fieldset-head">Idade dos lotes</div><div className="erp-fieldset-body">
+      <div className="erp-field erp-c2"><button className="erp-btn" onClick={() => run(async () => setIdade(await getIdadeDosLotes()))} disabled={busy}>Consultar idade</button></div>
+      {idade && (
+        <div className="erp-field erp-c12"><table className="erp-grid">
+          <thead><tr><th>Item</th><th>Descrição</th><th>Lote</th><th>Almoxarifado</th><th className="num">Saldo</th><th className="num">Valor</th><th>Recebido</th><th className="num">Idade</th></tr></thead>
+          <tbody>
+            {idade.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhum saldo em lote.</td></tr>}
+            {idade.map((l, i) => (
+              <tr key={`${l.item_code}-${l.lot}-${l.warehouse_id}-${i}`}><td><strong>{l.business_code}</strong></td><td>{l.name}</td><td>{l.lot}</td>
+                <td><EntityName code={l.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td><td className="num">{qtd(l.quantity)}</td><td className="num">{reais(l.value)}</td>
+                <td>{dataBR(l.received_at)}</td><td className="num">{l.age_days != null ? `${l.age_days} d` : "—"}</td></tr>
+            ))}
+          </tbody>
+        </table></div>
       )}
     </div></div>
 
@@ -70,7 +96,7 @@ export function AnaliseTab() {
         <div className="erp-field erp-c12">
           <table className="erp-grid">
             <thead><tr><th>Item</th><th className="num">Valor consumido</th><th className="num">Participação</th><th className="num">Acumulado</th><th>Classe</th></tr></thead>
-            <tbody>{abc.items.map((i) => <tr key={i.item_code}><td>{i.item_code}</td><td className="num">{reais(i.consumption_value)}</td><td className="num">{i.share_pct.toFixed(2)}%</td><td className="num">{i.cumulative_pct.toFixed(2)}%</td><td><strong>{i.abc_class}</strong></td></tr>)}</tbody>
+            <tbody>{abc.items.map((i) => <tr key={i.item_code}><td><EntityName code={i.item_code} loader={loadItems} prefix="Item" /></td><td className="num">{reais(i.consumption_value)}</td><td className="num">{i.share_pct.toFixed(2)}%</td><td className="num">{i.cumulative_pct.toFixed(2)}%</td><td><strong>{i.abc_class}</strong></td></tr>)}</tbody>
           </table>
         </div>
       )}

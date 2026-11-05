@@ -1,3 +1,4 @@
+import { EntityName } from "@/components/ui/EntityName";
 import { useState, useCallback, useEffect } from "react";
 import {
   type QuotationDTO, type QuotationPriceDTO,
@@ -7,7 +8,7 @@ import { errMessage, type Obj, parseNum, parseBool } from "@/services/fiscalShar
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadEstablishments, loadSuppliers } from "@/services/lookups";
+import { loadEstablishments, loadSuppliers, loadItems } from "@/services/lookups";
 import { MapaCotacaoPanel } from "./MapaCotacaoPanel";
 import { listRequisitions, getRequisition, type RequisitionDTO } from "@/services/purchaseRequisitionService";
 
@@ -175,7 +176,7 @@ export function Vsup0400Page(): JSX.Element {
                               {solicitacoes.flatMap((r) => (r.items ?? []).filter((i) => i.id && saldoDe(i) > 0).map((i) => (
                                 <tr key={i.id} onClick={() => alternarLinha(i.id!)} style={{ cursor: "pointer" }}>
                                   <td><input type="checkbox" checked={form.requisition_item_ids.includes(i.id!)} readOnly aria-label={`Cotar o item ${i.item_code} da solicitação ${r.code}`} /></td>
-                                  <td className="num">{r.code}</td><td>{i.item_code}</td><td className="num">{saldoDe(i).toLocaleString("pt-BR")}</td><td>{i.uom}</td><td>{i.delivery_date?.slice(0, 10).split("-").reverse().join("/") ?? "—"}</td>
+                                  <td className="num">{r.code}</td><td><EntityName code={i.item_code} loader={loadItems} prefix="Item" /></td><td className="num">{saldoDe(i).toLocaleString("pt-BR")}</td><td>{i.uom}</td><td>{i.delivery_date?.slice(0, 10).split("-").reverse().join("/") ?? "—"}</td>
                                 </tr>
                               )))}
                               {solicitacoes.every((r) => !(r.items ?? []).some((i) => i.id && saldoDe(i) > 0)) && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma solicitação de compra com saldo em aberto.</td></tr>}

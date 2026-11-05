@@ -58,6 +58,8 @@ interface Linha {
   origem: string;
   quantidade: string;
   preco: string;
+  lote: string;
+  endereco: string;
   comprado: boolean;
   /** O usuário escolheu: a sugestão automática não sobrescreve mais. */
   cfopManual: boolean;
@@ -122,7 +124,7 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
 
   const uidRef = useRef(1);
   const novaLinha = (): Linha => ({
-    uid: uidRef.current++, item_code: "", descricao: "", ncm: "", unidade: "", cfop: "", origem: "0", quantidade: "1", preco: "",
+    uid: uidRef.current++, item_code: "", descricao: "", ncm: "", unidade: "", cfop: "", origem: "0", quantidade: "1", preco: "", lote: "", endereco: "",
     comprado: false, cfopManual: false, precoManual: false, carregando: false, aviso: "",
   });
   const [linhas, setLinhas] = useState<Linha[]>(() => [novaLinha()]);
@@ -340,6 +342,8 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
         sequence: i + 1, item_code: l.item_code || undefined, codigo_produto: l.item_code || undefined, ncm: digitos(l.ncm), cfop: l.cfop,
         quantity: numero(l.quantidade), unit_price: numero(l.preco), total_price: totalLinha(l),
         origem_mercadoria: l.origem, description: l.descricao.trim(), unidade_comercial: textoOuNada(l.unidade.toUpperCase()),
+        lot: textoOuNada(l.lote),
+        address: textoOuNada(l.endereco),
       })),
     };
     setSalvando(true); setErro("");
@@ -456,7 +460,7 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
           <table className="erp-grid erp-nota-itens">
             <thead>
               <tr><th style={{ width: 34 }}>Seq</th><th>Item e descrição</th><th style={{ width: 92 }}>NCM</th><th style={{ width: 54 }}>UN</th><th style={{ width: 62 }}>CFOP</th>
-                <th style={{ width: 66 }}>Origem</th><th className="num" style={{ width: 82 }}>Qtd</th><th className="num" style={{ width: 96 }}>Preço unit.</th><th className="num" style={{ width: 94 }}>Total</th><th style={{ width: 38 }}></th></tr>
+                <th style={{ width: 66 }}>Origem</th><th style={{ width: 84 }}>Lote</th><th style={{ width: 84 }}>Endereço</th><th className="num" style={{ width: 82 }}>Qtd</th><th className="num" style={{ width: 96 }}>Preço unit.</th><th className="num" style={{ width: 94 }}>Total</th><th style={{ width: 38 }}></th></tr>
             </thead>
             <tbody>
               {linhas.map((l, i) => (
@@ -475,6 +479,8 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
                   <td><select className="erp-cell-input" aria-label={`Origem da linha ${i + 1}`} value={l.origem} title={ORIGENS.find((o) => o.value === l.origem)?.label} onChange={(e) => setLinha(l.uid, { origem: e.target.value })}>
                     {ORIGENS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select></td>
+                  <td><input className="erp-cell-input" aria-label={`Lote da linha ${i + 1}`} maxLength={50} value={l.lote} onChange={(e) => setLinha(l.uid, { lote: e.target.value })} /></td>
+                  <td><input className="erp-cell-input" aria-label={`Endereço da linha ${i + 1}`} maxLength={100} value={l.endereco} onChange={(e) => setLinha(l.uid, { endereco: e.target.value })} /></td>
                   <td><input className="erp-cell-input num" aria-label={`Quantidade da linha ${i + 1}`} type="number" min="0" step="any" value={l.quantidade} onChange={(e) => setLinha(l.uid, { quantidade: e.target.value })} /></td>
                   <td><input className="erp-cell-input num" aria-label={`Preço da linha ${i + 1}`} type="number" min="0" step="any" value={l.preco} onChange={(e) => setLinha(l.uid, { preco: e.target.value, precoManual: true, aviso: l.aviso.includes("preço") ? "" : l.aviso })} /></td>
                   <td><div className="erp-nota-total">{money(totalLinha(l))}</div></td>

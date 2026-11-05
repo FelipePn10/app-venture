@@ -1,12 +1,11 @@
 import { useState } from "react";
 import {
-  cancelarOndaSeparacao, confirmarOndaSeparacao, criarOndaSeparacao, sugerirGuarda, sugerirSeparacao,
-  type OndaDTO, type SugestaoGuardaDTO, type SugestaoSeparacaoDTO,
+  sugerirGuarda, sugerirSeparacao, type SugestaoGuardaDTO, type SugestaoSeparacaoDTO,
 } from "@/services/stockService";
 import { LookupField } from "@/components/ui/LookupField";
-import { EntityName } from "@/components/ui/EntityName";
-import { loadItems, loadWarehouses } from "@/services/lookups";
+import { loadWarehouses } from "@/services/lookups";
 import { num, qtd, useAcao } from "./comum";
+import { OndasSecao } from "./OndasSecao";
 import { FeedbackBox, Resumo } from "./ui";
 
 /** Separação (FEFO/FIFO), onda de separação e sugestão de guarda (endereçamento). */
@@ -16,8 +15,6 @@ export function SeparacaoTab({ itemCode }: { itemCode: string }) {
   const [regra, setRegra] = useState<"FEFO" | "FIFO">("FEFO");
   const [sepQtd, setSepQtd] = useState("");
   const [separacao, setSeparacao] = useState<SugestaoSeparacaoDTO | null>(null);
-  const [ondaForm, setOndaForm] = useState({ code: "", linhas: "" });
-  const [onda, setOnda] = useState<OndaDTO | null>(null);
   const [guardaQtd, setGuardaQtd] = useState("");
   const [guarda, setGuarda] = useState<SugestaoGuardaDTO[]>([]);
 
@@ -27,23 +24,6 @@ export function SeparacaoTab({ itemCode }: { itemCode: string }) {
     const r = await sugerirSeparacao(itemCode, q, almox || undefined, regra);
     setSeparacao(r);
     setFeedback(r.missing_qty > 0 ? { type: "error", message: `Faltam ${num(r.missing_qty)} para completar a separação.` } : { type: "success", message: `Separação sugerida por ${r.rule}.` });
-  });
-  const gerarOnda = () => run(async () => {
-    const code = Number(ondaForm.code);
-    const lines = ondaForm.linhas.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
-      const [item, q] = l.split(";").map((p) => p.trim());
-      return { item_code: item, quantity: Number((q ?? "").replace(",", ".")) };
-    }).filter((l) => l.item_code && l.quantity > 0);
-    if (!(code > 0) || !lines.length || !almox) { setFeedback({ type: "error", message: "Informe o número da onda, o almoxarifado e ao menos uma necessidade." }); return; }
-    const r = await criarOndaSeparacao({ code, warehouse_id: almox, rule: regra, lines });
-    setOnda(r);
-    setFeedback(r.missing.length ? { type: "error", message: `Onda ${r.code} criada com falta em ${r.missing.length} item(ns).` } : { type: "success", message: `Onda ${r.code}: ${r.lines.length} parada(s) na caminhada.` });
-  });
-  const encerrar = (confirmar: boolean) => run(async () => {
-    if (!onda) return;
-    const r = confirmar ? await confirmarOndaSeparacao(onda.code) : await cancelarOndaSeparacao(onda.code);
-    setOnda({ ...onda, status: r.status });
-    setFeedback({ type: "success", message: confirmar ? `Onda ${r.code} separada: estoque baixado e reservas liberadas.` : `Onda ${r.code} cancelada: o reservado voltou a ficar disponível.` });
   });
   const sugerirOndeGuardar = () => run(async () => {
     const q = Number(guardaQtd.replace(",", "."));
@@ -87,32 +67,7 @@ export function SeparacaoTab({ itemCode }: { itemCode: string }) {
       )}
     </div></div>
 
-    <div className="erp-fieldset"><div className="erp-fieldset-head">Onda de separação (várias necessidades numa caminhada)</div><div className="erp-fieldset-body">
-      <div className="erp-field erp-c2"><label className="erp-label erp-req">Nº da onda</label><input className="erp-input num" value={ondaForm.code} onChange={(e) => setOndaForm((p) => ({ ...p, code: e.target.value }))} /></div>
-      <div className="erp-field erp-c6"><label className="erp-label erp-req">Necessidades</label>
-        <textarea className="erp-input" rows={3} placeholder={"MP-CH-3MM;400\nMP-PERFIL-U;50"} value={ondaForm.linhas} onChange={(e) => setOndaForm((p) => ({ ...p, linhas: e.target.value }))} />
-        <small className="erp-hint">Uma por linha: item;quantidade.</small></div>
-      <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={gerarOnda} disabled={busy}>Gerar onda</button></div>
-      {onda && (
-        <div className="erp-field erp-c12">
-          <div><Resumo>Onda <strong>{onda.code}</strong> · {onda.status} · regra {onda.rule} · {onda.lines.length} parada(s)
-            {onda.missing.length > 0 && <> · <strong>falta:</strong> {onda.missing.map((m) => `${m.item_code} (${qtd(m.quantity)})`).join(", ")}</>}</Resumo></div>
-          <table className="erp-grid">
-            <thead><tr><th>Rota</th><th>Endereço</th><th>Item</th><th>Lote</th><th>Corrida</th><th className="num">Quantidade</th><th>Origem</th></tr></thead>
-            <tbody>{onda.lines.map((l) => (
-              <tr key={l.id}><td className="num">{l.pick_sequence || "—"}</td><td><strong>{l.address || "—"}</strong></td>
-                <td><EntityName code={l.item_code} loader={loadItems} prefix="Item" /></td><td>{l.lot || "—"}</td><td>{l.heat_number ?? "—"}</td>
-                <td className="num">{qtd(l.quantity)}</td><td>{l.reference_type ? `${l.reference_type} ${l.reference_code ?? ""}` : "—"}</td></tr>))}</tbody>
-          </table>
-          {onda.status === "ABERTA" && (
-            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-              <button className="erp-btn erp-btn-primary" onClick={() => encerrar(true)} disabled={busy}>Confirmar separação</button>
-              <button className="erp-btn" onClick={() => encerrar(false)} disabled={busy}>Cancelar onda</button>
-            </div>
-          )}
-        </div>
-      )}
-    </div></div>
+    <OndasSecao almox={almox} />
 
     <div className="erp-fieldset"><div className="erp-fieldset-head">Guardar recebimento (onde colocar)</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c2"><label className="erp-label">Quantidade</label><input className="erp-input num" value={guardaQtd} onChange={(e) => setGuardaQtd(e.target.value)} /></div>

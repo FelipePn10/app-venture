@@ -6,22 +6,26 @@ import {
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCostCenters, loadItems, loadWarehouseAddresses, loadWarehouses } from "@/services/lookups";
-import { MOVEMENT_LABEL, REFERENCE_LABEL, estornavel, qtd, reais, useAcao, useUnidadeDoItem } from "./comum";
+import { MOVEMENT_LABEL, REFERENCE_LABEL, estornavel, qtd, reais, useAcao, useUnidadeDoItem, hoje } from "./comum";
 import { FeedbackBox } from "./ui";
 
-type Form = { item_code: string; warehouse_id: number; movement_type_code: string; movement_type: string; quantity: string; unit_price: string; lot: string; address: string; cost_center_code?: number; notes: string };
-const VAZIO: Form = { item_code: "", warehouse_id: 0, movement_type_code: "", movement_type: "IN", quantity: "", unit_price: "", lot: "", address: "", notes: "" };
+type Form = { item_code: string; warehouse_id: number; movement_type_code: string; movement_type: string; quantity: string; unit_price: string; lot: string; address: string; cost_center_code?: number; notes: string; movement_date: string };
+const VAZIO: Form = { item_code: "", warehouse_id: 0, movement_type_code: "", movement_type: "IN", quantity: "", unit_price: "", lot: "", address: "", notes: "", movement_date: "" };
 
 /**
  * Lançamento manual. O tipo vem do cadastro de tipos de movimento (VEST0200):
  * é ele que diz se é entrada ou saída, se exige centro de custo e se a entrada
  * mexe no custo médio. Sem tipo, vale o IN/OUT/ajuste de sempre.
  */
+/** A lista de movimentos cresce sem limite: a tela busca por página. */
+const POR_PAGINA = 200;
+
 export function LancamentosTab({ itemCode }: { itemCode: string }) {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [form, setForm] = useState<Form>({ ...VAZIO, item_code: itemCode });
   const [tipos, setTipos] = useState<MovementTypeDTO[]>([]);
   const [movs, setMovs] = useState<MovementDTO[]>([]);
+  const [temMais, setTemMais] = useState(false);
   const [estornando, setEstornando] = useState<number | null>(null);
   const [motivo, setMotivo] = useState("");
   const uom = useUnidadeDoItem(form.item_code);
@@ -34,7 +38,14 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
   const ehSaida = direcaoFixa ? tipo?.entry_exit === "SAIDA" : form.movement_type === "OUT";
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((p) => ({ ...p, [k]: v }));
 
-  const carregar = () => run(async () => { setMovs(form.item_code ? await listMovementsByItem(form.item_code) : await listMovements()); });
+  const carregar = () => run(async () => {
+    const lista = form.item_code ? await listMovementsByItem(form.item_code) : await listMovements({ limit: POR_PAGINA });
+    setMovs(lista); setTemMais(!form.item_code && lista.length === POR_PAGINA);
+  });
+  const carregarMais = () => run(async () => {
+    const lista = await listMovements({ limit: POR_PAGINA, offset: movs.length });
+    setMovs((m) => [...m, ...lista]); setTemMais(lista.length === POR_PAGINA);
+  });
   const lancar = () => run(async () => {
     const q = Number(form.quantity.replace(",", "."));
     if (!form.item_code || !form.warehouse_id || !(q !== 0)) { setFeedback({ type: "error", message: "Item, almoxarifado e quantidade são obrigatórios." }); return; }
@@ -42,6 +53,7 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
     await createMovement({
       item_code: form.item_code, warehouse_id: form.warehouse_id, movement_type: form.movement_type, quantity: q,
       unit_price: Number(form.unit_price.replace(",", ".")) || 0, lot: form.lot || undefined, address: form.address || undefined,
+      movement_date: form.movement_date || undefined,
       movement_type_code: form.movement_type_code || undefined, cost_center_code: form.cost_center_code, notes: form.notes || undefined,
     });
     setFeedback({ type: "success", message: "Movimento lançado: saldo e custo médio atualizados." });
@@ -53,7 +65,7 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
     await estornarMovimento(id, motivo.trim());
     setEstornando(null); setMotivo("");
     setFeedback({ type: "success", message: `Movimento ${id} estornado.` });
-    setMovs(form.item_code ? await listMovementsByItem(form.item_code) : await listMovements());
+    setMovs(form.item_code ? await listMovementsByItem(form.item_code) : await listMovements({ limit: POR_PAGINA }));
   });
 
   return (<>
@@ -83,6 +95,9 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
           <input className="erp-input num" value={form.unit_price} onChange={(e) => set("unit_price", e.target.value)} disabled={tipo?.updates_avg_cost === false} /></div>
       )}
       <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" value={form.lot} onChange={(e) => set("lot", e.target.value)} /></div>
+      <div className="erp-field erp-c2"><label className="erp-label">Data do movimento</label>
+        <input className="erp-input" type="date" max={hoje()} value={form.movement_date} onChange={(e) => set("movement_date", e.target.value)} />
+        <span className="erp-field-hint">Em branco: hoje. Só em mês aberto.</span></div>
       <div className="erp-field erp-c2"><label className="erp-label">Endereço</label>
         <LookupField value={form.address || undefined} loader={loadWarehouseAddresses(form.warehouse_id || undefined)} entityLabel="endereço" placeholder="Sem endereço" clearable onChange={(c) => set("address", c ? String(c) : "")} /></div>
       <div className="erp-field erp-c2"><label className={`erp-label${tipo?.requires_cost_center ? " erp-req" : ""}`}>Centro de custo</label>
@@ -104,13 +119,13 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
             {movs.slice(0, 200).map((m) => (
               <Fragment key={m.id}>
                 <tr style={{ opacity: m.reversed_by_movement_id ? 0.55 : 1 }}>
-                  <td>{m.id}</td><td>{m.created_at?.slice(0, 10) ?? "—"}</td>
+                  <td>{m.id}</td><td>{(m.movement_date ?? m.created_at)?.slice(0, 10).split("-").reverse().join("/") ?? "—"}</td>
                   <td><EntityName code={m.item_code} loader={loadItems} prefix="Item" /></td>
                   <td><EntityName code={m.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td>
                   <td>{MOVEMENT_LABEL[m.movement_type] ?? m.movement_type}{m.movement_type_code ? ` · ${m.movement_type_code}` : ""}</td>
                   <td className="num">{qtd(m.quantity)}</td><td className="num">{reais(m.total_price)}</td><td>{m.lot || "—"}</td>
                   <td>{m.address_to ? `${m.address || "—"} → ${m.address_to}` : m.address || "—"}</td>
-                  <td>{m.reference_type ? `${REFERENCE_LABEL[m.reference_type] ?? m.reference_type} ${m.reference_code ?? ""}` : "Manual"}{m.cost_center_code ? ` · CC ${m.cost_center_code}` : ""}</td>
+                  <td>{m.reference_type ? `${REFERENCE_LABEL[m.reference_type] ?? "Documento"} ${m.reference_code ?? ""}` : "Manual"}{m.cost_center_code ? ` · CC ${m.cost_center_code}` : ""}</td>
                   <td>{estornavel(m) && m.id && <button className="erp-btn erp-btn-sm" onClick={() => { setEstornando(m.id!); setMotivo(""); }} disabled={busy}>Estornar</button>}
                     {m.reversed_by_movement_id && <span className="erp-badge erp-badge-gray">estornado</span>}
                     {m.reverses_movement_id && <span className="erp-badge erp-badge-blue">estorno de {m.reverses_movement_id}</span>}</td>
@@ -129,6 +144,7 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
             ))}
           </tbody>
         </table>
+        {temMais && <div style={{ marginTop: 8 }}><button className="erp-btn" onClick={carregarMais} disabled={busy}>Carregar mais</button></div>}
       </div>
     </div></div>
   </>);

@@ -6,6 +6,7 @@
  * inglês para o usuário.
  */
 export const FIELD_LABELS: Record<string, string> = {
+  to: "Até",
   num_min: "Valor mínimo", num_max: "Valor máximo", num_multiple: "Múltiplo permitido",
   id: "Código", item_code: "Item", supplier_code: "Fornecedor", purchase_order_code: "Pedido de compra",
   purchase_order_item_code: "Linha do pedido", enterprise_code: "Empresa", warehouse_id: "Almoxarifado",
@@ -108,7 +109,7 @@ export const FIELD_LABELS: Record<string, string> = {
   application: "Aplicação", classification_type: "Tipo de classificação", part_type: "Tipo de parte",
   date_format: "Formato de data", lot_mask_id: "Máscara de lote", size: "Tamanho",
   zero_on_year_change: "Zerar na virada de ano", current_value: "Valor atual",
-  load_code: "Carga", carrier_code: "Transportadora", dispatch_box_code: "Caixa de despacho", box_code: "Caixa",
+  wave_lines_open: "Paradas em separação", wave_lines_picked: "Paradas separadas", load_code: "Carga", carrier_code: "Transportadora", dispatch_box_code: "Caixa de despacho", box_code: "Caixa",
   shipment_code: "Romaneio", fiscal_exit_id: "Saída fiscal", nfe_number: "Número da NF-e", nfe_key: "Chave da NF-e",
   zone: "Zona", planned_ship_date: "Previsão de despacho", estimated_delivery: "Previsão de entrega",
   vehicle_plate: "Placa", driver_name: "Motorista", driver_document: "Documento do motorista",
