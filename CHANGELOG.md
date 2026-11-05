@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.11.0] — 2026-11-05
+
 ## Novidades
 - **Estoque por endereço e lote, de ponta a ponta:** inventário com conferência, recontagem e aprovação por tolerância; controle de lote e endereço por item; situações de lote (quarentena, reprovado) e regra FEFO ou FIFO.
 - **Fechamento mensal de estoque (VEST0200):** com simulação, foto do mês e recálculo do custo, que agora chega do componente ao produto.
