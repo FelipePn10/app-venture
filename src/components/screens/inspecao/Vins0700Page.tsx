@@ -32,7 +32,7 @@ export function Vins0700Page(): JSX.Element {
     try {
       const lotes = form.lotesInspecao.split(/[\s,;]+/).map(Number).filter((x) => x > 0);
       const c = await emitirCertificado({
-        item_code: Number(form.item), lote: form.lote.trim() || undefined, quantidade: num(form.quantidade),
+        item_code: form.item.trim(), lote: form.lote.trim() || undefined, quantidade: num(form.quantidade),
         customer_code: Number(form.cliente) || undefined, fiscal_exit_id: Number(form.nf) || undefined,
         lotes_inspecao: lotes.length ? lotes : undefined, observacoes: form.obs.trim() || undefined,
       });

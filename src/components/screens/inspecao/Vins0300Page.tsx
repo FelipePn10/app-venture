@@ -209,7 +209,7 @@ export function Vins0300Page(): JSX.Element {
     setBusy(true); setFeedback(null);
     try {
       const l = await abrirLote({
-        origem: novo.origem, item_code: Number(novo.item), quantidade: textoNum(novo.quantidade),
+        origem: novo.origem, item_code: novo.item.trim(), quantidade: textoNum(novo.quantidade),
         warehouse_id: novo.almox ? Number(novo.almox) : undefined, supplier_code: Number(novo.fornecedor) || undefined, lote: novo.lote.trim() || undefined,
       });
       setNovo((n) => ({ ...n, mostrar: false, item: "", quantidade: "", lote: "" }));

@@ -359,7 +359,7 @@ export interface PreviaItemNFe {
   /** Linha da nota (para corrigir o cClassTrib a partir da prévia). */
   id: number;
   sequence: number;
-  item_code?: number;
+  item_code?: string;
   descricao: string;
   ncm: string;
   cfop: string;
@@ -512,7 +512,7 @@ export async function previewExit(id: number): Promise<PreviaNFe> {
       valor_ibs: parseNum(i, 'valor_ibs'),
       valor_cbs: parseNum(i, 'valor_cbs'),
       aliquota_efetiva_cbs: parseNum(i, 'aliquota_efetiva_cbs'),
-      item_code: parseNum(i, 'item_code', 'ItemCode') || undefined,
+      item_code: parseStr(i, 'item_code', 'ItemCode') || undefined,
       descricao: parseStr(i, 'descricao', 'Descricao'),
       ncm: parseStr(i, 'ncm', 'Ncm'),
       cfop: parseStr(i, 'cfop', 'Cfop'),

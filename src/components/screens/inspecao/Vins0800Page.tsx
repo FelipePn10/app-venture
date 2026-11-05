@@ -63,7 +63,7 @@ export function Vins0800Page(): JSX.Element {
   }
 
   async function gravarCab() {
-    await executar(() => salvarDocumento(cab.id, { codigo: cab.codigo, titulo: cab.titulo, tipo: cab.tipo, item_code: Number(cab.item) || undefined, area: cab.area || undefined }),
+    await executar(() => salvarDocumento(cab.id, { codigo: cab.codigo, titulo: cab.titulo, tipo: cab.tipo, item_code: cab.item.trim() || undefined, area: cab.area || undefined }),
       (d) => `Documento ${d.codigo} gravado.`);
   }
 
