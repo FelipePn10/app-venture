@@ -60,7 +60,7 @@ export interface OverheadApplied {
 }
 
 export interface CostTreeNode {
-  item_code: number;
+  item_code: string;
   mask?: string;
   level: number;
   material_cost: number;
@@ -134,7 +134,7 @@ export interface OverheadRuleDTO {
 /** Uma apuração passada, para comparar o custo ao longo do tempo. */
 export interface CostHistoryEntry {
   id: number;
-  item_code: number;
+  item_code: string;
   mask?: string;
   lot_size: number;
   material_cost: number;
@@ -209,7 +209,7 @@ function parseOverheadApplied(raw: unknown): OverheadApplied {
 function parseTreeNode(raw: unknown): CostTreeNode {
   const o = unwrapObject(raw);
   return {
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     level: parseNum(o, 'level', 'Level'),
     material_cost: parseNum(o, 'material_cost', 'MaterialCost'),
@@ -247,7 +247,7 @@ function parseHistory(raw: unknown): CostHistoryEntry {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     lot_size: parseNum(o, 'lot_size', 'LotSize') || 1,
     material_cost: parseNum(o, 'material_cost', 'MaterialCost'),

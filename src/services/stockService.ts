@@ -702,7 +702,7 @@ export interface KardexLinhaDTO {
   cost_center_code?: number; reversed: boolean; is_reversal: boolean; notes?: string;
 }
 export interface KardexDTO {
-  item_code: number; business_code: string; name: string; uom: string; from: string; to: string;
+  item_code: string; business_code: string; name: string; uom: string; from: string; to: string;
   opening_qty: number; opening_value: number; total_in: number; total_out: number;
   closing_qty: number; closing_value: number; lines: KardexLinhaDTO[];
 }
@@ -715,7 +715,7 @@ export async function getKardex(itemCode: string, filtros: { warehouse_id?: numb
   const { data } = await httpClient.get(`/api/stock/kardex/${encodeURIComponent(itemCode)}`, { params });
   const o = unwrapObject(data);
   return {
-    item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
+    item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
     from: parseStr(o, 'from'), to: parseStr(o, 'to'),
     opening_qty: parseNum(o, 'opening_qty'), opening_value: parseNum(o, 'opening_value'),
     total_in: parseNum(o, 'total_in'), total_out: parseNum(o, 'total_out'),
@@ -737,7 +737,7 @@ export async function getKardex(itemCode: string, filtros: { warehouse_id?: numb
 }
 
 export interface PosicaoDTO {
-  item_code: number; business_code: string; name: string; uom: string; warehouse_id: number;
+  item_code: string; business_code: string; name: string; uom: string; warehouse_id: number;
   quantity: number; value: number; avg_cost: number; alt_uom?: string; alt_quantity?: number;
 }
 /** Saldo por item e almoxarifado ao fim do dia (posição em data), com a 2ª unidade quando há conversão. */
@@ -749,7 +749,7 @@ export async function getPosicaoEmData(date?: string, warehouseId?: number): Pro
   return unwrapArray(data).map((r) => {
     const o = unwrapObject(r);
     return {
-      item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
+      item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
       warehouse_id: parseNum(o, 'warehouse_id'), quantity: parseNum(o, 'quantity'), value: parseNum(o, 'value'), avg_cost: parseNum(o, 'avg_cost'),
       alt_uom: parseStr(o, 'alt_uom') || undefined, alt_quantity: o['alt_quantity'] != null ? parseNum(o, 'alt_quantity') : undefined,
     };
@@ -757,7 +757,7 @@ export async function getPosicaoEmData(date?: string, warehouseId?: number): Pro
 }
 
 export interface ReposicaoDTO {
-  item_code: number; business_code: string; name: string; uom: string; on_hand: number; reserved: number; on_order: number;
+  item_code: string; business_code: string; name: string; uom: string; on_hand: number; reserved: number; on_order: number;
   projected: number; reorder_point: number; safety_stock: number; minimum_lot: number; multiple_lot: number;
   avg_monthly_consumption: number; suggested_qty: number; reason: string;
 }
@@ -767,7 +767,7 @@ export async function getReposicao(): Promise<ReposicaoDTO[]> {
   return unwrapArray(data).map((r) => {
     const o = unwrapObject(r);
     return {
-      item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
+      item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
       on_hand: parseNum(o, 'on_hand'), reserved: parseNum(o, 'reserved'), on_order: parseNum(o, 'on_order'), projected: parseNum(o, 'projected'),
       reorder_point: parseNum(o, 'reorder_point'), safety_stock: parseNum(o, 'safety_stock'), minimum_lot: parseNum(o, 'minimum_lot'),
       multiple_lot: parseNum(o, 'multiple_lot'), avg_monthly_consumption: parseNum(o, 'avg_monthly_consumption'),
@@ -776,13 +776,13 @@ export async function getReposicao(): Promise<ReposicaoDTO[]> {
   });
 }
 /** Gera a requisição de compra (VSUP0300) com as sugestões escolhidas. */
-export async function gerarRequisicaoDeCompra(items: { item_code: number; quantity: number }[], notes?: string): Promise<Obj> {
+export async function gerarRequisicaoDeCompra(items: { item_code: string; quantity: number }[], notes?: string): Promise<Obj> {
   const { data } = await httpClient.post('/api/stock/replenishment/purchase-requisition', { items, notes });
   return unwrapObject(data);
 }
 
 export interface AnaliseDTO {
-  item_code: number; business_code: string; name: string; uom: string; quantity: number; value: number;
+  item_code: string; business_code: string; name: string; uom: string; quantity: number; value: number;
   consumed_qty: number; consumed_value: number; avg_monthly_consumption: number; coverage_months?: number;
   turnover?: number; last_movement_at?: string; idle_days?: number; idle: boolean; abc_class?: string;
 }
@@ -792,7 +792,7 @@ export async function getAnaliseEstoque(months = 6, idleDays = 90): Promise<Anal
   return unwrapArray(data).map((r) => {
     const o = unwrapObject(r);
     return {
-      item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
+      item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), uom: parseStr(o, 'uom'),
       quantity: parseNum(o, 'quantity'), value: parseNum(o, 'value'), consumed_qty: parseNum(o, 'consumed_qty'),
       consumed_value: parseNum(o, 'consumed_value'), avg_monthly_consumption: parseNum(o, 'avg_monthly_consumption'),
       coverage_months: o['coverage_months'] != null ? parseNum(o, 'coverage_months') : undefined,
@@ -804,13 +804,13 @@ export async function getAnaliseEstoque(months = 6, idleDays = 90): Promise<Anal
   });
 }
 
-export interface LoteAVencerDTO { item_code: number; business_code: string; name: string; lot: string; warehouse_id: number; quantity: number; expires_at: string; days_to_expire: number; expired: boolean; }
+export interface LoteAVencerDTO { item_code: string; business_code: string; name: string; lot: string; warehouse_id: number; quantity: number; expires_at: string; days_to_expire: number; expired: boolean; }
 export async function getLotesAVencer(days = 30): Promise<LoteAVencerDTO[]> {
   const { data } = await httpClient.get('/api/stock/lots/expiring', { params: { days } });
   return unwrapArray(data).map((r) => {
     const o = unwrapObject(r);
     return {
-      item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), lot: parseStr(o, 'lot'),
+      item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code'), name: parseStr(o, 'name'), lot: parseStr(o, 'lot'),
       warehouse_id: parseNum(o, 'warehouse_id'), quantity: parseNum(o, 'quantity'), expires_at: parseStr(o, 'expires_at'),
       days_to_expire: parseNum(o, 'days_to_expire'), expired: o['expired'] === true,
     };
@@ -832,7 +832,7 @@ function parseRequisicao(raw: unknown): RequisicaoDTO {
     status: parseStr(o, 'status'), notes: parseStr(o, 'notes') || undefined, created_at: parseStr(o, 'created_at') || undefined,
     items: unwrapArray(o['items']).map((r) => {
       const l = unwrapObject(r);
-      return { id: parseNum(l, 'id'), sequence: parseNum(l, 'sequence'), item_code: parseNum(l, 'item_code'), mask: parseStr(l, 'mask') || undefined,
+      return { id: parseNum(l, 'id'), sequence: parseNum(l, 'sequence'), item_code: parseStr(l, 'item_code'), mask: parseStr(l, 'mask') || undefined,
         quantity: parseNum(l, 'quantity'), issued_qty: parseNum(l, 'issued_qty'), notes: parseStr(l, 'notes') || undefined };
     }),
   };

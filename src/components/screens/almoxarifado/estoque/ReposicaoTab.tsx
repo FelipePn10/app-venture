@@ -12,7 +12,7 @@ import { FeedbackBox } from "./ui";
 export function ReposicaoTab() {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [lista, setLista] = useState<ReposicaoDTO[] | null>(null);
-  const [marcados, setMarcados] = useState<Record<number, string>>({});
+  const [marcados, setMarcados] = useState<Record<string, string>>({});
 
   const consultar = () => run(async () => {
     const r = await getReposicao();
@@ -20,7 +20,7 @@ export function ReposicaoTab() {
     setMarcados(Object.fromEntries(r.map((s) => [s.item_code, String(s.suggested_qty)])));
   });
   const gerar = () => run(async () => {
-    const itens = Object.entries(marcados).map(([k, v]) => ({ item_code: Number(k), quantity: Number(v.replace(",", ".")) })).filter((i) => i.quantity > 0);
+    const itens = Object.entries(marcados).map(([k, v]) => ({ item_code: k, quantity: Number(v.replace(",", ".")) })).filter((i) => i.quantity > 0);
     if (itens.length === 0) { setFeedback({ type: "error", message: "Marque ao menos um item com quantidade." }); return; }
     const r = await gerarRequisicaoDeCompra(itens);
     setFeedback({ type: "success", message: `Requisição de compra ${r["code"] ?? ""} gerada com ${itens.length} item(ns). Siga em VSUP0300/VSUP0400.` });

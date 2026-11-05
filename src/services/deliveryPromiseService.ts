@@ -32,11 +32,11 @@ export interface RescheduleRequest {
   /**
    * Pedidos e itens específicos a reprogramar. O nome aceito pelo backend é
    * `sales_order_codes` — enviado como `order_codes`, o filtro era descartado em
-   * silêncio e a reprogramação pegava a faixa inteira de datas. Ambos são
-   * numéricos.
+   * silêncio e a reprogramação pegava a faixa inteira de datas. Pedidos são
+   * números; itens vão pelo código do item como texto (ver `item_codes`).
    */
   sales_order_codes?: number[];
-  item_codes?: number[];
+  item_codes?: string[];
   reason?: string;
   new_date: string;
 }

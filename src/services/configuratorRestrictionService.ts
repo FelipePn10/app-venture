@@ -202,7 +202,7 @@ export async function evaluateRestrictions(
   escopo?: { classificationType?: string; divisionId?: number },
 ): Promise<RestrictionEvaluation> {
   const { data } = await httpClient.post(`${BASE}/evaluate`, {
-    item_code: Number(itemCode),
+    item_code: itemCode,
     ...(customerCode ? { customer_code: customerCode } : {}),
     ...(escopo?.classificationType ? { classification_type: escopo.classificationType } : {}),
     ...(escopo?.divisionId ? { division_id: escopo.divisionId } : {}),

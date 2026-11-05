@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Correções
+- **Itens com código numérico:** nas empresas em que o código de um item é um número (as chapas "5", "10"…), algumas telas confundiam esse item com outro. Agora cada tela trata o código do item exatamente como ele aparece no cadastro. Corrigido em: documentos da qualidade (VINS0800), abertura de lote de inspeção (VINS0300), certificado de qualidade (VINS0700), reposição do almoxarifado, reprogramação de entrega (VEXR0100 e VDPR0100), avaliação de restrições do configurador e reajuste da venda recorrente.
+- **Itens com letras no código** (como RN-01001): essas mesmas telas perdiam o item ao gravar ou mostravam 0 no lugar do código. A reprogramação de entrega em lote recusava o item como "código do item inválido".
+
 ## [v1.10.1] — 2026-11-03
 
 ## Correções

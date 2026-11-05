@@ -14,17 +14,17 @@ export interface LoteResumo {
   decidido_em: string; amostra?: string; caracteristicas: CaracResumo[];
 }
 export interface Certificado {
-  id: number; numero: number; customer_code?: number; fiscal_exit_id?: number; sales_order_code?: number; item_code: number; mask: string;
+  id: number; numero: number; customer_code?: number; fiscal_exit_id?: number; sales_order_code?: number; item_code: string; mask: string;
   lote?: string; quantidade: number; corrida?: string; certificado_usina?: string; lotes_inspecao: number[]; observacoes?: string;
   status: 'EMITIDO' | 'CANCELADO'; motivo_cancelamento?: string; emitido_em: string;
   conteudo: {
     empresa: { nome: string; cnpj?: string }; cliente?: { codigo?: number; nome: string; cnpj?: string };
-    item_code: number; item_nome: string; lote?: string; corrida?: string; certificado_usina?: string; quantidade: string;
+    item_code: string; item_nome: string; lote?: string; corrida?: string; certificado_usina?: string; quantidade: string;
     nf?: { numero: number; serie: string; data: string }; pedido_venda?: number; lotes: LoteResumo[]; observacoes?: string;
   };
 }
 export interface EmissaoDTO {
-  item_code: number; mask?: string; lote?: string; quantidade: string; lotes_inspecao?: number[];
+  item_code: string; mask?: string; lote?: string; quantidade: string; lotes_inspecao?: number[];
   customer_code?: number; fiscal_exit_id?: number; sales_order_code?: number; observacoes?: string;
 }
 
@@ -55,7 +55,7 @@ export interface RevisaoDoc {
   arquivo_nome?: string; tem_arquivo: boolean; elaborado_por: string; elaborado_em: string; aprovado_por?: string; vigente_desde?: string; obsoleta_em?: string;
 }
 export interface DocumentoQ {
-  id: number; codigo: string; titulo: string; tipo: TipoDocumento; item_code?: number; area?: string; ativo: boolean;
+  id: number; codigo: string; titulo: string; tipo: TipoDocumento; item_code?: string; area?: string; ativo: boolean;
   vigente?: RevisaoDoc; rascunho?: RevisaoDoc; revisoes?: RevisaoDoc[];
 }
 
@@ -71,7 +71,7 @@ export async function obterDocumento(id: number): Promise<DocumentoQ> {
   const { data } = await httpClient.get(`${DOC}/${id}`);
   return data as DocumentoQ;
 }
-export async function salvarDocumento(id: number | null, dto: { codigo: string; titulo: string; tipo: string; item_code?: number; area?: string; ativo?: boolean }): Promise<DocumentoQ> {
+export async function salvarDocumento(id: number | null, dto: { codigo: string; titulo: string; tipo: string; item_code?: string; area?: string; ativo?: boolean }): Promise<DocumentoQ> {
   const { data } = id ? await httpClient.put(`${DOC}/${id}`, dto) : await httpClient.post(DOC, dto);
   return data as DocumentoQ;
 }

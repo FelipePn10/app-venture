@@ -88,7 +88,9 @@ export function Vdpr0100Page(): JSX.Element {
     if (!rsNewDate) { setFeedback({ type: "error", message: "Informe a nova data de entrega." }); return; }
     const numeros = (texto: string) => texto.split(",").map((p) => Number(p.trim())).filter((n) => Number.isFinite(n) && n > 0);
     const pedidos = numeros(rsOrders);
-    const itens = numeros(rsItems);
+    // Código de item é texto: Number("RN-01001") virava NaN e sumia do filtro, e
+    // Number("5") era lido como a chave interna 5 — outro item.
+    const itens = rsItems.split(",").map((p) => p.trim()).filter(Boolean);
     const r = await rescheduleBatch({
       delivery_from: rsFrom || undefined,
       delivery_to: rsTo || undefined,
