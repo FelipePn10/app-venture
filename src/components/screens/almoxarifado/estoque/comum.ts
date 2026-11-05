@@ -27,7 +27,7 @@ export const MOVEMENT_LABEL: Record<string, string> = {
 };
 export const REFERENCE_LABEL: Record<string, string> = {
   FRETE_COMPRA: "CT-e de frete", FRETE_COMPRA_ESTORNO: "Estorno de frete", NFE_DEVOLUCAO: "Devolução de compra",
-  MANUAL: "Manual", SALES_ORDER: "Pedido de venda", PURCHASE_ORDER: "Pedido de compra", PRODUCTION_ORDER: "Ordem de produção",
+  CONSIGNACAO: "Consignação", TRANSF_CNPJ: "Transferência entre CNPJs", MANUAL: "Manual", SALES_ORDER: "Pedido de venda", PURCHASE_ORDER: "Pedido de compra", PRODUCTION_ORDER: "Ordem de produção",
   SHIPMENT: "Expedição", NF_ENTRADA: "Nota de entrada", NF_SAIDA: "Nota de saída", NF_SAIDA_CANCELADA: "Nota de saída cancelada",
   INVENTORY: "Inventário", CONTAGEM_CICLICA: "Contagem cíclica", TRANSFERENCIA: "Transferência", TRANSITO: "Envio em trânsito", ESTORNO: "Estorno",
   REQUISICAO_MATERIAL: "Requisição ao almoxarifado", QUALITY_LOT: "Lote de inspeção", ONDA_SEPARACAO: "Onda de separação",

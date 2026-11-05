@@ -228,6 +228,11 @@ export interface ParametrosContabilizacao {
   contabilizar_pagamentos: boolean;
   contabilizar_recebimentos: boolean;
   contabilizar_saidas: boolean;
+  contabilizar_producao: boolean;
+  producao_processo_account_id?: number;
+  custos_absorvidos_account_id?: number;
+  provisao_obsoletos_account_id?: number;
+  despesa_provisao_account_id?: number;
   banco_padrao_account_id?: number;
   juros_pagos_account_id?: number;
   descontos_obtidos_account_id?: number;
@@ -254,11 +259,12 @@ export interface ParametrosContabilizacao {
 }
 
 /** Os três interruptores do ciclo além da entrada. */
-export const FLAGS_CONTABILIZACAO: Array<{ campo: 'contabilizar_entrada' | 'contabilizar_pagamentos' | 'contabilizar_recebimentos' | 'contabilizar_saidas'; rotulo: string }> = [
+export const FLAGS_CONTABILIZACAO: Array<{ campo: 'contabilizar_entrada' | 'contabilizar_pagamentos' | 'contabilizar_recebimentos' | 'contabilizar_saidas' | 'contabilizar_producao'; rotulo: string }> = [
   { campo: 'contabilizar_entrada', rotulo: 'Aprovação da NF de entrada (e frete)' },
   { campo: 'contabilizar_pagamentos', rotulo: 'Pagamento de fornecedor, recolhimento de retenções e adiantamento a fornecedor' },
   { campo: 'contabilizar_recebimentos', rotulo: 'Recebimento e adiantamento de cliente' },
   { campo: 'contabilizar_saidas', rotulo: 'NF-e de saída (receita, impostos e CMV)' },
+  { campo: 'contabilizar_producao', rotulo: 'Consumo e entrada de produção, no fechamento de estoque' },
 ];
 
 export const CAMPOS_CONTA_PARAMETRO: Array<{ campo: keyof ParametrosContabilizacao; rotulo: string; grupo: string }> = [
@@ -297,9 +303,13 @@ export const CAMPOS_CONTA_PARAMETRO: Array<{ campo: keyof ParametrosContabilizac
   { campo: 'ibs_recolher_account_id', rotulo: 'IBS a recolher (a partir de 2027)', grupo: 'NF-e de saída' },
   { campo: 'cbs_vendas_account_id', rotulo: 'CBS sobre vendas (dedução, a partir de 2027)', grupo: 'NF-e de saída' },
   { campo: 'cbs_recolher_account_id', rotulo: 'CBS a recolher (a partir de 2027)', grupo: 'NF-e de saída' },
+  { campo: 'producao_processo_account_id', rotulo: 'Produção em processo', grupo: 'Fechamento de estoque' },
+  { campo: 'custos_absorvidos_account_id', rotulo: 'Mão de obra e indiretos absorvidos', grupo: 'Fechamento de estoque' },
+  { campo: 'provisao_obsoletos_account_id', rotulo: 'Provisão para obsolescência de estoque', grupo: 'Fechamento de estoque' },
+  { campo: 'despesa_provisao_account_id', rotulo: 'Despesa com provisão de obsoletos', grupo: 'Fechamento de estoque' },
 ];
 
-export const GRUPOS_CONTA_PARAMETRO = ['Obrigatórias', 'Impostos a recuperar', 'Retenções a recolher', 'Pagamentos e recebimentos', 'NF-e de saída'];
+export const GRUPOS_CONTA_PARAMETRO = ['Obrigatórias', 'Impostos a recuperar', 'Retenções a recolher', 'Pagamentos e recebimentos', 'NF-e de saída', 'Fechamento de estoque'];
 
 function parseParametros(raw: unknown): ParametrosContabilizacao | null {
   if (raw == null) return null;
@@ -324,6 +334,7 @@ function parseParametros(raw: unknown): ParametrosContabilizacao | null {
     contabilizar_pagamentos: parseBool(o, 'contabilizar_pagamentos'),
     contabilizar_recebimentos: parseBool(o, 'contabilizar_recebimentos'),
     contabilizar_saidas: parseBool(o, 'contabilizar_saidas'),
+    contabilizar_producao: parseBool(o, 'contabilizar_producao'),
     banco_padrao_account_id: opt('banco_padrao_account_id'),
     juros_pagos_account_id: opt('juros_pagos_account_id'),
     descontos_obtidos_account_id: opt('descontos_obtidos_account_id'),
@@ -347,6 +358,10 @@ function parseParametros(raw: unknown): ParametrosContabilizacao | null {
     cbs_recolher_account_id: opt('cbs_recolher_account_id'),
     adiantamento_fornecedores_account_id: opt('adiantamento_fornecedores_account_id'),
     adiantamento_clientes_account_id: opt('adiantamento_clientes_account_id'),
+    producao_processo_account_id: opt('producao_processo_account_id'),
+    custos_absorvidos_account_id: opt('custos_absorvidos_account_id'),
+    provisao_obsoletos_account_id: opt('provisao_obsoletos_account_id'),
+    despesa_provisao_account_id: opt('despesa_provisao_account_id'),
   };
 }
 

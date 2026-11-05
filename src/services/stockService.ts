@@ -408,6 +408,8 @@ export interface FechamentoDTO {
 export interface ResultadoFechamentoDTO {
   competence: string; simulation: boolean; items_in_snapshot: number; total_value: number; recalculated_items: number;
   changed_movements: number; recalc_variance: number; negative_stock_variance: number; journal_posted: boolean;
+  production_consumption: number; production_delivery: number; production_absorbed: number; production_variance: number;
+  obsolete_provision: number; obsolete_provision_change: number;
   blocking: string[]; warnings: string[];
 }
 function parseResultadoFechamento(raw: unknown): ResultadoFechamentoDTO {
@@ -417,6 +419,9 @@ function parseResultadoFechamento(raw: unknown): ResultadoFechamentoDTO {
     competence: parseStr(o, 'competence'), simulation: Boolean(o['simulation']), items_in_snapshot: parseNum(o, 'items_in_snapshot'),
     total_value: parseNum(o, 'total_value'), recalculated_items: parseNum(o, 'recalculated_items'), changed_movements: parseNum(o, 'changed_movements'),
     recalc_variance: parseNum(o, 'recalc_variance'), negative_stock_variance: parseNum(o, 'negative_stock_variance'),
+    production_consumption: parseNum(o, 'production_consumption'), production_delivery: parseNum(o, 'production_delivery'),
+    production_absorbed: parseNum(o, 'production_absorbed'), production_variance: parseNum(o, 'production_variance'),
+    obsolete_provision: parseNum(o, 'obsolete_provision'), obsolete_provision_change: parseNum(o, 'obsolete_provision_change'),
     journal_posted: Boolean(o['journal_posted']), blocking: textos('blocking'), warnings: textos('warnings'),
   };
 }
@@ -857,7 +862,7 @@ export async function salvarSituacaoLote(dto: SituacaoLoteDTO): Promise<void> {
 }
 export interface ParametrosEstoqueDTO {
   expired_lot_action: "BLOQUEAR" | "AVISAR"; retroactive_months: string; tolerance_a: string; tolerance_b: string; tolerance_c: string;
-  obsolete_days: string; obsolete_provision_pct: string;
+  obsolete_days: string; obsolete_provision_pct: string; consignment_warehouse_id: string; consignment_days: string;
 }
 export async function getParametrosEstoque(): Promise<ParametrosEstoqueDTO> {
   const { data } = await httpClient.get('/api/stock/parameters');
@@ -867,6 +872,7 @@ export async function getParametrosEstoque(): Promise<ParametrosEstoqueDTO> {
     expired_lot_action: parseStr(o, 'expired_lot_action') === 'AVISAR' ? 'AVISAR' : 'BLOQUEAR', retroactive_months: t('retroactive_months'),
     tolerance_a: t('tolerance_a'), tolerance_b: t('tolerance_b'), tolerance_c: t('tolerance_c'),
     obsolete_days: t('obsolete_days'), obsolete_provision_pct: t('obsolete_provision_pct'),
+    consignment_warehouse_id: t('consignment_warehouse_id'), consignment_days: t('consignment_days'),
   };
 }
 export async function salvarParametrosEstoque(p: ParametrosEstoqueDTO): Promise<void> {
@@ -881,6 +887,7 @@ export async function salvarParametrosEstoque(p: ParametrosEstoqueDTO): Promise<
     expired_lot_action: p.expired_lot_action, retroactive_months: inteiro(p.retroactive_months, "Meses retroativos"),
     tolerance_a: decimal(p.tolerance_a, "Tolerância A"), tolerance_b: decimal(p.tolerance_b, "Tolerância B"), tolerance_c: decimal(p.tolerance_c, "Tolerância C"),
     obsolete_days: inteiro(p.obsolete_days, "Obsoleto após"), obsolete_provision_pct: decimal(p.obsolete_provision_pct, "Provisão"),
+    consignment_warehouse_id: inteiro(p.consignment_warehouse_id, "Almoxarifado de consignação"), consignment_days: inteiro(p.consignment_days, "Prazo da consignação"),
   });
 }
 export interface MotivoDivergenciaDTO { code: string; description: string; is_active: boolean }
@@ -1045,7 +1052,7 @@ export async function getPosicaoEmData(date?: string, warehouseId?: number): Pro
 }
 
 export interface ReposicaoDTO {
-  item_code: string; business_code: string; name: string; uom: string; on_hand: number; reserved: number; on_order: number;
+  item_code: string; mask: string; business_code: string; name: string; uom: string; on_hand: number; reserved: number; on_order: number;
   projected: number; reorder_point: number; safety_stock: number; minimum_lot: number; multiple_lot: number;
   avg_monthly_consumption: number; suggested_qty: number; reason: string;
   warehouse_id?: number; source_type: OrigemReposicao; source_warehouse_id?: number; retained: number; requested: number; maximum: number; warning?: string;
@@ -1061,14 +1068,14 @@ export async function getReposicao(): Promise<ReposicaoDTO[]> {
       on_hand: parseNum(o, 'on_hand'), reserved: parseNum(o, 'reserved'), on_order: parseNum(o, 'on_order'), projected: parseNum(o, 'projected'),
       reorder_point: parseNum(o, 'reorder_point'), safety_stock: parseNum(o, 'safety_stock'), minimum_lot: parseNum(o, 'minimum_lot'),
       multiple_lot: parseNum(o, 'multiple_lot'), avg_monthly_consumption: parseNum(o, 'avg_monthly_consumption'),
-      suggested_qty: parseNum(o, 'suggested_qty'), reason: parseStr(o, 'reason'),
+      mask: parseStr(o, 'mask'), suggested_qty: parseNum(o, 'suggested_qty'), reason: parseStr(o, 'reason'),
       warehouse_id: parseNum(o, 'warehouse_id') || undefined, source_type: parseStr(o, 'source_type') as OrigemReposicao,
       source_warehouse_id: parseNum(o, 'source_warehouse_id') || undefined, retained: parseNum(o, 'retained'), requested: parseNum(o, 'requested'),
       maximum: parseNum(o, 'maximum'), warning: parseStr(o, 'warning') || undefined,
     };
   });
 }
-export interface LinhaReposicaoDTO { item_code: string; warehouse_id?: number; source_type: OrigemReposicao; source_warehouse_id?: number; quantity: string; }
+export interface LinhaReposicaoDTO { item_code: string; mask?: string; warehouse_id?: number; source_type: OrigemReposicao; source_warehouse_id?: number; quantity: string; }
 export interface ResultadoReposicaoDTO { purchase_requisition_code?: number; transfer_requisition_codes: number[]; planned_order_codes: number[]; }
 /** Gera os documentos das sugestões aceitas: compra, ordem de reposição e ordem planejada. */
 export async function gerarReposicao(lines: LinhaReposicaoDTO[]): Promise<ResultadoReposicaoDTO> {
@@ -1081,7 +1088,7 @@ export async function gerarReposicao(lines: LinhaReposicaoDTO[]): Promise<Result
   };
 }
 export interface PoliticaReposicaoDTO {
-  id?: number; item_code: string | number; warehouse_id: number; minimum_qty?: string; maximum_qty?: string; safety_qty?: string;
+  id?: number; item_code: string | number; mask?: string; warehouse_id: number; minimum_qty?: string; maximum_qty?: string; safety_qty?: string;
   source_type: OrigemReposicao; source_warehouse_id?: number; is_active: boolean;
 }
 export async function listarPoliticasReposicao(): Promise<PoliticaReposicaoDTO[]> {
@@ -1090,7 +1097,7 @@ export async function listarPoliticasReposicao(): Promise<PoliticaReposicaoDTO[]
     const o = unwrapObject(r);
     const num = (k: string) => (o[k] == null ? undefined : String(o[k]));
     return {
-      id: parseNum(o, 'id'), item_code: parseStr(o, 'item_code'), warehouse_id: parseNum(o, 'warehouse_id'),
+      id: parseNum(o, 'id'), item_code: parseStr(o, 'item_code'), mask: parseStr(o, 'mask'), warehouse_id: parseNum(o, 'warehouse_id'),
       minimum_qty: num('minimum_qty'), maximum_qty: num('maximum_qty'), safety_qty: num('safety_qty'),
       source_type: parseStr(o, 'source_type') as OrigemReposicao, source_warehouse_id: parseNum(o, 'source_warehouse_id') || undefined,
       is_active: o['is_active'] !== false,
@@ -1216,4 +1223,81 @@ export async function atenderRequisicao(id: number, lines: { item_id: number; qu
 }
 export async function cancelarRequisicao(id: number): Promise<void> {
   await httpClient.post(`${REQ}/${id}/cancel`, {});
+}
+
+// ── Limite de ajuste por perfil ──
+export interface ToleranciaPerfilDTO { profile_id: number; profile_name: string; max_document_value: string; max_line_value: string }
+export async function listarToleranciasPerfil(): Promise<ToleranciaPerfilDTO[]> {
+  const { data } = await httpClient.get('/api/stock/inventory-tolerances');
+  return unwrapArray(data).map((r) => {
+    const o = unwrapObject(r);
+    const v = (k: string) => (o[k] == null ? "" : String(o[k]));
+    return { profile_id: parseNum(o, 'profile_id'), profile_name: parseStr(o, 'profile_name'), max_document_value: v('max_document_value'), max_line_value: v('max_line_value') };
+  });
+}
+export async function salvarToleranciaPerfil(t: ToleranciaPerfilDTO): Promise<void> {
+  const v = (s: string) => (s.trim() === "" ? undefined : s.trim().replace(",", "."));
+  await httpClient.put('/api/stock/inventory-tolerances', { profile_id: t.profile_id, max_document_value: v(t.max_document_value), max_line_value: v(t.max_line_value) });
+}
+export async function excluirToleranciaPerfil(perfil: number): Promise<void> {
+  await httpClient.delete(`/api/stock/inventory-tolerances/${perfil}`);
+}
+
+// ── Cadernos de contagem ──
+export interface CadernoDTO { number: number; warehouse_id: number; lines: number; counted_lines: number; print_count: number; printed_at?: string; status: string }
+function parseCaderno(raw: unknown): CadernoDTO {
+  const o = unwrapObject(raw);
+  return { number: parseNum(o, 'number'), warehouse_id: parseNum(o, 'warehouse_id'), lines: parseNum(o, 'lines'), counted_lines: parseNum(o, 'counted_lines'),
+    print_count: parseNum(o, 'print_count'), printed_at: parseStr(o, 'printed_at') || undefined, status: parseStr(o, 'status') };
+}
+export async function listarCadernos(inventario: number): Promise<CadernoDTO[]> {
+  const { data } = await httpClient.get(`${INVENTORY}/${inventario}/notebooks`);
+  return unwrapArray(data).map(parseCaderno);
+}
+export async function gerarCadernos(inventario: number, linhas: number): Promise<CadernoDTO[]> {
+  const { data } = await httpClient.post(`${INVENTORY}/${inventario}/notebooks`, { lines_per_notebook: linhas });
+  return unwrapArray(data).map(parseCaderno);
+}
+export async function marcarCadernoImpresso(inventario: number, numero: number): Promise<void> {
+  await httpClient.post(`${INVENTORY}/${inventario}/notebooks/${numero}/printed`, {});
+}
+
+// ── Consignação ──
+export interface ConsignacaoDTO {
+  id: number; direction: 'SAIDA' | 'ENTRADA'; partner_code: number; partner_name: string; item_code: number; business_code: string; item_name: string;
+  mask: string; lot?: string; warehouse_id?: number; quantity: number; settled_qty: number; returned_qty: number; unit_value: number;
+  document?: string; issue_date: string; due_date?: string; status: string;
+}
+export async function listarConsignacoes(direcao: string, abertas: boolean): Promise<ConsignacaoDTO[]> {
+  const { data } = await httpClient.get('/api/stock/consignments', { params: { direction: direcao || undefined, open: abertas } });
+  return unwrapArray(data).map((r) => {
+    const o = unwrapObject(r);
+    return {
+      id: parseNum(o, 'id'), direction: parseStr(o, 'direction') as ConsignacaoDTO['direction'], partner_code: parseNum(o, 'partner_code'), partner_name: parseStr(o, 'partner_name'),
+      item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), item_name: parseStr(o, 'item_name'), mask: parseStr(o, 'mask'),
+      lot: parseStr(o, 'lot') || undefined, warehouse_id: parseNum(o, 'warehouse_id') || undefined, quantity: parseNum(o, 'quantity'), settled_qty: parseNum(o, 'settled_qty'),
+      returned_qty: parseNum(o, 'returned_qty'), unit_value: parseNum(o, 'unit_value'), document: parseStr(o, 'document') || undefined,
+      issue_date: parseStr(o, 'issue_date'), due_date: parseStr(o, 'due_date') || undefined, status: parseStr(o, 'status'),
+    };
+  });
+}
+export async function receberConsignacao(dto: { supplier_code: number; item_code: string; quantity: string; unit_value: string; document?: string; issue_date: string; due_date?: string; lot?: string; mask?: string }): Promise<void> {
+  await httpClient.post('/api/stock/consignments', dto);
+}
+export async function devolverConsignacao(id: number, quantity: string, document?: string): Promise<void> {
+  await httpClient.post(`/api/stock/consignments/${id}/return`, { quantity, document });
+}
+export async function consumirConsignacao(id: number, quantity: string, warehouse_id: number, document?: string): Promise<void> {
+  await httpClient.post(`/api/stock/consignments/${id}/consume`, { quantity, warehouse_id, document });
+}
+
+// ── Transferência entre CNPJs ──
+export interface TransferenciaCnpjDTO { id: number; origin_name: string; destination_name: string; nfe_key: string; status: string; created_at: string; received_at?: string }
+export async function listarTransferenciasCnpj(): Promise<TransferenciaCnpjDTO[]> {
+  const { data } = await httpClient.get('/api/stock/cnpj-transfers');
+  return unwrapArray(data).map((r) => {
+    const o = unwrapObject(r);
+    return { id: parseNum(o, 'id'), origin_name: parseStr(o, 'origin_name'), destination_name: parseStr(o, 'destination_name'), nfe_key: parseStr(o, 'nfe_key'),
+      status: parseStr(o, 'status'), created_at: parseStr(o, 'created_at'), received_at: parseStr(o, 'received_at') || undefined };
+  });
 }

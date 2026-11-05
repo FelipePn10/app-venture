@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { CadernosInventario } from "./estoque/CadernosInventario";
 import {
   type InventoryCloseResult, type InventoryDTO, type MovementTypeDTO,
   closeInventory, countInventoryItem, createInventory, createMovementType, finishInventoryCount, getInventory,
@@ -219,6 +220,7 @@ function InventarioAba() {
     </div></div>
 
     {sel && (<>
+      <CadernosInventario inventario={Number(sel.id)} codigo={sel.code ?? ""} aberto={sel.status === "OPEN"} linhas={itens} />
       <div className="erp-fieldset"><div className="erp-fieldset-head">Inventário {sel.code} — {(SITUACAO[sel.status ?? ""] ?? SITUACAO.OPEN).rotulo.toLowerCase()}</div><div className="erp-fieldset-body">
         <div className="erp-field erp-c12" style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {sel.blind_count && <span className="erp-badge erp-badge-gray">Contagem cega</span>}
