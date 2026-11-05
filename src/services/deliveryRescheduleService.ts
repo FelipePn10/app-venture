@@ -6,7 +6,7 @@ const BASE = '/api/delivery-reschedule';
 export interface RescheduleDTO {
   code?: number;
   sales_order_code: number;
-  item_code: number;
+  item_code: string;
   old_date: string;
   new_date: string;
   reason?: string;
@@ -14,7 +14,7 @@ export interface RescheduleDTO {
 
 export interface DeliveryReschedulePlanningItemDTO {
   sales_order_item_code: number;
-  item_code: number;
+  item_code: string;
   sequence: number;
   requested_qty: number;
   attended_qty: number;
@@ -41,7 +41,7 @@ export interface DeliveryReschedulePlanningItemDTO {
 
 export interface DeliveryRescheduleBatchItemDTO {
   sales_order_item_code: number;
-  item_code: number;
+  item_code: string;
   old_date: string;
   new_date: string;
   reason?: string;
@@ -63,7 +63,7 @@ function parseReschedule(raw: unknown): RescheduleDTO {
   return {
     code: parseNum(o, 'code', 'Code'),
     sales_order_code: parseNum(o, 'sales_order_code', 'SalesOrderCode'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     old_date: parseStr(o, 'old_date', 'OldDate'),
     new_date: parseStr(o, 'new_date', 'NewDate'),
     reason: parseStr(o, 'reason', 'Reason'),
@@ -77,7 +77,7 @@ function toRfc3339(d: string): string {
 }
 
 export async function createReschedule(dto: RescheduleDTO): Promise<RescheduleDTO> {
-  const payload = { ...dto, item_code: Number(dto.item_code), old_date: toRfc3339(dto.old_date), new_date: toRfc3339(dto.new_date) };
+  const payload = { ...dto, old_date: toRfc3339(dto.old_date), new_date: toRfc3339(dto.new_date) };
   const { data } = await httpClient.post(`${BASE}/create`, payload);
   return parseReschedule(data);
 }
@@ -90,7 +90,7 @@ function parsePlanningItem(raw: unknown): DeliveryReschedulePlanningItemDTO {
   const o = unwrapObject(raw);
   return {
     sales_order_item_code: parseNum(o, 'sales_order_item_code', 'SalesOrderItemCode'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     sequence: parseNum(o, 'sequence', 'Sequence'),
     requested_qty: parseNum(o, 'requested_qty', 'RequestedQty'),
     attended_qty: parseNum(o, 'attended_qty', 'AttendedQty'),
@@ -124,7 +124,7 @@ export async function previewDeliveryReschedule(salesOrderCode: number): Promise
 export async function createDeliveryRescheduleBatch(dto: DeliveryRescheduleBatchDTO): Promise<DeliveryRescheduleBatchResultDTO> {
   const payload = {
     ...dto,
-    items: dto.items.map((item) => ({ ...item, item_code: Number(item.item_code), old_date: toRfc3339(item.old_date), new_date: toRfc3339(item.new_date) })),
+    items: dto.items.map((item) => ({ ...item, old_date: toRfc3339(item.old_date), new_date: toRfc3339(item.new_date) })),
   };
   const { data } = await httpClient.post(`${BASE}/batch`, payload);
   const o = unwrapObject(data);

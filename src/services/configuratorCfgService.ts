@@ -122,7 +122,7 @@ export async function updateVariable(varId: number, setId: number, dto: CfgVaria
 /** Uma característica ligada a um item, na ordem em que será perguntada. */
 export interface CfgItemCharacteristic {
   id: number;
-  item_code: number;
+  item_code: string;
   characteristic_id: number;
   characteristic_code: string;
   characteristic_name: string;
@@ -140,7 +140,7 @@ function parseItemChar(raw: unknown): CfgItemCharacteristic {
   const o = unwrapObject(raw);
   return {
     id: parseNum(o, 'id', 'ID'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     characteristic_id: parseNum(o, 'characteristic_id', 'CharacteristicID'),
     characteristic_code: parseStr(o, 'characteristic_code', 'CharacteristicCode'),
     characteristic_name: parseStr(o, 'characteristic_name', 'CharacteristicName'),

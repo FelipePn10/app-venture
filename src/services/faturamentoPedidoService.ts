@@ -12,7 +12,7 @@ import { type FiscalExit } from '@/services/nfeService';
 export interface PedidoItemParaFaturar {
   sales_order_item_code: number;
   sequence: number;
-  item_code: number;
+  item_code: string;
   item_name: string;
   ncm?: string;
   uom?: string;
@@ -94,7 +94,7 @@ export async function previaFaturamentoPedido(code: number): Promise<PedidoParaF
     itens: unwrapArray(o['itens']).map(unwrapObject).map((i) => ({
       sales_order_item_code: parseNum(i, 'sales_order_item_code'),
       sequence: parseNum(i, 'sequence'),
-      item_code: parseNum(i, 'item_code'),
+      item_code: parseStr(i, 'item_code'),
       item_name: parseStr(i, 'item_name'),
       ncm: parseStr(i, 'ncm') || undefined,
       uom: parseStr(i, 'uom') || undefined,

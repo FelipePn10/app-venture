@@ -142,7 +142,7 @@ export function RecorrenciaParametrosPanel({ enterpriseCode, onClose, aviso }: P
         enterprise_code: enterpriseCode,
         customer_code: reajuste.customer_code ? Number(reajuste.customer_code) : null,
         establishment_code: reajuste.establishment_code ? Number(reajuste.establishment_code) : null,
-        item_code: reajuste.item_code ? Number(reajuste.item_code) : null,
+        item_code: reajuste.item_code || null,
         adjustment_date: reajuste.adjustment_date,
         adjustment_percent: Number(reajuste.adjustment_percent) || 0,
         adjustment_index: reajuste.adjustment_index === "LIVRE" ? "" : reajuste.adjustment_index,
@@ -327,7 +327,7 @@ export function RecorrenciaParametrosPanel({ enterpriseCode, onClose, aviso }: P
               </div>
               <div className="erp-field erp-c3">
                 <label className="erp-label">Item</label>
-                <LookupField value={Number(reajuste.item_code) || undefined}
+                <LookupField value={reajuste.item_code || undefined}
                   onChange={(c) => setReajuste((p) => ({ ...p, item_code: c ? String(c) : "" }))}
                   loader={loadItems} entityLabel="item" placeholder="Todos" clearable />
               </div>

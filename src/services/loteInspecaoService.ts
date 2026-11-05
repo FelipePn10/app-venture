@@ -69,7 +69,7 @@ export interface LoteInspecao {
   numero: number;
   origem: OrigemLote;
   status: StatusLote;
-  item_code: number;
+  item_code: string;
   mask: string;
   lote?: string;
   serie?: string;
@@ -118,7 +118,7 @@ export interface DecisaoDTO {
 
 export interface AberturaDTO {
   origem: OrigemLote;
-  item_code: number;
+  item_code: string;
   quantidade: string;
   warehouse_id?: number;
   supplier_code?: number;

@@ -12,7 +12,7 @@ import { parseExit, type FiscalExit } from '@/services/nfeService';
 export interface DevolucaoItemPrevia {
   fiscal_entry_item_id: number;
   sequence: number;
-  item_code?: number;
+  item_code?: string;
   descricao: string;
   uom?: string;
   quantidade: number;
@@ -79,7 +79,7 @@ export async function previaDevolucao(entradaId: number): Promise<DevolucaoPrevi
     itens: unwrapArray(o['itens']).map(unwrapObject).map((i) => ({
       fiscal_entry_item_id: parseNum(i, 'fiscal_entry_item_id'),
       sequence: parseNum(i, 'sequence'),
-      item_code: parseNum(i, 'item_code') || undefined,
+      item_code: parseStr(i, 'item_code') || undefined,
       descricao: parseStr(i, 'descricao'),
       uom: parseStr(i, 'uom') || undefined,
       quantidade: parseNum(i, 'quantidade'),

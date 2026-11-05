@@ -173,7 +173,7 @@ export interface ServiceOrder {
   id: number;
   code: number;
   production_order_id: number;
-  item_code: number;
+  item_code: string;
   item_description: string;
   supplier_code?: number;
   supplier_name: string;
@@ -230,7 +230,7 @@ function parseOrder(raw: unknown): ServiceOrder {
     id: parseNum(o, 'id', 'ID'),
     code: parseNum(o, 'code', 'Code'),
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID'),
-    item_code: parseNum(o, 'item_code', 'ItemCode'),
+    item_code: parseStr(o, 'item_code', 'ItemCode'),
     item_description: parseStr(o, 'item_description', 'ItemDescription'),
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode') || undefined,
     supplier_name: parseStr(o, 'supplier_name', 'SupplierName'),
