@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## Novidades
+- **Estoque por endereço e lote, de ponta a ponta:** inventário com conferência, recontagem e aprovação por tolerância; controle de lote e endereço por item; situações de lote (quarentena, reprovado) e regra FEFO ou FIFO.
+- **Fechamento mensal de estoque (VEST0200):** com simulação, foto do mês e recálculo do custo, que agora chega do componente ao produto.
+- **Reposição por almoxarifado (VEST0100):** mínimo e máximo por almoxarifado, origem por compra, transferência ou produção, sugestão pelo consumo e cartões kanban.
+- **Transferência em duas etapas:** envio em trânsito e recebimento no destino.
+- **Ondas de separação ligadas ao pedido e à carga:** a nota fiscal sai no lote e no endereço separados.
+- **Coletor de estoque (VEST0150):** tela para leitor de código de barras, com separar, contar, mover, receber, receber compra e contagem cíclica.
+- **Análises:** acuracidade do inventário, idade do estoque e dos lotes, demanda aberta, falta e provisão de obsoletos.
+
+## Melhorias
+- **Parâmetros de estoque:** limite de lançamento retroativo, tolerância por classe ABC e motivos de divergência.
+- **Mensagens de erro:** as regras de negócio agora dizem o motivo em vez de "erro interno".
+
+## Correções
+- **Custo do produto fabricado:** a entrada da produção ficava sem valor e agora vale o que a ordem gastou.
+- **Baixa de material em dobro:** a entrega não baixa de novo o que o apontamento já baixou.
+- **Duas pessoas no mesmo item:** lançamentos ao mesmo tempo deixam de dar erro.
+- **Notificações, situação de compras e exclusão de divisão de vendas:** voltam a funcionar.
+- **Reposição:** ordens de produção abertas passam a contar, sem pedir em dobro.
+
 ## [v1.10.2] — 2026-11-05
 
 ## Correções
