@@ -13,7 +13,7 @@ const texto = (l: Linha, k: string) => String(l[k] ?? "");
  * Cadernos e etiquetas de contagem. O papel nunca leva o saldo: serve para contagem
  * cega, e a digitação continua na lista do inventário.
  */
-export function CadernosInventario({ inventario, codigo, aberto, linhas }: { inventario: number; codigo: string | number; aberto: boolean; linhas: Linha[] }) {
+export function CadernosInventario({ inventario, codigo, aberto, linhas, aoGerar }: { inventario: number; codigo: string | number; aberto: boolean; linhas: Linha[]; aoGerar: () => Promise<void> }) {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [cadernos, setCadernos] = useState<CadernoDTO[]>([]);
   const [porCaderno, setPorCaderno] = useState("30");
@@ -23,7 +23,8 @@ export function CadernosInventario({ inventario, codigo, aberto, linhas }: { inv
 
   const gerar = () => run(async () => {
     setCadernos(await gerarCadernos(inventario, Number(porCaderno)));
-    setFeedback({ type: "success", message: "Cadernos gerados. Recarregue o inventário para ver o caderno de cada linha." });
+    await aoGerar();
+    setFeedback({ type: "success", message: "Cadernos gerados." });
   });
   const imprimir = (numero: number, tipo: "caderno" | "etiquetas") => run(async () => {
     flushSync(() => setImpressao({ numero, tipo }));

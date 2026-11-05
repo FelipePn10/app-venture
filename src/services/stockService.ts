@@ -1264,7 +1264,7 @@ export async function marcarCadernoImpresso(inventario: number, numero: number):
 
 // ── Consignação ──
 export interface ConsignacaoDTO {
-  id: number; direction: 'SAIDA' | 'ENTRADA'; partner_code: number; partner_name: string; item_code: number; business_code: string; item_name: string;
+  id: number; direction: 'SAIDA' | 'ENTRADA'; partner_code: number; partner_name: string; item_code: string; business_code: string; item_name: string;
   mask: string; lot?: string; warehouse_id?: number; quantity: number; settled_qty: number; returned_qty: number; unit_value: number;
   document?: string; issue_date: string; due_date?: string; status: string;
 }
@@ -1274,7 +1274,7 @@ export async function listarConsignacoes(direcao: string, abertas: boolean): Pro
     const o = unwrapObject(r);
     return {
       id: parseNum(o, 'id'), direction: parseStr(o, 'direction') as ConsignacaoDTO['direction'], partner_code: parseNum(o, 'partner_code'), partner_name: parseStr(o, 'partner_name'),
-      item_code: parseNum(o, 'item_code'), business_code: parseStr(o, 'business_code'), item_name: parseStr(o, 'item_name'), mask: parseStr(o, 'mask'),
+      item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code'), item_name: parseStr(o, 'item_name'), mask: parseStr(o, 'mask'),
       lot: parseStr(o, 'lot') || undefined, warehouse_id: parseNum(o, 'warehouse_id') || undefined, quantity: parseNum(o, 'quantity'), settled_qty: parseNum(o, 'settled_qty'),
       returned_qty: parseNum(o, 'returned_qty'), unit_value: parseNum(o, 'unit_value'), document: parseStr(o, 'document') || undefined,
       issue_date: parseStr(o, 'issue_date'), due_date: parseStr(o, 'due_date') || undefined, status: parseStr(o, 'status'),

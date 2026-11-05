@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## Novidades
+- **Consignação (VEST0100):** mercadoria nossa com clientes e material de fornecedores conosco, com saldo, vencimento, venda, consumo e devolução. A remessa e a venda saem pela NF-e, nos tipos de nota de consignação.
+- **Transferência entre CNPJs:** a nota de transferência para outro estabelecimento da mesma raiz deixa o material em trânsito, e a entrada no destino conclui.
+- **Cadernos e etiquetas de contagem (VEST0200):** o inventário se divide em cadernos para imprimir, com etiquetas e código de barras. O papel não traz o saldo.
+- **Limite de ajuste por perfil:** cada perfil de acesso tem um valor até o qual fecha o inventário sem aprovação.
+- **Reposição por máscara:** mínimo e máximo por item configurado, levados até a requisição e o pedido de compra.
+- **Contabilização no fechamento de estoque:** consumo e entrada de produção, mão de obra absorvida e provisão de obsoletos, com estorno na reabertura.
+
+## Melhorias
+- **Bloco H:** o que está consignado sai com o proprietário e o participante certos.
+
 ## [v1.11.0] — 2026-11-05
 
 ## Novidades

@@ -65,7 +65,7 @@ export function ConsignacaoTab() {
           {lista.length === 0 && <tr><td colSpan={11} className="erp-grid-empty">Nada em consignação.</td></tr>}
           {lista.map((c) => (
             <tr key={c.id}>
-              <td>{c.partner_name || c.partner_code}</td><td>{c.business_code} {c.item_name}{c.mask ? ` · ${c.mask}` : ""}{c.lot ? ` · lote ${c.lot}` : ""}</td>
+              <td>{c.partner_name || c.partner_code}</td><td>{c.business_code || c.item_code} {c.item_name}{c.mask ? ` · ${c.mask}` : ""}{c.lot ? ` · lote ${c.lot}` : ""}</td>
               <td>{c.document ?? "—"}</td><td>{dataBR(c.issue_date)}</td>
               <td style={vencida(c) && c.status === "ABERTA" ? { color: "var(--erp-danger, #b42318)", fontWeight: 600 } : undefined}>{c.due_date ? dataBR(c.due_date) : "—"}</td>
               <td className="num">{qtd(c.quantity)}</td><td className="num">{qtd(c.settled_qty)}</td><td className="num">{qtd(c.returned_qty)}</td>
