@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { getParametrosEstoque, listarMotivosDivergencia, listSituacoesLote, salvarMotivoDivergencia, salvarParametrosEstoque, salvarSituacaoLote, type MotivoDivergenciaDTO, type ParametrosEstoqueDTO, type SituacaoLoteDTO } from "@/services/stockService";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadWarehouses } from "@/services/lookups";
+import { ToleranciasPerfil } from "./ToleranciasPerfil";
 import { useAcao } from "./comum";
 import { FeedbackBox } from "./ui";
 
 const VAZIA: SituacaoLoteDTO = { code: "", description: "", allows_issue: false, allows_transfer: true, counts_available: false, is_active: true };
-const PARAM_VAZIO: ParametrosEstoqueDTO = { expired_lot_action: "BLOQUEAR", retroactive_months: "", tolerance_a: "", tolerance_b: "", tolerance_c: "", obsolete_days: "", obsolete_provision_pct: "" };
+const PARAM_VAZIO: ParametrosEstoqueDTO = { expired_lot_action: "BLOQUEAR", retroactive_months: "", tolerance_a: "", tolerance_b: "", tolerance_c: "", obsolete_days: "", obsolete_provision_pct: "", consignment_warehouse_id: "", consignment_days: "" };
 const MOTIVO_VAZIO: MotivoDivergenciaDTO = { code: "", description: "", is_active: true };
 const simNao = (v: boolean) => (v ? "Sim" : "Não");
 
@@ -63,9 +66,14 @@ export function SituacoesLoteAba() {
         <span className="erp-field-hint">Com o bloqueio, o descarte é feito por ajuste e a transferência para a quarentena continua permitida.</span></div>
       {campo("retroactive_months", "Meses retroativos", "Vazio não limita; 0 só aceita o mês atual.")}
       {campo("tolerance_a", "Tolerância classe A (%)")}{campo("tolerance_b", "Tolerância classe B (%)")}{campo("tolerance_c", "Tolerância classe C (%)", "Vale para acuracidade e inventário sem tolerância própria.")}
-      {campo("obsolete_days", "Obsoleto após (dias)")}{campo("obsolete_provision_pct", "Provisão (% do valor)", "Base do valor em risco em Análises.")}
+      {campo("obsolete_days", "Obsoleto após (dias)")}{campo("obsolete_provision_pct", "Provisão (% do valor)", "Base do valor em risco em Análises e do lançamento no fechamento.")}
+      <div className="erp-field erp-c4"><label className="erp-label">Almoxarifado de consignação</label>
+        <LookupField value={param.consignment_warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => setP("consignment_warehouse_id", String(c ?? ""))} />
+        <span className="erp-field-hint">Sem disponibilidade: a mercadoria com o cliente não entra na promessa.</span></div>
+      {campo("consignment_days", "Prazo da consignação (dias)", "Vazio não controla vencimento.")}
       <div className="erp-field erp-c2" style={{ alignSelf: "center" }}><button className="erp-btn erp-btn-primary" onClick={salvarParametros} disabled={busy}>Salvar parâmetros</button></div>
     </div></div>
+    <ToleranciasPerfil />
     <div className="erp-fieldset"><div className="erp-fieldset-head">Motivos de divergência ({motivos.length})</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input" maxLength={20} value={m.code} onChange={(e) => setM((p) => ({ ...p, code: e.target.value }))} /></div>
       <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label><input className="erp-input" maxLength={120} placeholder="Erro de contagem" value={m.description} onChange={(e) => setM((p) => ({ ...p, description: e.target.value }))} /></div>

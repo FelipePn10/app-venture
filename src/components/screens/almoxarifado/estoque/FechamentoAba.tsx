@@ -66,6 +66,10 @@ export function FechamentoAba() {
           {" "}{simulado.recalculated_items} item(ns) recalculado(s), {simulado.changed_movements} movimento(s) alterado(s) ·
           {" "}diferença do recálculo {reais(simulado.recalc_variance)} · entrada sobre saldo negativo {reais(simulado.negative_stock_variance)}
         </Resumo></div>
+        <div className="erp-field erp-c12"><Resumo>
+          Produção no mês: consumo {reais(simulado.production_consumption)} · entrada {reais(simulado.production_delivery)} · absorvido {reais(simulado.production_absorbed)} · variação {reais(simulado.production_variance)} ·
+          {" "}provisão de obsoletos {reais(simulado.obsolete_provision)} (variação {reais(simulado.obsolete_provision_change)})
+        </Resumo></div>
         <div className="erp-field erp-c12" style={{ alignItems: "flex-start" }}><button className="erp-btn erp-btn-danger" onClick={() => void fechar()} disabled={busy || simulado.blocking.length > 0}>Fechar o mês</button></div>
       </>)}
     </div></div>

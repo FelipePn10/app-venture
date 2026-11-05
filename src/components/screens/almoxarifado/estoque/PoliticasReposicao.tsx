@@ -6,7 +6,7 @@ import { loadItems, loadWarehouses } from "@/services/lookups";
 import { useAcao } from "./comum";
 import { FeedbackBox } from "./ui";
 
-const VAZIA: PoliticaReposicaoDTO = { item_code: "", warehouse_id: 0, minimum_qty: "", maximum_qty: "", safety_qty: "", source_type: "COMPRA", is_active: true };
+const VAZIA: PoliticaReposicaoDTO = { item_code: "", mask: "", warehouse_id: 0, minimum_qty: "", maximum_qty: "", safety_qty: "", source_type: "COMPRA", is_active: true };
 const NOME: Record<OrigemReposicao, string> = { COMPRA: "Compra", TRANSFERENCIA: "Transferência", PRODUCAO: "Produção" };
 const herda = (v?: string) => (v === undefined || v === "" ? "Do item" : v.replace(".", ","));
 
@@ -55,6 +55,9 @@ export function PoliticasReposicao() {
     <div className="erp-fieldset"><div className="erp-fieldset-head">Política por almoxarifado ({lista.length})</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label>
         <LookupField value={f.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => set("item_code", String(c ?? ""))} /></div>
+      <div className="erp-field erp-c4"><label className="erp-label">Máscara</label>
+        <input className="erp-input" maxLength={200} value={f.mask ?? ""} onChange={(e) => set("mask", e.target.value)} />
+        <span className="erp-field-hint">Vazia vale para o item. Com máscara, só o saldo dela conta.</span></div>
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Almoxarifado</label>
         <LookupField value={f.warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => set("warehouse_id", c ? Number(c) : 0)} /></div>
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Origem da reposição</label>
@@ -74,12 +77,13 @@ export function PoliticasReposicao() {
       </div>
       <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
         <table className="erp-grid">
-          <thead><tr><th>Item</th><th>Almoxarifado</th><th className="num">Mínimo</th><th className="num">Máximo</th><th className="num">Segurança</th><th>Origem</th><th>Situação</th><th></th></tr></thead>
+          <thead><tr><th>Item</th><th>Máscara</th><th>Almoxarifado</th><th className="num">Mínimo</th><th className="num">Máximo</th><th className="num">Segurança</th><th>Origem</th><th>Situação</th><th></th></tr></thead>
           <tbody>
-            {lista.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhuma política: a reposição segue o cadastro de cada item.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={9} className="erp-grid-empty">Nenhuma política: a reposição segue o cadastro de cada item.</td></tr>}
             {lista.map((p) => (
               <tr key={p.id}>
                 <td><EntityName code={p.item_code} loader={loadItems} prefix="Item" /></td>
+                <td>{p.mask || "—"}</td>
                 <td><EntityName code={p.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td>
                 <td className="num">{herda(p.minimum_qty)}</td><td className="num">{herda(p.maximum_qty)}</td><td className="num">{herda(p.safety_qty)}</td>
                 <td>{NOME[p.source_type]}{p.source_warehouse_id ? <> de <EntityName code={p.source_warehouse_id} loader={loadWarehouses} prefix="Almox." /></> : null}</td>

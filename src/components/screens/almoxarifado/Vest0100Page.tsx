@@ -13,6 +13,7 @@ import { LotesTab } from "./estoque/LotesTab";
 import { ReposicaoTab } from "./estoque/ReposicaoTab";
 import { AnaliseTab } from "./estoque/AnaliseTab";
 import { ConferenciaTab } from "./estoque/ConferenciaTab";
+import { ConsignacaoTab } from "./estoque/ConsignacaoTab";
 import { useUnidadeDoItem } from "./estoque/comum";
 
 /**
@@ -21,7 +22,7 @@ import { useUnidadeDoItem } from "./estoque/comum";
  * escolher o item de novo. Inventário e tipos de movimento ficam na VEST0200;
  * contagem cíclica na VEST0500; almoxarifados na VENT0800.
  */
-type Aba = "posicao" | "extrato" | "lancamentos" | "transferencias" | "reservas" | "requisicoes" | "separacao" | "lotes" | "reposicao" | "analises" | "conferencia";
+type Aba = "posicao" | "extrato" | "lancamentos" | "transferencias" | "reservas" | "requisicoes" | "separacao" | "lotes" | "reposicao" | "analises" | "conferencia" | "consignacao";
 
 const ABAS: { id: Aba; label: string; hint: string }[] = [
   { id: "posicao", label: "Posição", hint: "ATP por situação do estoque e posição valorizada em qualquer data" },
@@ -33,6 +34,7 @@ const ABAS: { id: Aba; label: string; hint: string }[] = [
   { id: "separacao", label: "Separação e guarda", hint: "FEFO/FIFO, ondas e endereço sugerido" },
   { id: "lotes", label: "Lotes", hint: "Registro, saldo por lote e genealogia" },
   { id: "reposicao", label: "Reposição", hint: "Mínimo e máximo por almoxarifado; gera compra, transferência ou ordem planejada" },
+  { id: "consignacao", label: "Consignação", hint: "Mercadoria com clientes, material de fornecedores e transferências entre CNPJs" },
   { id: "analises", label: "Análises", hint: "Giro, cobertura, itens parados, curva ABC e lotes a vencer" },
   { id: "conferencia", label: "Conferência do saldo", hint: "Compara o saldo com os movimentos, os lotes e as reservas" },
 ];
@@ -76,6 +78,7 @@ export function Vest0100Page(): JSX.Element {
             {aba === "separacao" && <SeparacaoTab itemCode={itemCode} />}
             {aba === "lotes" && <LotesTab itemCode={itemCode} />}
             {aba === "reposicao" && <ReposicaoTab />}
+            {aba === "consignacao" && <ConsignacaoTab />}
             {aba === "analises" && <AnaliseTab />}
             {aba === "conferencia" && <ConferenciaTab itemCode={itemCode} />}
           </div>

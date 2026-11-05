@@ -8,7 +8,7 @@ import { PoliticasReposicao } from "./PoliticasReposicao";
 import { FeedbackBox } from "./ui";
 
 const ORIGEM: Record<OrigemReposicao, string> = { COMPRA: "Comprar", TRANSFERENCIA: "Transferir", PRODUCAO: "Produzir" };
-const chave = (s: ReposicaoDTO) => `${s.item_code}:${s.warehouse_id ?? 0}`;
+const chave = (s: ReposicaoDTO) => `${s.item_code}:${s.mask}:${s.warehouse_id ?? 0}`;
 
 /**
  * Reposição por mínimo e máximo. Com política, cada almoxarifado é calculado
@@ -30,7 +30,7 @@ export function ReposicaoTab() {
     const linhas: LinhaReposicaoDTO[] = (lista ?? []).flatMap((s) => {
       const q = marcados[chave(s)]?.replace(",", ".");
       if (!q || !(Number(q) > 0)) return [];
-      return [{ item_code: s.item_code, warehouse_id: s.warehouse_id, source_type: s.source_type, source_warehouse_id: s.source_warehouse_id, quantity: q }];
+      return [{ item_code: s.item_code, mask: s.mask || undefined, warehouse_id: s.warehouse_id, source_type: s.source_type, source_warehouse_id: s.source_warehouse_id, quantity: q }];
     });
     if (linhas.length === 0) { setFeedback({ type: "error", message: "Marque ao menos um item com quantidade." }); return; }
     const r = await gerarReposicao(linhas);
@@ -69,7 +69,7 @@ export function ReposicaoTab() {
                       return n;
                     })} /></td>
                     <td><strong>{s.business_code}</strong></td><td>{s.name}</td>
-                    <td>{s.warehouse_id ? <EntityName code={s.warehouse_id} loader={loadWarehouses} prefix="Almox." /> : "Todos"}</td>
+                    <td>{s.warehouse_id ? <EntityName code={s.warehouse_id} loader={loadWarehouses} prefix="Almox." /> : "Todos"}{s.mask ? ` · ${s.mask}` : ""}</td>
                     <td>{ORIGEM[s.source_type]}{s.source_warehouse_id ? <> de <EntityName code={s.source_warehouse_id} loader={loadWarehouses} prefix="Almox." /></> : null}</td>
                     <td className="num">{qtd(s.on_hand)}</td><td className="num">{qtd(s.reserved + s.retained + s.requested)}</td><td className="num">{qtd(s.on_order)}</td>
                     <td className="num" style={{ color: s.projected < 0 ? "var(--v-err)" : undefined }}><strong>{qtd(s.projected)}</strong></td>

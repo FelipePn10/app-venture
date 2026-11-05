@@ -31,7 +31,7 @@ function limitesDaCompetencia(period: string): { from: string; to: string } | nu
 
 const PARAMETROS_VAZIOS: ParametrosContabilizacao = {
   plan_id: 0, fornecedores_account_id: 0, contabilizar_entrada: false,
-  contabilizar_pagamentos: false, contabilizar_recebimentos: false, contabilizar_saidas: false,
+  contabilizar_pagamentos: false, contabilizar_recebimentos: false, contabilizar_saidas: false, contabilizar_producao: false,
 };
 
 /** Plano de contas passa fácil de cem contas: busca pelo número ou pelo nome, em vez de rolar um `select`. */
