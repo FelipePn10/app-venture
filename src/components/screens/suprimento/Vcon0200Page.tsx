@@ -1,3 +1,4 @@
+import { EntityName } from "@/components/ui/EntityName";
 import { useState, useCallback } from "react";
 import { type SupplierContract, type ContractItem, type ContractStatus, CONTRACT_STATUSES, createContract } from "@/services/supplierContractService";
 import { errMessage } from "@/services/fiscalShared";
@@ -105,7 +106,7 @@ export function Vcon0200Page(): JSX.Element {
         {items.length > 0 && (
           <table className="erp-grid" style={{ marginTop: 10 }}>
             <thead><tr><th>Item</th><th>Máscara</th><th>UM</th><th>Qtd contratada</th><th>Preço</th><th>Pedido mín.</th><th></th></tr></thead>
-            <tbody>{items.map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.unit || "—"}</td><td>{it.contracted_qty}</td><td>{it.unit_price}</td><td>{it.min_order_qty}</td><td><button className="erp-btn" onClick={() => removeItem(i)}>Remover</button></td></tr>)}</tbody>
+            <tbody>{items.map((it, i) => <tr key={i}><td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td><td>{it.mask || "—"}</td><td>{it.unit || "—"}</td><td>{it.contracted_qty}</td><td>{it.unit_price}</td><td>{it.min_order_qty}</td><td><button className="erp-btn" onClick={() => removeItem(i)}>Remover</button></td></tr>)}</tbody>
           </table>
         )}
         </div></div>

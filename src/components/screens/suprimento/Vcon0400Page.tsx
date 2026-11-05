@@ -1,3 +1,5 @@
+import { loadItems } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
 import { useState, useCallback } from "react";
 import { type SupplierContract, type ContractStatus, CONTRACT_STATUSES, listContracts, getContract, updateContractStatus } from "@/services/supplierContractService";
 import { errMessage } from "@/services/fiscalShared";
@@ -79,7 +81,7 @@ export function Vcon0400Page(): JSX.Element {
                 <tbody>
                   {(detalhe.items ?? []).length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Sem linhas.</td></tr>}
                   {(detalhe.items ?? []).map((it, i) => (
-                    <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.unit || "—"}</td>
+                    <tr key={i}><td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td><td>{it.mask || "—"}</td><td>{it.unit || "—"}</td>
                       <td>{num(it.contracted_qty)}</td><td>{num(it.consumed_qty)}</td>
                       <td style={{ fontWeight: 600 }}>{num(it.remaining_qty)}</td><td>{num(it.unit_price)}</td></tr>
                   ))}

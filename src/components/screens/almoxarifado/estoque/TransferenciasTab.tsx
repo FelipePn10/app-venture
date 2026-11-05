@@ -4,6 +4,7 @@ import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadItems, loadWarehouseAddresses, loadWarehouses } from "@/services/lookups";
 import { qtd, reais, useAcao, useUnidadeDoItem } from "./comum";
+import { TransitoSecao } from "./TransitoSecao";
 import { FeedbackBox } from "./ui";
 
 /**
@@ -56,9 +57,11 @@ export function TransferenciasTab({ itemCode }: { itemCode: string }) {
       <div className="erp-field erp-c4"><label className="erp-label">Observação</label><input className="erp-input" value={t.notes} onChange={(ev) => setT((p) => ({ ...p, notes: ev.target.value }))} /></div>
       <div className="erp-field erp-c12" style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <button className="erp-btn erp-btn-primary" onClick={transferir} disabled={busy}>Transferir</button>
-        <span className="erp-hint">Para estoque em trânsito, transfira para um almoxarifado de localização TRÂNSITO e, na chegada, dele para o destino. O estorno (no extrato) desfaz as duas pernas.</span>
+        <span className="erp-hint">Transferência direta: sai da origem e entra no destino na mesma hora. O estorno (no extrato) desfaz as duas pernas.</span>
       </div>
     </div></div>
+
+    <TransitoSecao itemCode={itemCode} />
 
     <div className="erp-fieldset"><div className="erp-fieldset-head">Entre endereços do mesmo almoxarifado</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c3"><label className="erp-label erp-req">Almoxarifado</label>

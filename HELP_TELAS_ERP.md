@@ -356,6 +356,7 @@ regra de cada linha.
 | [VENT0800](#vent0800--cadastro-de-almoxarifado) | Cadastro de Almoxarifado | Cadastrar almoxarifados e configurações de estoque. |
 | [VEST0100](#vest0100--central-de-estoque) | Central de Estoque | Posição e ATP por situação, extrato (kardex), lançamentos com tipo e centro de custo, transferências, requisições ao almoxarifado, reservas, separação, lotes, reposição e análises (giro, cobertura, parados). |
 | [VEST0200](#vest0200--inventário-e-tipos-de-movimento) | Inventário e Tipos de Movimento | Inventário físico com foto do saldo, contagem e recontagem, diferenças valorizadas e fechamento que lança os ajustes; tipos de movimento com as regras do lançamento manual. |
+| [VEST0150](#vest0150--coletor-de-estoque) | Coletor de Estoque | Tela para leitor de código de barras: consulta, separação de ondas, contagem de inventário, movimentação entre endereços e etiquetas. |
 | [VEXP0100](#vexp0100--expedição--romaneio) | Expedição / Romaneio | Montar romaneio de expedição: itens, conferência e despacho (OPEN→SEPARATED→CONFERRED→SHIPPED). |
 | [VBEN0100](#vben0100--beneficiamento--remessas-e-retorno-fiscal) | Beneficiamento — Remessas e Retorno Fiscal | Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria. |
 | [VBEN0200](#vben0200--estoque-de-terceiros--material-do-cliente) | Estoque de Terceiros — Material do Cliente | Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio. |
@@ -3588,12 +3589,29 @@ análises. O item escolhido na barra de cima vale para todas as abas.
 | **Separação e guarda** | Sugestão de separação (FEFO/FIFO), **onda de separação** (várias necessidades numa caminhada) e **sugestão de endereço** para guardar o recebimento |
 | **Lotes** | Registrar lote (corrida, certificado, fornecedor, recebimento, validade), saldos por lote e **genealogia** |
 | **Reposição** | Itens a repor por ponto de pedido / estoque mínimo — para o que não passa pelo MRP (consumíveis, manutenção). A projeção já desconta pedidos e requisições de compra em aberto. Os marcados viram uma **requisição de compra** (VSUP0300) |
-| **Análises** | Giro, cobertura, itens parados, **curva ABC** do valor consumido e lotes vencidos ou a vencer |
+| **Análises** | Giro, cobertura, itens parados, **acuracidade** das contagens, idade do estoque, **curva ABC** do valor consumido e lotes vencidos ou a vencer |
 
 **Telas relacionadas.** VEST0200 (inventário e tipos de movimento), VEST0500,
 VENT0800, VEST0400.
 
 ---
+
+#### VEST0150 — Coletor de Estoque
+
+Também recebe pedido de compra (informe o pedido, leia o item e digite o que chegou) e faz a contagem cíclica programada em VEST0500.
+
+**Para que serve.** Operação do almoxarifado com leitor de código de barras USB ou Bluetooth, sem usar o teclado. O leitor lê o código e confirma sozinho.
+
+**Como usar.** Escolha o almoxarifado e o modo:
+
+- **Consultar:** leia um item, lote ou endereço para ver o saldo.
+- **Separar:** escolha a onda e siga as paradas, lendo endereço e item. Leitura errada avisa na tela e com som.
+- **Contar:** escolha o inventário, leia o endereço e o item e digite o que contou.
+- **Mover:** leia o item, o endereço de origem e o de destino, e digite a quantidade.
+- **Receber:** leia o endereço e o item do envio em trânsito que chegou.
+- **Etiquetas:** imprima as etiquetas dos endereços e dos itens.
+
+**Telas relacionadas.** VEST0100 (ondas), VEST0200 (inventário).
 
 #### VEST0200 — Inventário e Tipos de Movimento
 

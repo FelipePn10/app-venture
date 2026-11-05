@@ -61,10 +61,10 @@ export function KardexTab({ itemCode }: { itemCode: string }) {
                 const podeEstornar = estornavel({ reference_type: l.reference_type, reversed_by_movement_id: l.reversed ? 1 : undefined, reverses_movement_id: l.is_reversal ? 1 : undefined, movement_type: l.movement_type });
                 return (<Fragment key={l.movement_id}>
                   <tr style={{ opacity: l.reversed ? 0.55 : 1, textDecoration: l.reversed ? "line-through" : undefined }}>
-                    <td>{new Date(l.date).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</td>
+                    <td title={`Gravado em ${new Date(l.date).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`}>{l.movement_date.split("-").reverse().join("/")}</td>
                     <td>{l.movement_id}</td>
                     <td>{MOVEMENT_LABEL[l.movement_type] ?? l.movement_type}{l.movement_type_code ? ` · ${l.movement_type_code}` : ""}</td>
-                    <td title={l.notes}>{l.reference_type ? `${REFERENCE_LABEL[l.reference_type] ?? l.reference_type} ${l.reference_code ?? ""}` : "Manual"}{l.cost_center_code ? ` · CC ${l.cost_center_code}` : ""}</td>
+                    <td title={l.notes}>{l.reference_type ? `${REFERENCE_LABEL[l.reference_type] ?? "Documento"} ${l.reference_code ?? ""}` : "Manual"}{l.cost_center_code ? ` · CC ${l.cost_center_code}` : ""}</td>
                     <td><EntityName code={l.warehouse_id} loader={loadWarehouses} prefix="" /></td>
                     <td>{l.lot || "—"}</td>
                     <td className="num">{l.in_qty ? qtd(l.in_qty) : ""}</td>

@@ -201,7 +201,7 @@ function translateCommonValidation(text: string): string | undefined {
 
 /** Heurística: a string parece um erro técnico/cru que não deve ir à tela? */
 function looksTechnical(text: string): boolean {
-  return /SQLSTATE|ERROR:|panic:|goroutine|nil pointer|violates|pq:|sql: |\bat 0x|undefined \(|Traceback|dial tcp|connection refused|context deadline|context canceled|invalid character|json: |unmarshal|marshaling|http request|no such host|tls: |i\/o timeout|closed pool|\bpgx\b|https?:\/\/|^\s*[{[]/i.test(
+  return /SQLSTATE|ERROR:|panic:|goroutine|nil pointer|violates|pq:|sql: |\bat 0x|undefined \(|Traceback|dial tcp|connection refused|context deadline|context canceled|invalid character|json: |unmarshal|marshaling|http request|no such host|tls: |i\/o timeout|closed pool|\bpgx\b|https?:\/\/|^\s*[{[]|^\s*<(!doctype|html|\?xml)/i.test(
     text,
   );
 }

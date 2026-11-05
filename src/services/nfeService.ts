@@ -22,6 +22,9 @@ export interface ExitItemDTO {
   description: string;
   unidade_comercial?: string;
   codigo_produto?: string;
+  /** Lote que sai do estoque; vazio segue a regra de baixa do item. */
+  lot?: string;
+  address?: string;
   mva_pct?: number;
   aliq_interna_destino_st?: number;
   red_base_st_pct?: number;

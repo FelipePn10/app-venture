@@ -1,16 +1,26 @@
-import { useState } from "react";
-import { consumeReservation, createReservation, releaseReservation } from "@/services/stockService";
+import { useCallback, useEffect, useState } from "react";
+import { consumeReservation, createReservation, listReservations, releaseReservation, type ReservationDTO } from "@/services/stockService";
+import { EntityName } from "@/components/ui/EntityName";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadWarehouses } from "@/services/lookups";
-import { useAcao, useUnidadeDoItem } from "./comum";
+import { dataBR, qtd, REFERENCE_LABEL, RESERVA_LABEL, useAcao, useUnidadeDoItem } from "./comum";
 import { FeedbackBox } from "./ui";
 
-/** Reservas de saldo (ATP): criar, liberar e consumir. */
+/** Reservas encerradas pelo próprio documento, não por aqui. */
+const DO_DOCUMENTO = new Set(["ONDA_SEPARACAO", "DEMANDA_INDEPENDENTE", "REQUISICAO_MATERIAL"]);
+
+/** Reservas de saldo (ATP): ver as existentes, criar, liberar e consumir. */
 export function ReservasTab({ itemCode }: { itemCode: string }) {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [f, setF] = useState({ item_code: itemCode, warehouse_id: 0, quantity: "", reference_type: "MANUAL", reference_code: 0, reference_item_code: "", reservation_date: "", expiration_date: "", notes: "" });
-  const [resId, setResId] = useState("");
+  const [reservas, setReservas] = useState<ReservationDTO[]>([]);
+  const [soAtivas, setSoAtivas] = useState(true);
   const uom = useUnidadeDoItem(f.item_code || itemCode);
+
+  const carregar = useCallback(() => run(async () => {
+    setReservas(await listReservations({ itemCode: itemCode || undefined, soAtivas }));
+  }), [run, itemCode, soAtivas]);
+  useEffect(() => { void carregar(); }, [carregar]);
 
   const criar = () => run(async () => {
     const q = Number(f.quantity.replace(",", "."));
@@ -21,11 +31,14 @@ export function ReservasTab({ itemCode }: { itemCode: string }) {
       reference_item_code: Number(f.reference_item_code) || undefined, reservation_date: f.reservation_date || undefined,
       expiration_date: f.expiration_date || undefined, notes: f.notes.trim() || undefined,
     });
-    setResId(String(r.id ?? ""));
+    setReservas(await listReservations({ itemCode: itemCode || undefined, soAtivas }));
     setFeedback({ type: "success", message: `Reserva ${r.id} criada: o disponível para promessa diminuiu.` });
   });
-  const liberar = () => run(async () => { const id = Number(resId); if (!id) return; await releaseReservation(id); setFeedback({ type: "success", message: `Reserva ${id} liberada.` }); });
-  const consumir = () => run(async () => { const id = Number(resId); if (!id) return; await consumeReservation(id); setFeedback({ type: "success", message: `Reserva ${id} consumida.` }); });
+  const encerrar = (id: number, acao: (id: number) => Promise<void>, feito: string) => run(async () => {
+    await acao(id);
+    setReservas(await listReservations({ itemCode: itemCode || undefined, soAtivas }));
+    setFeedback({ type: "success", message: `Reserva ${id} ${feito}.` });
+  });
 
   return (<>
     <FeedbackBox feedback={feedback} />
@@ -42,11 +55,31 @@ export function ReservasTab({ itemCode }: { itemCode: string }) {
       <div className="erp-field erp-c6"><label className="erp-label">Observações</label><input className="erp-input" value={f.notes} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} /></div>
       <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar reserva</button></div>
     </div></div>
-    <div className="erp-fieldset"><div className="erp-fieldset-head">Liberar ou consumir</div><div className="erp-fieldset-body">
-      <div className="erp-field erp-c2"><label className="erp-label">Reserva (ID)</label><input className="erp-input num" value={resId} onChange={(e) => setResId(e.target.value)} /></div>
-      <div className="erp-field erp-c4" style={{ alignSelf: "end", display: "flex", flexDirection: "row", gap: 8 }}>
-        <button className="erp-btn" onClick={liberar} disabled={busy}>Liberar</button>
-        <button className="erp-btn" onClick={consumir} disabled={busy}>Consumir</button></div>
+    <div className="erp-fieldset"><div className="erp-fieldset-head">Reservas{itemCode ? " do item escolhido" : ""}</div><div className="erp-fieldset-body">
+      <div className="erp-field erp-c12" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={soAtivas} onChange={(e) => setSoAtivas(e.target.checked)} /> Só as ativas</label>
+      </div>
+      <div className="erp-field erp-c12"><div className="erp-grid-wrap"><table className="erp-grid">
+        <thead><tr><th>Reserva</th><th>Item</th><th>Almoxarifado</th><th className="num">Quantidade</th><th>Origem</th><th>Expira em</th><th>Situação</th><th>Ações</th></tr></thead>
+        <tbody>
+          {reservas.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhuma reserva encontrada.</td></tr>}
+          {reservas.map((r) => (
+            <tr key={r.id}>
+              <td>{r.id}</td>
+              <td><EntityName code={r.item_code} loader={loadItems} prefix="Item" /></td>
+              <td><EntityName code={r.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td>
+              <td className="num">{qtd(r.quantity)}</td>
+              <td>{REFERENCE_LABEL[r.reference_type ?? ""] ?? "Documento"} {r.reference_code || ""}</td>
+              <td>{dataBR(r.expiration_date)}</td>
+              <td>{RESERVA_LABEL[r.status ?? ""] ?? r.status}</td>
+              <td>{r.status === "ACTIVE" && r.id != null && !DO_DOCUMENTO.has(r.reference_type ?? "") && <div style={{ display: "flex", gap: 4 }}>
+                <button className="erp-btn erp-btn-sm" onClick={() => void encerrar(r.id as number, releaseReservation, "liberada")} disabled={busy}>Liberar</button>
+                <button className="erp-btn erp-btn-sm" onClick={() => void encerrar(r.id as number, consumeReservation, "consumida")} disabled={busy}>Consumir</button>
+              </div>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div></div>
     </div></div>
   </>);
 }

@@ -35,6 +35,10 @@ export function PosicaoTab({ itemCode }: { itemCode: string }) {
   });
   const consultarPosicao = () => run(async () => { setPosicao(await getPosicaoEmData(data, almox)); });
   const totalValor = (posicao ?? []).reduce((s, p) => s + p.value, 0);
+  const [pagina, setPagina] = useState(0);
+  const POR_PAGINA = 200;
+  const paginas = Math.max(1, Math.ceil((posicao?.length ?? 0) / POR_PAGINA));
+  const atual = Math.min(pagina, paginas - 1);
 
   return (<>
     <FeedbackBox feedback={feedback} />
@@ -84,7 +88,7 @@ export function PosicaoTab({ itemCode }: { itemCode: string }) {
             <thead><tr><th>Item</th><th>Descrição</th><th>Almoxarifado</th><th className="num">Quantidade</th><th>UM</th><th className="num">2ª unidade</th><th className="num">Custo médio</th><th className="num">Valor</th></tr></thead>
             <tbody>
               {posicao.length === 0 && <tr><td colSpan={8} className="erp-grid-empty">Nenhum saldo nessa data.</td></tr>}
-              {posicao.map((p) => (
+              {posicao.slice(atual * POR_PAGINA, (atual + 1) * POR_PAGINA).map((p) => (
                 <tr key={`${p.item_code}-${p.warehouse_id}`} style={{ color: p.quantity < 0 ? "var(--v-err)" : undefined }}>
                   <td><strong>{p.business_code}</strong></td><td>{p.name}</td>
                   <td><EntityName code={p.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td>
@@ -95,6 +99,13 @@ export function PosicaoTab({ itemCode }: { itemCode: string }) {
               ))}
             </tbody>
           </table>
+          {paginas > 1 && (
+            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+              <button className="erp-btn erp-btn-sm" onClick={() => setPagina(atual - 1)} disabled={atual === 0}>Anterior</button>
+              <span>Página {atual + 1} de {paginas}</span>
+              <button className="erp-btn erp-btn-sm" onClick={() => setPagina(atual + 1)} disabled={atual >= paginas - 1}>Próxima</button>
+            </div>
+          )}
         </div>
       )}
     </div></div>

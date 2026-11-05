@@ -1,3 +1,4 @@
+import { EntityName } from "@/components/ui/EntityName";
 import { resumoPedidosGerados } from "@/services/purchaseOrderService";
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -176,7 +177,7 @@ export function Vsup0300Page(): JSX.Element {
                           const sld = saldo(it); const g = gen[it.id ?? -1] ?? { qty: "", supplier: "" };
                           return (
                             <tr key={it.id}>
-                              <td className="num" style={{ fontWeight: 600 }}>{it.item_code}</td>
+                              <td className="num" style={{ fontWeight: 600 }}><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td>
                               <td className="num">{it.quantity}</td><td className="num">{it.attended_qty ?? 0}</td>
                               <td className="num" style={{ fontWeight: 700 }}>{sld}</td>
                               <td><span className="erp-badge draft">{enumLabel(it.status)}</span></td>

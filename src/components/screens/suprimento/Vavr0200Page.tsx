@@ -1,3 +1,4 @@
+import { EntityName } from "@/components/ui/EntityName";
 import { useState, useCallback } from "react";
 import {
   type ReceivingNotice, type NoticeItem, type ReceivingDivergence, type NoticeStatus, type DivergenceType, type DivergenceResolution,
@@ -123,7 +124,7 @@ export function Vavr0200Page(): JSX.Element {
               <div className="erp-grid-wrap">
                 <table className="erp-grid">
                   <thead><tr><th>Item</th><th>Máscara</th><th className="num">Qtd. esperada</th><th>Unidade</th><th style={{ width: 90 }} /></tr></thead>
-                  <tbody>{items.map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td className="num">{it.expected_qty}</td><td>{it.unit || "—"}</td><td><button className="erp-btn erp-btn-sm" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>Remover</button></td></tr>)}</tbody>
+                  <tbody>{items.map((it, i) => <tr key={i}><td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td><td>{it.mask || "—"}</td><td className="num">{it.expected_qty}</td><td>{it.unit || "—"}</td><td><button className="erp-btn erp-btn-sm" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>Remover</button></td></tr>)}</tbody>
                 </table>
               </div>
             </div>
@@ -156,7 +157,7 @@ export function Vavr0200Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">Aviso {detalhe.notice_number ?? detalhe.id} — {enumLabel(detalhe.status)} <span className="erp-tgroup-label">Avançar</span> <select className="erp-input" style={{ height: 28, width: 150 }} value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as NoticeStatus)}>{NOTICE_STATUSES.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}</select> <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={avancar} disabled={busy}>Aplicar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
               <table className="erp-grid">
                 <thead><tr><th>Item</th><th>Máscara</th><th>Esperada</th><th>Recebida</th><th>UM</th></tr></thead>
-                <tbody>{(detalhe.items ?? []).map((it, i) => <tr key={i}><td>{it.item_code}</td><td>{it.mask || "—"}</td><td>{it.expected_qty}</td><td>{it.received_qty ?? 0}</td><td>{it.unit || "—"}</td></tr>)}</tbody>
+                <tbody>{(detalhe.items ?? []).map((it, i) => <tr key={i}><td><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td><td>{it.mask || "—"}</td><td>{it.expected_qty}</td><td>{it.received_qty ?? 0}</td><td>{it.unit || "—"}</td></tr>)}</tbody>
               </table>
             </div></div>
             </div>

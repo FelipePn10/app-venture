@@ -142,7 +142,7 @@ export function Vexp0100Page(): JSX.Element {
               {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum romaneio. Use Listar ou Auto-fill.</td></tr>}
               {list.map((s) => (
                 <tr key={s.code} className={selected?.code === s.code ? "erp-row-sel" : ""}>
-                  <td>{s.code}</td><td>{REFERENCE_LABEL[s.reference_type ?? ""] ?? s.reference_type ?? "—"}</td>
+                  <td>{s.code}</td><td>{REFERENCE_LABEL[s.reference_type ?? ""] ?? "Documento"}</td>
                   <td>{s.sales_order_code ?? s.purchase_order_code ?? s.production_order_code ?? "—"}</td>
                   <td>{statusLabel(s.status)}</td><td>{s.total_volumes ?? 0}</td>
                   <td><button className="erp-btn" onClick={() => abrir(s.code)} disabled={busy}>Abrir</button></td>
