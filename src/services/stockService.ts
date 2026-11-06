@@ -933,8 +933,8 @@ export async function getIdadeDosLotes(almox?: number): Promise<IdadeLoteDTO[]> 
   });
 }
 export interface NiveisDTO { daily_consumption: number; lead_time_days: number; safety_days: number; safety_qty: number; minimum_qty: number; maximum_qty: number }
-export async function sugerirNiveis(itemCode: string, almox?: number): Promise<NiveisDTO> {
-  const { data } = await httpClient.get('/api/stock/replenishment/suggest-levels', { params: { item_code: itemCode, warehouse_id: almox || undefined } });
+export async function sugerirNiveis(itemCode: string, almox?: number, mask?: string): Promise<NiveisDTO> {
+  const { data } = await httpClient.get('/api/stock/replenishment/suggest-levels', { params: { item_code: itemCode, warehouse_id: almox || undefined, mask: mask || undefined } });
   const o = unwrapObject(data);
   return {
     daily_consumption: parseNum(o, 'daily_consumption'), lead_time_days: parseNum(o, 'lead_time_days'), safety_days: parseNum(o, 'safety_days'),

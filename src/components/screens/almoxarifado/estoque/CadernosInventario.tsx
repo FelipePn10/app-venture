@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { gerarCadernos, listarCadernos, marcarCadernoImpresso, type CadernoDTO } from "@/services/stockService";
 import { Code128Barcode } from "@/components/ui/Code128Barcode";
+import { loadItems } from "@/services/lookups";
 import { useAcao } from "./comum";
 import { FeedbackBox } from "./ui";
 
@@ -18,6 +19,7 @@ export function CadernosInventario({ inventario, codigo, aberto, linhas, aoGerar
   const [cadernos, setCadernos] = useState<CadernoDTO[]>([]);
   const [porCaderno, setPorCaderno] = useState("30");
   const [impressao, setImpressao] = useState<{ numero: number; tipo: "caderno" | "etiquetas" } | null>(null);
+  const [nomes, setNomes] = useState<Record<string, string>>({});
   const carregar = useCallback(() => run(async () => { setCadernos(await listarCadernos(inventario)); }), [run, inventario]);
   useEffect(() => { void carregar(); }, [carregar]);
 
@@ -27,7 +29,10 @@ export function CadernosInventario({ inventario, codigo, aberto, linhas, aoGerar
     setFeedback({ type: "success", message: "Cadernos gerados." });
   });
   const imprimir = (numero: number, tipo: "caderno" | "etiquetas") => run(async () => {
-    flushSync(() => setImpressao({ numero, tipo }));
+    // O papel é contado sem o sistema à mão: só o código não diz o que procurar.
+    const itens = await loadItems();
+    const porCodigo = Object.fromEntries(itens.map((i) => [String(i.code), i.label]));
+    flushSync(() => { setNomes(porCodigo); setImpressao({ numero, tipo }); });
     window.print();
     await marcarCadernoImpresso(inventario, numero);
     setImpressao(null);
@@ -61,13 +66,14 @@ export function CadernosInventario({ inventario, codigo, aberto, linhas, aoGerar
           <h3>Inventário {codigo} · Caderno {impressao.numero}</h3>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr><th>Endereço</th><th>Item</th><th>Máscara</th><th>Lote</th><th style={{ width: 110 }}>Contagem</th><th style={{ width: 110 }}>Conferência</th></tr></thead>
-            <tbody>{doCaderno.map((l) => <tr key={texto(l, "id")}><td>{texto(l, "address") || "—"}</td><td>{texto(l, "item_code")}</td><td>{texto(l, "mask")}</td><td>{texto(l, "lot")}</td><td></td><td></td></tr>)}</tbody>
+            <tbody>{doCaderno.map((l) => <tr key={texto(l, "id")}><td>{texto(l, "address") || "—"}</td><td>{texto(l, "item_code")} {nomes[texto(l, "item_code")] ?? ""}</td><td>{texto(l, "mask")}</td><td>{texto(l, "lot")}</td><td></td><td></td></tr>)}</tbody>
           </table>
           <p>Contado por: ______________________ Data: ____/____/______</p>
         </> : <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           {doCaderno.map((l) => <div key={texto(l, "id")} style={{ border: "1px solid #000", padding: 8, breakInside: "avoid", textAlign: "center" }}>
             <div>Inv. {codigo} · Caderno {impressao.numero}</div>
             <div>{texto(l, "address") || "Sem endereço"}{texto(l, "lot") ? ` · Lote ${texto(l, "lot")}` : ""}</div>
+            <div>{nomes[texto(l, "item_code")] ?? ""}{texto(l, "mask") ? ` · ${texto(l, "mask")}` : ""}</div>
             <Code128Barcode value={texto(l, "item_code")} />
             <div>Quantidade: ____________</div>
           </div>)}
