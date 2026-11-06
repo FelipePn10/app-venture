@@ -59,6 +59,7 @@ export function ConsignacaoTab() {
         <select className="erp-input" value={direcao} onChange={(e) => setDirecao(e.target.value as "SAIDA" | "ENTRADA")}>
           <option value="SAIDA">Nossa mercadoria com clientes</option><option value="ENTRADA">Material de fornecedores conosco</option></select></div>
       <div className="erp-field erp-c4" style={{ alignSelf: "end" }}><label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={abertas} onChange={(e) => setAbertas(e.target.checked)} /> Só com saldo</label></div>
+      {direcao === "ENTRADA" && <div className="erp-field erp-c12"><span className="erp-hint">Consumir dá entrada no estoque pelo valor combinado. A nota de faturamento do fornecedor gera a conta a pagar e reconhece o que já foi consumido: essa parte não entra de novo no estoque.</span></div>}
       {direcao === "SAIDA" && <div className="erp-field erp-c12"><span className="erp-hint">A remessa e a venda saem pela NF-e, nos tipos de nota Remessa em consignação e Venda em consignação. Configure o almoxarifado em Parâmetros.</span></div>}
       <div className="erp-field erp-c12"><table className="erp-grid">
         <thead><tr><th>{direcao === "SAIDA" ? "Cliente" : "Fornecedor"}</th><th>Item</th><th>Documento</th><th>Emissão</th><th>Vence</th><th className="num">Quantidade</th><th className="num">Baixado</th><th className="num">Devolvido</th><th className="num">Saldo</th><th className="num">Valor unit.</th><th></th></tr></thead>
@@ -69,7 +70,7 @@ export function ConsignacaoTab() {
               <td>{c.partner_name || c.partner_code}</td><td>{c.business_code || c.item_code} {c.item_name}{c.mask ? ` · ${c.mask}` : ""}{c.lot ? ` · lote ${c.lot}` : ""}</td>
               <td>{c.document ?? "—"}</td><td>{dataBR(c.issue_date)}</td>
               <td style={vencida(c) && c.status === "ABERTA" ? { color: "var(--erp-danger, #b42318)", fontWeight: 600 } : undefined}>{c.due_date ? dataBR(c.due_date) : "—"}</td>
-              <td className="num">{qtd(c.quantity)}</td><td className="num">{qtd(c.settled_qty)}</td><td className="num">{qtd(c.returned_qty)}</td>
+              <td className="num">{qtd(c.quantity)}</td><td className="num" title={c.direction === "ENTRADA" ? `Faturado pelo fornecedor: ${qtd(c.billed_qty)}` : undefined}>{qtd(c.settled_qty)}{c.direction === "ENTRADA" && c.settled_qty > c.billed_qty ? ` (${qtd(Number((c.settled_qty - c.billed_qty).toFixed(6)))} a faturar)` : ""}</td><td className="num">{qtd(c.returned_qty)}</td>
               <td className="num"><strong>{qtd(saldoDe(c))}</strong></td><td className="num">{reais(c.unit_value)}</td>
               <td style={{ display: "flex", gap: 6 }}>{c.status === "ABERTA" && <>
                 <button className="erp-btn erp-btn-sm" onClick={() => setBaixa({ id: c.id, tipo: "devolver", quantity: String(saldoDe(c)), document: "", warehouse: "" })}>Devolver</button>
