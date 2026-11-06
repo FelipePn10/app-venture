@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## Melhorias
+- **Consignação de fornecedor:** a nota de faturamento gera a conta a pagar e reconhece o material já consumido, que não entra de novo no estoque. A tela mostra quanto falta faturar.
+
 ## [v1.12.1] — 2026-11-06
 
 ## Novidades
