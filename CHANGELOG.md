@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.12.1] — 2026-11-06
+
 ## Novidades
 - **Consignação (VEST0100):** mercadoria nossa com clientes e material de fornecedores conosco, com saldo, vencimento, venda, consumo e devolução. A remessa e a venda saem pela NF-e, nos tipos de nota de consignação.
 - **Transferência entre CNPJs:** a nota de transferência para outro estabelecimento da mesma raiz deixa o material em trânsito, e a entrada no destino conclui.
