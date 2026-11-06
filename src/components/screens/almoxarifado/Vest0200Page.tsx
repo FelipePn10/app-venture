@@ -11,7 +11,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadItems, loadWarehouses } from "@/services/lookups";
-import { hoje, qtd, reais, useAcao } from "./estoque/comum";
+import { dataBR, hoje, qtd, reais, useAcao } from "./estoque/comum";
 import { FeedbackBox, Resumo } from "./estoque/ui";
 import { SituacoesLoteAba } from "./estoque/SituacoesLoteAba";
 import { FechamentoAba } from "./estoque/FechamentoAba";
@@ -208,7 +208,7 @@ function InventarioAba() {
             {invs.map((iv) => { const st = SITUACAO[iv.status ?? ""] ?? SITUACAO.OPEN; return (
               <tr key={iv.id} className={sel?.id === iv.id ? "erp-row-sel" : ""}>
                 <td><strong>{iv.code}</strong></td><td><EntityName code={iv.warehouse_id} loader={loadWarehouses} prefix="Almox." /></td>
-                <td>{iv.description || "—"}</td><td>{iv.start_date?.slice(0, 10) ?? "—"}</td>
+                <td>{iv.description || "—"}</td><td>{dataBR(iv.start_date)}</td>
                 <td><span className={`erp-badge ${st.cor}`}>{st.rotulo}</span></td>
                 <td>{iv.counted_items ?? 0}/{iv.total_items ?? 0}</td>
                 <td className="num">{iv.adjustment_value != null ? reais(iv.adjustment_value) : "—"}</td>

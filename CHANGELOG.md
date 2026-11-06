@@ -12,6 +12,14 @@
 
 ## Melhorias
 - **Bloco H:** o que está consignado sai com o proprietário e o participante certos.
+- **Cadernos e etiquetas:** o papel traz o nome do item, não só o código.
+- **Máscara:** a política de reposição e o material consignado escolhem a máscara na lista, e o material do fornecedor passa a aceitar máscara e lote.
+
+## Correções
+- **Consignação:** a baixa de quantidade fracionada não passa mais do saldo por arredondamento.
+- **Inventário:** a data da lista segue o formato dd/mm/aaaa.
+- **Política de reposição:** ao editar, item, máscara e almoxarifado ficam travados: para mudá-los, crie outra política.
+- **Etiquetas:** código de item com acento não derruba mais a impressão; sai o código em texto.
 
 ## [v1.11.0] — 2026-11-05
 

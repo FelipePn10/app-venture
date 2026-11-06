@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { excluirPoliticaReposicao, listarPoliticasReposicao, salvarPoliticaReposicao, sugerirNiveis, type OrigemReposicao, type PoliticaReposicaoDTO } from "@/services/stockService";
 import { EntityName } from "@/components/ui/EntityName";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadWarehouses } from "@/services/lookups";
+import { loadItemMasks, loadItems, loadWarehouses } from "@/services/lookups";
 import { useAcao } from "./comum";
 import { FeedbackBox } from "./ui";
 
@@ -34,7 +34,7 @@ export function PoliticasReposicao() {
   });
   const sugerir = () => run(async () => {
     if (!f.item_code) { setFeedback({ type: "error", message: "Escolha o item." }); return; }
-    const n = await sugerirNiveis(String(f.item_code), f.warehouse_id || undefined);
+    const n = await sugerirNiveis(String(f.item_code), f.warehouse_id || undefined, f.mask);
     if (!(n.daily_consumption > 0)) { setFeedback({ type: "info", message: "Este item não teve consumo nos últimos 6 meses: informe os níveis à mão." }); return; }
     const texto = (v: number) => String(v).replace(".", ",");
     setF((p) => ({ ...p, minimum_qty: texto(n.minimum_qty), safety_qty: texto(n.safety_qty), maximum_qty: texto(n.maximum_qty) }));
@@ -54,12 +54,13 @@ export function PoliticasReposicao() {
     <FeedbackBox feedback={feedback} />
     <div className="erp-fieldset"><div className="erp-fieldset-head">Política por almoxarifado ({lista.length})</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label>
-        <LookupField value={f.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => set("item_code", String(c ?? ""))} /></div>
+        <LookupField disabled={Boolean(f.id)} value={f.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => set("item_code", String(c ?? ""))} /></div>
       <div className="erp-field erp-c4"><label className="erp-label">Máscara</label>
-        <input className="erp-input" maxLength={200} value={f.mask ?? ""} onChange={(e) => set("mask", e.target.value)} />
+        <LookupField disabled={Boolean(f.id)} value={f.mask || undefined} loader={loadItemMasks} entityLabel="máscara" onChange={(c) => set("mask", String(c ?? ""))} />
         <span className="erp-field-hint">Vazia vale para o item. Com máscara, só o saldo dela conta.</span></div>
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Almoxarifado</label>
-        <LookupField value={f.warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => set("warehouse_id", c ? Number(c) : 0)} /></div>
+        <LookupField disabled={Boolean(f.id)} value={f.warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => set("warehouse_id", c ? Number(c) : 0)} />
+        {Boolean(f.id) && <span className="erp-field-hint">Item, máscara e almoxarifado identificam a política: para mudá-los, crie outra.</span>}</div>
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Origem da reposição</label>
         <select className="erp-input" value={f.source_type} onChange={(e) => set("source_type", e.target.value as OrigemReposicao)}>
           <option value="COMPRA">Compra</option><option value="TRANSFERENCIA">Transferência de outro almoxarifado</option><option value="PRODUCAO">Produção</option>

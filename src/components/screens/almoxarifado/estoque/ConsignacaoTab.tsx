@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { consumirConsignacao, devolverConsignacao, listarConsignacoes, listarTransferenciasCnpj, receberConsignacao, type ConsignacaoDTO, type TransferenciaCnpjDTO } from "@/services/stockService";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadSuppliers, loadWarehouses } from "@/services/lookups";
+import { loadItemMasks, loadItems, loadSuppliers, loadWarehouses } from "@/services/lookups";
 import { dataBR, hoje, qtd, reais, useAcao } from "./comum";
 import { FeedbackBox } from "./ui";
 
 const SITUACAO: Record<string, string> = { EM_TRANSITO: "Em trânsito", RECEBIDA: "Recebida", CANCELADA: "Cancelada" };
-const RECEBER_VAZIO = { supplier_code: "", item_code: "", quantity: "", unit_value: "", document: "", issue_date: hoje(), due_date: "" };
-const saldoDe = (c: ConsignacaoDTO) => c.quantity - c.settled_qty - c.returned_qty;
+const RECEBER_VAZIO = { supplier_code: "", item_code: "", mask: "", lot: "", quantity: "", unit_value: "", document: "", issue_date: hoje(), due_date: "" };
+/** Seis casas, como no banco: a sobra do ponto flutuante passaria do saldo na baixa. */
+const saldoDe = (c: ConsignacaoDTO) => Number((c.quantity - c.settled_qty - c.returned_qty).toFixed(6));
 const vencida = (c: ConsignacaoDTO) => Boolean(c.due_date && c.due_date.slice(0, 10) < hoje());
 
 /**
@@ -32,7 +33,7 @@ export function ConsignacaoTab() {
   const receber = () => run(async () => {
     if (!f.supplier_code || !f.item_code || !f.quantity || !f.unit_value) { setFeedback({ type: "error", message: "Informe fornecedor, item, quantidade e valor." }); return; }
     await receberConsignacao({ supplier_code: Number(f.supplier_code), item_code: f.item_code, quantity: f.quantity.replace(",", "."), unit_value: f.unit_value.replace(",", "."),
-      document: f.document || undefined, issue_date: f.issue_date, due_date: f.due_date || undefined });
+      mask: f.mask.trim() || undefined, lot: f.lot.trim() || undefined, document: f.document || undefined, issue_date: f.issue_date, due_date: f.due_date || undefined });
     setF({ ...RECEBER_VAZIO });
     setLista(await listarConsignacoes(direcao, abertas));
     setFeedback({ type: "success", message: "Material registrado. Ele só entra no estoque ao ser consumido." });
@@ -93,6 +94,8 @@ export function ConsignacaoTab() {
         <LookupField value={f.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor" onChange={(c) => setF((p) => ({ ...p, supplier_code: String(c ?? "") }))} /></div>
       <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label>
         <LookupField value={f.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setF((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
+      <div className="erp-field erp-c2"><label className="erp-label">Máscara</label><LookupField value={f.mask || undefined} loader={loadItemMasks} entityLabel="máscara" onChange={(c) => setF((p) => ({ ...p, mask: String(c ?? "") }))} /></div>
+      <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" maxLength={50} value={f.lot} onChange={(e) => setF((p) => ({ ...p, lot: e.target.value }))} /></div>
       <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label><input className="erp-input num" value={f.quantity} onChange={(e) => setF((p) => ({ ...p, quantity: e.target.value }))} /></div>
       <div className="erp-field erp-c2"><label className="erp-label erp-req">Valor unitário</label><input className="erp-input num" value={f.unit_value} onChange={(e) => setF((p) => ({ ...p, unit_value: e.target.value }))} /></div>
       <div className="erp-field erp-c4"><label className="erp-label">Nota do fornecedor</label><input className="erp-input" maxLength={60} value={f.document} onChange={(e) => setF((p) => ({ ...p, document: e.target.value }))} /></div>
