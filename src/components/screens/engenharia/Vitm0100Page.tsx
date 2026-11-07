@@ -4,6 +4,7 @@ import {
   listItems, getActivationReadiness,
 } from "@/services/itemService";
 import { resolveStructure, type StructureComponent } from "@/services/ItemStructureService";
+import { textoDeBuscaDosItens } from "@/services/lookups";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -23,6 +24,7 @@ function naturezaLegivel(i: ItemDTO): string {
     i.is_prototype && "Protótipo",
     i.is_tool && "Ferramenta",
     i.is_process_item && "Item de Processo",
+    i.is_scrap && "Sucata",
   ].filter(Boolean) as string[];
   if (marcas.length > 0) return marcas.join(" + ");
   if (i.nature == null) return "—";
@@ -42,7 +44,8 @@ export function Vitm0100Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  const listar = () => run(async () => { setItems(await listItems()); });
+  const [busca, setBusca] = useState<Map<string, string>>(new Map());
+  const listar = () => run(async () => { const [itens, textos] = await Promise.all([listItems(), textoDeBuscaDosItens()]); setItems(itens); setBusca(textos); });
 
   const abrir = (it: ItemDTO) => { const c = it.code; if (!c) return; void run(async () => {
     setSelected(it);
@@ -51,7 +54,7 @@ export function Vitm0100Page(): JSX.Element {
   }); };
 
   const filtered = filter.trim()
-    ? items.filter((i) => String(i.code).includes(filter.trim()) || (i.description ?? "").toLowerCase().includes(filter.trim().toLowerCase()))
+    ? items.filter((i) => { const q = filter.trim().toLowerCase(); return String(i.code).toLowerCase().includes(q) || (i.description ?? "").toLowerCase().includes(q) || (busca.get(String(i.code)) ?? "").toLowerCase().includes(q); })
     : items;
 
   return (

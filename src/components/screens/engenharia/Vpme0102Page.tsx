@@ -7,6 +7,7 @@ import {
   type DeliveryPromiseParams,
 } from "@/services/deliveryPromiseParamsService";
 import { useAuthStore } from "@/store/authStore";
+import { LinhasDeCapacidadeSecao } from "./LinhasDeCapacidadeSecao";
 
 function resolveUserId(id: string | undefined, token: string | null): string {
   if (id) return id;
@@ -538,6 +539,9 @@ export function Vpme0102Page(): JSX.Element {
               )}
             </div>
           </div>
+
+          {/* ── TANQUES / LINHAS DE CAPACIDADE ── */}
+          <LinhasDeCapacidadeSecao />
         </div>
 
         {/* ── FOOTER ── */}

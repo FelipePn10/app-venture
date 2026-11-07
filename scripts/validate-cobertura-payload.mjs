@@ -39,9 +39,11 @@ for (const campo of ['icms_red_pct_contrib', 'icms_subst_pct_contrib', 'bc_icms_
 
 // ── Classificação fiscal (VFIS0350) ────────────────────────────────────────
 const clas = read('src/components/screens/fiscal/Vfis0350Page.tsx');
-check('classificação separa PIS/COFINS normal, consumo, retenção e redução',
-  ['cst_pis_saida', 'pis_consumo_pct', 'pis_retencao_pct', 'pis_reducao_pct',
-   'cst_cofins_saida', 'cofins_consumo_pct', 'cofins_retencao_pct'].every((c) => clas.includes(c)));
+// A nota tira IPI e exceções de PIS/COFINS do NCM (VFIS0110), não da classificação:
+// a tela mostra o IPI da tabela só para leitura e não oferece alíquotas que a nota ignora.
+check('classificação mostra o IPI do NCM e não tem alíquotas que a nota ignora',
+  /classificacao-ipi-tabela/.test(clas) && /listNcmTaxes/.test(clas)
+  && !['pis_consumo_pct', 'pis_retencao_pct', 'pis_reducao_pct', 'cofins_consumo_pct', 'cofins_retencao_pct'].some((c) => clas.includes(c)));
 
 // ── Item (VENT0200) ────────────────────────────────────────────────────────
 const item = read('src/components/screens/engenharia/Vent0200Page.tsx');
@@ -50,7 +52,7 @@ const item = read('src/components/screens/engenharia/Vent0200Page.tsx');
 check('item envia as dimensões só quando completas',
   /(?:Number|parseDecimal)\(form\.dimLength\) > 0 && (?:Number|parseDecimal)\(form\.dimWidth\) > 0/.test(item));
 check('item coleta tanque, checklist de recebimento e safra',
-  /tank_code: optionalNumber\(form\.tanque\)/.test(item)
+  /tank_code: numero\(form\.tanque\)/.test(item)
   && /receiving_checklist: form\.checklistRecebimento/.test(item)
   && /harvest: form\.controlaSafra/.test(item));
 

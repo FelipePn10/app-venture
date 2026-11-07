@@ -301,7 +301,7 @@ export async function calculateStandardCost(itemCode: string, mask?: string, lot
   return parseCost(data);
 }
 export async function getStandardCost(itemCode: string): Promise<StandardCost> {
-  const { data } = await httpClient.get(`${BASE}/items/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/items/${encodeURIComponent(itemCode)}`);
   return parseCost(data);
 }
 /** O backend não expõe list-all de custo padrão (`GET /` → 404); retorna []. */
@@ -334,7 +334,7 @@ export async function upsertWorkCenterCost(
 
 // ── Custo de compra por item ──
 export async function getPurchaseCost(itemCode: string): Promise<PurchaseCost> {
-  const { data } = await httpClient.get(`${BASE}/purchase-costs/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/purchase-costs/${encodeURIComponent(itemCode)}`);
   return parsePurchaseCost(data);
 }
 export async function upsertPurchaseCost(itemCode: string, cost: number): Promise<PurchaseCost> {
@@ -375,7 +375,7 @@ export async function listCostHistory(itemCode: string, mask?: string, limit?: n
   if (mask) params.set('mask', mask);
   if (limit && limit > 0) params.set('limit', String(limit));
   const texto = params.toString();
-  const { data } = await httpClient.get(`${BASE}/history/${itemCode}${texto ? `?${texto}` : ''}`);
+  const { data } = await httpClient.get(`${BASE}/history/${encodeURIComponent(itemCode)}${texto ? `?${texto}` : ''}`);
   return unwrapArray(data).map(parseHistory);
 }
 

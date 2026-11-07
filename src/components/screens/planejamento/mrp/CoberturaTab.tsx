@@ -41,6 +41,7 @@ export function CoberturaTab({ plano, versao, sugestoes, busy, onFirmar, onVerPe
   const [erro, setErro] = useState<string | null>(null);
   const [farol, setFarol] = useState<CoverageStatus | "">("");
   const [planejador, setPlanejador] = useState("");
+  const [comprador, setComprador] = useState("");
   const [tipo, setTipo] = useState("");
   const [busca, setBusca] = useState("");
 
@@ -62,9 +63,11 @@ export function CoberturaTab({ plano, versao, sugestoes, busy, onFirmar, onVerPe
     const q = normalizar(busca.trim());
     return linhas.filter((l) =>
       (!planejador || (planejador === "-" ? l.planner_code === undefined : String(l.planner_code) === planejador))
+      && (!comprador || String(l.buyer_code ?? "") === comprador)
       && (!tipo || l.item_type === tipo)
       && (!q || normalizar(`${l.item_code} ${l.description}`).includes(q)));
-  }, [linhas, planejador, tipo, busca]);
+  }, [linhas, planejador, comprador, tipo, busca]);
+  const compradores = useMemo(() => [...new Set(linhas.map((l) => l.buyer_code).filter((c): c is number => c !== undefined))].sort((a, b) => a - b), [linhas]);
   const visiveis = farol ? filtradas.filter((l) => l.status === farol) : filtradas;
   const conta = (s: CoverageStatus) => filtradas.filter((l) => l.status === s).length;
 
@@ -87,6 +90,8 @@ export function CoberturaTab({ plano, versao, sugestoes, busy, onFirmar, onVerPe
 
       <Painel titulo="Filtros">
         <div className="vpl-filters">
+          <div className="erp-field"><label className="erp-label" htmlFor="cob-comprador">Comprador</label>
+            <select id="cob-comprador" className="erp-input" style={{ minWidth: 140 }} value={comprador} onChange={(e) => setComprador(e.target.value)}><option value="">Todos</option>{compradores.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
           <div className="erp-field"><label className="erp-label" htmlFor="cob-planejador">Planejador</label>
             <select id="cob-planejador" className="erp-input" style={{ minWidth: 200 }} value={planejador} onChange={(e) => setPlanejador(e.target.value)}>
               <option value="">Todos</option>

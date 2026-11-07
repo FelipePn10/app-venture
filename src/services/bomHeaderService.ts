@@ -29,7 +29,7 @@ function parse(raw: unknown): BomHeader {
   };
 }
 export async function listBomHeaders(itemCode: string): Promise<BomHeader[]> {
-  const { data } = await httpClient.get(`${BASE}/item/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parse);
 }
 export async function getBomHeader(id: number): Promise<BomHeader> {

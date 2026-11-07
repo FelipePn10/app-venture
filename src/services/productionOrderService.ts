@@ -15,6 +15,8 @@ const BASE = '/api/production-order';
  * `planned_qty > 0`. `operations/advance` usa `{operation_id,status,actual_hours}`.
  */
 export interface ProductionOrderDTO {
+  /** Revisão do item quando a OF nasceu. */
+  item_revision?: string;
   id?: number;
   order_number?: number;
   planned_order_id?: number | null;
@@ -151,6 +153,7 @@ function parseOrder(raw: unknown): ProductionOrderDTO {
     notes: parseStr(o, 'notes', 'Notes') || null,
     is_active: parseBool(o, 'is_active', 'IsActive'),
     cost_pending: parseStr(o, 'cost_pending', 'CostPending') || undefined,
+    item_revision: parseStr(o, 'item_revision') || undefined,
   };
 }
 

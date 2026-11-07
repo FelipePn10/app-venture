@@ -76,3 +76,18 @@ export async function rescheduleBatch(payload: RescheduleRequest): Promise<Obj> 
   const { data } = await httpClient.post(`${BASE}/reschedule`, payload);
   return unwrapObject(data);
 }
+
+/** Tanque / linha de capacidade da promessa de entrega (VPME0102). */
+export interface LinhaDeCapacidade { code: number; description: string; daily_capacity: number; uom: string; is_active: boolean }
+
+export async function listarLinhasDeCapacidade(): Promise<LinhaDeCapacidade[]> {
+  const { data } = await httpClient.get('/api/delivery-promise/lines');
+  return (Array.isArray(data) ? data : []).map((l: Record<string, unknown>) => ({
+    code: Number(l.code), description: String(l.description ?? ''), daily_capacity: Number(l.daily_capacity ?? 0),
+    uom: String(l.uom ?? 'UN'), is_active: l.is_active !== false,
+  }));
+}
+
+export async function salvarLinhaDeCapacidade(l: LinhaDeCapacidade): Promise<void> {
+  await httpClient.put('/api/delivery-promise/lines', { ...l, daily_capacity: String(l.daily_capacity) });
+}

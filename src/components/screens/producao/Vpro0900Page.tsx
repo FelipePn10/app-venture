@@ -21,6 +21,7 @@ import {
 import { OPERACAO, SITUACAO_FALTA } from "./of/operacao";
 import { lerSeries, obterPerfil } from "@/services/posVendaService";
 import { hojeLocal } from "@/utils/dataLocal";
+import { useBuscaDosItens } from "@/hooks/useBuscaDosItens";
 
 /**
  * Ordem de Produção (OF).
@@ -52,6 +53,7 @@ export function Vpro0900Page(): JSX.Element {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [ordens, setOrdens] = useState<ProductionOrderDTO[]>([]);
   const [busca, setBusca] = useState("");
+  const apelidoDoItem = useBuscaDosItens();
   const [filtro, setFiltro] = useState<FiltroSituacao>("ativas");
   const [of, setOf] = useState<ProductionOrderDTO | null>(null);
   const [aba, setAba] = useState<AbaOF>("resumo");
@@ -130,9 +132,9 @@ export function Vpro0900Page(): JSX.Element {
     const q = normalizar(busca.trim());
     return ordens
       .filter((o) => filtro === "todas" || (filtro === "ativas" ? o.status === "OPEN" || o.status === "IN_PROGRESS" : o.status === filtro))
-      .filter((o) => !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""}`).includes(q))
+      .filter((o) => !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""} ${apelidoDoItem(o.item_code)}`).includes(q))
       .sort((a, b) => (a.start_date ?? "9999").localeCompare(b.start_date ?? "9999") || (a.id ?? 0) - (b.id ?? 0));
-  }, [ordens, busca, filtro]);
+  }, [ordens, busca, filtro, apelidoDoItem]);
 
   // ── Ações da ordem ──
   const criar = () => run(async () => {

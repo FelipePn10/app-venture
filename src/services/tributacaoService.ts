@@ -84,3 +84,13 @@ export async function simularTributacao(input: SimulacaoInput, modulo: 'fiscal' 
   const { data } = await httpClient.post<SimulacaoResultado>(path, input);
   return { ...data, itens: data.itens ?? [], pendencias: data.pendencias ?? [] };
 }
+
+/**
+ * Impostos do item numa venda a empresa contribuinte (industrialização) para a
+ * UF pedida — a prévia do cadastro (VENT0200). Fica sob /api/items para quem
+ * cadastra item ver os impostos sem acesso ao módulo fiscal.
+ */
+export async function impostosDoItem(item: string, uf: string): Promise<SimulacaoResultado> {
+  const { data } = await httpClient.get<SimulacaoResultado>(`/api/items/governanca/itens/${encodeURIComponent(item)}/impostos`, { params: { uf } });
+  return { ...data, itens: data.itens ?? [], pendencias: data.pendencias ?? [] };
+}

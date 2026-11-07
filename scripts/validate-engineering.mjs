@@ -27,7 +27,8 @@ const classifications = read('src/services/itemClassificationService.ts');
 
 check('VENT0200 removeu botões Nav e PDM', !/className="it-nav-btn"/.test(vent0200) && !/>PDM<\/button>/.test(vent0200));
 check('VENT0200 removeu texto "Focco"', !/Focco/i.test(vent0200));
-check('VENT0200 classificação usa modal pesquisável', /loadItemClassifications/.test(vent0200));
+// A classificação do item é a fiscal (VFIS0350): é dela que a nota e o pedido de compra tiram NCM e IPI.
+check('VENT0200 classificação usa modal pesquisável', /loader=\{loadFiscalClassifications\}/.test(vent0200));
 check('VENT0200 item embalagem usa modal de itens', /loader=\{loadItems\}/.test(vent0200));
 check('VENT0210 removeu NAV e Ferramentas', !/className="fe-nav-btn"/.test(vent0210));
 check('VENT0210 item pai usa modal (buscarItemPai)', /buscarItemPai/.test(vent0210) && /loader=\{loadItems\}/.test(vent0210));
@@ -273,8 +274,9 @@ check('item envia crítico, exclusivo e curva ABC',
 check('curva ABC é um select de A/B/C, não um lookup de classificação',
   /value="A"/.test(vent0200) && /value="B"/.test(vent0200) && /value="C"/.test(vent0200)
   && !/curvaAbc[\s\S]{0,200}loadItemClassifications/.test(vent0200));
+// Sem consumo informado, a reposição usa o consumo apurado; sem prazo não há conta.
 check('item monta o ponto de pedido só quando a conta fecha',
-  /function montarPontoDePedido/.test(vent0200) && /TR <= 0 \|\| CM <= 0 \|\| CR <= 0/.test(vent0200));
+  /function montarPontoDePedido/.test(vent0200) && /if \(TR <= 0\) return null/.test(vent0200) && /modo: "DIA_TRABALHADO"/.test(vent0200));
 check('item mostra o ponto de pedido calculado', /function calcularPontoDePedido/.test(vent0200) && /Ponto de pedido/.test(vent0200));
 check('item envia a pasta de suprimentos completa',
   /purchase_uom: form\.umSuprimentos/.test(vent0200) && /warehouse_code: optionalNumber\(form\.almoxSuprimentos\)/.test(vent0200));

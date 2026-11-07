@@ -2,6 +2,58 @@
 
 ## Unreleased
 
+## Novidades
+- **Cadastro de Itens renovado:** a tela ganhou o visual do restante do sistema e passou a guardar tudo o que se digita nela.
+- **Código de barras e unidade tributável:** o GTIN é conferido no cadastro e vai para a nota e para a EFD.
+- **Tipo do item na EFD:** agora é informado no cadastro, inclusive produto em processo e intermediário.
+- **Validade e tolerâncias por item:** o lote recebe a validade do item, o recebimento recusa lote com pouca vida útil e cada item pode ter sua tolerância e seu roteiro de inspeção.
+- **Padrão descritivo (PDM):** cada grupo e modificador tem seus atributos, e a descrição técnica é gerada sempre do mesmo jeito.
+- **Prontidão e prévia fiscal:** o cadastro mostra se o item está pronto para comprar, produzir, vender e faturar, e o que a SEFAZ recusaria.
+- **Impacto antes de salvar:** alterações que afetam saldo, pedidos e ordens são mostradas antes de gravar, e as que quebrariam o estoque são recusadas.
+- **Política por status:** cada empresa define o que um item bloqueado ou descontinuado ainda pode fazer em cada documento.
+- **Níveis de embalagem:** a caixa contém unidades, o palete contém caixas, e o total é calculado sozinho. A nota usa esses níveis para a quantidade tributável.
+- **Atributos livres:** características fora do padrão descritivo, como tonalidade e acabamento, que também acham o item na busca.
+- **Saldo por lote nas duas unidades:** o peso real de cada lote aparece por almoxarifado.
+- **Revisão com data futura:** entra em vigor sozinha na data, e a ordem de fabricação já nasce nela.
+- **Setores e responsáveis por grupo:** a VNOT0100 ganhou a aba **Setores** (Compras, PCP…) com as pessoas de cada um, e a VITE0114 diz qual setor planeja e qual compra cada grupo. O item mostra quem responde por ele, e a cobertura do MRP mostra o setor no lugar do antigo planejador.
+
+## Melhorias
+- **Código digitado sem ambiguidade:** o cadastro não aceita código anterior ou referência do fabricante igual ao código de outro item, nem item novo com o código antigo ou de fornecedor de outro. A busca mostra por qual código achou o item.
+- **Cuidados de armazenagem e segurança onde o material é manuseado:** produto perigoso e condição de armazenagem aparecem na OF, na entrada de nota, na requisição, na separação, no recebimento, nas etiquetas e na expedição.
+- **Marcações que se contradizem:** a tela não deixa marcar, por exemplo, sucata que é item base ou fantasma comprado, e diz o motivo; ligar o número de série torna o item de quantidade inteira.
+- **Tanques / linhas de capacidade:** cadastro em VPME0102 com capacidade por dia; o item escolhe a linha numa lista e a promessa de entrega usa a capacidade de cada uma.
+- **Ponto de pedido por dia trabalhado:** o consumo é por dia em que a empresa trabalha e o prazo conta os sábados e feriados do calendário industrial.
+- **Impostos:** a aba Contábil explica de onde vem cada imposto da nota (NCM e regras), sem campos de alíquota que o cálculo não usava.
+- **Cadastro de Itens mais enxuto:** Estoque e Suprimentos viraram a aba **Estoque e compras**; saíram campos repetidos (unidade de compra e almoxarifado em duas abas) e campos que nada no sistema usava (fator de conversão de volume, item de embalagem, agrupamento, cobertura de segurança, grupo de inventário, classificações, insumo, planejador e comprador). Cada campo explica para que serve.
+- **Busca de item por qualquer código:** código anterior, referência do fabricante, código do item no fornecedor, GTIN e atributos livres acham o item em todos os seletores e nas buscas de OF, demanda e política de planejamento. Quem digita um desses códigos num campo de item recebe o código atual na mensagem.
+- **Ponto de pedido:** basta o consumo médio; o tempo de reposição e os dias úteis do mês têm padrão.
+- **NF-e:** o CEST do item vai para a nota, e a nota sai com o código comercial e a descrição comercial do item.
+- **Recebimento:** as tolerâncias do item olham o total da linha, e a entrada por nota segue o roteiro de recebimento do cadastro.
+- **Despacho:** a embalagem baixa pela quantidade conferida, e a falta de embalagem não segura mais a carga.
+- **MRP com o mesmo ponto de pedido da reposição:** o item em modo por dia trabalhado entra no MRP com o ponto calculado pelo calendário industrial, e não mais pela conta fixa de segunda a sexta.
+- **IPI do pedido de compra:** sem IPI digitado, a linha usa a classificação fiscal do item e o IPI do NCM na tabela tributária (VFIS0110), o mesmo da nota.
+- **Classificação fiscal (VFIS0350):** a lista e o formulário mostram o IPI do NCM, só para leitura, e a tela explica que IPI e exceções de PIS/COFINS vêm do NCM.
+- **Prévia de impostos no cadastro de itens:** quem cadastra item vê os impostos sem precisar de acesso ao módulo fiscal.
+- **Romaneio:** sai com o código comercial do item e com uma seção de cuidados no transporte e na armazenagem, sem cortar o texto.
+- **Validade no item novo:** informar validade ao cadastrar já liga o controle de lote do item.
+
+## Correções
+- **Prévia fiscal do item:** os impostos mostrados passam a vir do mesmo cálculo da nota (dentro e fora do estado); antes a prévia mostrava as alíquotas da classificação, como PIS/COFINS 0%, que a nota não usa.
+- **Campos do item que dependem de outros:** campos de OF só para item fabricado, de estoque desligados para serviço, validade só com lote, escala e CNPJ do fabricante só com CEST; revenda exige item comprado e o mínimo de venda precisa ser múltiplo do múltiplo.
+- **Separação FEFO/FIFO:** a sugestão de separação passa a seguir a regra do item; antes, item FIFO era sugerido em FEFO.
+- **Contagem cíclica pela curva ABC:** itens sem intervalo próprio passam a ser contados pela classe (A a cada 90 dias, B 180, C 365). Antes, só o item com intervalo digitado entrava no inventário rotativo.
+- **Alerta de contagem vencida e de estoque abaixo do mínimo:** ligado o alerta, ele passa a avisar também o que já estava vencido ou abaixo do mínimo antes.
+- **Itens com barra no código:** itens como TP-0120/50-E voltam a salvar e a abrir saldo, fornecedores, custo, MRP, qualidade, estrutura e demais consultas por item.
+- **Nota de palete sem código de barras:** a linha sai SEM GTIN em vez de levar o código da unidade, e a SEFAZ autoriza.
+- **Data de entrega:** a linha sem data segue a data do pedido, sem antecipar o MRP.
+- **Estorno de ajuste:** o saldo da segunda unidade volta ao valor anterior.
+- **Código do fornecedor igual ao de outro item:** o vínculo item × fornecedor (VSUP0130) e a entrada de nota recusam, explicando o motivo, o código do fornecedor que é o código atual de outro item nosso. Na entrada de nota, a mensagem orienta a desmarcar "lembrar vínculo" e lançar a nota.
+- **Validade sem lote:** o servidor recusa validade em item sem controle de lote, e desligar o lote de item com validade é recusado com o motivo.
+- **Faturar pedido de cliente com CNPJ formatado:** a nota não é mais recusada por "mais caracteres" quando o CNPJ ou a IE do cliente têm pontos e barras.
+- **Prévia de impostos do item:** calculava a venda como para consumidor final (IPI na base do ICMS); agora é venda a empresa contribuinte, como diz a tela.
+- **Pedido de compra sem IPI:** a linha ficava com IPI zero mesmo com a classificação do item informada.
+- **VPME0102:** o cadastro de tanques / linhas aparecia repetido debaixo de cada parâmetro; agora é uma seção só, no fim da tela.
+
 ## [v1.12.2] — 2026-11-06
 
 ## Melhorias

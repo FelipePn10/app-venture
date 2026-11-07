@@ -155,6 +155,13 @@ export interface PurchaseReceiptItemDTO {
   serial_number?: string;
   batch?: string;
   expiration_date?: string;
+  /** Corrida e certificado do material, quando o cadastro do item exige. */
+  heat_number?: string;
+  certificate?: string;
+  /** Peso real da balança, em item com segunda unidade. */
+  secondary_quantity?: number;
+  /** Confirmação do check list, quando o cadastro do item exige. */
+  checklist_confirmed?: boolean;
   notes?: string;
 }
 

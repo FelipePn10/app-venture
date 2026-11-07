@@ -26,6 +26,8 @@ export interface ToolDTO {
   life_used?: number;
   cost?: number;
   status?: ToolStatus;
+  /** Item marcado como ferramenta na VENT0200. */
+  item_code?: string;
 }
 
 export interface ToolSerialDTO {
@@ -78,6 +80,7 @@ function parseTool(raw: unknown): ToolDTO {
     life_used: parseNum(o, 'life_used', 'LifeUsed'),
     cost: parseNum(o, 'cost', 'Cost'),
     status: (parseStr(o, 'status', 'Status') || undefined) as ToolStatus | undefined,
+    item_code: parseStr(o, 'item_code') || undefined,
   };
 }
 

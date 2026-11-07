@@ -5,7 +5,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers } from "@/services/lookups";
 
-type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
+type FeedbackState = { type: "success" | "error" | "info" | "warn"; message: string } | null;
 const EMPTY: ItemSupplierDTO = { item_code: "", supplier_code: 0, ranking: 1, supplier_item_code: "", supplier_item_desc: "", supplier_uom: "", lead_time_days: undefined };
 
 export function Vsup0130Page(): JSX.Element {
@@ -24,6 +24,8 @@ export function Vsup0130Page(): JSX.Element {
   async function salvar() {
     if (!item || !form.supplier_code) { setFeedback({ type: "error", message: "Item e fornecedor são obrigatórios." }); return; }
     setBusy(true); setFeedback(null);
+    // O backend recusa código de fornecedor igual ao código atual de outro item
+    // nosso e diz por quê: digitado num pedido, ele levaria o outro item.
     try { await upsertItemSupplier({ ...form, item_code: item }); setForm(EMPTY); setFeedback({ type: "success", message: "Vínculo salvo." }); await carregar(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -89,7 +91,7 @@ export function Vsup0130Page(): JSX.Element {
                   <div className="erp-field erp-c6"><label className="erp-label erp-req">Fornecedor</label><LookupField value={form.supplier_code} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Selecionar fornecedor" onChange={(c) => setF("supplier_code", c ?? 0)} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Ranking</label><input className="erp-input num" type="number" value={form.ranking} onChange={(e) => setF("ranking", Number(e.target.value))} /></div>
                   <div className="erp-field erp-c3"><label className="erp-label">Lead time (dias)</label><input className="erp-input num" type="number" value={form.lead_time_days ?? ""} onChange={(e) => setF("lead_time_days", e.target.value ? Number(e.target.value) : undefined)} /></div>
-                  <div className="erp-field erp-c3"><label className="erp-label">Cód. no fornecedor</label><input className="erp-input" value={form.supplier_item_code ?? ""} onChange={(e) => setF("supplier_item_code", e.target.value)} /></div>
+                  <div className="erp-field erp-c3"><label className="erp-label" title="O código do item na nota do fornecedor. A entrada de NF-e liga a nota ao item por ele, e a busca de item também acha por ele. Não pode ser o código atual de outro item nosso.">Cód. no fornecedor</label><input className="erp-input" value={form.supplier_item_code ?? ""} onChange={(e) => setF("supplier_item_code", e.target.value)} /></div>
                   <div className="erp-field erp-c7"><label className="erp-label">Descrição no fornecedor</label><input className="erp-input" value={form.supplier_item_desc ?? ""} onChange={(e) => setF("supplier_item_desc", e.target.value)} /></div>
                   <div className="erp-field erp-c2"><label className="erp-label">UM</label><input className="erp-input" value={form.supplier_uom ?? ""} onChange={(e) => setF("supplier_uom", e.target.value.toUpperCase())} /></div>
                   <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy && <span className="erp-spin" />}Salvar vínculo</button></div>

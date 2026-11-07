@@ -7,6 +7,7 @@ import '@/styles/fiscal-screens.css';
 import '@/styles/erp-workbench.css';
 import '@/styles/system-update.css';
 import { SystemUpdateGate } from '@/components/system/SystemUpdateGate';
+import { ItemAvisoBanner } from '@/components/system/ItemAvisoBanner';
 import { DownloadNotice } from '@/components/ui/DownloadNotice';
 
 const queryClient = new QueryClient();
@@ -14,6 +15,7 @@ const queryClient = new QueryClient();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
+      <ItemAvisoBanner />
       <SystemUpdateGate>
         <AppRouter />
       </SystemUpdateGate>

@@ -11,6 +11,8 @@ import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadWarehouseAddresses, loadWarehouses } from "@/services/lookups";
 import { dataBR, qtd, useAcao } from "./estoque/comum";
 import { FeedbackBox } from "./estoque/ui";
+import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
+import { cuidadosDosItens, textoDoCuidado, type CuidadoDoItem } from "@/services/cuidadosDosItens";
 
 type Modo = "consultar" | "separar" | "contar" | "mover" | "receber" | "compra" | "ciclica" | "etiquetas";
 const MODOS: { id: Modo; label: string; dica: string }[] = [
@@ -287,6 +289,11 @@ function ReceberCompra({ almox, ler, erro }: { almox: number; ler: (c: string) =
   const [pedido, setPedido] = useState<PurchaseOrderDTO | null>(null);
   const [linha, setLinha] = useState<PurchaseOrderItemDTO | null>(null);
   const [lote, setLote] = useState("");
+  const [validade, setValidade] = useState("");
+  const [corrida, setCorrida] = useState("");
+  const [peso, setPeso] = useState("");
+  const [certificado, setCertificado] = useState("");
+  const [checklist, setChecklist] = useState(false);
   const pendente = (l: PurchaseOrderItemDTO) => l.requested_qty - (l.received_qty ?? 0);
 
   const lerPedido = (c: string) => run(async () => {
@@ -303,19 +310,27 @@ function ReceberCompra({ almox, ler, erro }: { almox: number; ler: (c: string) =
     setLinha(achada);
   });
   const receber = (q: string) => run(async () => {
-    await receiveOrder(pedido!.code!, [{ purchase_order_item_code: linha!.code!, quantity: Number(q), warehouse_id: almox, lot: lote.trim() || undefined }]);
-    setLinha(null); setLote("");
+    await receiveOrder(pedido!.code!, [{ purchase_order_item_code: linha!.code!, quantity: Number(q), warehouse_id: almox, lot: lote.trim() || undefined,
+      expiration_date: validade || undefined, heat_number: corrida.trim() || undefined, certificate: certificado.trim() || undefined, checklist_confirmed: checklist,
+      secondary_quantity: peso.trim() ? Number(peso.replace(",", ".")) : undefined }]);
+    setLinha(null); setLote(""); setValidade(""); setCorrida(""); setCertificado(""); setChecklist(false); setPeso("");
     setPedido(await getOrderDetail(pedido!.code!));
     setFeedback({ type: "success", message: `Recebido: ${q.replace(".", ",")}.` });
   });
 
   return (<>
     <FeedbackBox feedback={feedback} />
+    <CuidadosDosItens codigos={linha ? [linha.item_code] : (pedido?.items ?? []).map((x) => x.item_code)} contexto="no recebimento desta compra" />
     <Destaque>{pedido ? `Pedido ${pedido.code}${linha ? ` · ${linha.item_code} · falta ${String(pendente(linha)).replace(".", ",")}` : ""}` : "Pedido não informado"}</Destaque>
     {!pedido && <CampoLeitura rotulo="Número do pedido de compra" onLer={lerPedido} disabled={busy} />}
     {pedido && !linha && <CampoLeitura rotulo="Leia o item" onLer={lerItem} disabled={busy} />}
     {linha && (<>
       <div className="erp-field"><label className="erp-label">Lote</label><input className="erp-input" value={lote} onChange={(e) => setLote(e.target.value)} /></div>
+      <div className="erp-field"><label className="erp-label">Validade</label><input className="erp-input" type="date" value={validade} onChange={(e) => setValidade(e.target.value)} /></div>
+      <div className="erp-field"><label className="erp-label">Corrida</label><input className="erp-input" value={corrida} onChange={(e) => setCorrida(e.target.value)} /></div>
+      <div className="erp-field"><label className="erp-label">Certificado</label><input className="erp-input" value={certificado} onChange={(e) => setCertificado(e.target.value)} /></div>
+      <div className="erp-field"><label className="erp-label">Peso real (segunda unidade)</label><input className="erp-input" inputMode="decimal" value={peso} onChange={(e) => setPeso(e.target.value)} /></div>
+      <label className="erp-check"><input type="checkbox" checked={checklist} onChange={(e) => setChecklist(e.target.checked)} /> Check list de recebimento conferido</label>
       <CampoQuantidade key={linha.code} rotulo="Quantidade recebida" inicial="" onConfirmar={receber} />
     </>)}
   </>);
@@ -352,6 +367,7 @@ function Receber({ almox, ler, erro }: { almox: number; ler: (c: string) => Prom
     {envio
       ? <CampoQuantidade key={envio.id} rotulo="Quantidade recebida" inicial={String(pendente(envio))} onConfirmar={receber} />
       : <CampoLeitura rotulo="Leia o endereço de chegada ou o item" onLer={lerCodigo} disabled={busy} />}
+    <CuidadosDosItens codigos={envio ? [envio.item_code] : envios.map((t) => t.item_code)} contexto="no recebimento" />
     {!envio && envios.length > 0 && (
       <div className="erp-field erp-c12"><table className="erp-grid">
         <thead><tr><th>Envio</th><th>Item</th><th>Lote</th><th className="num">A receber</th></tr></thead>
@@ -363,8 +379,10 @@ function Receber({ almox, ler, erro }: { almox: number; ler: (c: string) => Prom
 
 function Etiquetas({ almox }: { almox: number }) {
   const { busy, feedback, setFeedback, run } = useAcao();
-  const [codigos, setCodigos] = useState<{ valor: string; texto: string }[]>([]);
+  const [codigos, setCodigos] = useState<{ valor: string; texto: string; cuidado?: string }[]>([]);
   const [item, setItem] = useState("");
+  const [cuidados, setCuidados] = useState<Map<string, CuidadoDoItem>>(new Map());
+  useEffect(() => { void cuidadosDosItens().then(setCuidados); }, []);
   const enderecos = () => run(async () => {
     const lista = await loadWarehouseAddresses(almox)();
     if (lista.length === 0) { setFeedback({ type: "error", message: "Este almoxarifado não tem endereços cadastrados." }); return; }
@@ -376,13 +394,13 @@ function Etiquetas({ almox }: { almox: number }) {
     <div className="erp-field erp-c6"><label className="erp-label">Item</label>
       <LookupField value={item || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setItem(String(c ?? ""))} /></div>
     <div className="erp-field erp-c6" style={{ display: "flex", flexDirection: "row", alignItems: "end", gap: 8 }}>
-      <button className="erp-btn" disabled={!item} onClick={() => { setCodigos((p) => [...p, { valor: item, texto: `Item ${item}` }]); setItem(""); }}>Adicionar item</button>
+      <button className="erp-btn" disabled={!item} onClick={() => { const c = cuidados.get(item.toUpperCase()); setCodigos((p) => [...p, { valor: item, texto: `Item ${item}`, cuidado: c ? textoDoCuidado(c) : undefined }]); setItem(""); }}>Adicionar item</button>
       <button className="erp-btn" onClick={enderecos} disabled={busy || !almox}>Endereços do almoxarifado</button>
       <button className="erp-btn erp-btn-primary" onClick={() => window.print()} disabled={codigos.length === 0}>Imprimir</button>
       <button className="erp-btn" onClick={() => setCodigos([])} disabled={codigos.length === 0}>Limpar</button>
     </div>
     <div className="erp-field erp-c12 etiquetas-coletor" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
-      {codigos.map((c, i) => <div key={`${c.valor}-${i}`} style={{ breakInside: "avoid", textAlign: "center" }}><div>{c.texto}</div><Code128Barcode value={c.valor} /></div>)}
+      {codigos.map((c, i) => <div key={`${c.valor}-${i}`} style={{ breakInside: "avoid", textAlign: "center" }}><div>{c.texto}</div><Code128Barcode value={c.valor} />{c.cuidado && <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2 }}>{c.cuidado}</div>}</div>)}
     </div>
   </>);
 }

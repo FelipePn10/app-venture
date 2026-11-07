@@ -1,10 +1,10 @@
 import { textoLegivel } from "@/utils/textoLegivel";
 import { useCallback, useEffect, useState } from "react";
 import {
-  type EventoItem, type PainelItem, type ParametrosGov, type Pendente, type RegraCampo, type StatusCadastro, type UsoItem, type Visao,
-  ROTULO_STATUS, ROTULO_VISAO, VISOES,
-  estornarVisao, historicoItem, liberarVisao, mudarStatusItem, painelItem, parametrosGovernanca, pendentesDeCadastro,
-  regrasDeCampo, salvarParametrosGovernanca, salvarRegraDeCampo, usoItem,
+  type EventoItem, type PainelItem, type ParametrosGov, type Pendente, type Politica, type Processo, type RegraCampo, type RegraPolitica, type StatusCadastro, type UsoItem, type Visao,
+  PROCESSOS, ROTULO_POLITICA, ROTULO_PROCESSO, ROTULO_STATUS, ROTULO_VISAO, VISOES,
+  estornarVisao, historicoItem, liberarVisao, mudarStatusItem, painelItem, parametrosGovernanca, pendentesDeCadastro, politicasDoCadastro,
+  regrasDeCampo, salvarParametrosGovernanca, salvarPoliticasDoCadastro, salvarRegraDeCampo, usoItem,
 } from "@/services/itemGovernancaService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -15,7 +15,7 @@ type FeedbackState = { type: "success" | "error" | "info"; message: string } | n
 const dataHora = (s?: string) => (s ? new Date(s).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 const COR: Record<StatusCadastro, string> = { EM_CADASTRO: "erp-badge-amber", LIBERADO: "erp-badge-green", BLOQUEADO: "erp-badge-red", DESCONTINUADO: "erp-badge-gray" };
 const valor = (v: unknown) => (v === undefined || v === null ? "—" : typeof v === "object" ? textoLegivel(v) : String(v));
-const ROTULO_EVENTO: Record<string, string> = { CRIACAO: "Criação", ALTERACAO: "Alteração", STATUS: "Status", LIBERACAO: "Liberação", ESTORNO_LIBERACAO: "Estorno da liberação" };
+const ROTULO_EVENTO: Record<string, string> = { CRIACAO: "Criação", ALTERACAO: "Alteração", STATUS: "Status", LIBERACAO: "Liberação", ESTORNO_LIBERACAO: "Estorno da liberação", USO_COM_AVISO: "Uso com aviso" };
 
 /**
  * VENT0250 — Governança do Cadastro. O cadastro do item como no SAP MDG e no
@@ -38,6 +38,7 @@ export function Vent0250Page(): JSX.Element {
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
   const [par, setPar] = useState<ParametrosGov | null>(null);
   const [regras, setRegras] = useState<RegraCampo[]>([]);
+  const [politicas, setPoliticas] = useState<RegraPolitica[]>([]);
 
   const abrir = useCallback(async (c: string) => {
     setBusy(true); setFeedback(null);
@@ -53,6 +54,7 @@ export function Vent0250Page(): JSX.Element {
     if (aba === "regras") {
       parametrosGovernanca().then(setPar).catch((e) => setFeedback({ type: "error", message: errMessage(e) }));
       regrasDeCampo().then(setRegras).catch((e) => setFeedback({ type: "error", message: errMessage(e) }));
+      politicasDoCadastro().then(setPoliticas).catch((e) => setFeedback({ type: "error", message: errMessage(e) }));
     }
   }, [aba]);
 
@@ -199,6 +201,25 @@ export function Vent0250Page(): JSX.Element {
                 </div>
                 <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" id="gov-salvar-par" disabled={busy} onClick={() => { setBusy(true); salvarParametrosGovernanca(par).then((p) => { setPar(p); setFeedback({ type: "success", message: "Parâmetros salvos." }); }).catch((e) => setFeedback({ type: "error", message: errMessage(e) })).finally(() => setBusy(false)); }}>Salvar</button>
                   {" "}<small>Itens que já existem continuam liberados.</small></div>
+              </div></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head">O que cada status permite</div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
+                  <table className="erp-grid" id="gov-politicas">
+                    <thead><tr><th>Status</th>{PROCESSOS.map((p) => <th key={p}>{ROTULO_PROCESSO[p]}</th>)}</tr></thead>
+                    <tbody>
+                      {(["EM_CADASTRO", "BLOQUEADO", "DESCONTINUADO"] as StatusCadastro[]).map((st) => (
+                        <tr key={st}><td>{ROTULO_STATUS[st]}</td>
+                          {PROCESSOS.map((pr: Processo) => (
+                            <td key={pr}><select className="erp-cell-input" disabled={busy} value={politicas.find((r) => r.status === st && r.processo === pr)?.politica ?? "BLOQUEADO"}
+                              onChange={(e) => { setBusy(true); salvarPoliticasDoCadastro([{ status: st, processo: pr, politica: e.target.value as Politica }]).then(setPoliticas).catch((er) => setFeedback({ type: "error", message: errMessage(er) })).finally(() => setBusy(false)); }}>
+                              {(Object.keys(ROTULO_POLITICA) as Politica[]).map((p) => <option key={p} value={p}>{ROTULO_POLITICA[p]}</option>)}
+                            </select></td>
+                          ))}</tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="erp-field erp-c12"><small>Vale para documento novo. "Com aviso" deixa passar e registra o uso no histórico do item; documento já aberto segue.</small></div>
               </div></div>
               <div className="erp-fieldset"><div className="erp-fieldset-head">Campos obrigatórios por visão</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>

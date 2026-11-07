@@ -277,8 +277,10 @@ async function main() {
     const dups = enviado.duplicatas ?? [];
     if (dups.length >= 2) ok('duplicatas no documento transmitido', `${dups.length} duplicata(s), 1ª vence ${dups[0].data_vencimento}`);
     else falha('duplicatas no documento', `${dups.length} duplicata(s) para uma venda a prazo`);
-    if ((enviado.destinatario?.logradouro ?? '') !== '' || !temEndereco) {
-      ok('endereço do destinatário no documento transmitido', enviado.destinatario?.logradouro || '(vazio, como o cadastro)');
+    // O payload da Focus é plano: logradouro_destinatario (o formato aninhado é antigo).
+    const logradouro = enviado.logradouro_destinatario ?? enviado.destinatario?.logradouro ?? '';
+    if (logradouro !== '' || !temEndereco) {
+      ok('endereço do destinatário no documento transmitido', logradouro || '(vazio, como o cadastro)');
     } else {
       falha('endereço no documento transmitido', 'a nota tem endereço mas o payload saiu sem');
     }

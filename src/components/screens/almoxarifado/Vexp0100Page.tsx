@@ -13,6 +13,7 @@ import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadCarriers, loadItems, loadWarehouses } from "@/services/lookups";
+import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const STATUS_LABEL: Record<string, string> = { OPEN: "Aberto", SEPARATED: "Separado", CONFERRED: "Conferido", SHIPPED: "Despachado", CANCELLED: "Cancelado" };
@@ -176,6 +177,7 @@ export function Vexp0100Page(): JSX.Element {
               <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={adicionarItem} disabled={busy || (st !== "OPEN" && st !== "SEPARATED")}>Adicionar</button></div>
             </div></div>
             <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <CuidadosDosItens codigos={items.map((i) => i.item_code)} contexto="nesta carga" />
               <table className="erp-grid">
                 <thead><tr><th>Item</th><th>Planej.</th><th>Conferido</th><th>Diverg.?</th><th>Depósito</th><th></th></tr></thead>
                 <tbody>

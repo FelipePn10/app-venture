@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
-import { type GrupoPDM, listarGrupos, criarGrupo, atualizarGrupo } from "@/services/pdmService";
+import { type GrupoPDM, type UsoPDM, listarGrupos, criarGrupo, atualizarGrupo, usoDoPDM } from "@/services/pdmService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { ResponsaveisDoGrupo } from "./ResponsaveisDoGrupo";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
 export function Vite0114Page(): JSX.Element {
   const [grupos, setGrupos] = useState<GrupoPDM[]>([]);
-  const [form, setForm] = useState({ code: "", description: "", enterprise_id: "1" });
+  const [form, setForm] = useState({ code: "", description: "", is_active: true });
+  const [uso, setUso] = useState<UsoPDM | null>(null);
   const [editing, setEditing] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -21,6 +23,7 @@ export function Vite0114Page(): JSX.Element {
   const carregar = () => run(async () => {
     const lista = await listarGrupos();
     setGrupos(lista);
+    setUso(await usoDoPDM());
     if (!editing) setForm((f) => ({ ...f, code: String(lista.reduce((max, g) => Math.max(max, g.code), 0) + 1) }));
   });
   useEffect(() => {
@@ -28,18 +31,21 @@ export function Vite0114Page(): JSX.Element {
       setGrupos(lista);
       setForm((f) => ({ ...f, code: String(lista.reduce((max, g) => Math.max(max, g.code), 0) + 1) }));
     }).catch((e) => setFeedback({ type: "error", message: errMessage(e) }));
+    void usoDoPDM().then(setUso).catch(() => setUso(null));
   }, []);
   const proximoCodigo = () => String(grupos.reduce((max, g) => Math.max(max, g.code), 0) + 1);
-  const limpar = () => { setForm({ code: proximoCodigo(), description: "", enterprise_id: "1" }); setEditing(false); };
-  const selecionar = (g: GrupoPDM) => { setForm({ code: String(g.code), description: g.description, enterprise_id: String(g.enterprise_id ?? 1) }); setEditing(true); };
+  const limpar = () => { setForm({ code: proximoCodigo(), description: "", is_active: true }); setEditing(false); };
+  const selecionar = (g: GrupoPDM) => { setForm({ code: String(g.code), description: g.description, is_active: g.is_active !== false }); setEditing(true); };
   const salvar = () => run(async () => {
     const code = Number(form.code);
     if (!code) { setFeedback({ type: "error", message: "Código do grupo é obrigatório (inteiro)." }); return; }
     if (!form.description.trim()) { setFeedback({ type: "error", message: "Descrição é obrigatória." }); return; }
-    const ent = Number(form.enterprise_id) || 1;
-    if (editing) { await atualizarGrupo(code, { description: form.description.trim(), enterprise_id: ent }); setFeedback({ type: "success", message: `Grupo ${code} atualizado.` }); }
-    else { await criarGrupo({ code, description: form.description.trim(), enterprise_id: ent }); setFeedback({ type: "success", message: `Grupo ${code} criado.` }); }
-    setGrupos(await listarGrupos()); limpar();
+    if (editing) { await atualizarGrupo(code, { description: form.description.trim(), is_active: form.is_active }); setFeedback({ type: "success", message: `Grupo ${code} atualizado.` }); }
+    else { await criarGrupo({ code, description: form.description.trim() }); setFeedback({ type: "success", message: `Grupo ${code} criado.` }); }
+    const lista = await listarGrupos();
+    setGrupos(lista);
+    setForm({ code: String(lista.reduce((max, g) => Math.max(max, g.code), 0) + 1), description: "", is_active: true });
+    setEditing(false);
   });
 
   const filtrados = filtro.trim() ? grupos.filter((g) => String(g.code).includes(filtro) || g.description.toLowerCase().includes(filtro.toLowerCase())) : grupos;
@@ -66,10 +72,10 @@ export function Vite0114Page(): JSX.Element {
           <aside className="erp-list-panel">
             <div className="erp-panel-head"><span className="erp-panel-title">Grupos ({filtrados.length})</span><span className="erp-count">{grupos.length}</span></div>
             <div className="erp-list">
-              {filtrados.length === 0 && <div className="erp-list-empty">Clique em <strong>Listar</strong>.</div>}
+              {filtrados.length === 0 && <div className="erp-list-empty">{grupos.length ? "Nenhum grupo com este filtro." : "Nenhum grupo cadastrado."}</div>}
               {filtrados.map((g) => (
                 <div key={g.code} className={`erp-list-row${editing && Number(form.code) === g.code ? " erp-row-sel" : ""}`} onClick={() => selecionar(g)}>
-                  <span className="erp-list-code">#{g.code}</span><span className="erp-list-sub">{g.description} · empresa {g.enterprise_id ?? "—"}</span>
+                  <span className="erp-list-code">#{g.code}</span><span className="erp-list-sub">{g.description}{g.is_active === false ? " · inativo" : ""} · {uso?.groups[String(g.code)] ?? 0} item(ns)</span>
                 </div>
               ))}
             </div>
@@ -77,17 +83,20 @@ export function Vite0114Page(): JSX.Element {
           <section className="erp-detail-panel">
             <div className="erp-tabs"><button className="erp-tab active">{editing ? `Editar grupo ${form.code}` : "Novo grupo"}</button></div>
             <div className="erp-detail-body">
-              <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo PDM (código sugerido automaticamente e imutável; sem exclusão)</div><div className="erp-fieldset-body">
-                <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" min={1} value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder={proximoCodigo()} disabled={editing} /><span className="erp-field-hint">Deixe vazio para gerar automaticamente na sequência.</span></div>
+              <div className="erp-fieldset"><div className="erp-fieldset-head">Grupo PDM (o código não muda depois de criado)</div><div className="erp-fieldset-body">
+                <div className="erp-field erp-c2"><label className="erp-label">Código</label><input className="erp-input num" type="number" min={1} readOnly={editing} value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder={proximoCodigo()} disabled={editing} /><span className="erp-field-hint">Deixe vazio para gerar automaticamente na sequência.</span></div>
                 <div className="erp-field erp-c7"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
+                {editing && <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><label className="erp-check"><input type="checkbox" id="grupo-ativo" checked={form.is_active} onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))} /> Ativo</label></div>}
+                {editing && !form.is_active && <div className="erp-field erp-c12"><small>Inativo não aparece para item novo. Os {uso?.groups[form.code] ?? 0} item(ns) do grupo seguem como estão.</small></div>}
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{editing ? "Atualizar" : "Criar"}</button></div>
               </div></div>
+              {editing && Number(form.code) > 0 && <ResponsaveisDoGrupo grupo={Number(form.code)} />}
             </div>
           </section>
         </div>
       </div>
 
-      <footer className="erp-statusbar"><div className="erp-status-item">Grupos: <strong>{grupos.length}</strong></div><div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span></footer>
+      <footer className="erp-statusbar"><div className="erp-status-item">Grupos: <strong>{grupos.length}</strong></div><div className="erp-status-spacer" /><span className="erp-status-brand">VentureERP</span></footer>
     </div>
   );
 }

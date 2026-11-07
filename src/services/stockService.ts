@@ -290,7 +290,7 @@ export async function listMovements(pagina: { limit?: number; offset?: number } 
   return unwrapArray(data).map(parseMovement);
 }
 export async function listMovementsByItem(itemCode: string): Promise<MovementDTO[]> {
-  const { data } = await httpClient.get(`/api/stock/movements/item/${itemCode}`);
+  const { data } = await httpClient.get(`/api/stock/movements/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseMovement);
 }
 export async function createMovement(dto: MovementDTO): Promise<MovementDTO> {
@@ -304,11 +304,11 @@ export async function listBalances(): Promise<BalanceDTO[]> {
   return unwrapArray(data).map(parseBalance);
 }
 export async function listBalancesByItem(itemCode: string): Promise<BalanceDTO[]> {
-  const { data } = await httpClient.get(`/api/stock/balances/item/${itemCode}`);
+  const { data } = await httpClient.get(`/api/stock/balances/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseBalance);
 }
 export async function getAtp(itemCode: string, mask?: string): Promise<AtpDTO> {
-  const { data } = await httpClient.get(`/api/stock/balances/atp/${itemCode}`, { params: mask ? { mask } : undefined });
+  const { data } = await httpClient.get(`/api/stock/balances/atp/${encodeURIComponent(itemCode)}`, { params: mask ? { mask } : undefined });
   const o = unwrapObject(data);
   return {
     item_code: parseStr(o, 'item_code', 'ItemCode'),
@@ -588,7 +588,7 @@ export async function sugerirGuarda(
   const params: Record<string, string> = { qty: String(quantidade), warehouse_id: String(warehouseId) };
   if (zona) params.zone = zona;
   if (mask) params.mask = mask;
-  const { data } = await httpClient.get(`/api/stock/putaway/suggest/${itemCode}`, { params });
+  const { data } = await httpClient.get(`/api/stock/putaway/suggest/${encodeURIComponent(itemCode)}`, { params });
   return unwrapArray(data).map((raw) => {
     const o = unwrapObject(raw);
     return {
@@ -809,12 +809,14 @@ export async function listarSaldoPorEndereco(warehouseId?: number, itemCode?: st
  * em `expired_skipped` para a tela avisar.
  */
 export async function sugerirSeparacao(
-  itemCode: string, quantidade: number, warehouseId?: number, regra: 'FEFO' | 'FIFO' = 'FEFO', mask = '',
+  itemCode: string, quantidade: number, warehouseId?: number, regra: '' | 'FEFO' | 'FIFO' = '', mask = '',
 ): Promise<SugestaoSeparacaoDTO> {
-  const params: Record<string, string> = { qty: String(quantidade), rule: regra };
+  // Sem regra, o backend usa a do item.
+  const params: Record<string, string> = { qty: String(quantidade) };
+  if (regra) params.rule = regra;
   if (warehouseId) params.warehouse_id = String(warehouseId);
   if (mask) params.mask = mask;
-  const { data } = await httpClient.get(`/api/stock/separation/suggest/${itemCode}`, { params });
+  const { data } = await httpClient.get(`/api/stock/separation/suggest/${encodeURIComponent(itemCode)}`, { params });
   const o = unwrapObject(data);
   return {
     item_code: parseStr(o, 'item_code', 'ItemCode'),
@@ -843,7 +845,7 @@ export async function sugerirSeparacao(
   };
 }
 export async function listLotsByItem(itemCode: string): Promise<LotBalanceDTO[]> {
-  const { data } = await httpClient.get(`/api/stock/lots/item/${itemCode}`);
+  const { data } = await httpClient.get(`/api/stock/lots/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseLot);
 }
 export interface SituacaoLoteDTO { code: string; description: string; allows_issue: boolean; allows_transfer: boolean; counts_available: boolean; is_active: boolean }
@@ -967,7 +969,7 @@ export async function recalcConsumptionAverage(itemCode?: string): Promise<Obj> 
   return unwrapObject(data);
 }
 export async function getConsumptionAverage(itemCode: string): Promise<ConsumptionAvgDTO> {
-  const { data } = await httpClient.get(`/api/stock/consumption-average/${itemCode}`);
+  const { data } = await httpClient.get(`/api/stock/consumption-average/${encodeURIComponent(itemCode)}`);
   return parseConsumption(data);
 }
 

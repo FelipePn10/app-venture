@@ -30,7 +30,11 @@ export interface ItemDTO {
   is_prototype?: boolean;
   is_tool?: boolean;
   is_process_item?: boolean;
+  is_scrap?: boolean;
   description?: string;
+  /** Código no sistema antigo e referência do fabricante: entram na busca de item. */
+  previous_code?: string;
+  manufacturer_part_number?: string;
   situation?: string;
   health?: string;
   group_code?: number;
@@ -115,10 +119,13 @@ function parseItem(raw: unknown): ItemDTO {
     is_prototype: parseBool(o, 'is_prototype', 'IsPrototype'),
     is_tool: parseBool(o, 'is_tool', 'IsTool'),
     is_process_item: parseBool(o, 'is_process_item', 'IsProcessItem'),
+    is_scrap: parseBool(o, 'is_scrap'),
     // A descrição técnica do PDM é a preferida; sem ela, o nome do item. Antes o
     // nome (que a API manda em `name`) não era lido: item sem descrição técnica
     // aparecia como "Item 77102" em todo seletor e não era achado pelo nome.
     description: parseStr(pdm, 'description_technique', 'DescriptionTechnique') || parseStr(o, 'description', 'Description') || parseStr(o, 'name', 'Name') || undefined,
+    previous_code: parseStr(o, 'previous_code') || undefined,
+    manufacturer_part_number: parseStr(o, 'manufacturer_part_number') || undefined,
     situation: parseStr(o, 'situation', 'Situation') || undefined,
     health: parseStr(o, 'health', 'Health') || undefined,
     group_code: parseNum(pdm, 'group_code', 'GroupCode') || undefined,

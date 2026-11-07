@@ -3,9 +3,9 @@ import { listItems } from "@/services/itemService";
 import { listMachines } from "@/services/machineService";
 import { listSuppliers } from "@/services/supplierService";
 import { listCustomers } from "@/services/customerService";
-import { loadWarehouses } from "@/services/lookups";
+import { loadWarehouses, textoDeBuscaDosItens } from "@/services/lookups";
 
-type Option = { value: string | number; code: string | number; label: string; sub?: string };
+type Option = { value: string | number; code: string | number; label: string; sub?: string; search?: string };
 type Entity = "item" | "machine" | "supplier" | "customer" | "warehouse";
 type Active = { input: HTMLInputElement; entity: Entity; label: string; useId: boolean } | null;
 
@@ -22,7 +22,10 @@ function identify(label: string): Entity | undefined {
 }
 
 async function optionsFor(entity: Entity, useId: boolean): Promise<Option[]> {
-  if (entity === "item") return (await listItems()).filter((x) => x.code).map((x) => ({ value: x.code!, code: x.code!, label: x.description || `Item ${x.code}`, sub: x.uom }));
+  if (entity === "item") {
+    const [itens, busca] = await Promise.all([listItems(), textoDeBuscaDosItens()]);
+    return itens.filter((x) => x.code).map((x) => ({ value: x.code!, code: x.code!, label: x.description || `Item ${x.code}`, sub: x.uom, search: busca.get(x.code!) }));
+  }
   if (entity === "machine") return (await listMachines()).map((x) => ({ value: useId ? x.id : x.code, code: x.code, label: x.name, sub: x.is_active ? "Ativa" : "Inativa" }));
   if (entity === "supplier") return (await listSuppliers()).filter((x) => x.code).map((x) => ({ value: useId ? (x.id || x.code!) : x.code!, code: x.code!, label: x.name, sub: x.document_number }));
   if (entity === "customer") return (await listCustomers()).filter((x) => x.code).map((x) => ({ value: x.code!, code: x.code!, label: x.name, sub: x.document_number }));
@@ -68,7 +71,7 @@ export function EntityLookupAssist(): JSX.Element | null {
   }, [active]);
 
   if (!active) return null;
-  const filtered = options.filter((option) => !query.trim() || `${option.code} ${option.label} ${option.sub || ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 250);
+  const filtered = options.filter((option) => !query.trim() || `${option.code} ${option.label} ${option.sub || ""} ${option.search || ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 250);
   const choose = (value: string | number) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
     setter?.call(active.input, String(value));

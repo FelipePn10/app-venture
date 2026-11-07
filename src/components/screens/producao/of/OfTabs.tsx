@@ -9,6 +9,7 @@ import { EntityName } from "@/components/ui/EntityName";
 import { loadEmployees, loadEmployeesById, loadItems, loadMachinesById, loadWarehouses } from "@/services/lookups";
 import { Detalhe, Painel, Progresso, Selo, Vazio } from "../../planejamento/planUi";
 import { data, dataHora, num, type Tom } from "../../planejamento/planFormat";
+import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -24,12 +25,14 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos }: {
   const apontadoBom = apontamentos.reduce((t, a) => t + (a.produced_qty || 0), 0);
   const apontadoRefugo = apontamentos.reduce((t, a) => t + (a.scrapped_qty || 0), 0);
   const saldo = Math.max(0, (of.planned_qty || 0) - Math.max(of.produced_qty || 0, apontadoBom));
-  return (
+  return (<>
+    <CuidadosDosItens codigos={[of.item_code]} contexto="do item desta ordem" />
     <div className="vpl-cols wide-left">
       <Painel titulo="Ordem">
         <Detalhe itens={[
           { label: "Item", value: of.item_code + (of.mask ? ` · ${of.mask}` : ""), forte: true },
           { label: "Quantidade planejada", value: num(of.planned_qty), forte: true },
+          { label: "Revisão do item", value: of.item_revision || "—" },
           { label: "Apontado (bom)", value: num(apontadoBom) },
           { label: "Refugo apontado", value: num(Math.max(apontadoRefugo, of.scrapped_qty ?? 0)) },
           { label: "Entregue ao estoque", value: num(of.produced_qty ?? 0) },
@@ -64,7 +67,7 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos }: {
         )}
       </Painel>
     </div>
-  );
+  </>);
 }
 
 // ── Apontamento: produção, consumo e conclusão ───────────────────────────────
@@ -325,6 +328,7 @@ export function MateriaisTab({ busy, materiais, disponibilidade, form, setForm, 
   onIncluir: () => void; onAlocar: (m: MaterialDTO) => void; onSucata: (m: MaterialDTO) => void;
 }): JSX.Element {
   return (<>
+    <CuidadosDosItens codigos={materiais.map((m) => m.item_code)} contexto="nos materiais desta ordem" />
     <FaltasPainel disponibilidade={disponibilidade} />
     <Painel titulo="Materiais da ordem" sub={`${materiais.length} item(ns)`} flush>
       {materiais.length === 0 ? <Vazio titulo="Nenhum material lançado" texto="Inclua abaixo os itens que a ordem consome além da estrutura, ou as substituições." /> : (

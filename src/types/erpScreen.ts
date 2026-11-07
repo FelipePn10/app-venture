@@ -698,8 +698,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
   {
     code: "VITE0116",
-    title: "Cadastro de Atributos (PDM)",
-    description: "Cadastrar atributos ligados a um determinado modificador do PDM.",
+    title: "Padrão Descritivo (PDM)",
+    description: "Modificadores de cada grupo e modelo de atributos que gera a descrição técnica do item.",
     module: "engenharia",
   },
   {

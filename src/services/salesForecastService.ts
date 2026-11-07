@@ -176,7 +176,7 @@ export async function listActuals(year: number, source: ActualSource = 'BOTH', i
 }
 
 export async function getForecastByItem(itemCode: string): Promise<SalesForecastDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/item/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseForecast);
 }
 

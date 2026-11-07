@@ -8,8 +8,9 @@ import {
   type NotificationEvent, type NotificationRecord, type NotificationSettings,
   type NotificationDepartmentRecipient, type NotificationSubscription, type NotificationUserRecipient,
 } from '@/services/notificationService';
+import { SetoresSecao } from './SetoresSecao';
 
-type Tab = 'config' | 'subscriptions' | 'alerts' | 'history' | 'dead';
+type Tab = 'config' | 'subscriptions' | 'setores' | 'alerts' | 'history' | 'dead';
 type Feedback = { type: 'success' | 'error' | 'info'; message: string } | null;
 
 const DEFAULT_SETTINGS: NotificationSettings = { enabled: true, digest_time: '08:00', timezone: 'America/Sao_Paulo', retention_days: 365, max_attachment_bytes: 10485760, max_emails_per_minute: 60, fiscal_config_id: null };
@@ -83,7 +84,7 @@ export function Vnot0100Page(): JSX.Element {
     });
   }
 
-  const tabs: Array<[Tab, string]> = [['config', 'Configuração'], ['subscriptions', 'Assinaturas'], ['alerts', 'Alertas'], ['history', 'Histórico'], ['dead', 'Falhas esgotadas']];
+  const tabs: Array<[Tab, string]> = [['config', 'Configuração'], ['subscriptions', 'Assinaturas'], ['setores', 'Setores'], ['alerts', 'Alertas'], ['history', 'Histórico'], ['dead', 'Falhas esgotadas']];
   return <div className="erp-screen">
     <header className="erp-titlebar"><div className="erp-brand"><div className="erp-brand-logo">V</div></div><nav className="erp-crumbs"><span className="erp-crumb-mut">Cadastros &amp; Plataforma</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Central de Alertas</span><span className="erp-crumb-code">VNOT0100</span></nav><div className="erp-titlebar-spacer"/><span className="erp-titlebar-meta">{settings.enabled ? 'Central habilitada' : 'Central desabilitada'}</span></header>
     <div className="erp-toolbar"><div className="erp-tgroup"><button className="erp-btn erp-btn-dark" onClick={() => void run(loadBase)} disabled={busy}>{busy && <span className="erp-spin"/>}Atualizar</button></div></div>
@@ -91,6 +92,7 @@ export function Vnot0100Page(): JSX.Element {
       {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
       <div className="erp-note"><strong>Comunicação segura:</strong> a central envia apenas para usuários internos. Senhas e configurações do servidor de e-mail ficam exclusivamente no backend.</div>
       <section className="erp-detail-panel"><div className="erp-tabs">{tabs.map(([key, label]) => <button key={key} className={`erp-tab ${tab === key ? 'active' : ''}`} onClick={() => void loadRecords(key)}>{label}</button>)}</div><div className="erp-detail-body">
+        {tab === 'setores' && <SetoresSecao />}
         {tab === 'config' && <div className="erp-fieldset"><div className="erp-fieldset-head">Funcionamento da central</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c3"><label className="erp-label">Central ativa</label><label className="erp-check"><input type="checkbox" checked={settings.enabled} onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}/> Habilitar alertas e e-mails</label></div>
           <div className="erp-field erp-c3"><label className="erp-label">Horário do resumo</label><input className="erp-input" type="time" value={settings.digest_time} onChange={(e) => setSettings({ ...settings, digest_time: e.target.value })}/></div>

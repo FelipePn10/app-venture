@@ -11,6 +11,7 @@ import { hojeLocal } from "@/utils/dataLocal";
 import { type Aba, Abas, Aviso, Cabecalho, Detalhe, Kpis, Painel, Rodape, Selo, Vazio } from "./planUi";
 import { type Tom, data, normalizar, num, situacaoOF } from "./planFormat";
 import { useAcao } from "./planHooks";
+import { useBuscaDosItens } from "@/hooks/useBuscaDosItens";
 
 /**
  * VPLA0102 — Demanda independente: o que se quer produzir ou comprar sem
@@ -51,6 +52,7 @@ export function Vpla0102Page(): JSX.Element {
   const [situacao, setSituacao] = useState<FiltroSituacao>("ABERTA");
   const [motivo, setMotivo] = useState("");
   const [busca, setBusca] = useState("");
+  const apelidoDoItem = useBuscaDosItens();
   const [dem, setDem] = useState<Demanda | null>(null);
   const [aba, setAba] = useState<AbaDemanda>("resumo");
   const [form, setForm] = useState<Form | null>(null);
@@ -75,8 +77,8 @@ export function Vpla0102Page(): JSX.Element {
   const visiveis = useMemo(() => {
     const t = normalizar(busca.trim());
     if (!t) return lista;
-    return lista.filter((d) => normalizar(`${d.code_demand} ${d.item_business_code} ${d.item_name} ${d.projeto ?? ""}`).includes(t));
-  }, [lista, busca]);
+    return lista.filter((d) => normalizar(`${d.code_demand} ${d.item_business_code} ${d.item_name} ${d.projeto ?? ""} ${apelidoDoItem(d.item_business_code)}`).includes(t));
+  }, [lista, busca, apelidoDoItem]);
 
   const kpis = useMemo(() => {
     const abertas = lista.filter((d) => d.situacao === "ABERTA");

@@ -216,12 +216,12 @@ export async function runMrp(planCode: number, initialOrderNumber = 10000, gener
   };
 }
 export async function getMrpProfile(itemCode: string, planCode: number): Promise<MrpProfileRow[]> {
-  const { data } = await httpClient.get(`/api/mrp-calculation/profile/${itemCode}/${planCode}`);
+  const { data } = await httpClient.get(`/api/mrp-calculation/profile/${encodeURIComponent(itemCode)}/${planCode}`);
   return unwrapArray(data).map(parseProfile);
 }
 /** Perfil operacional filtrável: `position` CALCULATION (foto do MRP) | CURRENT (+ saldo atual). */
 export async function getMrpProfileOperational(itemCode: string, planCode: number, opts: { position?: 'CALCULATION' | 'CURRENT'; from?: string; to?: string } = {}): Promise<Obj> {
-  const { data } = await httpClient.get(`/api/mrp-calculation/profile/${itemCode}/${planCode}/operational`, { params: opts });
+  const { data } = await httpClient.get(`/api/mrp-calculation/profile/${encodeURIComponent(itemCode)}/${planCode}/operational`, { params: opts });
   return unwrapObject(data);
 }
 export async function getExceptions(planCode: number): Promise<MrpException[]> {
@@ -254,7 +254,7 @@ export async function firmSuggestion(code: number): Promise<PlannedOrder> {
 
 // ── Regras configuradas ──
 export async function listConfiguredRules(itemCode: string): Promise<ConfiguredRule[]> {
-  const { data } = await httpClient.get(`/api/mrp-calculation/configured-rules/${itemCode}`);
+  const { data } = await httpClient.get(`/api/mrp-calculation/configured-rules/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseRule);
 }
 export async function createConfiguredRule(dto: ConfiguredRule): Promise<ConfiguredRule> {

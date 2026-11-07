@@ -142,7 +142,7 @@ export function Vdpr0100Page(): JSX.Element {
             <div className="erp-fieldset-body">
               <div className="erp-field erp-c3"><label className="erp-label erp-req">De</label><input className="erp-input" type="date" value={occFrom} onChange={(e) => setOccFrom(e.target.value)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Até</label><input className="erp-input" type="date" value={occTo} onChange={(e) => setOccTo(e.target.value)} /></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Capacidade diária</label><input className="erp-input num" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label" title="Cada tanque usa a capacidade cadastrada em VPME0102; este valor só vale para tanque sem cadastro.">Capacidade diária (tanque sem cadastro)</label><input className="erp-input num" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Tanques</label><input className="erp-input" value={occTanks} placeholder="Ex.: 1, 2 — vazio considera todos" onChange={(e) => setOccTanks(e.target.value)} /></div>
               <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={carregarOcupacao} disabled={busy}>{busy && <span className="erp-spin" />}Calcular ocupação</button></div>
             </div>

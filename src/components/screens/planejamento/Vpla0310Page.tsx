@@ -11,6 +11,7 @@ import { Aviso, Cabecalho, Detalhe, Kpis, Painel, Selo, Vazio } from "./planUi";
 import { normalizar, num } from "./planFormat";
 import { decimalParaApi } from "@/services/demandaService";
 import { useAcao } from "./planHooks";
+import { useBuscaDosItens } from "@/hooks/useBuscaDosItens";
 
 /**
  * VPLA0310 — Política de planejamento por item ou classificação: estratégia
@@ -42,6 +43,7 @@ export function Vpla0310Page(): JSX.Element {
   const [lista, setLista] = useState<Politica[]>([]);
   const [escopo, setEscopo] = useState<Escopo | "">("");
   const [busca, setBusca] = useState("");
+  const apelidoDoItem = useBuscaDosItens();
   const [sel, setSel] = useState<Politica | null>(null);
   const [form, setForm] = useState<Form | null>(null);
   const [excluir, setExcluir] = useState(false);
@@ -54,8 +56,8 @@ export function Vpla0310Page(): JSX.Element {
   const visiveis = useMemo(() => {
     const t = normalizar(busca.trim());
     if (!t) return lista;
-    return lista.filter((p) => normalizar(`${escopoDe(p)} ${p.observacao ?? ""}`).includes(t));
-  }, [lista, busca]);
+    return lista.filter((p) => normalizar(`${escopoDe(p)} ${p.observacao ?? ""} ${apelidoDoItem(p.item_business_code)}`).includes(t));
+  }, [lista, busca, apelidoDoItem]);
 
   const novo = () => { setFeedback(null); setForm(FORM_VAZIO()); };
   const editar = (p: Politica) => {

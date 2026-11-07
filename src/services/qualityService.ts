@@ -157,7 +157,7 @@ export async function getPlan(id: number): Promise<InspectionPlanDTO> {
   return parsePlan(data);
 }
 export async function listPlansByItem(itemCode: string): Promise<InspectionPlanDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/plans/by-item/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/plans/by-item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parsePlan);
 }
 export async function createPlan(dto: InspectionPlanDTO): Promise<InspectionPlanDTO> {
@@ -183,7 +183,7 @@ export async function listRecordsByOrder(orderId: number): Promise<QualityRecord
   return unwrapArray(data).map(parseRecord);
 }
 export async function listRecordsByItem(itemCode: string): Promise<QualityRecordDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/records/by-item/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/records/by-item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseRecord);
 }
 export async function createRecord(dto: QualityRecordDTO): Promise<QualityRecordDTO> {
@@ -202,7 +202,7 @@ export async function getNC(id: number): Promise<NonConformanceDTO> {
   return parseNC(data);
 }
 export async function listNCsByItem(itemCode: string): Promise<NonConformanceDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/non-conformances/by-item/${itemCode}`);
+  const { data } = await httpClient.get(`${BASE}/non-conformances/by-item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseNC);
 }
 export async function createNC(dto: NonConformanceDTO): Promise<NonConformanceDTO> {
