@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.13.0] — 2026-11-07
+
 ## Novidades
 - **Cadastro de Itens renovado:** a tela ganhou o visual do restante do sistema e passou a guardar tudo o que se digita nela.
 - **Código de barras e unidade tributável:** o GTIN é conferido no cadastro e vai para a nota e para a EFD.
