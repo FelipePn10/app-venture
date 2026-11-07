@@ -78,7 +78,7 @@ export async function listItemCalendarMonth(
 ): Promise<ItemCalendarDay[]> {
   try {
     const res = await httpClient.get<unknown>(
-      `${BASE}/${itemCode}/${encodeMask(mask)}/${year}/${month}`,
+      `${BASE}/${encodeURIComponent(itemCode)}/${encodeMask(mask)}/${year}/${month}`,
     );
     const result: ItemCalendarDay[] = [];
     for (const raw of unwrapArray(res.data)) {
@@ -104,6 +104,6 @@ export async function deleteItemCalendarDay(
   day: number,
 ): Promise<void> {
   await httpClient.delete(
-    `${BASE}/${itemCode}/${encodeMask(mask)}/${year}/${month}/${day}`,
+    `${BASE}/${encodeURIComponent(itemCode)}/${encodeMask(mask)}/${year}/${month}/${day}`,
   );
 }

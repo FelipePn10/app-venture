@@ -1,3 +1,5 @@
+import { loadItems } from "@/services/lookups";
+import { LookupField } from "@/components/ui/LookupField";
 import { useState, useCallback, useEffect } from "react";
 import {
   type ToolDTO, type ToolSerialDTO, type ToolSheetDTO, type ToolSheetOperationDTO, type ToolLifeType, type ToolStatus,
@@ -256,6 +258,7 @@ export function Vpro1000Page(): JSX.Element {
                   <div className="erp-field erp-c4"><label className="erp-label">Vida (tipo)</label>
                     <select className="erp-tselect" value={toolForm.life_type} onChange={(e) => setToolForm((p) => ({ ...p, life_type: e.target.value as ToolLifeType }))}>{TOOL_LIFE_TYPES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}</select>
                   </div>
+                  <div className="erp-field erp-c4"><label className="erp-label">Item (VENT0200)</label><LookupField<string> value={toolForm.item_code} loader={loadItems} entityLabel="item" placeholder="Sem vínculo" onChange={(c) => setToolForm((p) => ({ ...p, item_code: c ?? undefined }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Limite de vida</label><input className="erp-input num" type="number" value={toolForm.life_limit || ""} onChange={(e) => setToolForm((p) => ({ ...p, life_limit: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c4"><label className="erp-label">Custo</label><input className="erp-input num" type="number" value={toolForm.cost || ""} onChange={(e) => setToolForm((p) => ({ ...p, cost: Number(e.target.value) }))} /></div>
                   <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={gravarTool} disabled={busy}>Cadastrar ferramenta</button></div>

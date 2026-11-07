@@ -34,8 +34,17 @@ httpClient.interceptors.request.use(async (config) => {
   return config;
 });
 
+/** Evento da política "com aviso" do cadastro do item (cabeçalho X-Item-Aviso). */
+export const ITEM_AVISO_EVENT = 'erp:item-aviso';
+
 httpClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const aviso = response.headers?.['x-item-aviso'];
+    if (typeof aviso === 'string' && aviso) {
+      window.dispatchEvent(new CustomEvent<string>(ITEM_AVISO_EVENT, { detail: decodeURIComponent(aviso.replace(/\+/g, ' ')) }));
+    }
+    return response;
+  },
   (error) => {
     const responseBody = error?.response?.data;
     const apiMessage = typeof responseBody === 'string'

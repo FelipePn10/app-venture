@@ -81,3 +81,85 @@ export async function salvarRegraDeCampo(campo: string, obrigatorio: boolean | n
   const { data } = await httpClient.put(`${BASE}/regras/${encodeURIComponent(campo)}`, { obrigatorio });
   return (data ?? []) as RegraCampo[];
 }
+
+// ─── Prontidão, política por processo e prévia fiscal ────────────────────────
+export type Politica = 'LIBERADO' | 'AVISO' | 'BLOQUEADO';
+export type Processo = 'ORCAMENTO' | 'VENDA' | 'COMPRA' | 'REQUISICAO' | 'PRODUCAO' | 'FATURAMENTO';
+export const PROCESSOS: Processo[] = ['ORCAMENTO', 'VENDA', 'COMPRA', 'REQUISICAO', 'PRODUCAO', 'FATURAMENTO'];
+export const ROTULO_PROCESSO: Record<Processo, string> = { ORCAMENTO: 'Orçamento', VENDA: 'Pedido de venda', COMPRA: 'Pedido de compra', REQUISICAO: 'Requisição', PRODUCAO: 'Ordem de fabricação', FATURAMENTO: 'Nota fiscal' };
+export const ROTULO_POLITICA: Record<Politica, string> = { LIBERADO: 'Liberado', AVISO: 'Com aviso', BLOQUEADO: 'Bloqueado' };
+export interface RegraPolitica { status: StatusCadastro; processo: Processo; politica: Politica }
+export interface PendenciaProcesso { nivel: 'IMPEDE' | 'ATENCAO'; mensagem: string; onde: string }
+export interface Prontidao { processo: string; rotulo: string; aplica: boolean; pronto: boolean; politica: Politica; pendencias: PendenciaProcesso[] }
+export interface CheckFiscal { nivel: 'IMPEDE' | 'ATENCAO'; mensagem: string; como_resolver: string }
+export interface PreviaFiscal {
+  ncm: string; cest: string; origem?: number; cclass_trib: string; unidade_comercial: string; unidade_tributavel: string; fator_tributavel: string;
+  gtin: string; gtin_tributavel: string; aliquota_ipi?: string; aliquota_icms?: string; aliquota_pis?: string; aliquota_cofins?: string;
+  tipo_efd: string; tipo_efd_origem: 'INFORMADO' | 'DEDUZIDO'; checks: CheckFiscal[]; pode_faturar: boolean;
+}
+export interface ImpactoAlteracao { campo: string; rotulo: string; antes: string; depois: string; severidade: 'BLOQUEIA' | 'ATENCAO'; mensagem: string }
+
+export async function politicasDoCadastro(): Promise<RegraPolitica[]> {
+  const { data } = await httpClient.get(`${BASE}/politicas`);
+  return (data ?? []) as RegraPolitica[];
+}
+export async function salvarPoliticasDoCadastro(regras: RegraPolitica[]): Promise<RegraPolitica[]> {
+  const { data } = await httpClient.put(`${BASE}/politicas`, regras);
+  return (data ?? []) as RegraPolitica[];
+}
+export async function prontidaoDoItem(codigo: string): Promise<Prontidao[]> {
+  const { data } = await httpClient.get(`${item(codigo)}/prontidao`);
+  return (data ?? []) as Prontidao[];
+}
+export async function previaFiscalDoItem(codigo: string): Promise<PreviaFiscal> {
+  const { data } = await httpClient.get(`${item(codigo)}/previa-fiscal`);
+  return data as PreviaFiscal;
+}
+export async function impactoDaAlteracao(codigo: string, alteracao: unknown): Promise<ImpactoAlteracao[]> {
+  const { data } = await httpClient.post(`/api/items/${encodeURIComponent(codigo)}/impacto`, alteracao);
+  return (data ?? []) as ImpactoAlteracao[];
+}
+
+// ─── GTIN por embalagem, revisões e saldo em duas unidades ───────────────────
+export interface EmbalagemItem { gtin: string; uom: string; package_quantity: number; description?: string; parent_uom?: string; parent_quantity?: number }
+export interface RevisaoItem { revision: string; valid_from: string; valid_until?: string; reason: string; created_at: string }
+export interface SaldoPorLote { warehouse_id: number; warehouse: string; lot?: string; quantity: string; secondary_quantity: string }
+export interface SaldoDuasUnidades { uom: string; quantity: string; secondary_uom?: string; secondary_quantity: string; details: SaldoPorLote[] }
+export interface AtributoLivre { name: string; value: string }
+
+const embalagemDaApi = (e: EmbalagemItem): EmbalagemItem => ({
+  ...e, package_quantity: Number(e.package_quantity),
+  parent_quantity: e.parent_quantity === undefined ? undefined : Number(e.parent_quantity),
+});
+export async function embalagensDoItem(codigo: string): Promise<EmbalagemItem[]> {
+  const { data } = await httpClient.get(`${item(codigo)}/gtins`);
+  return ((data ?? []) as EmbalagemItem[]).map(embalagemDaApi);
+}
+export async function salvarEmbalagensDoItem(codigo: string, lista: EmbalagemItem[]): Promise<EmbalagemItem[]> {
+  const { data } = await httpClient.put(`${item(codigo)}/gtins`, lista);
+  return ((data ?? []) as EmbalagemItem[]).map(embalagemDaApi);
+}
+export async function atributosLivresDoItem(codigo: string): Promise<AtributoLivre[]> {
+  const { data } = await httpClient.get(`${item(codigo)}/atributos-livres`);
+  return (data ?? []) as AtributoLivre[];
+}
+export async function salvarAtributosLivres(codigo: string, lista: AtributoLivre[]): Promise<AtributoLivre[]> {
+  const { data } = await httpClient.put(`${item(codigo)}/atributos-livres`, lista);
+  return (data ?? []) as AtributoLivre[];
+}
+export async function nomesDeAtributosLivres(): Promise<string[]> {
+  const { data } = await httpClient.get(`${BASE}/atributos-livres/nomes`);
+  return (data ?? []) as string[];
+}
+export async function revisoesDoItem(codigo: string): Promise<RevisaoItem[]> {
+  const { data } = await httpClient.get(`${item(codigo)}/revisoes`);
+  return (data ?? []) as RevisaoItem[];
+}
+export async function criarRevisaoDoItem(codigo: string, dto: { revision: string; valid_from: string; reason: string }): Promise<RevisaoItem[]> {
+  const { data } = await httpClient.post(`${item(codigo)}/revisoes`, dto);
+  return (data ?? []) as RevisaoItem[];
+}
+export async function saldoDuasUnidades(codigo: string): Promise<SaldoDuasUnidades> {
+  const { data } = await httpClient.get(`${item(codigo)}/saldo`);
+  return data as SaldoDuasUnidades;
+}

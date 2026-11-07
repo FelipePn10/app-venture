@@ -30,6 +30,14 @@ export interface LookupOption {
   displayCode?: string | number;
   /** Rótulo principal (nome/descrição). */
   label: string;
+  /** Texto extra que a busca considera, sem aparecer na lista. */
+  search?: string;
+  /**
+   * Outros códigos do registro (código anterior, do fornecedor, GTIN…). A lista
+   * mostra qual deles achou o registro, e o código digitado que for um deles não
+   * vira "código informado manualmente": ele leva ao registro certo.
+   */
+  aliases?: { kind: string; value: string }[];
   /** Linha secundária opcional (documento, UM, cidade…). */
   sub?: string;
   /**
@@ -259,14 +267,48 @@ export const loadConsumerServiceCalls = cached(async () =>
  * `FANTASMA` não é inativo: é um item de planejamento que a estrutura atravessa,
  * e ele precisa continuar selecionável.
  */
-export const loadItems = cached(async () =>
-  (await listItems()).map((i) => ({
+/**
+ * Texto de busca de cada item além do código e do nome: código anterior,
+ * referência do fabricante, código do item em cada fornecedor, GTINs e
+ * atributos livres. Todo seletor de item usa isto, para quem conhece o item por
+ * um desses códigos achá-lo em qualquer tela. Se falhar, a busca segue pelo
+ * código e pelo nome.
+ */
+type BuscaDoItem = { texto: string; apelidos: { kind: string; value: string }[] };
+let buscaDosItens: Promise<Map<string, BuscaDoItem>> | null = null;
+aoInvalidarListas(() => { buscaDosItens = null; });
+export function buscaCompletaDosItens(): Promise<Map<string, BuscaDoItem>> {
+  buscaDosItens ??= httpClient.get<{ item: string; text: string; aliases?: { kind: string; value: string }[] }[]>('/api/items/governanca/busca/resumo')
+    .then((r) => new Map((Array.isArray(r.data) ? r.data : []).map((a) => [a.item, { texto: a.text, apelidos: a.aliases ?? [] }])))
+    .catch(() => { buscaDosItens = null; return new Map<string, BuscaDoItem>(); });
+  return buscaDosItens;
+}
+export async function textoDeBuscaDosItens(): Promise<Map<string, string>> {
+  return new Map([...(await buscaCompletaDosItens())].map(([k, v]) => [k, v.texto]));
+}
+
+/** Tanques / linhas de capacidade da promessa de entrega (cadastro em VPME0102). */
+export const loadCapacityLines = cached(async () => {
+  const { data } = await httpClient.get('/api/delivery-promise/lines');
+  return (Array.isArray(data) ? data : []).map((l: Record<string, unknown>) => ({
+    code: Number(l.code),
+    label: String(l.description ?? `Tanque ${l.code}`),
+    sub: `${Number(l.daily_capacity ?? 0).toLocaleString('pt-BR')} ${String(l.uom ?? 'UN')}/dia`,
+    inactive: l.is_active === false,
+  }));
+});
+
+export const loadItems = cached(async () => {
+  const [itens, busca] = await Promise.all([listItems(), buscaCompletaDosItens()]);
+  return itens.map((i) => ({
     code: i.code ?? '',
     label: i.description || `Item ${i.code}`,
     sub: i.uom || undefined,
+    search: busca.get(i.code ?? '')?.texto,
+    aliases: busca.get(i.code ?? '')?.apelidos,
     inactive: i.health === 'INATIVO',
-  })).filter((o) => o.code),
-);
+  })).filter((o) => o.code);
+});
 
 /** Máscaras configuradas (códigos comerciais variantes) disponíveis no tenant. */
 export const loadItemMasks = cached(async () => {
@@ -402,6 +444,7 @@ export const loadPdmGroups = cached(async () =>
   (await listarGrupos()).map((g) => ({
     code: g.code,
     label: g.description || `Grupo ${g.code}`,
+    inactive: g.is_active === false,
   })).filter((o) => o.code),
 );
 
@@ -409,6 +452,7 @@ export const loadPdmModifiers = cached(async () =>
   (await listarModificadores()).map((m) => ({
     code: m.id ?? 0,
     label: m.description || `Modificador ${m.id}`,
+    inactive: m.is_active === false,
   })).filter((o) => o.code),
 );
 
@@ -425,18 +469,21 @@ export const loadPdmModifiers = cached(async () =>
  * backend, e um campo que não abre nada é pior que um campo abrangente.
  */
 export const loadBaseItems = cached(async () => {
-  const todos = (await listItems())
+  const [itens, busca] = await Promise.all([listItems(), buscaCompletaDosItens()]);
+  const todos = itens
     .map((i) => ({
       code: i.code ?? '',
       label: i.description || `Item ${i.code}`,
       sub: i.uom || undefined,
+      search: busca.get(i.code ?? '')?.texto,
+      aliases: busca.get(i.code ?? '')?.apelidos,
       inactive: i.health === 'INATIVO',
       base: Boolean(i.is_base) || i.nature === 2,
     }))
     .filter((o) => o.code);
   const marcados = todos.filter((o) => o.base);
   const escolhidos = marcados.length > 0 ? marcados : todos;
-  return escolhidos.map(({ code, label, sub, inactive }) => ({ code, label, sub, inactive }));
+  return escolhidos.map(({ code, label, sub, search, aliases, inactive }) => ({ code, label, sub, search, aliases, inactive }));
 });
 
 // A rota de listagem é `/api/warehouse/list`; `/api/warehouse` (sem sufixo) é

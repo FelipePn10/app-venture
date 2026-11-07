@@ -5,6 +5,18 @@ import { errMessage } from "@/services/fiscalShared";
 import { geracaoDasListas } from "@/services/lookupInvalidation";
 
 /** Minúsculas e sem acento: "Técnica" e "tecnica" são a mesma busca. */
+/**
+ * Quando o registro só casou por um apelido (código anterior, do fornecedor…),
+ * diz qual: com o código de outro registro na lista, a escolha não fica às cegas.
+ */
+function apelidoQueAchou(o: LookupOption, query: string): string | null {
+  const q = normalizarBusca(query.trim());
+  if (!q || !o.aliases?.length) return null;
+  if (normalizarBusca(String(o.displayCode ?? o.code)).includes(q) || normalizarBusca(o.label).includes(q)) return null;
+  const a = o.aliases.find((x) => normalizarBusca(x.value).includes(q) || normalizarBusca(`${x.kind} ${x.value}`).includes(q));
+  return a ? `${a.kind.charAt(0).toLowerCase()}${a.kind.slice(1)}: ${a.value}` : null;
+}
+
 function normalizarBusca(texto: string): string {
   return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
@@ -169,7 +181,7 @@ export function LookupField<T extends string | number = number>({
     };
 
     return disponiveis
-      .filter((o) => normalizarBusca(String(o.code)).includes(q) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.sub ?? "").includes(q))
+      .filter((o) => normalizarBusca(String(o.code)).includes(q) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.search ?? "").includes(q) || normalizarBusca(o.sub ?? "").includes(q))
       .map((o, i) => ({ o, r: relevancia(o), i }))
       .sort((a, b) => a.r - b.r || a.i - b.i)   // empate mantém a ordem original
       .map((x) => x.o)
@@ -177,7 +189,13 @@ export function LookupField<T extends string | number = number>({
   }, [disponiveis, query]);
 
   const manualCode = query.trim();
-  const canUseManualCode = allowManualCode && manualCode.length > 0
+  // O código digitado que é o código anterior ou de fornecedor de um registro não
+  // pode seguir como "informado manualmente": levaria a outro registro ou a
+  // nenhum. A lista já mostra o registro dono dele.
+  const donoDoApelido = manualCode
+    ? options.find((option) => option.aliases?.some((a) => normalizarBusca(a.value) === normalizarBusca(manualCode)))
+    : undefined;
+  const canUseManualCode = allowManualCode && manualCode.length > 0 && !donoDoApelido
     && (typeof options[0]?.code !== "number" || /^\d+$/.test(manualCode))
     && !options.some((option) => String(option.code) === manualCode);
 
@@ -235,9 +253,16 @@ export function LookupField<T extends string | number = number>({
                 <span className="erp-lookup-item-main">
                   <span className="erp-lookup-item-label">{o.label}{o.inactive && <span className="erp-lookup-item-off">inativo</span>}</span>
                   {o.sub && <span className="erp-lookup-item-sub">{o.sub}</span>}
+                  {apelidoQueAchou(o, query) && <span className="erp-lookup-item-sub erp-lookup-item-alias">Achado pelo {apelidoQueAchou(o, query)}</span>}
                 </span>
               </button>
             ))}
+            {!loading && !error && allowManualCode && donoDoApelido && (
+              <div className="erp-lookup-item erp-lookup-item-aviso" role="note">
+                <span className="erp-lookup-item-code">{manualCode}</span>
+                <span className="erp-lookup-item-main"><span className="erp-lookup-item-label">Não é um código atual: escolha o item {donoDoApelido.displayCode ?? donoDoApelido.code} acima.</span></span>
+              </div>
+            )}
             {!loading && !error && canUseManualCode && (
               <button type="button" className="erp-lookup-item" onClick={() => {
                 const code = (typeof options[0]?.code === "number" ? Number(manualCode) : manualCode) as T;

@@ -249,7 +249,7 @@ regra de cada linha.
 | [VITE0313](#vite0313--geração-de-máscara-para-itens-configurados) | Geração de Máscara para Itens Configurados | Gerar combinações válidas de itens configurados para novas máscaras. |
 | [VITE0114](#vite0114--cadastro-de-grupos-pdm) | Cadastro de Grupos (PDM) | Cadastrar grupos para a Padronização da Descrição dos Materiais. |
 | [VITE0115](#vite0115--cadastro-de-modificadores-pdm) | Cadastro de Modificadores (PDM) | Cadastrar modificadores referentes aos grupos do PDM. |
-| [VITE0116](#vite0116--cadastro-de-atributos-pdm) | Cadastro de Atributos (PDM) | Cadastrar atributos ligados a um determinado modificador do PDM. |
+| [VITE0116](#vite0116--padrão-descritivo-pdm) | Padrão Descritivo (PDM) | Modificadores de cada grupo e modelo de atributos que gera a descrição técnica do item. |
 | [VITE0118](#vite0118--cadastro-de-regras-de-itens-configurados) | Cadastro de Regras de Itens Configurados | Cadastrar regras para itens configurados e definir onde estas regras devem ser executadas. |
 | [VITE0129](#vite0129--recarga-de-descrições-de-itens-configurados) | Recarga de Descrições de Itens Configurados | Recarregar e renderizar descrições configuradas usando as regras vigentes. |
 | [VCFG0100](#vcfg0100--conjuntos-e-variáveis-do-configurador) | Conjuntos e Variáveis do Configurador | Conjuntos de respostas, variáveis, máscaras e traduções. |
@@ -1753,7 +1753,14 @@ bloquear exportação na promessa; quebrar ocupação de tanque; recalcular apó
 liberação; reprogramar pedidos carregados; permitir alteração da data de
 entrega. Marque e salve.
 
-**Telas relacionadas.** VDPR0100, VPME0102ITE.
+**Tanques / linhas de capacidade.** A seção no fim da tela cadastra cada linha
+(código, descrição, capacidade por dia e unidade) e permite desativá-la. O item
+escolhe a sua linha em VENT0200 › Planejamento, e a promessa de entrega reparte a
+quantidade pela capacidade diária dessa linha, nos dias úteis (ex.: 300 un numa
+linha de 120/dia ocupam três dias: 120, 120 e 60). O item não aceita linha
+inexistente ou desativada.
+
+**Telas relacionadas.** VDPR0100, VPME0102ITE, VENT0200.
 
 ---
 
@@ -1855,29 +1862,95 @@ não úteis e salve. A mensagem diz quantos dias foram atualizados.
 matéria-prima, embalagem, ferramenta, serviço. Quase tudo no sistema começa aqui.
 
 **Passo a passo.**
-1. **Capa:** código, nome, situação, nome técnico detalhado e complemento, grupo e
-   modificador (PDM), estado e os **marcadores de natureza** — fabricado,
-   comprado, de terceiro, serviço, item base, configurado, genérico, protótipo,
-   ferramenta, item de processo. Os marcadores combinam entre si (um item pode
-   ser *base* e *configurado* ao mesmo tempo). Sem marcador, o item é genérico.
-2. **Estoque:** almoxarifado padrão, unidade de medida, indicadores de estoque,
-   intervalo de inventário e estoque mínimo de alerta.
+1. **Capa:** código, nome, situação, complemento, revisão, código anterior, estado,
+   fabricante e referência do fabricante. Em **Padrão descritivo**, grupo, modificador
+   e os atributos do modelo (VITE0116): o sistema gera a descrição técnica e avisa se a
+   mesma combinação já existe. Sem modelo, a descrição segue livre. Depois vêm a
+   descrição longa e os **marcadores de natureza** — item base, configurado, genérico,
+   protótipo, ferramenta, item de processo, sucata/retalho. Genérico não combina com
+   item base nem com configurado. Protótipo e sucata ficam fora do MRP; sucata sai na
+   EFD como subproduto.
+2. **Estoque e compras:** unidade de estoque e **unidade de compra** (diferentes,
+   a conversão fica em VSUP0110), **almoxarifado padrão** e **almoxarifado de
+   recebimento** (em branco, o recebimento usa o padrão), segunda unidade e fator,
+   estoque mínimo (abaixo dele a reposição sugere compra ou fabricação) e máximo,
+   baixa automática, fracionado, **contagem cíclica própria** (sem ela, o item é
+   contado pela curva ABC: A a cada 90 dias, B 180, C 365; a contagem vencida avisa
+   quem estiver configurado em VNOT0100), tipo de utilização, **roteiro de
+   recebimento** (direto, padrão ou inspeção obrigatória), tolerâncias de excesso e de
+   falta, **check list** e **certificado e corrida**, controle de lote, endereço e
+   série, regra de baixa do lote, **validade**, **vida útil mínima no recebimento**,
+   condições de armazenagem e produto perigoso (número ONU e classe de risco).
 3. **Engenharia:** tipo de item, tipo de estrutura, item-base usado como modelo,
-   OEM, pesos e as dimensões da embalagem em milímetros (vão para o romaneio e o
-   frete).
-4. **Planejamento:** tipo de planejamento, curva ABC, nível na estrutura (1 =
-   produto final, 9 = matéria-prima), lotes mínimo, máximo e múltiplo, quantidade
-   máxima por ordem, estoque e tempo de segurança, tempo de reposição, consumo
-   médio, cobertura, tanque/setor e baixa automática. O **ponto de pedido** é
-   calculado na tela antes de gravar: (tempo de reposição × consumo médio ÷
-   cobertura) + estoque de segurança.
-5. **Comercial:** descrição comercial, tipo de venda, múltiplo e mínimo de venda,
-   entrega estimada, tempo de garantia, almoxarifados de transferência e de
-   assistência técnica e item de embalagem.
+   OEM, pesos, volume, dimensões em milímetros, revisões, atributos livres e **corte e
+   fabricação**: o **sentido do material** (veio do MDF, laminação da chapa) faz o
+   plano de corte alinhar a peça e não girá-la; **não girar no corte** proíbe o giro
+   mesmo sem sentido (estampa, furação); **exige desenho para produzir** só deixa a
+   prontidão de produção verde com desenho vinculado.
+4. **Planejamento:**
+   - *Política:* tipo de planejamento, curva ABC, nível na estrutura (1 = produto
+     final, 9 = matéria-prima) e tanque/linha de capacidade (escolhida na lista das
+     linhas cadastradas em VPME0102, com a capacidade por dia).
+   - *Tamanho do lote:* mínimo, múltiplo e máximo. O MRP arredonda as ordens por eles
+     e divide a necessidade acima do máximo.
+   - *Prazos e estoque de segurança:* prazo de compra e de fabricação (o MRP usa
+     quando o fornecedor ou o roteiro não dão prazo), **tempo de segurança** (folga de
+     prazo: o item chega antes) e **estoque de segurança** (folga de quantidade).
+   - *Ponto de pedido:* para itens repostos pelo consumo, fora do MRP. Marque
+     "Repor pelo ponto de pedido": consumo por dia trabalhado (em branco, apurado dos
+     últimos 90 dias ÷ dias trabalhados) × dias que a empresa trabalha no prazo de
+     reposição, pelo calendário industrial (sábado trabalhado conta, feriado não), +
+     estoque de segurança. A reposição (VEST) e o MRP usam este mesmo número.
+   - *Responsáveis:* o setor que planeja e o que compra o item, com as pessoas,
+     vêm do grupo (VITE0114). Para mudar, altere o grupo, não o item.
+   - *Produção:* momento da baixa de material, forma de apontamento, crítico
+     (destacado nos alertas de estoque), fantasma (o MRP passa direto aos
+     componentes) e ativo no MRP.
+5. **Comercial:** descrição comercial, tipo de venda, **unidade de venda**, mínimo e
+   múltiplo de venda (o pedido e o orçamento recusam quantidade fora da regra), entrega
+   estimada, tempo de garantia, **volumes por unidade** e **cliente exclusivo**.
+   Faturamento e expedição: altera descrição no faturamento, exige volumes no despacho,
+   embalagem diferenciada e de exportação (saem destacadas no romaneio) e é embalagem.
+   A embalagem que vai com o produto entra na estrutura do item (VENT0210).
 6. **Contábil:** classificações fiscais de venda e de compra (NCM), **origem da
-   mercadoria** (0 a 8), IPI de venda e de compra, ICMS, unidades de venda e de
-   compra, grupo de inventário, CEST e cálculo de PIS/COFINS.
-7. **Suprimentos:** recebimento, tipo de utilização e classificação.
+   mercadoria** (0 a 8), CEST, **tipo do item na EFD**, **GTIN** comercial e
+   tributável, unidade tributável e fator e embalagens com GTIN. As alíquotas não ficam
+   no item: o IPI vem do NCM (VFIS0110), o ICMS da UF e da regra de ICMS/IPI (VFIS0320)
+   e o PIS/COFINS do regime e do NCM.
+
+**Marcações que não combinam.** A tela não deixa marcar juntas: sucata com item
+base, configurado, protótipo, ferramenta ou item de processo; fantasma em item que
+não é fabricado, crítico ou com lote/série/contagem; embalagem de exportação com diferenciada; serviço perigoso ou com
+estoque. Passe o mouse na opção desabilitada para ver o motivo. Marcar o número de
+série torna o item de quantidade inteira.
+
+**Campos que dependem de outros.** Os campos de OF (prazo de fabricação, baixa de
+material, apontamento, exige desenho) só valem para item Fabricado e o prazo de
+compra só para Comprado; serviço não tem campos de estoque. Validade e vida útil
+são do lote: num item novo, informar a validade já liga o controle de lote; num
+item existente, ligue o lote antes; e desligar o lote de item com validade é
+recusado até a validade sair do cadastro. Escala relevante e CNPJ do fabricante
+só vão na nota com CEST. Revenda é só para item Comprado e o mínimo de venda
+precisa ser múltiplo do múltiplo. Na aba **Prontidão**, a prévia fiscal mostra os
+impostos pelo mesmo cálculo da nota, numa venda a empresa contribuinte para
+industrialização, dentro e fora do estado; quem cadastra item a vê sem precisar
+de acesso ao módulo fiscal.
+
+**Cuidados no manuseio.** Produto perigoso (ONU e classe) e condições de
+armazenagem aparecem em destaque na OF, na entrada de nota, na requisição, na
+separação, no recebimento pelo coletor, nas etiquetas de item e na expedição, e
+saem no romaneio.
+7. **Prontidão** (item já gravado): diz se o item está pronto para comprar, produzir,
+   estocar, vender e faturar, o que falta e em qual tela resolver. A **prévia fiscal**
+   mostra o que vai à nota e à EFD e o que a SEFAZ recusaria.
+
+**Achar o item por outro código.** Em qualquer campo de item do sistema, a busca
+acha também pelo código anterior, pela referência do fabricante, pelo código do
+item no fornecedor (VSUP0130), pelo GTIN e pelos atributos livres. Num campo em
+que se digita o código, use o código atual: se digitar um desses outros, a
+mensagem diz qual é o item. Para não haver dúvida, o cadastro não aceita código
+anterior ou referência do fabricante igual ao código de outro item, e a busca
+mostra por qual código achou cada item.
 
 **Usar um item-base como modelo.** Escolha o item-base: o sistema copia as pastas
 para o item novo e mantém código, nome e nome técnico que você digitou.
@@ -1888,6 +1961,10 @@ corrigido. A lista mostra também os itens inativos — é aqui que se reativa.
 **Regras e cuidados.**
 - Os obrigatórios aparecem só depois da primeira tentativa de salvar, com a aba
   onde cada um está.
+- Ao alterar campo com efeito fora do cadastro, a tela mostra o **impacto** antes de
+  gravar. Unidade de estoque com saldo ou com documento aberto não muda, nem o tipo do
+  item com ordem ou pedido de compra aberto.
+- O GTIN é conferido pelo dígito verificador e não se repete na empresa.
 - Ao marcar **Inativo** num item já gravado, a tela mostra **onde ele é usado**
   (as estruturas que consomem o item) — inativar sem olhar isso vira falta de
   componente no MRP.
@@ -1898,8 +1975,18 @@ corrigido. A lista mostra também os itens inativos — é aqui que se reativa.
 - Se a empresa exige a liberação do cadastro (VENT0250), o item novo nasce
   **em cadastro** e só entra em documento depois que as áreas liberarem.
 
-**Telas relacionadas.** VENT0210 (estrutura), VENT0202 (roteiro), VITM0100
-(prontidão), VSUP0110 (conversão de UM), VFIS0350 (classificação fiscal),
+**Novidades do cadastro.**
+- **Embalagens e GTIN** (Contábil): cada nível diz o que contém (a caixa tem 10 unidades, o palete tem 40 caixas) e o total é calculado ao gravar. O palete pode ficar sem GTIN. O leitor, a entrada de nota e a NF-e reconhecem cada embalagem.
+- **Atributos livres** (Engenharia): o que o PDM não padroniza, como tonalidade ou acabamento. O valor também acha o item na busca.
+- **Saldo por lote** (Estoque): com segunda unidade, a tela mostra as duas quantidades por almoxarifado e lote.
+- **Revisões** (Engenharia): a nova revisão fecha a anterior na véspera. Com início futuro, a vigente só muda na data. A OF guarda a revisão com que nasceu.
+- **Segunda unidade** (Estoque): controla peso além da peça. O recebimento informa o peso real; sem ele vale o fator nominal.
+- **Item de embalagem** (Comercial): o despacho baixa uma embalagem por volume.
+- **Entrega estimada:** vira a data da linha de venda quando ela vem sem data.
+- **Tolerância de falta:** encerra a linha do pedido de compra quando a falta cabe nela.
+
+**Telas relacionadas.** VITE0116 (padrão descritivo), VENT0210 (estrutura), VENT0202
+(roteiro), VITM0100 (prontidão), VSUP0110 (conversão de UM), VFIS0350 (classificação fiscal),
 VENT0250 (governança do cadastro).
 
 ---
@@ -1920,6 +2007,11 @@ Em cadastro, bloqueado ou descontinuado, o item **não entra em documento
 novo**: pedido de venda, orçamento, pedido e requisição de compra, OF e NF. A
 mensagem diz o motivo e, no descontinuado, qual item usar. Documento já aberto
 segue normalmente.
+
+**O que cada status permite.** Em **Regras**, a matriz ajusta isso por documento:
+**Bloqueado** (padrão), **Com aviso** (deixa passar e registra o uso no histórico do
+item, e a tela do documento avisa quem gravou) ou **Liberado**. Exemplo: descontinuado bloqueia a compra e libera a venda do
+saldo.
 
 **Visões.** Engenharia, Fiscal, Suprimentos, Planejamento, Comercial e Custos.
 - A tela mostra as pendências de cada visão, ou seja, os campos obrigatórios
@@ -2121,12 +2213,20 @@ gravando-a.
 #### VITE0114 — Cadastro de Grupos (PDM)
 
 **Para que serve.** Cadastrar os grupos PDM (famílias de itens) que compõem a
-descrição técnica padronizada.
+descrição técnica padronizada. Cada empresa tem os seus códigos. A lista mostra quantos
+itens usam cada grupo. Nome repetido é recusado e grupo **inativo** deixa de ser
+oferecido para item novo, sem mexer nos itens que já o usam.
 
 **Como usar.** **Novo**: o código é sugerido e não muda depois; informe a
 descrição. Grupos não são excluídos — altere a descrição quando preciso.
 
-**Telas relacionadas.** VITE0115, VITE0116, VENT0200.
+**Responsáveis.** Ao editar um grupo, escolha o setor que **planeja** e o setor
+que **compra** os itens dele (os setores e as pessoas ficam na VNOT0100, aba
+Setores). Todo item do grupo herda esses responsáveis: a VENT0200 mostra o setor
+e as pessoas na aba Planejamento, e a cobertura do MRP mostra o setor como
+planejador. Grupo sem responsável mostra o planejador antigo do item, quando há.
+
+**Telas relacionadas.** VITE0115, VITE0116, VENT0200, VNOT0100.
 
 ---
 
@@ -2135,24 +2235,31 @@ descrição. Grupos não são excluídos — altere a descrição quando preciso
 **Para que serve.** Cadastrar os modificadores PDM (o qualificador que vem depois
 do grupo: "PARAFUSO **SEXTAVADO**").
 
-**Como usar.** **Novo**: o código é gerado pelo sistema; informe a descrição. Os
-modificadores valem para todas as empresas.
+**Como usar.** **Novo**: o código é gerado pelo sistema; informe a descrição. Cada
+empresa tem os seus modificadores. A lista mostra quantos itens usam cada um. Nome
+repetido é recusado e modificador **inativo** deixa de ser oferecido para item novo. O
+vínculo com os grupos e os atributos ficam na VITE0116.
 
 **Telas relacionadas.** VITE0114, VITE0116.
 
 ---
 
-#### VITE0116 — Cadastro de Atributos (PDM)
+#### VITE0116 — Padrão Descritivo (PDM)
 
-**Para que serve.** Montar a descrição técnica do item a partir do grupo, do
-modificador e dos atributos (ex.: COR = PRETO, DIÂMETRO = 8 MM).
+**Para que serve.** Definir quais modificadores cada grupo aceita e quais atributos
+cada par grupo e modificador pede. A VENT0200 usa esse modelo para gerar a descrição
+técnica do item: quem cadastra escolhe os valores e o sistema escreve a descrição
+sempre do mesmo jeito.
 
-**Como usar.** Escolha grupo e modificador, adicione os atributos (nome e valor) e
-confira a **pré-visualização**: a descrição técnica composta e o resumo para o
-cadastro do item.
+**Como usar.** Escolha o grupo, marque os modificadores e grave. Escolha o modificador,
+crie os atributos (texto, número ou lista de valores), com prefixo, unidade e ordem, e
+use **Testar o padrão** para ver a descrição gerada. Na lista de valores, escreva um por
+linha; para abreviar na descrição, use `ZINCADO BRANCO=ZB`.
 
-**Importante.** Atributo não tem cadastro próprio: os pares nome/valor são gravados
-no próprio item (VENT0200).
+**Importante.** Grupo sem modificador marcado aceita todos. Modificador sem atributos
+mantém a descrição livre. Item antigo continua como está até alguém preencher os
+atributos dele. **Identifica o item** diz quais atributos entram na conferência de
+duplicidade: dois itens com os mesmos valores são apontados na VENT0200.
 
 **Telas relacionadas.** VITE0114, VITE0115, VENT0200.
 
@@ -3126,7 +3233,9 @@ recebimento confere depois.
 3. **+ Item:** item, quantidade, preço unitário, entrega, almoxarifado, desconto,
    IPI, ICMS, tolerância, centro de custo, utilização, classificação fiscal e tipo
    de nota. Preço, unidade interna e IPI podem ficar em branco — o sistema busca
-   na tabela de preço, nas conversões do item e na classificação fiscal. O painel
+   na tabela de preço, nas conversões do item e na classificação fiscal. Sem
+   classificação na linha, vale a de compra do cadastro do item (ou a de venda), e
+   o IPI é o do NCM dela na tabela tributária (VFIS0110), o mesmo da nota. O painel
    de **histórico de preço** mostra a última compra, o custo médio de 12 meses
    por unidade de estoque e o último pedido.
 4. **Origem da linha:** solicitante, requisição (e **qual linha** dela este item
@@ -3265,7 +3374,15 @@ preferencial), lead time, o código e a descrição do item no fornecedor e a UM
 item comprado sem fornecedor não está pronto para o MRP (VITM0100). O código no
 fornecedor é o que a importação da NF-e usa para reconhecer o item.
 
-**Telas relacionadas.** VVOR0202, VSUP0670, VFIS0610.
+**Regra do código no fornecedor.** O código do fornecedor **não pode ser o código
+atual de outro item nosso**: quem digitasse esse código num pedido ou numa nota
+levaria o outro item. A tela recusa e diz qual item já usa o código. Nesse caso,
+vincule o item sem o código do fornecedor ou peça ao fornecedor o código dele. A
+mesma regra vale quando a entrada de nota (VFIS0210) aprende o vínculo: ali, a
+recusa pede para desmarcar **lembrar vínculo** na linha, e a nota é lançada sem
+memorizar o código.
+
+**Telas relacionadas.** VVOR0202, VSUP0670, VFIS0610, VFIS0210.
 
 ---
 
@@ -3649,7 +3766,12 @@ que peso e em que transporte.
    ANTT/lacres e previsão de entrega. **Vincular NF-e** (número e chave).
 5. A **trilha de auditoria** registra cada evento do romaneio.
 
-**Telas relacionadas.** VVND0200, VFIS0200, VEXP0110 (cargas), VPLC0200.
+**Romaneio impresso (PDF e planilha).** Cada linha sai com o **código comercial**
+do item. Item perigoso ou com condição de armazenagem gera, depois da tabela de
+itens, a seção **Cuidados no transporte e na armazenagem** (ONU, classe e
+condição), com o texto inteiro. Na tela, o mesmo aviso aparece acima dos itens.
+
+**Telas relacionadas.** VVND0200, VFIS0200, VEXP0110 (cargas), VPLC0200, VENT0200.
 
 ---
 
@@ -4578,7 +4700,10 @@ contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
   segunda linha de cada item. A mesma nota do mesmo fornecedor não entra duas vezes.
   - **Código no fornecedor:** informe o código impresso na nota. Com o vínculo já
     cadastrado (VSUP0110), o item do cadastro vem sozinho. Código novo: escolha o item
-    e deixe **Lembrar vínculo** marcado para a próxima nota já reconhecer.
+    e deixe **Lembrar vínculo** marcado para a próxima nota já reconhecer. Se o
+    código do fornecedor for o código atual de outro item nosso, o vínculo é
+    recusado e a mensagem diz qual item o usa: desmarque **Lembrar vínculo** e
+    lance a nota sem memorizar.
   - **Preço, ICMS % e IPI %:** valem os da nota do fornecedor. O sistema sugere o
     preço (pedido de compra em aberto ou última compra) e as alíquotas (tabelas
     fiscais); o que você digita prevalece. Confira com a nota: fornecedor do Simples,
@@ -4589,7 +4714,9 @@ contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
 **Passo a passo.**
 1. **Itens e conciliação:** cada produto da nota é ligado ao item do cadastro.
    O vínculo produto × fornecedor concilia sozinho; os demais vêm com
-   **sugestões** (descrição parecida só sugere — nunca liga sozinha). Também é
+   **sugestões** (descrição parecida só sugere — nunca liga sozinha). Item
+   perigoso ou com condição de armazenagem aparece num aviso no topo da nota (ONU,
+   classe e como armazenar), para quem vai receber o material. Também é
    possível cadastrar o item novo com os dados da nota. Escolha a **operação de
    entrada** (padrão dos itens), o almoxarifado e o **pedido de compra** (e a
    linha) que a nota atende.
@@ -4780,14 +4907,25 @@ VFIS0510 (códigos de ajuste), VCTB0200 (plano contábil).
 herdam.
 
 **Blocos.**
-- **Identificação:** descrição, NCM, CEST, Ex tarifário e vigência.
-- **Padrões herdados pelos itens:** origem padrão e ICMS padrão %.
-- **Tributos:** IPI (UM, alíquota, indicador, CSTs), PIS/COFINS, ST, desconto
-  ZF, uso e consumo, retenção, redução, majoração, modalidades de base,
-  **cClassTrib (IBS/CBS)** e a observação fiscal (infAdFisco).
+- **Identificação:** descrição, NCM e CEST.
+- **Padrões herdados pelos itens:** vigência, origem padrão (0 a 8) e UM de
+  tributação.
+- **Impostos da nota:** a classificação **não guarda alíquota**. Na nota, o IPI e
+  as exceções de PIS/COFINS (monofásico, alíquota zero, suspensão) vêm do NCM na
+  tabela tributária (VFIS0110); o ICMS vem da UF e das regras (VFIS0320); o PIS e
+  a COFINS, do regime da empresa. O campo **IPI do NCM (VFIS0110)** mostra, só
+  para leitura, a alíquota que a nota vai usar; para mudá-la, altere o NCM na
+  VFIS0110. Ficam aqui a **Apuração** (EFD e devolução de compra) e o
+  **cClassTrib (IBS/CBS)**.
 - **Idiomas** e **Atributos de exportação**.
 
-**Telas relacionadas.** VENT0200 (aba Contábil), VFIS0110, VFIS0670.
+**Regras.**
+- A lista mostra a coluna **IPI do NCM**. NCM fora da tabela aparece sem
+  alíquota: cadastre-o na VFIS0110 antes de faturar.
+- O **pedido de compra** sugere o IPI da linha por esta classificação (a de
+  compra do item, ou a de venda quando a de compra está vazia), pelo mesmo NCM.
+
+**Telas relacionadas.** VENT0200 (aba Contábil), VFIS0110, VFIS0320, VPDC0200, VFIS0670.
 
 ---
 
@@ -5119,6 +5257,10 @@ mínimo ou negativo, lote perto do vencimento e exceções do MRP.
   valor.
 - As grades mostram as assinaturas, os alertas abertos e os envios (com
   tentativas e o motivo de falha).
+- **Setores:** cadastre os setores da empresa (ex.: COMPRAS, PCP), com código e
+  nome, e marque as pessoas de cada um. Um setor desativado continua nos
+  registros antigos, mas não é oferecido de novo. Os setores dizem **quem
+  responde** por cada grupo de itens (VITE0114).
 
 ---
 

@@ -22,6 +22,7 @@ import { type BlocoPlano, calcularPlano, dataMaisDias, planoParcelasIguais } fro
 import { FORMAS_DE_PAGAMENTO, FORMA_PAGAMENTO_LABELS } from "@/services/financialService";
 import { getDadosFiscaisDoFornecedor } from "@/services/supplierService";
 import { codigoDaCondicao } from "@/services/customerService";
+import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "itens" | "financeiro" | "divergencias" | "nota";
@@ -417,6 +418,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
 
   return (
     <>
+      <CuidadosDosItens codigos={itens.map((i) => i.item_code)} contexto="no recebimento desta nota" />
       <div className="erp-toolbar" style={{ marginBottom: 8 }}>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Nota {doc.numero_nf}/{doc.serie}</span>

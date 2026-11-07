@@ -5,6 +5,7 @@ import { EntityName } from "@/components/ui/EntityName";
 import { loadCostCenters, loadItems, loadWarehouseAddresses, loadWarehouses } from "@/services/lookups";
 import { dataBR, qtd, useAcao } from "./comum";
 import { FeedbackBox } from "./ui";
+import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 type Linha = { item_code: string; quantity: string };
 const STATUS_COR: Record<string, string> = { PENDENTE_APROVACAO: "erp-badge-amber", ABERTA: "erp-badge-blue", PARCIAL: "erp-badge-amber", ATENDIDA: "erp-badge-green", CANCELADA: "erp-badge-gray", REPROVADA: "erp-badge-gray" };
@@ -68,6 +69,7 @@ export function RequisicoesTab() {
 
   return (<>
     <FeedbackBox feedback={feedback} />
+    <CuidadosDosItens codigos={linhas.map((l) => l.item_code)} contexto="nos itens da requisição" />
     <div className="erp-fieldset"><div className="erp-fieldset-head">Nova requisição</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c3"><label className="erp-label erp-req">Almoxarifado que atende</label>
         <LookupField value={nova.warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => setNova((p) => ({ ...p, warehouse_id: c ? Number(c) : 0 }))} /></div>

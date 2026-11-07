@@ -51,7 +51,7 @@ function parseRule(raw: unknown): ItemRule {
 
 /** Regras de um item (`GET /api/configurator/items/{itemCode}/rules`). */
 export async function listItemRules(itemCode: string): Promise<ItemRule[]> {
-  const { data } = await httpClient.get(`/api/configurator/items/${itemCode}/rules`);
+  const { data } = await httpClient.get(`/api/configurator/items/${encodeURIComponent(itemCode)}/rules`);
   return unwrapArray(data).map(parseRule);
 }
 export async function getItemRule(id: number): Promise<ItemRule> {

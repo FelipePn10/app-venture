@@ -44,7 +44,7 @@ function parseConv(raw: unknown): ItemConversionDTO {
   };
 }
 export async function listItemConversions(itemCode: string): Promise<ItemConversionDTO[]> {
-  const { data } = await httpClient.get(`/api/item-conversions/item/${itemCode}`);
+  const { data } = await httpClient.get(`/api/item-conversions/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseConv);
 }
 export async function upsertItemConversion(dto: ItemConversionDTO): Promise<ItemConversionDTO> {

@@ -128,7 +128,7 @@ try {
 
   // ── 2. VENT0200 — cadastro de item: o inativo PRECISA aparecer ───────────
   await page.goto(`${APP}/#/screen/VENT0200`);
-  const manutencao = page.locator('.it-open-item');
+  const manutencao = page.locator('#item-abrir');
   await manutencao.waitFor();
   await abrirLista(manutencao);
   const listaCadastro = await codigosNaLista();
@@ -207,12 +207,12 @@ try {
 
   // ── 6. VENT0200 avisa o impacto antes de inativar ────────────────────────
   await page.goto(`${APP}/#/screen/VENT0200`);
-  await abrirLista(page.locator('.it-open-item'));
+  await abrirLista(page.locator('#item-abrir'));
   await page.locator('.erp-lookup-panel .erp-lookup-item', { hasText: 'CHAPA GALVANIZADA' }).click();
-  await page.locator('.it-sit-badge').waitFor();
-  const estado = page.locator('select.it-select').filter({ has: page.locator('option[value="FANTASMA"]') }).first();
+  await page.locator('#item-estado').waitFor();
+  const estado = page.locator('select.erp-input').filter({ has: page.locator('option[value="FANTASMA"]') }).first();
   await estado.selectOption('INATIVO');
-  const impacto = page.locator('.it-impacto-alerta');
+  const impacto = page.locator('#item-impacto-inativar');
   await impacto.waitFor();
   const textoImpacto = await impacto.textContent();
   assert.match(textoImpacto, /2 montagem\(ns\) usam este item/, `aviso não contou as montagens: ${textoImpacto}`);

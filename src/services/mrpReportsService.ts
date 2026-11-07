@@ -79,7 +79,7 @@ export async function reportGroupedNeeds(params: ReportParams & { plan_code: num
  * `consider_item_warehouses`, `production_orders`, `loads`; `quantity` e `at=YYYY-MM-DD`.
  */
 export async function reportExplosion(itemCode: string, params: ReportParams = {}): Promise<MrpReport> {
-  const { data } = await httpClient.get(`/api/mrp-reports/explosion/${itemCode}`, { params: clean({ quantity: 1, ...params }) });
+  const { data } = await httpClient.get(`/api/mrp-reports/explosion/${encodeURIComponent(itemCode)}`, { params: clean({ quantity: 1, ...params }) });
   return toReport(data);
 }
 
@@ -107,6 +107,7 @@ export interface CoverageRow {
   uom?: string;
   item_type: string;
   planner_code?: number;
+  buyer_code?: number;
   planner_name?: string;
   status: CoverageStatus;
   reason: string;
@@ -130,7 +131,7 @@ export async function getCoverage(planCode: number, params: ReportParams = {}): 
   const { data } = await httpClient.get('/api/mrp-reports/coverage', { params: clean({ plan_code: planCode, ...params }) });
   return toReport(data).rows.map((o) => ({
     item_code: String(o['item_code'] ?? ''), description: String(o['description'] ?? ''), uom: (o['uom'] as string) || undefined,
-    item_type: String(o['item_type'] ?? ''), planner_code: numOu(o['planner_code']), planner_name: (o['planner_name'] as string) || undefined,
+    item_type: String(o['item_type'] ?? ''), planner_code: numOu(o['planner_code']), buyer_code: numOu(o['buyer_code']), planner_name: (o['planner_name'] as string) || undefined,
     status: (String(o['status'] ?? 'OK') as CoverageStatus), reason: String(o['reason'] ?? ''),
     stock: Number(o['stock'] ?? 0), safety_stock: Number(o['safety_stock'] ?? 0), demand: Number(o['demand'] ?? 0),
     firm_supply: Number(o['firm_supply'] ?? 0), planned_supply: Number(o['planned_supply'] ?? 0),

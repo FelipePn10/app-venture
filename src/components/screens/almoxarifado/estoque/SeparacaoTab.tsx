@@ -7,12 +7,14 @@ import { loadWarehouses } from "@/services/lookups";
 import { num, qtd, useAcao } from "./comum";
 import { OndasSecao } from "./OndasSecao";
 import { FeedbackBox, Resumo } from "./ui";
+import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 /** Separação (FEFO/FIFO), onda de separação e sugestão de guarda (endereçamento). */
 export function SeparacaoTab({ itemCode }: { itemCode: string }) {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [almox, setAlmox] = useState(0);
-  const [regra, setRegra] = useState<"FEFO" | "FIFO">("FEFO");
+  // Em branco vale a regra cadastrada no item (VENT0200); FEFO/FIFO aqui é exceção.
+  const [regra, setRegra] = useState<"" | "FEFO" | "FIFO">("");
   const [sepQtd, setSepQtd] = useState("");
   const [separacao, setSeparacao] = useState<SugestaoSeparacaoDTO | null>(null);
   const [guardaQtd, setGuardaQtd] = useState("");
@@ -35,11 +37,13 @@ export function SeparacaoTab({ itemCode }: { itemCode: string }) {
 
   return (<>
     <FeedbackBox feedback={feedback} />
+    <CuidadosDosItens codigos={[itemCode]} contexto="ao separar e guardar este item" />
     <div className="erp-fieldset"><div className="erp-fieldset-head">Parâmetros</div><div className="erp-fieldset-body">
       <div className="erp-field erp-c4"><label className="erp-label">Almoxarifado</label>
         <LookupField value={almox || undefined} loader={loadWarehouses} entityLabel="almoxarifado" onChange={(c) => setAlmox(c ? Number(c) : 0)} /></div>
       <div className="erp-field erp-c4"><label className="erp-label">Regra</label>
-        <select className="erp-input" value={regra} onChange={(e) => setRegra(e.target.value as "FEFO" | "FIFO")}>
+        <select className="erp-input" value={regra} onChange={(e) => setRegra(e.target.value as "" | "FEFO" | "FIFO")}>
+          <option value="">Regra do item</option>
           <option value="FEFO">FEFO — vence antes, sai antes</option><option value="FIFO">FIFO — entrou antes, sai antes</option>
         </select></div>
     </div></div>
