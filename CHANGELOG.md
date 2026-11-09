@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.14.1] — 2026-11-09
+
 ## Melhorias
 - **Beneficiamento com pasta própria:** as telas de beneficiamento (VBEN0100 Remessas e Retorno Fiscal, VBEN0200 Estoque de Terceiros e VBEN0300 Horas de Beneficiamento) saíram de Almoxarifado e ganharam a pasta **Beneficiamento** em Industrial & Produção. Os códigos, favoritos e permissões continuam os mesmos.
 
