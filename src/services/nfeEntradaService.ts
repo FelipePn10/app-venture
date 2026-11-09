@@ -52,6 +52,15 @@ export interface EntradaItem {
   valor_contabil: number;
   fator_conversao?: number;
   quantidade_estoque?: number;
+  /** Unidade tributável do XML (uTrib/qTrib). */
+  unidade_tributavel?: string;
+  quantidade_tributavel?: number;
+  /** A unidade da nota traduzida para o catálogo (UND → UN). */
+  unidade_normalizada?: string;
+  /** De onde veio o fator: ver ROTULO_ORIGEM_FATOR. */
+  origem_conversao?: string;
+  /** Explicação do fator ("1 KG = 0,155 M pelo cadastro do item"). */
+  caminho_conversao?: string;
   pedido_compra_xml?: string;
   plano_contas_id?: number;
   plano_contas_codigo?: string;
@@ -242,6 +251,11 @@ function parseItem(raw: unknown): EntradaItem {
     valor_contabil: parseNum(o, 'valor_contabil'),
     fator_conversao: optNum(o, 'fator_conversao'),
     quantidade_estoque: optNum(o, 'quantidade_estoque'),
+    unidade_tributavel: optStr(o, 'unidade_tributavel'),
+    quantidade_tributavel: optNum(o, 'quantidade_tributavel'),
+    unidade_normalizada: optStr(o, 'unidade_normalizada'),
+    origem_conversao: optStr(o, 'origem_conversao'),
+    caminho_conversao: optStr(o, 'caminho_conversao'),
     pedido_compra_xml: optStr(o, 'pedido_compra_xml'),
     plano_contas_id: optNum(o, 'plano_contas_id'),
     plano_contas_codigo: optStr(o, 'plano_contas_codigo'),
@@ -466,6 +480,63 @@ export interface ConciliacaoPayload {
 
 export async function salvarConciliacao(id: number, payload: ConciliacaoPayload): Promise<EntradaDocumento> {
   const { data } = await httpClient.put(`${BASE}/${id}/conciliacao`, payload);
+  return parseEntradaDocumento(data);
+}
+
+// ── Unidade da linha: de onde veio o fator, sugestões e resolução ──
+
+export const ROTULO_ORIGEM_FATOR: Record<string, string> = {
+  MESMA_UNIDADE: 'mesma unidade', SINONIMO: 'sinônimo', VINCULO_FORNECEDOR: 'vínculo do fornecedor', PEDIDO_COMPRA: 'pedido de compra',
+  CADASTRO_ITEM: 'conversão do item', LOTE: 'conversão do lote', PADRAO: 'conversão padrão', XML_TRIBUTAVEL: 'unidade tributável do XML', MANUAL: 'informado à mão',
+};
+export const ROTULO_FONTE_SUGESTAO: Record<string, string> = {
+  ...ROTULO_ORIGEM_FATOR, HISTORICO_FORNECEDOR: 'última nota do fornecedor', PESO_DO_ITEM: 'peso do item', CUSTO_REFERENCIA: 'custo da última entrada',
+};
+export const ROTULO_MEMORIZAR: Record<string, string> = {
+  NENHUM: 'Só nesta nota', ITEM: 'Cadastrar como conversão do item', FORNECEDOR: 'Gravar no vínculo com o fornecedor', SINONIMO: 'A unidade da nota é sinônimo de…',
+};
+
+export interface CandidatoUnidade {
+  fonte: string; confianca: 'ALTA' | 'MEDIA' | 'BAIXA' | string; fator: number; quantidade_estoque: number;
+  custo_unitario?: number; desvio_custo?: number; explicacao: string;
+}
+export interface SugestaoUnidade {
+  item_id: number; sequence: number; item_code: number; item_business_code?: string; item_name?: string;
+  unidade_nota: string; unidade_normalizada: string; unidade_catalogo: boolean; unidade_estoque: string;
+  quantidade: number; valor_total: number; fator_atual?: number; origem_atual?: string; caminho_atual?: string;
+  resolvida: boolean; custo_referencia?: number; candidatos: CandidatoUnidade[]; memorizacoes: string[];
+}
+
+/** Linhas que chegam em unidade diferente da de estoque, com os fatores possíveis. */
+export async function sugestoesDeUnidade(id: number): Promise<SugestaoUnidade[]> {
+  const { data } = await httpClient.get(`${BASE}/${id}/unidades/sugestoes`);
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    return {
+      item_id: parseNum(o, 'item_id'), sequence: parseNum(o, 'sequence'), item_code: parseNum(o, 'item_code'),
+      item_business_code: optStr(o, 'item_business_code'), item_name: optStr(o, 'item_name'),
+      unidade_nota: parseStr(o, 'unidade_nota'), unidade_normalizada: parseStr(o, 'unidade_normalizada'),
+      unidade_catalogo: Boolean(o?.unidade_catalogo), unidade_estoque: parseStr(o, 'unidade_estoque'),
+      quantidade: parseNum(o, 'quantidade'), valor_total: parseNum(o, 'valor_total'),
+      fator_atual: optNum(o, 'fator_atual'), origem_atual: optStr(o, 'origem_atual'), caminho_atual: optStr(o, 'caminho_atual'),
+      resolvida: Boolean(o?.resolvida), custo_referencia: optNum(o, 'custo_referencia'),
+      memorizacoes: Array.isArray(o?.memorizacoes) ? (o.memorizacoes as unknown[]).map(String) : ['NENHUM'],
+      candidatos: unwrapArray(o?.candidatos).map((c) => {
+        const x = unwrapObject(c);
+        return {
+          fonte: parseStr(x, 'fonte'), confianca: parseStr(x, 'confianca'), fator: parseNum(x, 'fator'),
+          quantidade_estoque: parseNum(x, 'quantidade_estoque'), custo_unitario: optNum(x, 'custo_unitario'),
+          desvio_custo: optNum(x, 'desvio_custo'), explicacao: parseStr(x, 'explicacao'),
+        };
+      }),
+    };
+  });
+}
+
+export interface ResolucaoUnidade { item_id: number; fator?: string; memorizar: string; unidade_catalogo?: string }
+/** Aplica o fator escolhido à linha e, se pedido, memoriza para as próximas notas. */
+export async function resolverUnidade(id: number, r: ResolucaoUnidade): Promise<EntradaDocumento> {
+  const { data } = await httpClient.post(`${BASE}/${id}/unidades/resolver`, r);
   return parseEntradaDocumento(data);
 }
 

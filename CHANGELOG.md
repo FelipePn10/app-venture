@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## Novidades
+- **Unidades e Conversões (VSUP0110) refeita:** a tela reúne o catálogo de unidades da empresa, os sinônimos que chegam nas notas, as conversões padrão (1 KG = 1.000 G) e as conversões de cada item (1 CX = 12 UN, 3 M2 = 1 chapa).
+- **Unidade cadastrada vale no sistema todo:** a unidade criada no catálogo aparece no cadastro do item, na estrutura, nos pedidos de compra e de venda, no orçamento, no contrato de fornecimento, no aviso de recebimento e na nota digitada, sempre com o nome ("GL — Galão"). As telas já abertas recebem a unidade nova assim que você volta para elas.
+- **Conversões em cadeia e exatas:** se o item tem 1 CX = 12 UN e 1 UN = 0,5 KG, o sistema converte caixa em quilo sozinho, sem arredondar no meio do caminho.
+- **Vigência e histórico:** a conversão pode valer a partir de uma data futura, a anterior fica guardada como encerrada e toda alteração pede o motivo e mostra antes o que será afetado (notas pendentes, pedidos, estrutura).
+- **Simulador:** mostra as conversões já cadastradas do item, converte qualquer quantidade e testa uma conversão nova antes de gravar.
+- **Nota de entrada entende a unidade do fornecedor:** "Kg.", "KGS", "PC" ou o apelido que cada fornecedor usa são reconhecidos pelos sinônimos, e a quantidade entra no estoque já convertida, mostrando de onde veio a conversão.
+- **Unidade fiscal:** cada unidade tem o código que vai na NF-e e no SPED (TONELADA vai como T). A prévia da nota avisa antes de transmitir se alguma unidade não tiver código fiscal válido.
+
+## Melhorias
+- **Segunda unidade e embalagens do item contam como conversão:** o peso por peça do cadastro do item e os níveis de embalagem (1 CX = 12 UN) já convertem nas notas e nos pedidos, sem precisar cadastrar de novo. Quando a VSUP0110 tem um fator diferente, a tela avisa.
+- **Conversão por máscara e por lote:** um item pode ter um fator por máscara (espessura, bitola) e um lote pode ter o peso real dele.
+- **Pedido de compra:** aceita o sinônimo da unidade (BMB = bombona) e recusa unidade que não está no catálogo, em vez de pedir uma conversão que não existe.
+- **Unidade de venda:** o pedido e o orçamento começam na unidade do item e só aceitam unidades do catálogo.
+- **Frete:** o peso para o cálculo do frete entende tonelada e miligrama.
+
+
 ## [v1.13.0] — 2026-11-07
 
 ## Novidades

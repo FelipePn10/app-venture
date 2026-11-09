@@ -1,4 +1,5 @@
 import { EntityName } from "@/components/ui/EntityName";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { useState, useCallback } from "react";
 import {
   type ReceivingNotice, type NoticeItem, type ReceivingDivergence, type NoticeStatus, type DivergenceType, type DivergenceResolution,
@@ -116,7 +117,7 @@ export function Vavr0200Page(): JSX.Element {
           <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label><LookupField<string> value={itemForm.item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Buscar item" onChange={(c) => setItemForm((f) => ({ ...f, item_code: c ? String(c) : "" }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Máscara</label><input className="erp-input" value={itemForm.mask} onChange={(e) => setItemForm((f) => ({ ...f, mask: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd. esperada</label><input className="erp-input num" type="number" value={itemForm.expected_qty} onChange={(e) => setItemForm((f) => ({ ...f, expected_qty: e.target.value }))} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Unidade</label><input className="erp-input" value={itemForm.unit} onChange={(e) => setItemForm((f) => ({ ...f, unit: e.target.value }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Unidade</label><SelectUnidade aria-label="Unidade" value={itemForm.unit} onChange={(u) => setItemForm((f) => ({ ...f, unit: u }))} /></div>
           <div className="erp-field erp-c1" style={{ alignSelf: "end" }}><button className="erp-btn" style={{ width: "100%" }} onClick={addItem}>Incluir</button></div>
 
           {items.length > 0 && (

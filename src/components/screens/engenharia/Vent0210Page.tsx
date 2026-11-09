@@ -28,6 +28,7 @@ import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
 import { StructureFormulaTester } from './StructureFormulaTester';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { hojeLocal } from "@/utils/dataLocal";
+import { useUnidades, useRotulosDeUnidades } from "@/hooks/useUnidades";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -346,6 +347,9 @@ interface DetailPanelProps {
 }
 
 const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }: DetailPanelProps) {
+  // Catálogo da empresa (VSUP0110); a unidade já gravada fica na lista.
+  const unidades = useUnidades(UNIT_OPTIONS, row?.unitOfMeasurement);
+  const rotuloUM = useRotulosDeUnidades();
   // Conferir a fórmula é uma ação do próprio componente: nada sai daqui.
   const [simulando, setSimulando] = useState(false);
   const [copiaAviso, setCopiaAviso] = useState('');
@@ -408,7 +412,7 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
           <label className="fe-d-label">Unid. Medida</label>
           <select className="fe-d-select" value={row.unitOfMeasurement}
             onChange={(e) => onUpdate({ unitOfMeasurement: e.target.value as UnitOfMeasurement })}>
-            {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
+            {unidades.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? enumLabel(u)}</option>)}
           </select>
           <ConversaoDeUnidade row={row} />
         </div>
@@ -724,6 +728,8 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function Vent0210Page(): JSX.Element {
+  const unidadesDoCatalogo = useUnidades(UNIT_OPTIONS);
+  const rotuloUM = useRotulosDeUnidades();
   const [breadcrumb, setBreadcrumb]       = useState<BreadcrumbEntry[]>([]);
   const [rootInfo, setRootInfo]           = useState<ItemInfo | null>(null);
   const [rootCodigo, setRootCodigo]       = useState('');
@@ -1506,7 +1512,7 @@ export function Vent0210Page(): JSX.Element {
                                   onChange={(e) => updateRow(row.localId, { unitOfMeasurement: e.target.value as UnitOfMeasurement })}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}>
-                                  {UNIT_OPTIONS.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}
+                                  {(unidadesDoCatalogo.includes(row.unitOfMeasurement) ? unidadesDoCatalogo : [...unidadesDoCatalogo, row.unitOfMeasurement]).map((u) => <option key={u} value={u}>{rotuloUM[u] ?? enumLabel(u)}</option>)}
                                 </select>
                               </div></td>
 

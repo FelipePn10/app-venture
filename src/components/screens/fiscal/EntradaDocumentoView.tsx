@@ -5,7 +5,9 @@ import {
   salvarConciliacao, aprovarEntrada, cancelarEntrada, sugerirItens, listarPedidosDoItem, baixarXmlEntrada,
   cadastrarFornecedorDaNota, cadastrarItemDaNota, unidadeDoCadastro, tipoUsoPeloCfop, UNIDADES_ITEM, type TipoUsoItem,
   ROTULO_ESTRATEGIA, ROTULO_ESTOQUE, ROTULO_STATUS_ENTRADA,
+  type SugestaoUnidade, sugestoesDeUnidade, resolverUnidade, ROTULO_ORIGEM_FATOR, ROTULO_FONTE_SUGESTAO, ROTULO_MEMORIZAR,
 } from "@/services/nfeEntradaService";
+import { useUnidades, useRotulosDeUnidades } from "@/hooks/useUnidades";
 import { errMessage } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
 import {
@@ -57,15 +59,33 @@ interface ParcelaEdit {
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const moneyCent = (c: number) => money(deCentavos(c));
 const qtd = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+/** Fator de conversão: 1/6000 precisa de mais casas que uma quantidade (0,000167, não 0,0002). */
+const fatorFmt = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 8 });
+/** "1.234,5" → "1234.5"; "0.5" continua 0.5. */
+const decimalDigitado = (s: string) => { const t = s.trim(); return t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t; };
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 
 function itensDoDoc(doc: EntradaDocumento): ItemEdit[] {
   return doc.itens.map((it) => ({
     id: it.id, item_code: it.item_code, plano: it.plano_contas_id, cc: it.centro_custo_id,
-    lembrar: false, fator: it.fator_conversao && it.fator_conversao !== 1 ? it.fator_conversao : undefined,
+    // Só o fator digitado volta para o campo: o calculado (cadastro, XML,
+    // pedido) aparece como sugestão no campo vazio e é refeito pelo servidor.
+    lembrar: false, fator: fatorDigitado(it) ? it.fator_conversao : undefined,
     op: it.entry_operation_code, almox: it.warehouse_id, linha: it.purchase_order_item_code,
     cfop: it.cfop_entrada, cfopManual: false,
   }));
+}
+
+function fatorDigitado(it: EntradaDocumento["itens"][number]): boolean {
+  if (it.origem_conversao) return it.origem_conversao === "MANUAL";
+  return !!it.fator_conversao && it.fator_conversao !== 1;
+}
+
+/** A linha chega numa unidade que não é a de estoque do item (já traduzida pelo catálogo). */
+function unidadeDiferente(it: EntradaDocumento["itens"][number]): boolean {
+  const daNota = (it.unidade_normalizada || it.uom || "").trim().toUpperCase();
+  const doItem = (it.item_uom || "").trim().toUpperCase();
+  return !!daNota && !!doItem && daNota !== doItem;
 }
 
 function parcelasDoDoc(doc: EntradaDocumento): ParcelaEdit[] {
@@ -101,6 +121,10 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
   const [devolvendo, setDevolvendo] = useState(false);
   // Item da nota que não existe no cadastro: cadastro direto da linha.
   const [novoItem, setNovoItem] = useState<{ idx: number; itemId: number; nome: string; unidade: string; almox?: number; tipoUso: TipoUsoItem } | null>(null);
+  const unidadesDoCatalogo = useUnidades(UNIDADES_ITEM, novoItem?.unidade);
+  const rotuloUM = useRotulosDeUnidades();
+  // Resolução de unidade de uma linha: candidatos a fator e como memorizar.
+  const [uni, setUni] = useState<{ itemId: number; dados?: SugestaoUnidade; carregando: boolean; fator: string; memorizar: string; unidade: string } | null>(null);
 
   useEffect(() => {
     setItens(itensDoDoc(doc)); setParcelas(parcelasDoDoc(doc)); setOpNota(doc.entry_operation_code);
@@ -209,9 +233,39 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
     }
   }
 
+  async function abrirUnidade(itemId: number) {
+    setUni({ itemId, carregando: true, fator: "", memorizar: "NENHUM", unidade: "" });
+    try {
+      const lista = await sugestoesDeUnidade(doc.id);
+      const dados = lista.find((l) => l.item_id === itemId);
+      const melhor = dados?.candidatos[0];
+      setUni({ itemId, dados, carregando: false, fator: melhor ? String(melhor.fator) : "", memorizar: "NENHUM", unidade: "" });
+    } catch (e) {
+      setUni(null);
+      onFeedback({ type: "error", message: errMessage(e) });
+    }
+  }
+
+  async function aplicarUnidade() {
+    if (!uni) return;
+    const fator = decimalDigitado(uni.fator);
+    if (uni.memorizar !== "SINONIMO" && !(Number(fator) > 0)) { onFeedback({ type: "error", message: "Informe o fator: quanto 1 unidade da nota vale na unidade de estoque." }); return; }
+    if (uni.memorizar === "SINONIMO" && !uni.unidade) { onFeedback({ type: "error", message: "Escolha de que unidade do catálogo a unidade da nota é sinônimo." }); return; }
+    setBusy(true);
+    try {
+      const atualizado = await resolverUnidade(doc.id, {
+        item_id: uni.itemId, fator: uni.memorizar === "SINONIMO" ? undefined : fator, memorizar: uni.memorizar,
+        unidade_catalogo: uni.memorizar === "SINONIMO" ? uni.unidade : undefined,
+      });
+      setUni(null);
+      onChange(atualizado);
+      onFeedback({ type: "success", message: uni.memorizar === "NENHUM" ? "Fator aplicado à linha." : "Fator aplicado e memorizado para as próximas notas." });
+    } catch (e) { onFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
   function abrirNovoItem(idx: number) {
     const it = doc.itens[idx];
-    setNovoItem({ idx, itemId: it.id, nome: (it.description ?? "").trim(), unidade: unidadeDoCadastro(it.uom),
+    setNovoItem({ idx, itemId: it.id, nome: (it.description ?? "").trim(), unidade: it.unidade_normalizada || unidadeDoCadastro(it.uom),
       almox: itens[idx]?.almox, tipoUso: tipoUsoPeloCfop(itens[idx]?.cfop || it.cfop_entrada || it.cfop) });
   }
 
@@ -564,8 +618,8 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                             )}
                           </td>
                           <td>{editavel
-                            ? <input className="erp-input num" style={{ height: 30, width: 70 }} type="number" step="0.0001" min="0" value={e.fator ?? ""} placeholder="1"
-                                title="Quantas unidades do cadastro há em 1 unidade da nota (ex.: CX com 12 → 12)"
+                            ? <input className="erp-input num" style={{ height: 30, width: 120 }} type="number" step="any" min="0" value={e.fator ?? ""} placeholder={String(it.fator_conversao ?? 1)}
+                                title={`Quantas unidades do cadastro há em 1 unidade da nota (ex.: CX com 12 → 12)${it.fator_conversao != null ? ` — fator atual: ${it.fator_conversao}` : ""}`}
                                 onChange={(ev) => setItem(idx, { fator: ev.target.value ? Number(ev.target.value) : undefined })} />
                             : (it.fator_conversao ?? 1)}
                             {it.item_uom && (() => {
@@ -573,10 +627,17 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                               // backend calculou (vínculo, pedido ou conversão do cadastro do item).
                               const fatorDigitado = e.fator && e.fator > 0 ? e.fator : undefined;
                               const naUnidade = fatorDigitado ? it.quantity * fatorDigitado : (it.quantidade_estoque ?? it.quantity);
-                              const semConversao = !fatorDigitado && (it.fator_conversao ?? 1) === 1 && !!it.uom && it.uom.toUpperCase() !== it.item_uom.toUpperCase();
+                              const semConversao = !fatorDigitado && !it.origem_conversao && (it.fator_conversao ?? 1) === 1 && unidadeDiferente(it);
+                              const origem = !fatorDigitado && it.origem_conversao && it.origem_conversao !== "MESMA_UNIDADE" ? ROTULO_ORIGEM_FATOR[it.origem_conversao] ?? it.origem_conversao : "";
                               return (<>
                                 <small style={{ display: "block" }}>= {qtd(naUnidade)} {it.item_uom}</small>
-                                {semConversao && <small style={{ display: "block", color: "var(--v-err)" }} title="Cadastre a conversão do item em VSUP0110 ou informe o fator">sem conversão {it.uom}→{it.item_uom}</small>}
+                                {origem && <small style={{ display: "block", color: "var(--v-text-muted)", cursor: it.caminho_conversao ? "help" : undefined }} title={it.caminho_conversao}>via {origem}</small>}
+                                {semConversao && <small style={{ display: "block", color: "var(--v-err)" }} title="Escolha uma das sugestões, cadastre a conversão do item em VSUP0110 ou informe o fator">sem conversão {it.unidade_normalizada || it.uom}→{it.item_uom}</small>}
+                                {editavel && unidadeDiferente(it) && (
+                                  <button className="erp-btn erp-btn-sm" style={{ marginTop: 4 }} onClick={() => (uni?.itemId === it.id ? setUni(null) : void abrirUnidade(it.id))}>
+                                    {uni?.itemId === it.id ? "Fechar" : semConversao ? "Resolver unidade" : "Conferir fator"}
+                                  </button>
+                                )}
                               </>);
                             })()}
                           </td>
@@ -625,6 +686,76 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                             )}
                           </td>
                         </tr>
+                        {uni?.itemId === it.id && (
+                          <tr>
+                            <td />
+                            <td colSpan={7}>
+                              {uni.carregando ? <em>Buscando fatores possíveis…</em> : !uni.dados ? <em>A unidade desta linha já é a de estoque do item.</em> : (() => {
+                                const d = uni.dados;
+                                const fatorNum = Number(decimalDigitado(uni.fator));
+                                const qtdEstoque = fatorNum > 0 ? d.quantidade * fatorNum : undefined;
+                                const custo = qtdEstoque ? d.valor_total / qtdEstoque : undefined;
+                                return (
+                                  <div className="erp-fieldset" style={{ margin: 0 }}>
+                                    <div className="erp-fieldset-head">
+                                      Unidade da linha {d.sequence}: a nota vem em {d.unidade_nota}{d.unidade_normalizada !== d.unidade_nota.toUpperCase() ? ` (${d.unidade_normalizada})` : ""} e o item é estocado em {d.unidade_estoque}
+                                      {d.custo_referencia ? <span style={{ fontWeight: 400, opacity: .7, marginLeft: 8 }}>— última entrada: {money(d.custo_referencia)} por {d.unidade_estoque}</span> : null}
+                                    </div>
+                                    {d.candidatos.length === 0 ? (
+                                      <div className="erp-fieldset-body"><em className="erp-c12">Nenhuma pista no cadastro, no XML, no pedido, nas notas anteriores ou no peso do item. Informe o fator abaixo.</em></div>
+                                    ) : (
+                                      <table className="erp-grid">
+                                        <thead><tr><th>Fonte</th><th>Confiança</th><th style={{ textAlign: "right" }}>1 {d.unidade_nota} =</th><th style={{ textAlign: "right" }}>Entra no estoque</th><th style={{ textAlign: "right" }}>Custo por {d.unidade_estoque}</th><th>Por quê</th><th /></tr></thead>
+                                        <tbody>
+                                          {d.candidatos.map((c, i) => (
+                                            <tr key={`${c.fonte}-${i}`}>
+                                              <td>{ROTULO_FONTE_SUGESTAO[c.fonte] ?? c.fonte}</td>
+                                              <td><span className={`erp-badge ${c.confianca === "ALTA" ? "ok" : c.confianca === "MEDIA" ? "info" : "warn"}`}>{c.confianca === "MEDIA" ? "média" : c.confianca.toLowerCase()}</span></td>
+                                              <td style={{ textAlign: "right" }}>{fatorFmt(c.fator)} {d.unidade_estoque}</td>
+                                              <td style={{ textAlign: "right" }}>{qtd(c.quantidade_estoque)} {d.unidade_estoque}</td>
+                                              <td style={{ textAlign: "right" }}>{c.custo_unitario !== undefined ? money(c.custo_unitario) : "—"}{c.desvio_custo !== undefined && (c.desvio_custo >= 5 || c.desvio_custo <= 0.2) ? <small style={{ display: "block", color: "var(--v-err)" }}>{qtd(c.desvio_custo)}× a última entrada</small> : null}</td>
+                                              <td><small>{c.explicacao}</small></td>
+                                              <td><button className="erp-btn erp-btn-sm" onClick={() => setUni({ ...uni, fator: String(c.fator) })}>Escolher</button></td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    )}
+                                    <div className="erp-fieldset-body">
+                                      <div className="erp-field erp-c2"><label className="erp-label erp-req">1 {d.unidade_nota} vale ({d.unidade_estoque})</label>
+                                        <input className="erp-input num" value={uni.fator} disabled={uni.memorizar === "SINONIMO"} onChange={(ev) => setUni({ ...uni, fator: ev.target.value })} /></div>
+                                      <div className="erp-field erp-c4"><label className="erp-label">Lembrar para as próximas notas</label>
+                                        <select className="erp-input" value={uni.memorizar} onChange={(ev) => setUni({ ...uni, memorizar: ev.target.value })}>
+                                          {d.memorizacoes.map((m) => <option key={m} value={m}>{ROTULO_MEMORIZAR[m] ?? m}</option>)}
+                                        </select></div>
+                                      {uni.memorizar === "SINONIMO" && (
+                                        <div className="erp-field erp-c2"><label className="erp-label erp-req">Unidade do catálogo</label>
+                                          <select className="erp-input" value={uni.unidade} onChange={(ev) => setUni({ ...uni, unidade: ev.target.value })}>
+                                            <option value="">— escolha —</option>
+                                            {unidadesDoCatalogo.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}
+                                          </select></div>
+                                      )}
+                                      <div className="erp-field erp-c4" style={{ justifyContent: "flex-end" }}>
+                                        {qtdEstoque !== undefined && uni.memorizar !== "SINONIMO" && <small>Entra {qtd(qtdEstoque)} {d.unidade_estoque}{custo !== undefined ? ` a ${money(custo)} cada` : ""}.</small>}
+                                      </div>
+                                      <div className="erp-field erp-c12"><small style={{ opacity: 0.75 }}>
+                                        {uni.memorizar === "ITEM" && `Cria a conversão ${d.unidade_normalizada} → ${d.unidade_estoque} no cadastro do item (VSUP0110): vale para todas as notas, pedidos e estruturas.`}
+                                        {uni.memorizar === "FORNECEDOR" && "Grava o fator no vínculo deste produto com este fornecedor: vale só para as notas dele."}
+                                        {uni.memorizar === "SINONIMO" && `As próximas notas deste fornecedor com "${d.unidade_nota}" passam a ser lidas na unidade escolhida; o fator vem da conversão cadastrada.`}
+                                        {uni.memorizar === "NENHUM" && "O fator vale só para esta linha desta nota."}
+                                      </small></div>
+                                      <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
+                                        {dirty && <small style={{ color: "var(--v-err)" }}>Grave a conciliação antes: aplicar o fator recarrega a nota.</small>}
+                                        <button className="erp-btn erp-btn-sm" onClick={() => setUni(null)} disabled={busy}>Desistir</button>
+                                        <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void aplicarUnidade()} disabled={busy || dirty}>Aplicar</button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                          </tr>
+                        )}
                         {pedAberto && ped && (
                           <tr>
                             <td />
@@ -670,7 +801,7 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
                                     <div className="erp-field erp-c2"><label className="erp-label erp-req">Unidade de estoque</label>
                                       <select className="erp-input" value={novoItem.unidade} onChange={(ev) => setNovoItem({ ...novoItem, unidade: ev.target.value })}>
                                         <option value="">— escolha —</option>
-                                        {UNIDADES_ITEM.map((u) => <option key={u} value={u}>{u}</option>)}
+                                        {unidadesDoCatalogo.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}
                                       </select>
                                       <span className="erp-hint">Na nota: {it.uom || "—"}</span></div>
                                     <div className="erp-field erp-c3"><label className="erp-label erp-req">Almoxarifado</label>

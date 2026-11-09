@@ -14,6 +14,8 @@ import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSuppliers, loadOperations } from "@/services/lookups";
 import { hojeLocal } from "@/utils/dataLocal";
+import { useCatalogoDeUnidades, useUnidades, useRotulosDeUnidades } from "@/hooks/useUnidades";
+import { OpcoesDeUnidade } from "@/components/screens/suprimento/Vsup0110Catalogo";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -61,6 +63,8 @@ export function Vtps0100Page(): JSX.Element {
   // Preços
   const [prices, setPrices] = useState<ServicePrice[]>([]);
   const [form, setForm] = useState<ServicePrice>({ ...PRECO_VAZIO });
+  const unidadesPreco = useUnidades(["UN"], form.uom);
+  const rotuloUM = useRotulosDeUnidades();
   const [editId, setEditId] = useState<number | null>(null);
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   const [reajuste, setReajuste] = useState({ percent: "", reason: "" });
@@ -80,6 +84,11 @@ export function Vtps0100Page(): JSX.Element {
   // Conversões globais
   const [conversoes, setConversoes] = useState<GlobalConversion[]>([]);
   const [convForm, setConvForm] = useState<GlobalConversion>({ from_uom: "", to_uom: "", factor: "1" });
+  // Catálogo de unidades (VSUP0110): a conversão global só liga unidades da
+  // mesma grandeza, então "Para" mostra só as da grandeza de "De".
+  const catalogo = useCatalogoDeUnidades();
+  const grandezaDe = catalogo.find((u) => u.code === convForm.from_uom)?.dimension;
+  const destinos = grandezaDe ? catalogo.filter((u) => u.dimension === grandezaDe && u.code !== convForm.from_uom) : catalogo;
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true); setFeedback(null);
@@ -277,7 +286,9 @@ export function Vtps0100Page(): JSX.Element {
                       <input id="tps-mascara" className="erp-input" value={form.mask ?? ""} placeholder="Todas"
                         onChange={(e) => setF("mask", e.target.value)} /></div>
                     <div className="erp-field erp-c1"><label htmlFor="tps-um" className="erp-label">UM</label>
-                      <input id="tps-um" className="erp-input" value={form.uom ?? ""} onChange={(e) => setF("uom", e.target.value)} /></div>
+                      <select id="tps-um" className="erp-input" value={form.uom ?? ""} onChange={(e) => setF("uom", e.target.value)}>
+                        {unidadesPreco.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}
+                      </select></div>
 
                     <div className="erp-field erp-c2"><label htmlFor="tps-preco" className="erp-label erp-req">Preço unitário</label>
                       <input id="tps-preco" className="erp-input num" type="number" step="0.0001" value={String(form.unit_price)}
@@ -572,11 +583,16 @@ export function Vtps0100Page(): JSX.Element {
                 </div>
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c2"><label htmlFor="tps-conv-de" className="erp-label erp-req">De</label>
-                    <input id="tps-conv-de" className="erp-input" value={convForm.from_uom} placeholder="KG"
-                      onChange={(e) => setConvForm((c) => ({ ...c, from_uom: e.target.value.toUpperCase() }))} /></div>
+                    <select id="tps-conv-de" className="erp-input" value={convForm.from_uom}
+                      onChange={(e) => setConvForm((c) => ({ ...c, from_uom: e.target.value, to_uom: "" }))}>
+                      <OpcoesDeUnidade unidades={catalogo} />
+                    </select></div>
                   <div className="erp-field erp-c2"><label htmlFor="tps-conv-para" className="erp-label erp-req">Para</label>
-                    <input id="tps-conv-para" className="erp-input" value={convForm.to_uom} placeholder="TONELADA"
-                      onChange={(e) => setConvForm((c) => ({ ...c, to_uom: e.target.value.toUpperCase() }))} /></div>
+                    <select id="tps-conv-para" className="erp-input" value={convForm.to_uom} disabled={!convForm.from_uom}
+                      onChange={(e) => setConvForm((c) => ({ ...c, to_uom: e.target.value }))}>
+                      <OpcoesDeUnidade unidades={destinos} vazio={convForm.from_uom ? "Selecione" : "Escolha «De» primeiro"} />
+                    </select>
+                    <span className="erp-field-hint">Só unidades da mesma grandeza. Conversão entre grandezas (KG→UN) é do item, na VSUP0110.</span></div>
                   <div className="erp-field erp-c3"><label htmlFor="tps-conv-fator" className="erp-label">Fator</label>
                     <input id="tps-conv-fator" className="erp-input num" type="number" step="0.00000001" value={convForm.factor}
                       onChange={(e) => setConvForm((c) => ({ ...c, factor: e.target.value }))} />
