@@ -16,7 +16,8 @@ export type ErpModule =
   | 'manutencao'
   | 'suprimento'
   | 'importacao'
-  | 'inspecao';
+  | 'inspecao'
+  | 'beneficiamento';
 
 export type ParentCategory = 'comercial_vendas' | 'industrial_producao' | 'administrativo_financeiro';
 
@@ -32,7 +33,7 @@ export const PARENT_CATEGORIES: Record<ParentCategory, ParentMeta> = {
   },
   industrial_producao: {
     label: 'Industrial & Produção',
-    modules: ['engenharia', 'producao', 'manutencao', 'planejamento', 'suprimento', 'almoxarifado', 'importacao', 'inspecao'],
+    modules: ['engenharia', 'producao', 'manutencao', 'planejamento', 'suprimento', 'almoxarifado', 'beneficiamento', 'importacao', 'inspecao'],
   },
   administrativo_financeiro: {
     label: 'Administrativo & Financeiro',
@@ -70,6 +71,7 @@ export const MODULE_META: Record<ErpModule, ModuleMeta> = {
   suprimento:    { label: 'Suprimento',          color: '#15803d', bgColor: '#f0fdf4' },
   importacao:    { label: 'Importação',          color: '#0369a1', bgColor: '#f0f9ff' },
   inspecao:      { label: 'Inspeção',            color: '#a21caf', bgColor: '#fdf4ff' },
+  beneficiamento: { label: 'Beneficiamento',     color: '#4d7c0f', bgColor: '#f7fee7' },
   cadastros:     { label: 'Cadastros & Plataforma', color: '#475569', bgColor: '#f8fafc' },
 };
 
@@ -120,6 +122,9 @@ export const MODULO_DE_PERMISSAO: Record<string, string> = {
   suprimento: 'suprimentos', importacao: 'suprimentos',
   inspecao: 'qualidade',
   almoxarifado: 'estoque',
+  // As rotinas de beneficiamento saíram do Almoxarifado para uma pasta própria
+  // e continuam sob a mesma permissão de estoque no backend.
+  beneficiamento: 'estoque',
   engenharia: 'engenharia',
   planejamento: 'planejamento',
   producao: 'producao',
@@ -1226,9 +1231,9 @@ export const ERP_SCREENS: ErpScreen[] = [
   // Beneficiamento — material do cliente em poder da empresa. Telas NOVAS: o
   // estoque próprio (VEST0100) segue como está. Prefixo VBEN, e não VTER, porque
   // VTER* é o sentido oposto (serviço que MANDAMOS para fora).
-  { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria.", module: "almoxarifado" },
-  { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio.", module: "almoxarifado" },
-  { code: "VBEN0300", title: "Horas de Beneficiamento", description: "Horas trabalhadas nas ordens de fabricação de beneficiamento, por cliente e pedido: apontamentos e horas lançadas nas operações do roteiro.", module: "almoxarifado" },
+  { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria.", module: "beneficiamento" },
+  { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio.", module: "beneficiamento" },
+  { code: "VBEN0300", title: "Horas de Beneficiamento", description: "Horas trabalhadas nas ordens de fabricação de beneficiamento, por cliente e pedido: apontamentos e horas lançadas nas operações do roteiro.", module: "beneficiamento" },
   { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento", replacedBy: "VPCT0100" },
   { code: "VSUP0640", title: "Registros Operacionais de Compras", description: "Ocorrências normalizadas de compra, recebimento e inspeção.", module: "suprimento" },
   { code: "VSUP0650", title: "Histórico de Movimentos de Compra", description: "Rastreabilidade consolidada de movimentos por fornecedor e item.", module: "suprimento" },

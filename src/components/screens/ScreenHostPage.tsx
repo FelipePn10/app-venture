@@ -16,9 +16,9 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  * `Suspense` lá embaixo.
  */
 const Vent0800Page = lazy(() => import("./almoxarifado/Vent0800Page").then((m) => ({ default: m.Vent0800Page })));
-const Vben0100Page = lazy(() => import("./almoxarifado/Vben0100Page").then((m) => ({ default: m.Vben0100Page })));
-const Vben0200Page = lazy(() => import("./almoxarifado/Vben0200Page").then((m) => ({ default: m.Vben0200Page })));
-const Vben0300Page = lazy(() => import("./almoxarifado/Vben0300Page").then((m) => ({ default: m.Vben0300Page })));
+const Vben0100Page = lazy(() => import("./beneficiamento/Vben0100Page").then((m) => ({ default: m.Vben0100Page })));
+const Vben0200Page = lazy(() => import("./beneficiamento/Vben0200Page").then((m) => ({ default: m.Vben0200Page })));
+const Vben0300Page = lazy(() => import("./beneficiamento/Vben0300Page").then((m) => ({ default: m.Vben0300Page })));
 
 const Vent0200Page = lazy(() => import("./engenharia/Vent0200Page").then((m) => ({ default: m.Vent0200Page })));
 const Vent0210Page = lazy(() => import("./engenharia/Vent0210Page").then((m) => ({ default: m.Vent0210Page })));
