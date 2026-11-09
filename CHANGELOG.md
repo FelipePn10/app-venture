@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.14.0] — 2026-11-09
+
 ## Novidades
 - **Unidades e Conversões (VSUP0110) refeita:** a tela reúne o catálogo de unidades da empresa, os sinônimos que chegam nas notas, as conversões padrão (1 KG = 1.000 G) e as conversões de cada item (1 CX = 12 UN, 3 M2 = 1 chapa).
 - **Unidade cadastrada vale no sistema todo:** a unidade criada no catálogo aparece no cadastro do item, na estrutura, nos pedidos de compra e de venda, no orçamento, no contrato de fornecimento, no aviso de recebimento e na nota digitada, sempre com o nome ("GL — Galão"). As telas já abertas recebem a unidade nova assim que você volta para elas.
