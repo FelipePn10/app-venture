@@ -508,8 +508,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
   {
     code: "VSUP0110",
-    title: "Conversão de UM por Item",
-    description: "Cadastrar fatores de conversão entre unidades de medida de um item (ex.: 1 CX = 12 UN) para o pedido de compra.",
+    title: "Unidades e Conversões",
+    description: "Catálogo de unidades da empresa, sinônimos da nota fiscal, conversões padrão e conversões do item (1 CX = 12 UN, 3 M2 = 1 chapa) com vigência, encadeamento, cobertura, simulador, fator por lote e histórico.",
     module: "suprimento",
   },
   {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import {
   type SalesQuotationDTO,
   type SalesQuotationItemDTO,
@@ -120,7 +121,7 @@ const EMPTY_QUOTATION: SalesQuotationDTO = {
   discount_value: 0, surcharge_value: 0, retained_tax_value: 0,
 };
 const EMPTY_ITEM: SalesQuotationItemDTO = {
-  item_code: "", requested_qty: 1, unit_price: 0, sales_uom: "UN",
+  item_code: "", requested_qty: 1, unit_price: 0, sales_uom: "",
   discount_pct: 0, ipi_pct: 0, st_pct: 0, delivery_date_firm: false,
 };
 
@@ -931,7 +932,7 @@ export function Vvnd0300Page(): JSX.Element {
                           <div className="erp-field erp-c3"><label className="erp-label erp-req">Item</label><LookupField value={newItem.item_code} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={selecionarItem} /></div>
                           <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela válida para o item</label><LookupField key={`${newItem.item_code}-${itemTableOptions.map((option) => option.code).join("-")}`} value={newItem.price_table_code} loader={async () => itemTableOptions} entityLabel="tabela de venda" disabled={!newItem.item_code || itemTableOptions.length === 0} onChange={(code) => { const tableCode = Number(code ?? 0); setNewItem((current) => ({ ...current, price_table_code: tableCode || undefined, unit_price: itemTablePrices[tableCode] ?? 0 })); }} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" step="0.0001" value={newItem.requested_qty || ""} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
-                          <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>
+                          <div className="erp-field erp-c1"><label className="erp-label">UM</label><SelectUnidade aria-label="Unidade de venda" vazio="A do item" value={newItem.sales_uom ?? ""} onChange={(u) => setI("sales_uom", u)} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço da tabela</label><input className="erp-input num" type="number" step="0.0001" value={newItem.unit_price || ""} readOnly title="Preço calculado pela tabela de venda do orçamento" /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">Desc.%</label><input className="erp-input num" type="number" step="0.01" value={newItem.discount_pct || ""} onChange={(e) => setI("discount_pct", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">IPI %</label><input className="erp-input num" type="number" step="0.01" value={newItem.ipi_pct || ""} disabled={!!selected?.delivery_with_receipt} onChange={(e) => { setI("ipi_pct", Number(e.target.value)); setI("tributos_manuais", true); }} title="Em branco (com ST em branco), o IPI e a ST são calculados pela regra de ICMS/IPI do cliente" /></div>

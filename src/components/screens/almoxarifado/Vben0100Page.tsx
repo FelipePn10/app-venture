@@ -1,4 +1,5 @@
 import { rotuloDaNota } from "@/services/nfeService";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type RemittanceDTO, type RemittanceItemDTO, type MovementDTO, type MovementType, type ScrapDestination,
@@ -695,7 +696,7 @@ export function Vben0100Page(): JSX.Element {
                       <div className="erp-field erp-c2"><label className="erp-label" htmlFor="ben-serv-cod">Código do serviço</label>
                         <input id="ben-serv-cod" className="erp-input" value={servico.codigo_item} onChange={(e) => setServico((p) => ({ ...p, codigo_item: e.target.value }))} /></div>
                       <div className="erp-field erp-c1"><label className="erp-label" htmlFor="ben-serv-um">UM</label>
-                        <input id="ben-serv-um" className="erp-input" value={servico.unidade} onChange={(e) => setServico((p) => ({ ...p, unidade: e.target.value }))} /></div>
+                        <SelectUnidade id="ben-serv-um" compacto value={servico.unidade} onChange={(u) => setServico((p) => ({ ...p, unidade: u }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label erp-req" htmlFor="ben-serv-qtd">Quantidade</label>
                         <input id="ben-serv-qtd" className="erp-input num" inputMode="decimal" value={servico.quantidade} onChange={(e) => setServico((p) => ({ ...p, quantidade: e.target.value }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label erp-req" htmlFor="ben-serv-vlr">Valor unitário</label>

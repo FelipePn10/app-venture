@@ -3,77 +3,12 @@ import { downloadResponse } from '@/services/fileDownload';
 
 /**
  * Cadastros mestres de Compras:
- *  §11 Conversão de UM por Item (`/api/item-conversions`)
+ *  §11 Conversão de UM por Item — em `unitConversionService`
  *  §12 Tabela de Preço de Compra (`/api/purchase-price-tables`)
  *  §14 Fornecedor Preferencial por Item (`/api/item-suppliers`)
  */
 
-// ── §11 Conversão de UM ──
-export interface ItemConversionDTO {
-  id?: number;
-  item_code: string;
-  from_uom: string;
-  to_uom: string;
-  factor: number;
-  /**
-   * Política de arredondamento para item que não aceita fração. A conversão
-   * arredonda para o inteiro mais próximo e só aceita se a sobra couber em
-   * `rounding_percent` (% da quantidade) mais a tolerância. Tudo em zero recusa
-   * qualquer conversão que não dê inteiro exato — que era o comportamento até
-   * aqui, porque a tela nunca enviava esses três campos.
-   */
-  rounding_percent?: number;
-  tolerance_value?: number;
-  /** `PERCENT` (% da quantidade) ou `FIXED` (valor absoluto). */
-  tolerance_type?: string;
-}
-
-/** Como a tolerância de conversão é interpretada. */
-export const CONVERSION_TOLERANCE_TYPES = ['PERCENT', 'FIXED'] as const;
-function parseConv(raw: unknown): ItemConversionDTO {
-  const o = unwrapObject(raw);
-  return {
-    id: parseNum(o, 'id', 'ID') || undefined,
-    item_code: parseStr(o, 'item_code', 'ItemCode'),
-    from_uom: parseStr(o, 'from_uom', 'FromUom'),
-    to_uom: parseStr(o, 'to_uom', 'ToUom'),
-    factor: parseNum(o, 'factor', 'Factor'),
-    rounding_percent: parseNum(o, 'rounding_percent', 'RoundingPercent'),
-    tolerance_value: parseNum(o, 'tolerance_value', 'ToleranceValue'),
-    tolerance_type: parseStr(o, 'tolerance_type', 'ToleranceType') || undefined,
-  };
-}
-export async function listItemConversions(itemCode: string): Promise<ItemConversionDTO[]> {
-  const { data } = await httpClient.get(`/api/item-conversions/item/${encodeURIComponent(itemCode)}`);
-  return unwrapArray(data).map(parseConv);
-}
-export async function upsertItemConversion(dto: ItemConversionDTO): Promise<ItemConversionDTO> {
-  const { data } = await httpClient.post('/api/item-conversions', dto);
-  return parseConv(data);
-}
-export async function deleteItemConversion(id: number): Promise<void> {
-  await httpClient.delete(`/api/item-conversions/${id}`);
-}
-/** Resultado legível da conversão — a tela mostra isso, não o JSON cru. */
-export interface ConversionResult {
-  from_uom: string;
-  to_uom: string;
-  factor: number;
-  quantity: number;
-  converted_qty: number;
-}
-
-export async function convertItem(itemCode: string, from: string, to: string, qty: number): Promise<ConversionResult> {
-  const { data } = await httpClient.get('/api/item-conversions/convert', { params: { item: itemCode, from, to, qty } });
-  const o = unwrapObject(data);
-  return {
-    from_uom: parseStr(o, 'from_uom', 'FromUom'),
-    to_uom: parseStr(o, 'to_uom', 'ToUom'),
-    factor: parseNum(o, 'factor', 'Factor'),
-    quantity: parseNum(o, 'quantity', 'Quantity'),
-    converted_qty: parseNum(o, 'converted_qty', 'ConvertedQty'),
-  };
-}
+// §11 Conversão de UM: ver unitConversionService (VSUP0110).
 
 // ── §12 Tabela de Preço de Compra ──
 export interface PriceTableDTO {

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import {
   type CuttingPlanDTO, type CuttingPartDTO, type CuttingStockDTO, type PatternDTO, type CuttingSettings,
   CUT_TYPES,
@@ -155,7 +156,7 @@ export function Vcut0100Page(): JSX.Element {
               <div className="erp-field erp-c1"><label className="erp-label">Kerf</label><input className="erp-input num" type="number" value={newPlan.kerf_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, kerf_mm: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Refile</label><input className="erp-input num" type="number" value={newPlan.trim_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, trim_mm: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Sobra mín.</label><input className="erp-input num" type="number" value={newPlan.min_remnant_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, min_remnant_mm: Number(e.target.value) }))} /></div>
-              <div className="erp-field erp-c1"><label className="erp-label">UoM estoque</label><input className="erp-input" value={newPlan.stock_uom ?? ""} onChange={(e) => setNewPlan((s) => ({ ...s, stock_uom: e.target.value }))} /></div>
+              <div className="erp-field erp-c1"><label className="erp-label">UoM estoque</label><SelectUnidade aria-label="Unidade de estoque" compacto value={newPlan.stock_uom ?? ""} onChange={(u) => setNewPlan((s) => ({ ...s, stock_uom: u }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Fator UoM</label><input className="erp-input num" type="number" step="0.001" value={newPlan.uom_factor || ""} onChange={(e) => setNewPlan((s) => ({ ...s, uom_factor: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Depósito (p/ firmar)</label><input className="erp-input num" type="number" value={newPlan.warehouse_id || ""} onChange={(e) => setNewPlan((s) => ({ ...s, warehouse_id: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>

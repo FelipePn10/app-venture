@@ -1,4 +1,5 @@
 import { FINALIDADES_COMPRA } from "@/services/customerService";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { useState, useCallback, useMemo } from "react";
 import {
   type SalesOrderDTO,
@@ -54,7 +55,7 @@ const EMPTY_ORDER: SalesOrderDTO = {
   emission_date: today(), delivery_date: today(), commission_pct: 0, additional_days: 0,
 };
 const EMPTY_ITEM: SalesOrderItemDTO = {
-  item_code: "", requested_qty: 1, unit_price: 0, warehouse_code: 0, sales_uom: "UN", discount_pct: 0,
+  item_code: "", requested_qty: 1, unit_price: 0, warehouse_code: 0, sales_uom: "", discount_pct: 0,
 };
 
 export function Vvnd0200Page(): JSX.Element {
@@ -460,7 +461,7 @@ export function Vvnd0200Page(): JSX.Element {
                           <div className="erp-field erp-c3"><label className="erp-label erp-req">Tabela válida para o item</label><LookupField key={`${newItem.item_code}-${itemTableOptions.map((option) => option.code).join("-")}`} value={newItem.price_table_code} loader={async () => itemTableOptions} entityLabel="tabela de venda" disabled={!newItem.item_code || itemTableOptions.length === 0} onChange={(code) => { const tableCode = Number(code ?? 0); setNewItem((current) => ({ ...current, price_table_code: tableCode || undefined, unit_price: itemTablePrices[tableCode] ?? 0 })); }} /></div>
                           <div className="erp-field erp-c3"><label className="erp-label">Almoxarifado</label><LookupField value={newItem.warehouse_code} loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Selecionar almoxarifado" onChange={(code) => setI("warehouse_code", code ?? 0)} /></div>
                           <div className="erp-field erp-c1"><label className="erp-label erp-req">Qtd</label><input className="erp-input num" type="number" value={newItem.requested_qty || ""} onChange={(e) => setI("requested_qty", Number(e.target.value))} /></div>
-                          <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={newItem.sales_uom ?? ""} onChange={(e) => setI("sales_uom", e.target.value)} /></div>
+                          <div className="erp-field erp-c1"><label className="erp-label">UM</label><SelectUnidade aria-label="Unidade de venda" vazio="A do item" value={newItem.sales_uom ?? ""} onChange={(u) => setI("sales_uom", u)} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço da tabela</label><input className="erp-input num" type="number" value={newItem.unit_price || ""} readOnly title="Preço calculado pela tabela selecionada para esta linha" /></div>
                           <div className="erp-field erp-c1"><label className="erp-label">Desc.%</label><input className="erp-input num" type="number" value={newItem.discount_pct || ""} onChange={(e) => setI("discount_pct", Number(e.target.value))} /></div>
                           <div className="erp-field erp-c2"><label className="erp-label">Lote</label><input className="erp-input" value={newItem.lot ?? ""} placeholder="Se o item é rastreado" onChange={(e) => setI("lot", e.target.value || undefined)} /></div>

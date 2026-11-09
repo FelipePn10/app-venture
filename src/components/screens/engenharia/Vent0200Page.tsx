@@ -12,6 +12,7 @@ import { invalidarListas } from "@/services/lookupInvalidation";
 import { atributosLivresDoItem, criarRevisaoDoItem, embalagensDoItem, impactoDaAlteracao, itensParecidos, nomesDeAtributosLivres, previaFiscalDoItem, prontidaoDoItem, revisoesDoItem, saldoDuasUnidades, salvarAtributosLivres, salvarEmbalagensDoItem, type AtributoLivre, type Candidato, type EmbalagemItem, type ImpactoAlteracao, type PreviaFiscal, type Prontidao, type RevisaoItem, type SaldoDuasUnidades } from "@/services/itemGovernancaService";
 import { impostosDoItem, type SimulacaoResultado } from "@/services/tributacaoService";
 import { responsaveisDoGrupo, type Responsaveis } from "@/services/setorService";
+import { useUnidades, useRotulosDeUnidades, useCatalogoDeUnidades } from "@/hooks/useUnidades";
 
 // ─── Enums (mirror do backend Go) ─────────────────────────────────────────────
 //
@@ -493,8 +494,29 @@ const formInicial: FormItem = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+/**
+ * Número digitado do jeito brasileiro: "84,78", "1.234,5" ou "84.78". Number()
+ * puro dava NaN para "84,78" e a validação dizia "informe o fator" com o
+ * campo preenchido.
+ */
+function decimalBR(value: string): number {
+  const t = value.trim();
+  if (!t) return NaN;
+  return Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t);
+}
+
 export function Vent0200Page(): JSX.Element {
   const [form, setForm] = useState<FormItem>(formInicial);
+  // Catálogo da empresa (VSUP0110 › Unidades); as unidades já gravadas ficam na lista.
+  const unidades = useUnidades(UNIDADES, form.unitOfMeasurement, form.umSuprimentos, form.umVenda, form.secondaryUom);
+  // A opção mostra o nome ("GL — Galão"): com só o código, ninguém achava o galão.
+  const rotuloUM = useRotulosDeUnidades();
+  const catalogoUM = useCatalogoDeUnidades();
+  // Todas as unidades ativas do catálogo, como nas outras listas: a nota leva o
+  // código fiscal da unidade (TONELADA → T), então o tamanho do código não limita.
+  const unidadesEmbalagem = catalogoUM.length > 0
+    ? catalogoUM.map((u) => u.code).sort((a, b) => a.localeCompare(b))
+    : UNIDADES_EMBALAGEM;
   const [aba, setAba] = useState<AbaAtiva>("capa");
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<
@@ -767,7 +789,7 @@ export function Vent0200Page(): JSX.Element {
       e.cest = "CEST deve conter exatamente 7 dígitos.";
     if (form.gtin && !gtinValido(form.gtin)) e.gtin = "GTIN inválido: confira os dígitos e o verificador.";
     if (form.gtinTax && !gtinValido(form.gtinTax)) e.gtinTax = "GTIN inválido: confira os dígitos e o verificador.";
-    if (form.taxUnit.trim() && !(Number(form.taxUnitFactor) > 0)) e.taxUnitFactor = "Informe quantas unidades tributáveis há em uma comercial.";
+    if (form.taxUnit.trim() && !(decimalBR(form.taxUnitFactor) > 0)) e.taxUnitFactor = "Informe quantas unidades tributáveis há em uma comercial.";
     if (form.taxUnitFactor.trim() && !form.taxUnit.trim()) e.taxUnit = "Informe a unidade tributável do fator.";
     if (form.shelfLifeDays.trim() && Number(form.shelfLifeDays) <= 0) e.shelfLifeDays = "A validade deve ser maior que zero.";
     if (form.minRemainingLifeDays.trim() && form.shelfLifeDays.trim() && Number(form.minRemainingLifeDays) > Number(form.shelfLifeDays))
@@ -776,7 +798,7 @@ export function Vent0200Page(): JSX.Element {
     if (form.lotMaximo.trim() && Number(form.lotMinimo) > 0 && Number(form.lotMaximo) < Number(form.lotMinimo)) e.lotMaximo = "Não pode ser menor que o lote mínimo.";
     if (form.underTolerance.trim() && (Number(form.underTolerance) < 0 || Number(form.underTolerance) > 100)) e.underTolerance = "Vai de 0 a 100%.";
     if (form.overTolerance.trim() && Number(form.overTolerance) < 0) e.overTolerance = "Não pode ser negativa.";
-    if (form.secondaryUom && !(Number(form.secondaryFactor) > 0)) e.secondaryFactor = "Informe o fator da segunda unidade.";
+    if (form.secondaryUom && !(decimalBR(form.secondaryFactor) > 0)) e.secondaryFactor = "Informe o fator da segunda unidade.";
     if (form.exTipi && !/^\d{2,3}$/.test(form.exTipi)) e.exTipi = "O EX TIPI tem 2 ou 3 dígitos.";
     if (form.manufacturerCnpj && form.manufacturerCnpj.length !== 14) e.manufacturerCnpj = "O CNPJ tem 14 dígitos.";
     if (form.fciNumber.trim() && form.fciNumber.trim().length !== 36) e.fciNumber = "A FCI tem 36 caracteres.";
@@ -862,8 +884,7 @@ export function Vent0200Page(): JSX.Element {
 
   /** Corpo de criar e de alterar. Na alteração, `null` limpa o campo opcional. */
   function montarPayload(): Obj {
-      const parseDecimal = (value: string): number =>
-        Number(value.trim().replace(",", "."));
+      const parseDecimal = decimalBR;
       const bruto = parseDecimal(form.grossWeight || "0");
       const liquido = parseDecimal(form.netWeight || "0");
       const optionalNumber = (value: string): number | undefined => {
@@ -1449,10 +1470,10 @@ export function Vent0200Page(): JSX.Element {
         {aba === "estoque" && (<>
           <Secao titulo="Unidade e almoxarifado">
             <Campo c={3} rotulo="Unidade de estoque" dica="A unidade em que o saldo é controlado e todas as quantidades do item são convertidas. Com saldo ou documento aberto ela não muda.">
-              <select className="erp-input" value={form.unitOfMeasurement} onChange={(e) => setField("unitOfMeasurement", e.target.value as TypeUnitOfMeasurementItem)}>{UNIDADES.map((u) => <option key={u}>{u}</option>)}</select>
+              <select className="erp-input" value={form.unitOfMeasurement} onChange={(e) => setField("unitOfMeasurement", e.target.value as TypeUnitOfMeasurementItem)}>{unidades.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}</select>
             </Campo>
             <Campo c={3} rotulo="Unidade de compra" dica="Em que o fornecedor vende. Diferente da de estoque, cadastre a conversão em VSUP0110 (ex.: 1 BR = 6 M).">
-              <select className="erp-input" value={form.umSuprimentos} onChange={(e) => setField("umSuprimentos", e.target.value as TypeUnitOfMeasurementItem)}>{UNIDADES.map((u) => <option key={u}>{u}</option>)}</select>
+              <select className="erp-input" value={form.umSuprimentos} onChange={(e) => setField("umSuprimentos", e.target.value as TypeUnitOfMeasurementItem)}>{unidades.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}</select>
             </Campo>
             <Campo c={3} rotulo="Almoxarifado padrão" dica="Onde o item fica guardado e de onde sai quando o documento não indica outro. Em branco = almoxarifado 1.">
               <LookupField<number> value={form.warehouseID ? Number(form.warehouseID) : undefined} loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Selecionar almoxarifado…" onChange={(c) => setField("warehouseID", c ? String(c) : "")} />
@@ -1460,8 +1481,8 @@ export function Vent0200Page(): JSX.Element {
             <Campo c={3} rotulo="Almoxarifado de recebimento" dica="Só se a compra entra em outro lugar, como a inspeção. Em branco, o recebimento usa o almoxarifado padrão.">
               <LookupField<number> value={form.almoxSuprimentos ? Number(form.almoxSuprimentos) : undefined} loader={loadWarehouses} entityLabel="almoxarifado" placeholder="O mesmo do padrão" onChange={(c) => setField("almoxSuprimentos", c ? String(c) : "")} />
             </Campo>
-            <Campo c={3} rotulo="Segunda unidade" dica="Para controlar também em outra medida, como peça e peso (KG) da chapa ou do perfil."><select className="erp-input" id="item-segunda-um" disabled={form.type === "SERVICO"} value={form.secondaryUom} onChange={(e) => { setField("secondaryUom", e.target.value); if (!e.target.value) setField("secondaryFactor", ""); }}><option value="">Não controla</option>{UNIDADES.filter((u) => u !== form.unitOfMeasurement).map((u) => <option key={u}>{u}</option>)}</select></Campo>
-            <Campo c={3} rotulo="Fator nominal da segunda unidade" erro={erroDe("secondaryFactor")} dica="Quanto 1 unidade de estoque vale na segunda (ex.: 1 PC = 12,5 KG). O recebimento pode informar o peso real."><input className="erp-input" inputMode="decimal" disabled={!form.secondaryUom} value={form.secondaryFactor} onChange={(e) => setField("secondaryFactor", e.target.value)} /></Campo>
+            <Campo c={3} rotulo="Segunda unidade" dica="Para controlar também em outra medida, como peça e peso (KG) da chapa ou do perfil."><select className="erp-input" id="item-segunda-um" disabled={form.type === "SERVICO"} value={form.secondaryUom} onChange={(e) => { setField("secondaryUom", e.target.value); if (!e.target.value) setField("secondaryFactor", ""); }}><option value="">Não controla</option>{unidades.filter((u) => u !== form.unitOfMeasurement).map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}</select></Campo>
+            <Campo c={3} rotulo="Fator nominal da segunda unidade" erro={erroDe("secondaryFactor")} dica="Quanto 1 unidade de estoque vale na segunda (ex.: 1 PC = 12,5 KG). O recebimento pode informar o peso real. É a mesma conversão da VSUP0110: gravar lá a conversão deste par atualiza este campo."><input className="erp-input" inputMode="decimal" disabled={!form.secondaryUom} value={form.secondaryFactor} onChange={(e) => setField("secondaryFactor", e.target.value)} /></Campo>
             {saldo?.secondary_uom && <Dado c={6} rotulo="Saldo nas duas unidades" valor={`${Number(saldo.quantity).toLocaleString("pt-BR")} ${saldo.uom} · ${Number(saldo.secondary_quantity).toLocaleString("pt-BR")} ${saldo.secondary_uom}`} />}
             {saldo?.secondary_uom && saldo.details.length > 0 && (
               <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
@@ -1659,7 +1680,7 @@ export function Vent0200Page(): JSX.Element {
           <Secao titulo="Venda">
             <Campo c={8} rotulo="Descrição comercial" dica="Como o item aparece no orçamento, no pedido e na nota. Em branco, usa a descrição técnica."><input className="erp-input" maxLength={255} value={form.descrComercial} placeholder="Descrição usada em pedidos e notas fiscais" onChange={(e) => setField("descrComercial", e.target.value)} /></Campo>
             <Campo c={4} rotulo="Tipo de venda" erro={erroDe("tipoVenda")} dica="Venda: produzido aqui. Revenda: comprado pronto para revender. Define o tipo do item na EFD."><select className="erp-input" value={form.tipoVenda} onChange={(e) => setField("tipoVenda", e.target.value as TypeVenda)}><option>Venda</option><option disabled={form.type !== "COMPRADO"}>Revenda</option></select></Campo>
-            <Campo c={3} rotulo="Unidade de venda" dica="Em que o item é vendido, se não for a de estoque. A conversão entre as duas fica em VSUP0110."><select className="erp-input" value={form.umVenda} onChange={(e) => setField("umVenda", e.target.value)}><option value="">A de estoque</option>{UNIDADES.map((u) => <option key={u}>{u}</option>)}</select></Campo>
+            <Campo c={3} rotulo="Unidade de venda" dica="Em que o item é vendido, se não for a de estoque. A conversão entre as duas fica em VSUP0110."><select className="erp-input" value={form.umVenda} onChange={(e) => setField("umVenda", e.target.value)}><option value="">A de estoque</option>{unidades.map((u) => <option key={u} value={u}>{rotuloUM[u] ?? u}</option>)}</select></Campo>
             <Campo c={3} rotulo="Mínimo de venda" erro={erroDe("minVenda")} dica="O pedido não aceita quantidade menor."><input className="erp-input" inputMode="decimal" value={form.minVenda} placeholder="0" onChange={(e) => setField("minVenda", e.target.value)} /></Campo>
             <Campo c={3} rotulo="Múltiplo de venda" erro={erroDe("multiploVenda")} dica="O pedido só aceita múltiplos disto, como caixa fechada de 50."><input className="erp-input" inputMode="decimal" value={form.multiploVenda} placeholder="0" onChange={(e) => setField("multiploVenda", e.target.value)} /></Campo>
             <Campo c={3} rotulo="Entrega estimada (dias)" erro={erroDe("entregaEstimada")} dica="Prazo sugerido no orçamento e no pedido quando não há data combinada."><input className="erp-input" type="number" value={form.entregaEstimada} placeholder="0" onChange={(e) => setField("entregaEstimada", e.target.value)} /></Campo>
@@ -1714,7 +1735,7 @@ export function Vent0200Page(): JSX.Element {
                     {embalagens.map((e, i) => (
                       <tr key={i}>
                         <td><input className="erp-cell-input" inputMode="numeric" maxLength={14} value={e.gtin} onChange={(ev) => setEmbalagens((l) => l.map((x, j) => (j === i ? { ...x, gtin: ev.target.value.replace(/\D/g, "") } : x)))} /></td>
-                        <td><select className="erp-cell-input" value={e.uom} onChange={(ev) => setEmbalagens((l) => l.map((x, j) => (j === i ? { ...x, uom: ev.target.value } : x)))}>{[...new Set([...UNIDADES_EMBALAGEM, e.uom])].map((u) => <option key={u} value={u}>{ROTULO_EMBALAGEM[u] ?? u}</option>)}</select></td>
+                        <td><select className="erp-cell-input" value={e.uom} onChange={(ev) => setEmbalagens((l) => l.map((x, j) => (j === i ? { ...x, uom: ev.target.value } : x)))}>{[...new Set([...unidadesEmbalagem, e.uom])].map((u) => <option key={u} value={u}>{rotuloUM[u] ?? ROTULO_EMBALAGEM[u] ?? u}</option>)}</select></td>
                         <td><select className="erp-cell-input" value={e.parent_uom ?? ""} onChange={(ev) => setEmbalagens((l) => l.map((x, j) => (j === i ? { ...x, parent_uom: ev.target.value || undefined, parent_quantity: ev.target.value ? (x.parent_quantity ?? 1) : undefined } : x)))}><option value="">Direto</option>{[...new Set<string>([form.unitOfMeasurement, ...embalagens.map((x) => x.uom)])].filter((u) => u !== e.uom).map((u) => <option key={u}>{u}</option>)}</select></td>
                         <td><input className="erp-cell-input" type="number" min={0} disabled={!e.parent_uom} value={e.parent_quantity ?? ""} onChange={(ev) => setEmbalagens((l) => l.map((x, j) => (j === i ? { ...x, parent_quantity: Number(ev.target.value) } : x)))} /></td>
                         <td><input className="erp-cell-input" type="number" min={0} disabled={!!e.parent_uom} title={e.parent_uom ? "Calculado ao gravar." : undefined} value={e.package_quantity} onChange={(ev) => setEmbalagens((l) => l.map((x, j) => (j === i ? { ...x, package_quantity: Number(ev.target.value) } : x)))} /></td>

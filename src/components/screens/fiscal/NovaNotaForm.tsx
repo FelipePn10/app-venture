@@ -1,4 +1,5 @@
 import { dataMaisDias } from "@/utils/planoParcelas";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   type CfopSugerido, type CreateExitDTO, type DestinatarioDaNota, type EnderecoDoDestinatario, type FiscalExit, type TipoPessoa,
@@ -474,7 +475,7 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
                     {l.aviso && <span className="erp-nota-aviso">{l.aviso}</span>}
                   </td>
                   <td><input className="erp-cell-input" aria-label={`NCM da linha ${i + 1}`} inputMode="numeric" value={l.ncm} onChange={(e) => setLinha(l.uid, { ncm: digitos(e.target.value).slice(0, 8) })} /></td>
-                  <td><input className="erp-cell-input" aria-label={`Unidade da linha ${i + 1}`} maxLength={6} value={l.unidade} onChange={(e) => setLinha(l.uid, { unidade: e.target.value.toUpperCase() })} /></td>
+                  <td><SelectUnidade className="erp-cell-input" compacto aria-label={`Unidade da linha ${i + 1}`} value={l.unidade} onChange={(u) => setLinha(l.uid, { unidade: u })} /></td>
                   <td><input className="erp-cell-input" aria-label={`CFOP da linha ${i + 1}`} inputMode="numeric" value={l.cfop} onChange={(e) => setLinha(l.uid, { cfop: digitos(e.target.value).slice(0, 4), cfopManual: true })} /></td>
                   <td><select className="erp-cell-input" aria-label={`Origem da linha ${i + 1}`} value={l.origem} title={ORIGENS.find((o) => o.value === l.origem)?.label} onChange={(e) => setLinha(l.uid, { origem: e.target.value })}>
                     {ORIGENS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

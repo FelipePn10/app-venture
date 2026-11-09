@@ -1,4 +1,5 @@
 import { EntityName } from "@/components/ui/EntityName";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { resumoPedidosGerados } from "@/services/purchaseOrderService";
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -142,7 +143,7 @@ export function Vsup0300Page(): JSX.Element {
                         <div key={i} className="erp-field erp-c12" style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
                           <div style={{ flex: 3, minWidth: 0 }}><label className="erp-label erp-req">Item</label><LookupField value={it.item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setNI(i, { item_code: String(c ?? "") })} /></div>
                           <div style={{ width: 90 }}><label className="erp-label">Qtde</label><input className="erp-input num" type="number" value={it.quantity} onChange={(e) => setNI(i, { quantity: Number(e.target.value) })} /></div>
-                          <div style={{ width: 70 }}><label className="erp-label">UM</label><input className="erp-input" value={it.uom ?? ""} onChange={(e) => setNI(i, { uom: e.target.value.toUpperCase() })} /></div>
+                          <div style={{ width: 70 }}><label className="erp-label">UM</label><SelectUnidade aria-label="Unidade" value={it.uom} onChange={(u) => setNI(i, { uom: u })} /></div>
                           <div style={{ width: 120 }}><label className="erp-label">Valor sugerido</label><input className="erp-input num" type="number" step="0.01" value={it.suggested_price ?? 0} onChange={(e) => setNI(i, { suggested_price: Number(e.target.value) })} /></div>
                           <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => setNewItems((p) => p.filter((_, idx) => idx !== i))} disabled={newItems.length === 1}>✕</button>
                         </div>
@@ -164,7 +165,7 @@ export function Vsup0300Page(): JSX.Element {
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c6"><label className="erp-label erp-req">Item</label><LookupField value={itemForm.item_code || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(c) => setItemForm((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Qtde</label><input className="erp-input num" type="number" value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: Number(e.target.value) }))} /></div>
-                      <div className="erp-field erp-c2"><label className="erp-label">UM</label><input className="erp-input" value={itemForm.uom ?? ""} onChange={(e) => setItemForm((p) => ({ ...p, uom: e.target.value.toUpperCase() }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">UM</label><SelectUnidade aria-label="Unidade" value={itemForm.uom} onChange={(u) => setItemForm((p) => ({ ...p, uom: u }))} /></div>
                       <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void addItem()} disabled={busy}>+ Item</button></div>
                     </div>
                   </div>

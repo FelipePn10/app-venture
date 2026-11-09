@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { type Drawing, type DrawingRevision, listDrawings, getDrawing, createDrawing, deleteDrawing, listRevisions, addRevision } from "@/services/drawingsService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -60,7 +61,7 @@ export function Vdes0100Page(): JSX.Element {
                 <div className="erp-field erp-c1"><label className="erp-label">Dígito</label><input className="erp-input" value={form.digit} onChange={(e) => setF("digit", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Formato</label><input className="erp-input" value={form.format} onChange={(e) => setF("format", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num"  value={form.item_code ?? ""} onChange={(e) => setF("item_code", e.target.value || undefined)} /></div>
-                <div className="erp-field erp-c1"><label className="erp-label">UM</label><input className="erp-input" value={form.uom} onChange={(e) => setF("uom", e.target.value)} /></div>
+                <div className="erp-field erp-c1"><label className="erp-label">UM</label><SelectUnidade aria-label="Unidade" vazio="—" value={form.uom} onChange={(u) => setF("uom", u)} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
                 <div className="erp-field erp-c12" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar desenho</button></div>
               </div></div>
