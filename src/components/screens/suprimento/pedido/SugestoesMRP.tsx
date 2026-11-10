@@ -9,9 +9,10 @@ type Feedback = { type: "success" | "error" | "info"; message: string };
 const num = (v?: number) => (v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 
 /**
- * Sugestões de compra do MRP (ordens planejadas de compra ainda não firmes).
- * Aprovar gera o pedido com o fornecedor escolhido na lista; o pedido passa
- * pela alçada como qualquer outro.
+ * Sugestões de compra do MRP: ordens planejadas de compra que ainda não viraram
+ * pedido — planejadas ou já firmadas pelo planejador no VMRP0100. Aprovar gera
+ * o pedido com o fornecedor escolhido na lista; o pedido passa pela alçada como
+ * qualquer outro. Rejeitar cancela a ordem e o MRP volta a sugerir no próximo cálculo.
  */
 export function SugestoesMRP({ onFeedback, onPedidoGerado }: { onFeedback: (f: Feedback) => void; onPedidoGerado: (code: number, aviso: Feedback) => void }): JSX.Element {
   const [lista, setLista] = useState<SuggestionDTO[]>([]);
@@ -76,7 +77,10 @@ export function SugestoesMRP({ onFeedback, onPedidoGerado }: { onFeedback: (f: F
                       <td><strong>{s.item_code}</strong>{nomeItem[s.item_code] && <><br /><small>{nomeItem[s.item_code]}</small></>}</td>
                       <td className="num">{num(s.quantity)}</td>
                       <td>{(s.need_date ?? "").slice(0, 10).split("-").reverse().join("/") || "—"}</td>
-                      <td>{enumLabel(s.status)}</td>
+                      <td>{s.mrp_alert && <div className={`erp-badge ${s.mrp_alert === "CANCEL" ? "err" : "warn"}`} title={s.mrp_alert_text} style={{ marginRight: 8 }}>
+                        {s.mrp_alert === "CANCEL" ? "MRP: não precisa mais" : s.mrp_alert === "RESCHEDULE_OUT" ? "MRP: pode adiar" : s.mrp_alert === "RESCHEDULE_IN" || s.mrp_alert === "EXPEDITE" ? "MRP: antecipar" : "MRP: revisar"}
+                        {s.mrp_alert_date ? ` → ${s.mrp_alert_date.slice(0, 10).split("-").reverse().join("/")}` : ""}</div>}
+                        {s.status === "RELEASED" ? <span title="O planejador firmou a necessidade no MRP (VMRP0100): o MRP já conta com esta compra. Falta virar pedido.">Firmada no MRP</span> : enumLabel(s.status)}</td>
                       <td style={{ whiteSpace: "nowrap" }}>
                         <button className="erp-btn erp-btn-primary erp-btn-sm" disabled={busy} onClick={() => setAprovando({ code: s.code, preco: "" })}>Aprovar</button>{" "}
                         <button className="erp-btn erp-btn-danger erp-btn-sm" disabled={busy} onClick={() => void rejeitar(s.code)}>Rejeitar</button>

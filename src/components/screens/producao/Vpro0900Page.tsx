@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ehNaoEncontrado } from "@/utils/erroHttp";
 import {
   type AppointmentDTO, type ConsumptionDTO, type CostDTO, type MaterialAvailability, type MaterialDTO, type OperationDTO, type ProductionOrderDTO, type ProductionScanToken,
-  addConsumption, addMaterial, addScrapDestination, advanceOperation, allocateLots, appointProduction, cancelProductionOrder, closeProductionOrder,
+  addConsumption, addMaterial, baixarFichaDaOrdem, reapurarCustos, addScrapDestination, advanceOperation, allocateLots, appointProduction, cancelProductionOrder, closeProductionOrder,
   completeProductionOrder, createProductionOrder, createProductionScanToken, explodeOperations, getCost, getMaterialAvailability, getMaterialAvailabilitySummary,
   getProductionOrder, listAppointments,
   listConsumptions, listMaterials, listOperations, listProductionOrders, scanProductionOrder, scrapReturn, settleCost, startProductionOrder,
@@ -22,6 +22,7 @@ import { OPERACAO, SITUACAO_FALTA } from "./of/operacao";
 import { lerSeries, obterPerfil } from "@/services/posVendaService";
 import { hojeLocal } from "@/utils/dataLocal";
 import { useBuscaDosItens } from "@/hooks/useBuscaDosItens";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Ordem de Produção (OF).
@@ -53,6 +54,11 @@ export function Vpro0900Page(): JSX.Element {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [ordens, setOrdens] = useState<ProductionOrderDTO[]>([]);
   const [busca, setBusca] = useState("");
+  // O posto de trabalho (OPERATOR) aponta etapa, produção e consumo. Criar,
+  // iniciar, encerrar, cancelar, entregar ao estoque e apurar custo são do
+  // PCP/almoxarifado — o servidor recusa ao operador; a tela não oferece.
+  const gestor = useAuthStore((s) => (s.user?.role ?? "").toUpperCase() !== "OPERATOR");
+  const administrador = useAuthStore((s) => (s.user?.role ?? "").toUpperCase() === "ADMIN");
   const apelidoDoItem = useBuscaDosItens();
   const [filtro, setFiltro] = useState<FiltroSituacao>("ativas");
   const [of, setOf] = useState<ProductionOrderDTO | null>(null);
@@ -70,8 +76,10 @@ export function Vpro0900Page(): JSX.Element {
   useEffect(() => {
     const item = of?.item_code;
     if (!item) { setSerieDaOF(undefined); return; }
+    // Série só importa na entrega ao estoque, que é do PCP; o posto não lê o perfil de pós-venda.
+    if (!gestor) { setSerieDaOF(undefined); return; }
     obterPerfil(String(item)).then((p) => setSerieDaOF({ controla: p.controla_serie, mascara: Boolean(p.mascara_serie_id) })).catch(() => setSerieDaOF(undefined));
-  }, [of?.item_code]);
+  }, [of?.item_code, gestor]);
   const [etapa, setEtapa] = useState({ horas: "", pecas: "", motivo: "" });
   const [matForm, setMatForm] = useState<MaterialForm>(MATERIAL_VAZIO);
   const [token, setToken] = useState<ProductionScanToken | null>(null);
@@ -111,11 +119,11 @@ export function Vpro0900Page(): JSX.Element {
       try { return await f(); }
       catch (e) { if (!ehNaoEncontrado(e)) naoCarregou.push(`${nome} (${errMessage(e)})`); return vazio; }
     };
-    setCusto(await parte("custo", () => getCost(id), null));
+    setCusto(gestor ? await parte("custo", () => getCost(id), null) : null);
     setMateriais(await parte("materiais", () => listMaterials(id), [] as MaterialDTO[]));
     setFaltas(await parte("faltas de material", () => getMaterialAvailability(id), null));
     if (naoCarregou.length) setFeedback({ type: "error", message: `Ordem aberta, mas não foi possível carregar: ${naoCarregou.join("; ")}.` });
-  }, [setFeedback]);
+  }, [setFeedback, gestor]);
 
   const abrir = (id?: number) => { if (id) void run(async () => { setToken(null); await carregarOF(id); }); };
   const recarregar = async () => { if (of?.id) { await carregarOF(of.id); await listar(); } };
@@ -128,11 +136,14 @@ export function Vpro0900Page(): JSX.Element {
     }
     return c;
   }, [ordens]);
+  // Código de barras da ordem impressa (OF000607): a leitura abre a OF.
+  const ofLida = /^OF0*(\d+)$/i.exec(busca.trim())?.[1];
   const visiveis = useMemo(() => {
+    const lida = /^OF0*(\d+)$/i.exec(busca.trim())?.[1];
     const q = normalizar(busca.trim());
     return ordens
-      .filter((o) => filtro === "todas" || (filtro === "ativas" ? o.status === "OPEN" || o.status === "IN_PROGRESS" : o.status === filtro))
-      .filter((o) => !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""} ${apelidoDoItem(o.item_code)}`).includes(q))
+      .filter((o) => lida !== undefined || filtro === "todas" || (filtro === "ativas" ? o.status === "OPEN" || o.status === "IN_PROGRESS" : o.status === filtro))
+      .filter((o) => (lida !== undefined ? String(o.id) === lida : !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""} ${apelidoDoItem(o.item_code)}`).includes(q)))
       .sort((a, b) => (a.start_date ?? "9999").localeCompare(b.start_date ?? "9999") || (a.id ?? 0) - (b.id ?? 0));
   }, [ordens, busca, filtro, apelidoDoItem]);
 
@@ -164,6 +175,13 @@ export function Vpro0900Page(): JSX.Element {
   }); };
   const apurarCusto = () => { const id = of?.id; if (!id) return; void run(async () => { setCusto(await settleCost(id)); await recarregar(); setFeedback({ type: "success", message: "Custo real apurado." }); setAba("custo"); }); };
 
+  const reapurarTodas = () => void run(async () => {
+    const r = await reapurarCustos();
+    if (of?.id) setCusto(await getCost(of.id));
+    setFeedback({ type: r.falhas?.length ? "error" : "success", message: `${r.reapuradas} OF(s) reapurada(s) pela regra atual.${r.falhas?.length ? ` Não reapuradas: ${r.falhas.join("; ")}` : ""}` });
+  });
+  const imprimir = () => { const id = of?.id; if (!id) return; void run(async () => { await baixarFichaDaOrdem(id); setFeedback({ type: "success", message: "Ordem impressa: confira o PDF baixado." }); }); };
+
   const apontar = () => { const id = of?.id; if (!id) return; void run(async () => {
     if (!app.produced_qty && !app.scrapped_qty) { setFeedback({ type: "error", message: "Informe a quantidade boa e/ou o refugo." }); return; }
     if (!app.employee_id) { setFeedback({ type: "error", message: "Informe o operador que produziu." }); return; }
@@ -183,8 +201,14 @@ export function Vpro0900Page(): JSX.Element {
     await scrapReturn(id, { scrap_item_code: cons.item_code, warehouse_id: cons.warehouse_id, quantity: cons.consumed_qty, unit_value: 0, notes: "Retorno de sucata" });
     setFeedback({ type: "success", message: "Sucata devolvida ao estoque." });
   }); };
-  const concluir = () => { const id = of?.id; if (!id || !of) return; void run(async () => {
+  // Concluir com material da lista que não saiu do estoque: o custo da OF fica
+  // sem esse material e o estoque do componente fica sobrando. A ordem pode ser
+  // concluída assim (sobra, troca, perda de cadastro), mas a pessoa decide vendo.
+  const naoBaixados = (faltas?.lines ?? []).filter((l) => (l.remaining ?? 0) > 0);
+  const [confirmarSemBaixa, setConfirmarSemBaixa] = useState(false);
+  const concluir = (mesmoSemBaixa = false) => { const id = of?.id; if (!id || !of) return; void run(async () => {
     if (!conclusao.deposito) { setFeedback({ type: "error", message: "Escolha o depósito de entrada do produto acabado." }); return; }
+    if (conclusao.final && !mesmoSemBaixa && naoBaixados.length > 0) { setConfirmarSemBaixa(true); return; }
     const saldo = Math.max(0, (of.planned_qty || 0) - (of.produced_qty || 0));
     const qtd = conclusao.quantidade.trim() ? Number(conclusao.quantidade) : saldo;
     if (!(qtd >= 0) || (!conclusao.final && qtd <= 0)) { setFeedback({ type: "error", message: "Informe a quantidade entregue." }); return; }
@@ -259,7 +283,7 @@ export function Vpro0900Page(): JSX.Element {
     { id: "etapas", label: "Etapas", contador: operacoes.length, hint: "Etapas do roteiro e leitura por código de barras" },
     { id: "materiais", label: "Materiais", contador: materiais.length, alerta: !!faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO"), hint: "Materiais da ordem, lotes e sucata" },
     { id: "consumos", label: "Consumos", contador: consumos.length },
-    { id: "custo", label: "Custo", hint: "Custo real × padrão" },
+    ...(gestor ? [{ id: "custo" as AbaOF, label: "Custo", hint: "Custo real × padrão" }] : []),
   ];
   const sit = situacaoOF(st);
   const passo = CICLO.findIndex((c) => c.status === st);
@@ -269,7 +293,7 @@ export function Vpro0900Page(): JSX.Element {
       <Cabecalho modulo="Produção" titulo="Ordem de Produção" codigo="VPRO0900" />
 
       <div className="erp-toolbar vpl-toolbar">
-        <button className="erp-btn erp-btn-new" onClick={() => { setNova(NOVA_OF); setNovaAberta(true); }} disabled={busy}>+ Nova OF</button>
+        {gestor && <button className="erp-btn erp-btn-new" onClick={() => { setNova(NOVA_OF); setNovaAberta(true); }} disabled={busy}>+ Nova OF</button>}
         <div className="erp-tgroup"><button className="erp-btn" onClick={() => void run(async () => { await listar(); if (of?.id) await carregarOF(of.id); })} disabled={busy}>Atualizar</button></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VPRO0900 — Ordem de Produção" filename="vpro0900" build={() => ({
@@ -284,7 +308,8 @@ export function Vpro0900Page(): JSX.Element {
             <div className="erp-panel-head">
               <span className="erp-panel-title">Ordens</span><span className="erp-count">{visiveis.length}</span>
               <div className="erp-panel-head-spacer" />
-              <input className="erp-search" placeholder="OF ou item…" aria-label="Buscar ordem" value={busca} onChange={(e) => setBusca(e.target.value)} />
+              <input className="erp-search" placeholder="OF, item ou leia o código da OF…" aria-label="Buscar ordem" value={busca} onChange={(e) => setBusca(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && ofLida) abrir(Number(ofLida)); }} title="O código de barras da ordem impressa (OF000607) abre a ordem: leia e tecle Enter" />
             </div>
             <div className="vpl-list-filters">
               {FILTROS.map((f) => <button key={f.id} type="button" className={`erp-chip${filtro === f.id ? " active" : ""}`} onClick={() => setFiltro(f.id)}>{f.rotulo} · {contagem[f.id]}</button>)}
@@ -329,12 +354,13 @@ export function Vpro0900Page(): JSX.Element {
                     {of.cost_pending && <div style={{ marginTop: 6 }}><Selo tom="danger">Custo não apurado</Selo> <span className="erp-hint">{of.cost_pending}</span></div>}
                   </div>
                   <div className="vpl-record-actions">
-                    {st === "OPEN" && <button className="erp-btn erp-btn-primary" disabled={busy}
+                    {gestor && st === "OPEN" && <button className="erp-btn erp-btn-primary" disabled={busy}
                       onClick={() => (faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO") ? setConfirmarInicio(true) : transicao("produção iniciada", startProductionOrder))}>Iniciar produção</button>}
-                    {operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>}
-                    <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>
-                    {st === "COMPLETED" && <button className="erp-btn erp-btn-primary" onClick={encerrar} disabled={busy}>Encerrar</button>}
-                    {st !== "CLOSED" && st !== "CANCELLED" && <button className="erp-btn erp-btn-danger" onClick={() => setConfirmarCancelamento(true)} disabled={busy}>Cancelar OF</button>}
+                    {gestor && operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>}
+                    <button className="erp-btn" onClick={imprimir} disabled={busy} title="PDF da ordem para a fábrica: etapas na sequência, quem executa cada uma, material por etapa, ferramentas e serviços em terceiro">Imprimir OP</button>
+                    {gestor && <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>}
+                    {gestor && st === "COMPLETED" && <button className="erp-btn erp-btn-primary" onClick={encerrar} disabled={busy}>Encerrar</button>}
+                    {gestor && st !== "CLOSED" && st !== "CANCELLED" && <button className="erp-btn erp-btn-danger" onClick={() => setConfirmarCancelamento(true)} disabled={busy}>Cancelar OF</button>}
                   </div>
                 </div>
                 {(st === "OPEN" || st === "IN_PROGRESS") && faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO") && (
@@ -359,13 +385,13 @@ export function Vpro0900Page(): JSX.Element {
                 {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} />}
                 {aba === "apontamento" && <ApontamentoTab of={of} busy={busy} app={app} setApp={setApp} cons={cons} setCons={setCons} apontamentos={apontamentos}
                   operacoesPendentes={pendentes} conclusao={conclusao} setConclusao={setConclusao} serie={serieDaOF}
-                  onApontar={apontar} onConsumir={consumir} onRetornarSucata={retornarSucata} onConcluir={concluir} />}
+                  onApontar={apontar} onConsumir={consumir} onRetornarSucata={retornarSucata} onConcluir={() => concluir()} gestor={gestor} />}
                 {aba === "etapas" && <EtapasTab of={of} busy={busy} operacoes={operacoes} etapa={etapa} setEtapa={setEtapa} onAlterar={(i, s) => void alterarEtapa(i, s)}
                   onGerarCodigo={gerarCodigo} token={token} leitura={leitura} setLeitura={setLeitura} onLer={() => void ler()} onExplodir={explodir} />}
                 {aba === "materiais" && <MateriaisTab busy={busy} materiais={materiais} disponibilidade={faltas} form={matForm} setForm={setMatForm} onIncluir={incluirMaterial} onAlocar={alocar}
-                  onSucata={(m) => setSucata({ material: m, quantidade: "", deposito: m.warehouse_id })} />}
+                  onSucata={(m) => setSucata({ material: m, quantidade: "", deposito: m.warehouse_id })} gestor={gestor} />}
                 {aba === "consumos" && <ConsumosTab consumos={consumos} />}
-                {aba === "custo" && <CustoTab custo={custo} busy={busy} onApurar={apurarCusto} />}
+                {aba === "custo" && <CustoTab custo={custo} busy={busy} onApurar={apurarCusto} onReapurarTodas={administrador ? reapurarTodas : undefined} />}
               </div>
             </>)}
           </section>
@@ -441,6 +467,11 @@ export function Vpro0900Page(): JSX.Element {
         assunto={faltas ? `${faltas.missing_items} de ${faltas.items} item(ns) com falta` : undefined} rotuloConfirmar="Iniciar mesmo assim"
         onCancelar={() => setConfirmarInicio(false)}
         onConfirmar={() => { setConfirmarInicio(false); transicao("produção iniciada", startProductionOrder); }} />
+      <ConfirmDialog aberto={confirmarSemBaixa} titulo="Concluir a ordem com material não baixado?"
+        mensagem={`Estes materiais da lista ainda não saíram do estoque para a ordem: ${naoBaixados.map((l) => `${l.item_code} (falta ${num(l.remaining)} ${l.uom ?? ""})`.trim()).join("; ")}. Concluída assim, o custo real da ordem fica sem esse material. Registre o consumo na aba Apontamento se ele foi usado.`}
+        assunto={`${naoBaixados.length} material(is) sem baixa`} rotuloConfirmar="Concluir mesmo assim"
+        onCancelar={() => setConfirmarSemBaixa(false)}
+        onConfirmar={() => { setConfirmarSemBaixa(false); concluir(true); }} />
       <ConfirmDialog aberto={confirmarCancelamento} titulo="Cancelar a ordem de produção?"
         mensagem="A ordem deixa de valer para produção e planejamento. Apontamentos e consumos já lançados continuam registrados."
         assunto={of ? `OF ${of.id} · ${of.item_code} · ${num(of.planned_qty)} peça(s)` : undefined} rotuloConfirmar="Cancelar OF"

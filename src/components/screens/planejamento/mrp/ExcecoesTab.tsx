@@ -114,6 +114,8 @@ export function ExcecoesTab({ excecoes, busy, onVerPerfil, onTratar, onVerOrigem
                       <td className="vpl-strong">{e.item_code}</td>
                       <td><Selo tom={tomDaExcecao(e.message_type)}>{tipoExcecao(e.message_type)}</Selo></td>
                       <td>{e.description}
+                        {e.source_type === "PRODUCTION_ORDER" && e.source_code && <span className="vpl-sub">OF {e.source_code} — ajuste a data na própria OF (VPRO0900)</span>}
+                        {e.source_type === "PURCHASE_ORDER" && e.source_code && <span className="vpl-sub">Pedido de compra (linha {e.source_code}) — renegocie a entrega no VPDC0200</span>}
                         {daOrdem && <span className="vpl-sub">Ordem planejada {e.source_order_number}{e.source_need_date && ` · necessidade ${data(e.source_need_date)}`}{e.suggested_date && REPROGRAMAVEIS.has(e.message_type) && ` → sugerida ${data(e.suggested_date)}`}</span>}
                         {e.affected_demands && e.affected_demands.length > 0 && <span className="vpl-sub" title={e.affected_demands.join(" · ")}>Afeta: {afetados(e.affected_demands)}</span>}</td>
                       <td>{e.handling_action

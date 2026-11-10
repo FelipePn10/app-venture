@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 // Validações da rodada de engenharia/manufatura (VMAQ0200, VENT0200/0210,
-// VENT0115/0202/0204, VPRO0900). Rode com: npm run test:engineering
+// VENT0202/0204, VPRO0900). Rode com: npm run test:engineering
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const checks = [];
@@ -14,7 +14,10 @@ const check = (name, condition) => {
 
 const vent0200 = read('src/components/screens/engenharia/Vent0200Page.tsx');
 const vent0210 = read('src/components/screens/engenharia/Vent0210Page.tsx');
-const roteiro = read('src/components/screens/engenharia/RoteiroFabricacaoPage.tsx');
+// A tela do roteiro é a página mais os componentes de engenharia/roteiro/.
+const roteiroDir = 'src/components/screens/engenharia/roteiro';
+const roteiro = read('src/components/screens/engenharia/RoteiroFabricacaoPage.tsx')
+  + fs.readdirSync(path.join(root, roteiroDir)).filter((f) => f.endsWith('.tsx')).map((f) => read(`${roteiroDir}/${f}`)).join('\n');
 const vpro0900 = read('src/components/screens/producao/Vpro0900Page.tsx');
 const vmaq0200 = read('src/components/screens/engenharia/Vmaq0200Page.tsx');
 const routinePage = read('src/components/screens/OperationalRoutinePage.tsx')
@@ -76,7 +79,10 @@ check('painel destaca perguntas usadas em fórmula', /used_by_formula/.test(cfgP
 check('VCFG0100 não gera mais máscara (foi para a estrutura)', !/generateMask/.test(vcfg0100) && /VENT0210/.test(vcfg0100));
 
 // ── Telas unificadas ────────────────────────────────────────────────────────
-check('roteiro centralizado em VENT0115/VENT0202', /RoteiroFabricacaoPage code="VENT0115"/.test(host) && /RoteiroFabricacaoPage code="VENT0202"/.test(host));
+// O roteiro vive numa tela só (VENT0202); os modelos são um modo dela.
+check('roteiro unificado na VENT0202', /VENT0202: <RoteiroFabricacaoPage \/>/.test(host) && !/RoteiroFabricacaoPage code=/.test(host));
+check('não existe outra tela de roteiro', !/VENT0115/.test(host) && !/VENT0115/.test(read('src/types/erpScreen.ts')));
+check('roteiro tem modo de modelos', /listRouteTemplates/.test(roteiro) && /Modelos/.test(roteiro));
 for (const code of ['VPRO0100', 'VSUP0510', 'VCON0100']) {
   check(`${code} saiu do catálogo`, !catalogo.includes(`code: "${code}"`));
   check(`${code} explica para onde foi`, new RegExp(`${code}: \\{`).test(host));
@@ -217,18 +223,25 @@ for (const campo of ['run_time', 'labor_time', 'run_base_qty', 'queue_time', 'wa
 check('roteiro mapeia os tempos já resolvidos pelo backend', /OperationTimeBreakdown/.test(roteiroSrv) && /parseBreakdown/.test(roteiroSrv));
 check('roteiro mapeia terceirização', /supplier_id/.test(roteiroSrv) && /service_item_code/.test(roteiroSrv) && /third_party_remittance/.test(roteiroSrv));
 check('roteiro mapeia a vigência', /valid_from/.test(roteiroSrv) && /valid_to/.test(roteiroSrv));
-check('tela do roteiro expõe o modelo de tempo', /Peças por ciclo/.test(roteiro) && /Preparação \(por lote\)/.test(roteiro) && /Operadores/.test(roteiro));
+check('tela do roteiro expõe o modelo de tempo', /Ciclo produz/.test(roteiro) && /Preparação/.test(roteiro) && /Operadores/.test(roteiro));
+check('etapa grava o tempo de máquina em run_time, não no legado', /set\("run_time"/.test(roteiro) && !/setRoF\("standard_time"/.test(roteiro));
+check('tela do roteiro tem base de tempo por medida', /TIME_BASES/.test(roteiro) && /time_basis/.test(roteiro));
+check('etapa é editável (PUT com a etapa inteira)', /updateRouteOperation\(/.test(roteiro) && /payloadDaEtapa/.test(roteiro));
 check('tela do roteiro separa tempos que não ocupam a máquina', /Fila/.test(roteiro) && /Movimentação/.test(roteiro));
-check('tela do roteiro trata terceirização por origem', /opForm\.origin !== "INTERNA"/.test(roteiro) && /Item de serviço/.test(roteiro));
+check('tela do roteiro trata terceirização por origem', /ehTerceiro\(form\.origin\)/.test(roteiro) && /Item de serviço/.test(roteiro));
 check('tela do roteiro usa lookup de centro, ferramenta e fornecedor',
   /loadWorkCenters/.test(roteiro) && /loadTools/.test(roteiro) && /loadSuppliers/.test(roteiro)
   && !/Ferramenta \(ID\)/.test(roteiro) && !/Centro \(ID\)/.test(roteiro));
-check('tela do roteiro tem vigência', /Início da vigência/.test(roteiro));
+check('tela do roteiro tem vigência e faixa de lote', /Vigente de/.test(roteiro) && /Lote a partir de/.test(roteiro));
 // A asserção cobra o COMPORTAMENTO, não a forma da declaração: a cópia tem de
 // recriar as etapas, guardar a equivalência de ids e recriar a rede sobre eles.
 // Cobrar `async function` quebrava o teste só por trocar para arrow function.
-check('roteiro copia para outro item com rede de dependências',
-  /copiarRoteiro/.test(roteiro) && /equivalencia/.test(roteiro) && /createEdge\(novo\.id/.test(roteiro));
+// A cópia mora no servidor, numa transação: a tela não recria etapa por etapa
+// (uma falha no meio deixava roteiro pela metade).
+check('roteiro copia no servidor, com tudo o que pende das etapas',
+  /copyRoute\(/.test(roteiro) && !/equivalencia/.test(roteiro) && /\/copy`/.test(roteiroSrv));
+check('centro principal não aparece duas vezes (só alternativos na aba Centros)', /alternativos/.test(roteiro) && /is_primary: false/.test(roteiro));
+check('roteiro tem materiais por etapa e padrão × real', /MateriaisPorEtapa/.test(roteiro) && /PadraoVersusReal/.test(roteiro));
 check('custo do roteiro simula por tamanho de lote',
   /RoteiroCustoPanel/.test(roteiro) && /Tamanho do lote/.test(custoPanel));
 check('custo do roteiro separa máquina de mão de obra',

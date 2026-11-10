@@ -1,3 +1,4 @@
+import { downloadResponse } from '@/services/fileDownload';
 import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/production-order';
@@ -98,12 +99,22 @@ export interface OperationDTO {
   description?: string;
   status?: string;
   work_center_id?: number;
+  /** A etapa está com o terceiro (OS aberta no VTPS0100): anda pela OS, não pelos botões do posto. */
+  service_order_code?: number;
 }
 
 export interface CostDTO {
   production_order_id?: number;
   produced_qty?: number;
   material_cost_real?: number;
+  /** Máquina = preparação + máquina (horas das etapas × taxa de máquina do centro). */
+  machine_cost_real?: number;
+  machine_cost_std?: number;
+  machine_variance?: number;
+  /** Serviço de terceiros recebido (preço do pedido, da VTER0100 ou do roteiro). */
+  subcontract_cost_real?: number;
+  subcontract_cost_std?: number;
+  subcontract_variance?: number;
   labor_cost_real?: number;
   overhead_cost_real?: number;
   total_cost_real?: number;
@@ -205,6 +216,7 @@ function parseOperation(raw: unknown): OperationDTO {
     notes: parseStr(o, 'notes', 'Notes'),
     status: parseStr(o, 'status', 'Status'),
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
+    service_order_code: parseNum(o, 'service_order_code') || undefined,
   };
 }
 
@@ -214,6 +226,12 @@ function parseCost(raw: unknown): CostDTO {
     production_order_id: parseNum(o, 'production_order_id', 'ProductionOrderID'),
     produced_qty: parseNum(o, 'produced_qty', 'ProducedQty'),
     material_cost_real: parseNum(o, 'material_cost_real', 'MaterialCostReal'),
+    machine_cost_real: parseNum(o, 'machine_cost_real'),
+    machine_cost_std: parseNum(o, 'machine_cost_std'),
+    machine_variance: parseNum(o, 'machine_variance'),
+    subcontract_cost_real: parseNum(o, 'subcontract_cost_real'),
+    subcontract_cost_std: parseNum(o, 'subcontract_cost_std'),
+    subcontract_variance: parseNum(o, 'subcontract_variance'),
     labor_cost_real: parseNum(o, 'labor_cost_real', 'LaborCostReal'),
     overhead_cost_real: parseNum(o, 'overhead_cost_real', 'OverheadCostReal'),
     total_cost_real: parseNum(o, 'total_cost_real', 'TotalCostReal'),
@@ -241,6 +259,17 @@ export async function listProductionOrders(): Promise<ProductionOrderDTO[]> {
 export async function getProductionOrder(id: number): Promise<ProductionOrderDTO> {
   const { data } = await httpClient.get(`${BASE}/${id}`);
   return parseOrder(data);
+}
+/** Reapura pela regra atual todas as OFs da empresa que já têm custo apurado (ADMIN). */
+export async function reapurarCustos(): Promise<{ reapuradas: number; falhas?: string[] }> {
+  const { data } = await httpClient.post(`${BASE}/costs/resettle`, {});
+  const o = unwrapObject(data);
+  return { reapuradas: parseNum(o, 'reapuradas'), falhas: unwrapArray(o.falhas).map(String) };
+}
+/** Ordem de fabricação impressa: etapas, material por etapa, ferramentas e serviços em terceiro. */
+export async function baixarFichaDaOrdem(id: number): Promise<void> {
+  const resp = await httpClient.get(`${BASE}/${id}/pdf`, { responseType: 'blob' });
+  downloadResponse(resp.data as Blob, resp.headers as Record<string, unknown>, `OF-${id}.pdf`);
 }
 export async function createProductionOrder(dto: ProductionOrderDTO): Promise<ProductionOrderDTO> {
   const { data } = await httpClient.post(`${BASE}/create`, dto);

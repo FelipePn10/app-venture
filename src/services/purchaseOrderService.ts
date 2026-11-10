@@ -136,6 +136,10 @@ export interface SuggestionDTO {
   need_date?: string;
   status?: string;
   order_type?: string;
+  /** O que o MRP recomenda para esta compra no último cálculo (CANCEL, RESCHEDULE_IN/OUT…). */
+  mrp_alert?: string;
+  mrp_alert_text?: string;
+  mrp_alert_date?: string;
 }
 
 export interface PurchaseOrderConsultationFilter {
@@ -262,6 +266,9 @@ function parseSuggestion(raw: unknown): SuggestionDTO {
     need_date: parseStr(o, 'need_date', 'NeedDate') || undefined,
     status: parseStr(o, 'status', 'Status') || undefined,
     order_type: parseStr(o, 'order_type', 'OrderType') || undefined,
+    mrp_alert: parseStr(o, 'mrp_alert') || undefined,
+    mrp_alert_text: parseStr(o, 'mrp_alert_text') || undefined,
+    mrp_alert_date: parseStr(o, 'mrp_alert_date') || undefined,
   };
 }
 

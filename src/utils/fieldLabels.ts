@@ -93,7 +93,7 @@ export const FIELD_LABELS: Record<string, string> = {
   phone_type: "Tipo de telefone", number: "Número", contact_code: "Contato", email: "E-mail", role: "Função",
   zip_code: "CEP", address: "Endereço", address_number: "Número", complement: "Complemento",
   knowledge_code: "Como conheceu", rg: "RG", cpf: "CPF", cnpj: "CNPJ", state_registration: "Inscrição estadual",
-  // Roteiros / operações (VENT0115, VENT0202)
+  // Roteiros / operações (VENT0202)
   is_standard: "Padrão", alternative: "Alternativa", route_id: "Roteiro", operation_id: "Operação",
   operation_code: "Código da operação", operation_name: "Nome da operação", standard_time: "Tempo padrão",
   setup_time: "Tempo de preparação", eff_time: "Tempo efetivo", effective_setup: "Preparação efetiva",

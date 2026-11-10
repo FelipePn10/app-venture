@@ -269,13 +269,17 @@ export async function serviceOrderHistory(id: number): Promise<Obj[]> {
 // ─── remessa e retorno ────────────────────────────────────────────────────────
 
 /**
- * O que fisicamente saiu e voltou. REMESSA tira da fábrica, RETORNO e
- * RECEBIMENTO trazem de volta, AJUSTE corrige divergência de contagem.
+ * O que fisicamente saiu e voltou. REMESSA tira da fábrica; RECEBIMENTO traz a
+ * peça com o serviço feito — é ele que cumpre a ordem de serviço e conclui a
+ * etapa de terceiro na OP (liberando a etapa seguinte); DEVOLUÇÃO traz de volta
+ * sem o serviço (não cumpre nada); AJUSTE corrige divergência de contagem.
+ * O rótulo antigo "Retorno do terceiro" era a escolha natural para "a peça
+ * voltou zincada" e não cumpria a ordem: a etapa da OP nunca concluía.
  */
 export const MOVEMENT_TYPES: { value: string; label: string; entrada: boolean }[] = [
-  { value: 'REMITTANCE', label: 'Remessa ao terceiro', entrada: false },
-  { value: 'RETURN', label: 'Retorno do terceiro', entrada: true },
-  { value: 'RECEIPT', label: 'Recebimento', entrada: true },
+  { value: 'REMITTANCE', label: 'Remessa ao terceiro (peças saíram)', entrada: false },
+  { value: 'RECEIPT', label: 'Recebimento do serviço (peças voltaram prontas)', entrada: true },
+  { value: 'RETURN', label: 'Devolução sem o serviço', entrada: true },
   { value: 'ADJUSTMENT', label: 'Ajuste de quantidade', entrada: true },
 ];
 

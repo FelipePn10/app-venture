@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## Novidades
+- **Roteiro de Fabricação unificado (VENT0202):** uma tela só para roteiros do item, roteiros modelo e biblioteca de operações. A VENT0115 foi retirada (o atalho abre a VENT0202).
+- **Roteiro modelo:** crie o roteiro uma vez e copie para vários itens, com etapas, centros, ferramentas, documentos e inspeção.
+- **Alternativo por tamanho de lote:** cada roteiro alternativo pode valer para uma faixa de quantidade; a OP e o MRP escolhem pelo tamanho da ordem.
+- **Tempo por medida do item:** etapa cobrada por peça, m², metro, perímetro ou atributo do item.
+- **Componente por etapa:** cada componente da estrutura pode ser ligado à etapa em que entra; o MRP pede o material para quando a etapa começa.
+- **Padrão × real:** compare o tempo do roteiro com o apontado nas OPs e veja o ajuste sugerido.
+- **Ordem de produção impressa (VPRO0900 → Imprimir OP):** ficha em preto e branco no formato de chão de fábrica, com código de barras, roteiro com campos de apontamento, serviço externo com NF de remessa e retorno, lista de separação com conferência, ferramentas, liberação da qualidade e assinaturas.
+- **Custo da OF por componente:** material, máquina e preparação, mão de obra, serviços de terceiros e indiretos, com o real e o padrão lado a lado. O administrador pode reapurar de uma vez as OFs já apuradas.
+
+## Melhorias
+- **Etapa em terceiro:** anda pela ordem de serviço — a remessa põe a etapa em andamento e o recebimento de todas as peças a conclui. Com parte das peças de volta, a etapa seguinte já pode começar.
+- **MRP mais completo:** conta a OF aberta e o pedido de compra já lançado, e pede o material das OFs abertas que ainda não foi baixado.
+- **Fila do comprador (VPDC0200):** a compra firmada no MRP aparece como "Firmada no MRP" até virar pedido, com o alerta do MRP ("não precisa mais", "pode adiar", "antecipar").
+- **Carga de máquina (CRP) e sequenciamento (APS):** seguem as etapas que faltam de cada OF, na ordem do roteiro, esperando o prazo do terceiro.
+- **VPRO0900 por perfil:** o operador abre a OF, executa etapas, aponta, consome e imprime; criar, iniciar, entregar, encerrar, cancelar e custo ficam com o PCP. Ler o código de barras da ordem impressa na busca abre a OF.
+- **Concluir com material não baixado** pede confirmação: o custo ficaria sem esse material.
+- **Exceções do MRP** dizem onde ajustar quando a origem é uma OF ou um pedido.
+
+## Correções
+- Cancelar a OF cancela junto a OS do terceiro e a inspeção abertas, e explica por que não pode quando já há apontamento, consumo ou peças com o terceiro.
+- A barra de progresso da OF mostra só o que entrou no estoque; OF encerrada não mostra saldo a produzir.
+- Custo de compra (VCUS0100) passou a gravar o valor informado.
+- Situação "Concluída" da OS traduzida e "A receber dos terceiros" no lugar de "Em poder de terceiros".
+
 ## [v1.14.1] — 2026-11-09
 
 ## Melhorias

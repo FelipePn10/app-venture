@@ -22,6 +22,20 @@ export const TIME_UNITS: { value: TimeUnit; label: string }[] = [
  */
 export const THIRD_PARTY_REMITTANCES = ['DEMAND_ITEMS', 'ORDER_ITEM', 'GENERIC', 'NONE'] as const;
 
+/**
+ * Em que medida da peça o tempo de máquina é contado. Com a base certa, uma só
+ * operação serve para a porta de 40 cm e a de 2 m: o tempo sai das dimensões
+ * de engenharia do item (comprimento × largura, em mm) ou de um atributo PDM.
+ */
+export type TimeBasis = 'PECA' | 'M2' | 'METRO_LINEAR' | 'PERIMETRO' | 'ATRIBUTO';
+export const TIME_BASES: { value: TimeBasis; label: string; unit: string; hint: string }[] = [
+  { value: 'PECA', label: 'Por peça', unit: 'peça', hint: 'O de sempre: o tempo vale por peça (ou por ciclo de N peças).' },
+  { value: 'M2', label: 'Por m²', unit: 'm²', hint: 'Comprimento × largura do item. Pintura, lixamento, laminação.' },
+  { value: 'METRO_LINEAR', label: 'Por metro linear', unit: 'm', hint: 'Comprimento do item. Corte de tubo, solda contínua.' },
+  { value: 'PERIMETRO', label: 'Por metro de perímetro', unit: 'm', hint: '2 × (comprimento + largura). Fita de borda, rebarbação.' },
+  { value: 'ATRIBUTO', label: 'Por atributo do item', unit: 'un.', hint: 'Um atributo numérico do PDM: furos, dobras, metros de fita.' },
+];
+
 export interface OperationDTO {
   id?: number;
   code?: number;
@@ -64,6 +78,10 @@ export interface OperationDTO {
    */
   scrap_pct?: number;
 
+  /** Base do tempo de máquina (padrão: por peça). */
+  time_basis?: TimeBasis;
+  time_basis_attribute?: string;
+
   is_active?: boolean;
 }
 
@@ -79,6 +97,11 @@ export interface RouteDTO {
   /** Vigência do roteiro: fora dela o MRP não deve usá-lo. */
   valid_from?: string;
   valid_to?: string;
+  /** Roteiro-modelo: sem item, ponto de partida para criar roteiros por cópia. */
+  is_template?: boolean;
+  /** Faixa de lote em que este roteiro vale (vazio = qualquer quantidade). */
+  lot_min?: number;
+  lot_max?: number;
   is_active?: boolean;
 }
 
@@ -127,6 +150,21 @@ export interface RouteOperationDTO {
   third_party_remittance?: string;
   /** Refugo desta etapa; vazio herda o da operação de biblioteca. */
   scrap_pct?: number;
+  /** Base de tempo desta etapa (vazio herda) e a que vale de fato. */
+  time_basis?: TimeBasis;
+  time_basis_attribute?: string;
+  effective_time_basis?: TimeBasis;
+  effective_time_basis_attribute?: string;
+  /** Quanto da base cada peça tem (m², metros…). */
+  units_per_piece?: number;
+  /** O item não informa a medida que a base pede. */
+  missing_measure?: boolean;
+  /** Origem da operação de biblioteca. */
+  origin?: OpOrigin;
+  /** Prazo do terceiro que vale (etapa ∘ biblioteca), dias corridos. */
+  effective_lead_time_days?: number;
+  /** Fornecedor que vale (etapa ∘ biblioteca). */
+  effective_supplier_id?: number;
   /** Refugo que vale de fato, já resolvido pelo backend. */
   effective_scrap_pct?: number;
   /**
@@ -242,6 +280,8 @@ function parseOperation(raw: unknown): OperationDTO {
     lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
     third_party_remittance: parseStr(o, 'third_party_remittance', 'ThirdPartyRemittance') || undefined,
     scrap_pct: parseNum(o, 'scrap_pct', 'ScrapPct'),
+    time_basis: (parseStr(o, 'time_basis', 'TimeBasis') || 'PECA') as TimeBasis,
+    time_basis_attribute: parseStr(o, 'time_basis_attribute', 'TimeBasisAttribute') || undefined,
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };
 }
@@ -258,6 +298,9 @@ function parseRoute(raw: unknown): RouteDTO {
     is_standard: parseBool(o, 'is_standard', 'IsStandard'),
     valid_from: parseStr(o, 'valid_from', 'ValidFrom') || undefined,
     valid_to: parseStr(o, 'valid_to', 'ValidTo') || undefined,
+    is_template: parseBool(o, 'is_template', 'IsTemplate'),
+    lot_min: parseNum(o, 'lot_min', 'LotMin') || undefined,
+    lot_max: parseNum(o, 'lot_max', 'LotMax') || undefined,
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };
 }
@@ -272,31 +315,52 @@ function parseRouteOp(raw: unknown): RouteOperationDTO {
     effective_work_center_id: parseNum(o, 'effective_work_center_id', 'EffectiveWorkCenterID') || parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
     operation_name: parseStr(o, 'operation_name', 'OperationName') || undefined,
     work_center_name: parseStr(o, 'work_center_name', 'WorkCenterName') || undefined,
-    standard_time: parseNum(o, 'standard_time', 'StandardTime') || undefined,
-    setup_time: parseNum(o, 'setup_time', 'SetupTime') || undefined,
+    standard_time: opcional(o, 'standard_time'),
+    setup_time: opcional(o, 'setup_time'),
     effective_std_time: parseNum(o, 'effective_std_time', 'EffectiveStdTime') || undefined,
     effective_setup: parseNum(o, 'effective_setup', 'EffectiveSetup') || undefined,
     eff_time: parseBreakdown(o['eff_time'] ?? o['EffTime']),
-    run_time: parseNum(o, 'run_time', 'RunTime') || undefined,
-    labor_time: parseNum(o, 'labor_time', 'LaborTime') || undefined,
-    run_base_qty: parseNum(o, 'run_base_qty', 'RunBaseQty') || undefined,
-    queue_time: parseNum(o, 'queue_time', 'QueueTime') || undefined,
-    wait_time: parseNum(o, 'wait_time', 'WaitTime') || undefined,
-    move_time: parseNum(o, 'move_time', 'MoveTime') || undefined,
-    crew_size: parseNum(o, 'crew_size', 'CrewSize') || undefined,
+    run_time: opcional(o, 'run_time'),
+    labor_time: opcional(o, 'labor_time'),
+    run_base_qty: opcional(o, 'run_base_qty'),
+    queue_time: opcional(o, 'queue_time'),
+    wait_time: opcional(o, 'wait_time'),
+    move_time: opcional(o, 'move_time'),
+    crew_size: opcional(o, 'crew_size'),
     time_unit: (parseStr(o, 'time_unit', 'TimeUnit') || undefined) as TimeUnit | undefined,
     supplier_id: parseNum(o, 'supplier_id', 'SupplierID') || undefined,
     service_item_code: parseStr(o, 'service_item_code', 'ServiceItemCode') || undefined,
-    cost_per_unit: parseNum(o, 'cost_per_unit', 'CostPerUnit') || undefined,
-    lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
+    cost_per_unit: opcional(o, 'cost_per_unit'),
+    lead_time_days: opcional(o, 'lead_time_days'),
     third_party_remittance: parseStr(o, 'third_party_remittance', 'ThirdPartyRemittance') || undefined,
-    scrap_pct: parseNum(o, 'scrap_pct', 'ScrapPct') || undefined,
+    scrap_pct: opcional(o, 'scrap_pct'),
     effective_scrap_pct: parseNum(o, 'effective_scrap_pct', 'EffectiveScrap'),
+    time_basis: (parseStr(o, 'time_basis', 'TimeBasis') || undefined) as TimeBasis | undefined,
+    time_basis_attribute: parseStr(o, 'time_basis_attribute', 'TimeBasisAttribute') || undefined,
+    effective_time_basis: (parseStr(o, 'effective_time_basis', 'EffectiveTimeBasis') || 'PECA') as TimeBasis,
+    effective_time_basis_attribute: parseStr(o, 'effective_time_basis_attribute') || undefined,
+    units_per_piece: parseNum(o, 'units_per_piece', 'UnitsPerPiece') || 1,
+    missing_measure: parseBool(o, 'missing_measure', 'MissingMeasure'),
+    origin: (parseStr(o, 'origin', 'Origin') || undefined) as OpOrigin | undefined,
+    effective_lead_time_days: parseNum(o, 'effective_lead_time_days', 'EffectiveLeadDays') || undefined,
+    effective_supplier_id: parseNum(o, 'effective_supplier_id') || undefined,
     input_qty: parseNum(o, 'input_qty', 'InputQty'),
     inspection_required: parseBool(o, 'inspection_required', 'InspectionRequired'),
     situation: parseStr(o, 'situation', 'Situation') || undefined,
     notes: parseStr(o, 'notes', 'Notes') || undefined,
   };
+}
+
+/**
+ * Sobreposição da etapa: ausente = herda; ZERO é um valor (ex.: "nesta etapa não
+ * há preparação"). O `|| undefined` antigo transformava o zero em "herda" e a
+ * edição da etapa regravava o tempo da biblioteca por cima.
+ */
+function opcional(o: Obj, campo: string): number | undefined {
+  const v = o[campo];
+  if (v === null || v === undefined || v === '') return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 function parseBreakdown(raw: unknown): OperationTimeBreakdown | undefined {
@@ -604,4 +668,129 @@ export async function getRouteReadiness(routeId: number): Promise<RouteReadiness
       };
     }),
   };
+}
+
+// ── Roteiros-modelo e cópia ──
+/** Roteiros-modelo (sem item): a sequência típica de uma família de peças. */
+export async function listRouteTemplates(incluirInativos = false): Promise<RouteDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/routes/templates`, { params: incluirInativos ? { incluir_inativos: 'true' } : {} });
+  return unwrapArray(data).map(parseRoute);
+}
+
+export interface CopyRouteRequest {
+  /** true = cria um modelo novo (sem item). */
+  to_template?: boolean;
+  item_code?: string;
+  mask?: string;
+  alternative?: number;
+  description?: string;
+  is_standard?: boolean;
+}
+export interface CopyRouteResult {
+  route: RouteDTO;
+  copied: { steps: number; dependencies: number; resources: number; tools: number; documents: number; inspections: number };
+}
+/**
+ * Copia o roteiro no servidor, numa transação só: etapas (com tempos, refugo,
+ * base de tempo e terceirização), rede, centros alternativos, ferramentas,
+ * documentos da etapa e — para item — os planos de inspeção.
+ */
+export async function copyRoute(sourceRouteId: number, req: CopyRouteRequest): Promise<CopyRouteResult> {
+  const { data } = await httpClient.post(`${BASE}/routes/${sourceRouteId}/copy`, req);
+  const o = unwrapObject(data);
+  const c = unwrapObject(o['copied'] ?? {});
+  return {
+    route: parseRoute(o['route'] ?? {}),
+    copied: {
+      steps: parseNum(c, 'steps'), dependencies: parseNum(c, 'dependencies'), resources: parseNum(c, 'resources'),
+      tools: parseNum(c, 'tools'), documents: parseNum(c, 'documents'), inspections: parseNum(c, 'inspections'),
+    },
+  };
+}
+
+// ── Componentes por etapa ──
+export interface RouteMaterialDTO {
+  structure_id: number;
+  child_code: string;
+  child_name: string;
+  quantity: number;
+  unit: string;
+  /** Etapa em que o componente entra; vazio = no início da ordem. */
+  step_sequence?: number;
+  step_name?: string;
+  parent_mask?: string;
+  is_coproduct: boolean;
+  /** Aponta para uma etapa que não existe neste roteiro. */
+  step_missing: boolean;
+}
+export async function listRouteMaterials(routeId: number): Promise<RouteMaterialDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/routes/${routeId}/materials`);
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    return {
+      structure_id: parseNum(o, 'structure_id'),
+      child_code: parseStr(o, 'child_code'),
+      child_name: parseStr(o, 'child_name'),
+      quantity: parseNum(o, 'quantity'),
+      unit: parseStr(o, 'unit'),
+      step_sequence: parseNum(o, 'step_sequence') || undefined,
+      step_name: parseStr(o, 'step_name') || undefined,
+      parent_mask: parseStr(o, 'parent_mask') || undefined,
+      is_coproduct: parseBool(o, 'is_coproduct'),
+      step_missing: parseBool(o, 'step_missing'),
+    };
+  });
+}
+export async function setRouteMaterialStep(routeId: number, structureId: number, sequence: number | null): Promise<void> {
+  await httpClient.put(`${BASE}/routes/${routeId}/materials`, { structure_id: structureId, sequence });
+}
+
+// ── Tempo padrão × real apontado ──
+export interface StepPerformanceDTO {
+  route_operation_id: number;
+  sequence: number;
+  operation_name: string;
+  orders: number;
+  planned_hours: number;
+  actual_hours: number;
+  deviation_pct: number;
+  planned_hours_per_piece: number;
+  actual_hours_per_piece: number;
+  current_run_hours: number;
+  /** Novo tempo de máquina sugerido, em HORAS por ciclo. */
+  suggested_run_hours?: number;
+  reason: string;
+  last_completed?: string;
+}
+export async function getRoutePerformance(routeId: number, days = 180): Promise<StepPerformanceDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/routes/${routeId}/performance`, { params: { days } });
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    const sug = o['suggested_run_hours'];
+    return {
+      route_operation_id: parseNum(o, 'route_operation_id'),
+      sequence: parseNum(o, 'sequence'),
+      operation_name: parseStr(o, 'operation_name'),
+      orders: parseNum(o, 'orders'),
+      planned_hours: parseNum(o, 'planned_hours'),
+      actual_hours: parseNum(o, 'actual_hours'),
+      deviation_pct: parseNum(o, 'deviation_pct'),
+      planned_hours_per_piece: parseNum(o, 'planned_hours_per_piece'),
+      actual_hours_per_piece: parseNum(o, 'actual_hours_per_piece'),
+      current_run_hours: parseNum(o, 'current_run_hours'),
+      suggested_run_hours: sug === null || sug === undefined ? undefined : Number(sug),
+      reason: parseStr(o, 'reason'),
+      last_completed: parseStr(o, 'last_completed') || undefined,
+    };
+  });
+}
+
+/** Horas → valor na unidade em que a etapa é cadastrada. */
+export function horasNaUnidade(horas: number, unidade: TimeUnit | undefined): number {
+  switch (unidade) {
+    case 'SEGUNDO': return horas * 3600;
+    case 'MIN': return horas * 60;
+    case 'DIA': return horas / 8;
+    default: return horas;
+  }
 }

@@ -1,4 +1,5 @@
 import { enumLabel } from '@/utils/enumLabels';
+import { useAuthStore } from '@/store/authStore';
 import { aoInvalidarListas, invalidarListas } from '@/services/lookupInvalidation';
 import { httpClient, unwrapArray, unwrapObject, parseNum, parseStr } from '@/services/fiscalShared';
 import { listCustomers } from '@/services/customerService';
@@ -63,6 +64,37 @@ export type LookupLoader = () => Promise<LookupOption[]>;
  * o erro e oferece nova tentativa) e o memo é descartado, para a próxima
  * abertura tentar de novo.
  */
+
+/**
+ * Listas mínimas do posto (máquina, operador, depósito: código e nome). O
+ * perfil OPERATOR não lê os cadastros completos — funcionário tem dado pessoal —
+ * e sem estas listas a aba Apontamento da VPRO0900 não deixava apontar.
+ * Os carregadores abaixo caem aqui quando o cadastro responde 403.
+ */
+interface ItemDoPosto { id: number; code: string; name: string; is_active: boolean }
+let cadastrosDoPosto: Promise<{ machines: ItemDoPosto[]; employees: ItemDoPosto[]; warehouses: ItemDoPosto[] }> | null = null;
+function doPosto() {
+  if (!cadastrosDoPosto) {
+    cadastrosDoPosto = httpClient.get('/api/production-order/shop-floor-lookups').then(({ data }) => {
+      const o = unwrapObject(data);
+      const lista = (k: string) => unwrapArray(o[k]).map(unwrapObject).map((x) => ({
+        id: parseNum(x, 'id'), code: parseStr(x, 'code'), name: parseStr(x, 'name'), is_active: x['is_active'] !== false,
+      }));
+      return { machines: lista('machines'), employees: lista('employees'), warehouses: lista('warehouses') };
+    }).catch((e) => { cadastrosDoPosto = null; throw e; });
+  }
+  return cadastrosDoPosto;
+}
+function semPermissao(e: unknown): boolean {
+  const status = (e as { response?: { status?: number } })?.response?.status;
+  return status === 403;
+}
+async function ouDoPosto<T>(principal: () => Promise<T>, posto: () => Promise<T>): Promise<T> {
+  // O posto vai direto às listas dele: pedir o cadastro só para levar 403.
+  if ((useAuthStore.getState().user?.role ?? '').toUpperCase() === 'OPERATOR') return posto();
+  try { return await principal(); } catch (e) { if (semPermissao(e)) return posto(); throw e; }
+}
+
 function cached(fn: LookupLoader): LookupLoader {
   let promise: Promise<LookupOption[]> | null = null;
   const wrapped = () => {
@@ -192,26 +224,26 @@ export const loadConsumers = cached(async () =>
   })).filter((option) => option.code),
 );
 
-export const loadEmployees = cached(async () =>
+export const loadEmployees = cached(async () => ouDoPosto(async () =>
   (await listEmployees()).filter((employee) => employee.situation !== 'INACTIVE').map((employee) => ({
     code: employee.code,
     label: employee.name || `Funcionário ${employee.code}`,
     sub: employee.role || undefined,
   })),
-);
+async () => (await doPosto()).employees.filter((e) => e.is_active).map((e) => ({ code: Number(e.code) || e.code, label: e.name || `Funcionário ${e.code}` }))));
 
 /**
  * Funcionários pela chave interna, para EXIBIR registros já gravados. A escolha
  * continua pelo código (`loadEmployees`), que o backend converte; o apontamento
  * devolve o id, e procurá-lo entre os códigos mostrava "Funcionário 1".
  */
-export const loadEmployeesById = cached(async () =>
+export const loadEmployeesById = cached(async () => ouDoPosto(async () =>
   (await listEmployees()).filter((employee) => employee.id).map((employee) => ({
     code: employee.id!,
     label: employee.name || `Funcionário ${employee.code}`,
     sub: employee.role || undefined,
   })),
-);
+async () => (await doPosto()).employees.map((e) => ({ code: e.id, label: e.name || `Funcionário ${e.code}` }))));
 
 export const loadRecurringSales = cached(async () =>
   (await listRecurringSales()).map((sale) => ({
@@ -380,14 +412,14 @@ export const loadMachines = cached(async () =>
  * apontamento gravam o id; o `loadMachines` devolve o código da máquina, e
  * escolher "Bancada 8301" mandava 8301 onde o banco espera o id 3.
  */
-export const loadMachinesById = cached(async () =>
+export const loadMachinesById = cached(async () => ouDoPosto(async () =>
   (await listMachines()).filter((m) => m.id).map((m) => ({
     code: m.id,
     label: `${m.code} · ${m.name || `Máquina ${m.code}`}`,
     sub: m.is_active ? 'Ativa' : 'Inativa',
     inactive: !m.is_active,
   })),
-);
+async () => (await doPosto()).machines.map((m) => ({ code: m.id, label: `${m.code} · ${m.name || `Máquina ${m.code}`}`, sub: m.is_active ? 'Ativa' : 'Inativa', inactive: !m.is_active }))));
 
 /** Operações da biblioteca de roteiro de fabricação. */
 export const loadOperations = cached(async () =>
@@ -544,7 +576,7 @@ export function loadWarehouseAddresses(warehouseId?: number): LookupLoader {
   };
 }
 
-export const loadWarehouses = cached(async () => {
+export const loadWarehouses = cached(async () => ouDoPosto(async () => {
   const { data } = await httpClient.get<unknown>('/api/warehouse/list');
   const out: LookupOption[] = [];
   for (const raw of unwrapArray(data)) {
@@ -558,7 +590,7 @@ export const loadWarehouses = cached(async () => {
     out.push({ code: id, label, sub: desc || code });
   }
   return out.sort((a, b) => Number(a.code) - Number(b.code));
-});
+}, async () => (await doPosto()).warehouses.map((w) => ({ code: w.id, label: `${w.code} · ${w.name}`.replace(/ · $/, ''), sub: w.name || w.code }))));
 
 /**
  * Tipos de operação de entrada (VFIS0360, o "TES"): natureza/CFOP de entrada e
