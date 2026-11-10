@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.15.0] — 2026-11-10
+
 ## Novidades
 - **Roteiro de Fabricação unificado (VENT0202):** uma tela só para roteiros do item, roteiros modelo e biblioteca de operações. A VENT0115 foi retirada (o atalho abre a VENT0202).
 - **Roteiro modelo:** crie o roteiro uma vez e copie para vários itens, com etapas, centros, ferramentas, documentos e inspeção.
