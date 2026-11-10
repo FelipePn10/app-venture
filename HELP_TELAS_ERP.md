@@ -242,8 +242,7 @@ regra de cada linha.
 | [VENT0250](#vent0250--governança-do-cadastro) | Governança do Cadastro | Liberação do cadastro do item por área, campos obrigatórios, bloqueio, descontinuação com substituto e histórico campo a campo. |
 | [VENT0210](#vent0210--cadastro-de-estrutura-de-produtos) | Cadastro de Estrutura de Produtos | Realize o cadastro das estruturas dos produtos. |
 | [VENT0204](#vent0204--cadastro-de-grupo) | Cadastro de Grupo | Cadastro e manutenção de grupos do PDM. |
-| [VENT0115](#vent0115--cadastro-de-roteiro-padrão) | Cadastro de Roteiro Padrão | Cadastrar roteiros padrão para agilizar o cadastro dos roteiros de fabricação. |
-| [VENT0202](#vent0202--cadastro-do-roteiro-de-fabricação) | Cadastro do Roteiro de Fabricação | Cadastrar operações e roteiros padrões na sequência de fabricação. |
+| [VENT0202](#vent0202--roteiro-de-fabricação) | Roteiro de Fabricação | Roteiros dos itens, modelos de roteiro e biblioteca de operações. |
 | [VENT0363](#vent0363--relatório-de-tempo-de-centro-de-trabalho) | Relatório de Tempo de Centro de Trabalho | Listar os tempos de fabricação por centro de trabalho. |
 | [VENG0204](#veng0204--cadastro-de-regras-de-variáveis-equivalentes) | Cadastro de Regras de Variáveis Equivalentes | Cadastrar regras para itens configurados conforme a configuração do item pai. |
 | [VITE0313](#vite0313--geração-de-máscara-para-itens-configurados) | Geração de Máscara para Itens Configurados | Gerar combinações válidas de itens configurados para novas máscaras. |
@@ -506,7 +505,7 @@ Código antigo: abre a [VFIS0320 — Parâmetros ICMS/IPI](#vfis0320--parâmetro
 
 #### VPRO0100 — Roteiro de Fabricação
 
-Código antigo: abre a [VENT0202 — Cadastro do Roteiro de Fabricação](#vent0202--cadastro-do-roteiro-de-fabricação).
+Código antigo: abre a [VENT0202 — Roteiro de Fabricação](#vent0202--roteiro-de-fabricação).
 
 #### VSUP0510 — Apoio de Fornecedores
 
@@ -2111,60 +2110,53 @@ empresa.
 
 ---
 
-#### VENT0115 — Cadastro de Roteiro Padrão
+#### VENT0202 — Roteiro de Fabricação
 
-**Para que serve.** Manter os **roteiros modelo** — processos-padrão que depois são
-copiados para os itens parecidos. Usa a mesma tela e as mesmas abas da VENT0202
-(veja abaixo); a diferença é o uso: aqui se monta o modelo e se usa **Copiar
-roteiro para outro item**.
+**Para que serve.** Descrever como cada item é fabricado — etapas, centros,
+tempos, ferramentas, inspeções e em que etapa cada componente entra. O MRP, o
+CRP, o custo e a ordem de produção leem o roteiro. É a única tela de roteiro:
+os modelos (roteiros sem item) são um modo dela.
 
-**Telas relacionadas.** VENT0202.
+**Três modos (no alto da tela).**
+- **Roteiros do item:** escolha o item; à esquerda ficam os roteiros dele
+  (alternativa, máscara, vigência, faixa de lote, padrão). Crie **do zero** ou
+  **a partir de um modelo**.
+- **Modelos:** roteiros sem item ("chapa cortada, dobrada e pintada"). Monte as
+  etapas uma vez e use **Usar em um item** para criar o roteiro de cada peça
+  parecida. Modelo nunca é planejado.
+- **Biblioteca de operações:** o vocabulário da fábrica. Cada operação diz onde é
+  feita (na fábrica ou num terceiro), o centro padrão, a unidade dos tempos, **como
+  o tempo é contado** (por peça, por m², por metro linear, por metro de perímetro
+  ou por um atributo do item, como furos), preparação, tempo de máquina, quanto
+  sai por ciclo, mão de obra, operadores, fila/espera/movimentação e refugo.
 
----
+**O roteiro aberto.**
+- **Cabeçalho:** descrição, padrão, vigência e **faixa de lote** — com faixa, o
+  roteiro alternativo cuja faixa contém a quantidade da ordem vence o padrão
+  (ex.: guilhotina até 49 peças, laser a partir de 50).
+- **Prontidão:** o que impede o planejamento (sem centro, sem máquina apta na
+  VMAQ0200, terceiro sem prazo, medida faltando no item) e o que só distorce o
+  resultado (sem tarifa na VCUS0100).
+- **Etapas:** o processo desenhado em cartões, na ordem — verde na fábrica, âmbar
+  no terceiro, tracejado quando é fantasma. Clique numa etapa para editar tudo
+  dela: tempos (em branco herda da biblioteca), centro, situação, terceiro,
+  refugo, ponto de inspeção, **centros alternativos**, ferramentas, documentos e
+  o que inspecionar.
+- **Dependências:** o que precisa vir antes de quê e quanto pode sobrepor. Sem
+  dependência, as etapas seguem a sequência. Remover uma etapa liga a anterior à
+  seguinte.
+- **Materiais por etapa:** em que etapa cada componente da estrutura entra. O
+  planejamento pede o componente para quando a etapa começa.
+- **Tempo e custo:** prazo do lote (horas nossas e dias no terceiro, separados),
+  caminho crítico e custo por etapa.
+- **Padrão × real:** compara o tempo padrão com o apontado nas ordens concluídas
+  e sugere o novo tempo de máquina (botão **Aplicar**).
 
-#### VENT0202 — Cadastro do Roteiro de Fabricação
+**Desativar e reativar.** Operação desativada sai da escolha, mas os roteiros que
+a usam continuam. Roteiro desativado deixa de entrar no próximo MRP/CRP; ao
+reativar, volta como alternativo se outro já for o padrão.
 
-**Para que serve.** Descrever como um item é fabricado: as etapas, em que centro,
-com que tempos, ferramentas e inspeções. O MRP, o CRP, o custo e a ordem de
-produção leem o roteiro.
-
-**Abas (na ordem em que se monta o processo).**
-1. **Operação / Biblioteca:** o vocabulário de operações — nome, origem (interna
-   ou externa), unidade dos tempos, centro padrão, preparação por lote, tempo de
-   máquina, tempo de mão de obra, peças por ciclo, operadores, fila, espera,
-   movimentação e refugo padrão. Operação **externa** (terceiro) tem fornecedor,
-   item de serviço, custo por peça, prazo em dias e o que remeter. Documentos
-   vinculados à operação valem em todo roteiro que a usa.
-2. **Roteiros do item:** crie o roteiro do item — alternativa, máscara, *padrão
-   (MRP/CRP)* e vigência. A lista mostra os ativos e os inativos.
-3. **Etapas do roteiro:** inclua as etapas (sequência, operação, centro de
-   trabalho, tempos, refugo da etapa, ponto de inspeção e observação). Operação
-   externa já traz os dados da biblioteca; ajuste só o que for diferente.
-4. **Recursos e ferramentas:** centros alternativos (prioridade, fator de tempo,
-   principal), ferramentas, documentos e **inspeção nesta etapa** (o que
-   inspecionar, amostra e aceitação %). A ordem de produção abre o registro de
-   inspeção quando chega nessa etapa.
-5. **Rede de dependências:** predecessora, sucessora e sobreposição %. A tela
-   mostra o **caminho crítico**.
-6. **Tempo e custo do lote:** informe um tamanho de lote e veja, etapa por etapa,
-   máquina, mão de obra, paradas e custo — antes de gravar qualquer ordem.
-
-**Desativar e reativar.**
-- **Desativar** a operação: ela sai da lista de escolha, mas os roteiros que a
-  usam continuam funcionando.
-- **Desativar** o roteiro: deixa de ser usado no próximo MRP/CRP; ordens já
-  geradas mantêm as etapas que receberam.
-- **Reativar** o roteiro: volta a entrar no MRP e no CRP. Se outro roteiro do item
-  já for o padrão, ele volta como **alternativo**.
-
-**Prontidão do roteiro.** A tela confere sozinha, a cada mudança, o que o
-planejamento exige e não está nesta tela — máquina apta no centro (VMAQ0200) e
-tarifa por hora (VCUS0100) — e mostra a pendência na hora.
-
-**Copiar roteiro para outro item.** Vão juntas as etapas (tempos, refugo,
-terceirização) e a rede de dependências.
-
-**Telas relacionadas.** VENT0115, VMAQ0200, VCUS0100, VPRO0900, VPRO0200,
+**Telas relacionadas.** VENT0210, VMAQ0200, VCUS0100, VTER0100, VPRO0900, VPRO0200,
 VENG0600.
 
 ---
@@ -2650,11 +2642,35 @@ almoxarifado que recebe precisa ser da empresa em que você está.
 
 **Situações.** Aberta → Em produção → Concluída → Encerrada (ou Cancelada).
 
+**Quem faz o quê.**
+
+| Ação | Onde | Quem |
+|---|---|---|
+| Criar OF | **+ Nova OF** (ou firmar no VMRP0100) | PCP |
+| Iniciar produção | botão **Iniciar produção** | PCP |
+| Iniciar/pausar/concluir etapa | aba **Etapas** | Operador (posto) e PCP |
+| Apontar produção e refugo, registrar consumo | aba **Apontamento** | Operador e PCP |
+| Entregar ao estoque / concluir a OF | aba **Apontamento** → **Entregar e concluir** | PCP ou almoxarifado |
+| Encerrar (após concluída) | botão **Encerrar** | PCP |
+| Cancelar | botão **Cancelar OF** — só sem apontamento, consumo ou peças no terceiro; cancela junto a OS de terceiro e a inspeção abertas | PCP |
+| Apurar custo | botão **Apurar custo** / aba **Custo** | PCP / custos |
+
+O perfil **Operador** vê só o que pode fazer: abre a OF, executa etapas, aponta,
+consome e imprime. Para ler o código de barras da ordem impressa, leia na busca da
+lista (`OF000607`) e tecle Enter — a ordem abre.
+
+**O percentual da lista.** É o **entregue ao estoque ÷ quantidade planejada**
+(17,4 de 29 = 60%). Apontar a última etapa não move a barra: só a entrada no
+estoque (entrega) move.
+
 **Abas.**
 1. **Resumo:** planejado, apontado bom, refugo, entregue ao estoque, saldo a
    produzir, datas, origem e o que já foi feito.
    - **Iniciar produção:** antes, a tela confere as **faltas de material**. Com
      falta parcial ou sem saldo, pede confirmação (iniciar continua permitido).
+   - **Imprimir OP:** baixa o PDF da ordem para a fábrica — observações, etapas na
+     sequência com quem executa (centro ou terceiro), peças que entram, horas,
+     inspeção, material por etapa, ferramentas, serviços em terceiro e campos de visto.
    - **Explodir roteiro**, **Apurar custo**, **Encerrar**.
 2. **Apontamento:** quantidade boa, refugo e motivo, data, máquina e **operador**
    (obrigatório). *Baixa automática da estrutura no depósito* baixa os
@@ -2662,14 +2678,24 @@ almoxarifado que recebe precisa ser da empresa em que você está.
    ação, dispositivo, funcionário).
 3. **Etapas:** as operações do roteiro — iniciar, **pausar** ou **interromper**
    (com motivo) e **concluir**. Para concluir, informe horas trabalhadas ou peças
-   produzidas: é o que desconta a vida útil da ferramenta.
+   produzidas: é o que desconta a vida útil da ferramenta. Etapa feita em
+   **terceiro** mostra "Com o terceiro — OS n": ela anda pela OS no VTPS0100 (a
+   remessa põe em andamento, o recebimento de todas as peças conclui e libera a
+   etapa seguinte), não pelos botões.
 4. **Materiais:** o que a ordem consome — a baixar, livre no depósito, o que as OFs
    da frente vão consumir, disponível e falta. Inclua material, aloque lotes e
    registre o destino da sucata.
 5. **Consumos:** registre o consumo do insumo (sai do estoque para a ordem) ou
    **retorne como sucata** (volta ao estoque com valor).
-6. **Custo:** custo real × padrão por componente, com o desvio. Sem custo padrão,
-   o desvio não aparece (não há com o que comparar).
+6. **Custo:** custo real × padrão nos mesmos componentes do custo padrão
+   (VCUS0100): **material** (o que saiu do estoque para a OF), **máquina e
+   preparação** e **mão de obra** (horas apontadas nas etapas × taxas do centro),
+   **serviços de terceiros** (peças recebidas × preço do pedido, da VTER0100 ou do
+   roteiro) e **indiretos** (absorvidos na proporção do padrão). Sem custo padrão,
+   o desvio não aparece (não há com o que comparar). Concluir a OF com material
+   da lista sem baixa pede confirmação: o custo ficaria sem esse material.
+   O administrador tem **Reapurar todas as OFs**, que refaz pela regra atual o
+   custo das OFs apuradas antes da mudança (sem máquina e terceiros).
 
 **Entrega ao estoque.** Informe depósito do acabado, quantidade e lote. Item que
 controla número de série (VATC0110) pede as **séries** — uma por linha, uma por

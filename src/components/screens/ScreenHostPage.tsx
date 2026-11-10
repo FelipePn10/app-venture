@@ -205,7 +205,7 @@ const RETIRED_SCREENS: Record<string, { title: string; reason: string; replaceme
     title: "Roteiro de Fabricação",
     reason: "O roteiro de fabricação era mantido em duas telas sobre os mesmos dados; ficou centralizado na engenharia, com operações, precedências, recursos, ferramentas e lead time.",
     replacement: "VENT0202",
-    replacementTitle: "Roteiro de Fabricação por Item",
+    replacementTitle: "Roteiro de Fabricação",
   },
 };
 
@@ -286,8 +286,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VDPR0100: <Vdpr0100Page />,
   VPRO0900: <Vpro0900Page />,
   VPRO1000: <Vpro1000Page />,
-  VENT0115: <RoteiroFabricacaoPage code="VENT0115" />,
-  VENT0202: <RoteiroFabricacaoPage code="VENT0202" />,
+  VENT0202: <RoteiroFabricacaoPage />,
   VPRO0200: <Vpro0200Page />,
   VPRO0210: <Vpro0210Page />,
   VPRO0300: <Vpro0300Page />,

@@ -1,6 +1,6 @@
 ================================================================================
 ROTEIRO DE FABRICAÇÃO — O QUE ELE FAZ NO VENTURERP
-Atualizado em 18/09/2026
+Atualizado em 08/11/2026
 ================================================================================
 
 O roteiro responde a UMA pergunta: por quais processos este item passa para
@@ -12,9 +12,19 @@ bucha ("tornear aqui, cementar num terceiro, retificar aqui") é do ROTEIRO DELA
 Quem junta as duas é o MRP: ele explode a estrutura, descobre que precisa da
 bucha antes da balança, lê o roteiro de cada uma e ordena tudo no tempo.
 
-Telas: VENT0202 (roteiro efetivo do item) e VENT0115 (roteiros padrão).
-São a mesma tela com dois títulos. Seis abas, na ordem em que se desenha um
-processo.
+Tela: VENT0202, em três modos — Roteiros do item, Modelos e Biblioteca de
+operações. É a única tela de roteiro.
+
+NOVIDADES DE 08/11/2026 (detalhe técnico em docs/dev/manufatura-e-compras.md):
+  • roteiro-modelo (sem item) e cópia no servidor, numa transação só;
+  • faixa de lote por roteiro alternativo (guilhotina × laser);
+  • base de tempo: por peça, m², metro linear, perímetro ou atributo do item;
+  • componente da estrutura alocado a uma etapa (o MRP data pela etapa);
+  • tempo padrão × apontado nas OPs, com sugestão de ajuste;
+  • uma regra única de escolha do roteiro (máscara, vigência, faixa de lote);
+  • o roteiro manda no tempo; a VMAQ0200 só quando o roteiro não tem tempo;
+  • etapa editável (antes só incluir/remover) e centro principal = centro da
+    etapa (os alternativos ficam à parte).
 
 
 --------------------------------------------------------------------------------
@@ -297,6 +307,10 @@ estão na mesma tela em que o processo é desenhado, atualizando ao digitar o
 tamanho do lote. E o prazo do terceiro não é diluído em "horas" — aparece como
 os dias corridos que de fato são.
 
+Desde 08/11/2026 também: faixa de lote por roteiro (SAP), componente alocado à
+etapa (SAP/Oracle), base de tempo por medida da peça e padrão × real na própria
+tela — os dois últimos sem equivalente direto na tela de roteiro deles.
+
 O que NÃO temos e eles têm (decisão consciente, não esquecimento):
   • roteiro por linha de montagem com balanceamento automático (takt time) —
     faz sentido em linha seriada, não em metalúrgica sob encomenda;
@@ -310,8 +324,10 @@ O que NÃO temos e eles têm (decisão consciente, não esquecimento):
 12. ONDE O CÓDIGO MORA
 --------------------------------------------------------------------------------
 Frontend
-  src/components/screens/engenharia/RoteiroFabricacaoPage.tsx   as seis abas
-  src/components/screens/engenharia/roteiro/RoteiroCustoPanel.tsx  tempo e custo
+  src/components/screens/engenharia/RoteiroFabricacaoPage.tsx   modos, lista, cabeçalho, abas
+  src/components/screens/engenharia/roteiro/                    biblioteca, editor da etapa,
+                                                                fluxo, dependências, materiais,
+                                                                padrão × real, custo
   src/services/manufacturingRoutingService.ts                   chamadas à API
 
 Backend (panossoerp)

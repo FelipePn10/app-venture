@@ -360,15 +360,9 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "engenharia",
   },
   {
-    code: "VENT0115",
-    title: "Cadastro de Roteiro Padrão",
-    description: "Cadastrar roteiros padrão para agilizar o cadastro dos roteiros de fabricação.",
-    module: "engenharia",
-  },
-  {
     code: "VENT0202",
-    title: "Cadastro do Roteiro de Fabricação",
-    description: "Cadastrar operações e roteiros padrões na sequência de fabricação.",
+    title: "Roteiro de Fabricação",
+    description: "Roteiros dos itens, modelos de roteiro e biblioteca de operações: etapas, centros, tempos, dependências, materiais por etapa, custo e tempo real.",
     module: "engenharia",
   },
   {

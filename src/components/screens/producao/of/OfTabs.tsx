@@ -24,7 +24,9 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos }: {
   // ordem parecer parada com peças já apontadas.
   const apontadoBom = apontamentos.reduce((t, a) => t + (a.produced_qty || 0), 0);
   const apontadoRefugo = apontamentos.reduce((t, a) => t + (a.scrapped_qty || 0), 0);
-  const saldo = Math.max(0, (of.planned_qty || 0) - Math.max(of.produced_qty || 0, apontadoBom));
+  // Fechada (concluída, encerrada, cancelada) não tem saldo a produzir: o que faltou é refugo.
+  const fechada = of.status === "COMPLETED" || of.status === "CLOSED" || of.status === "CANCELLED";
+  const saldo = fechada ? 0 : Math.max(0, (of.planned_qty || 0) - Math.max(of.produced_qty || 0, apontadoBom));
   return (<>
     <CuidadosDosItens codigos={[of.item_code]} contexto="do item desta ordem" />
     <div className="vpl-cols wide-left">
@@ -79,13 +81,15 @@ export type EntregaForm = { deposito?: number; lote: string; quantidade: string;
 export type SerieDaOF = { controla: boolean; mascara: boolean };
 export type ConsumoForm = ConsumptionDTO;
 
-export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamentos, operacoesPendentes, conclusao, setConclusao, onApontar, onConsumir, onRetornarSucata, onConcluir, serie }: {
+export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamentos, operacoesPendentes, conclusao, setConclusao, onApontar, onConsumir, onRetornarSucata, onConcluir, serie, gestor = true }: {
   of: ProductionOrderDTO; busy: boolean;
   app: AppointmentDTO; setApp: (f: (p: AppointmentDTO) => AppointmentDTO) => void;
   cons: ConsumptionDTO; setCons: (f: (p: ConsumptionDTO) => ConsumptionDTO) => void;
   apontamentos: AppointmentDTO[]; operacoesPendentes: number;
   conclusao: EntregaForm; setConclusao: (f: (p: EntregaForm) => EntregaForm) => void;
   onApontar: () => void; onConsumir: () => void; onRetornarSucata: () => void; onConcluir: () => void;
+  /** Perfil de escritório (PCP/almoxarifado): entrega ao estoque e conclusão. O posto (OPERATOR) aponta e consome. */
+  gestor?: boolean;
   serie?: SerieDaOF;
 }): JSX.Element {
   const emProducao = of.status === "IN_PROGRESS";
@@ -144,7 +148,7 @@ export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamen
       </Painel>
     </div>
 
-    <Painel titulo="Entregar ao estoque" sub={`entrada do produto acabado · já entregue ${num(of.produced_qty ?? 0)} de ${num(of.planned_qty)}`}>
+    {!gestor ? <p className="erp-note">A entrada do acabado no estoque e a conclusão da ordem são feitas pelo PCP ou almoxarifado. Já entregue: {num(of.produced_qty ?? 0)} de {num(of.planned_qty)}.</p> : <Painel titulo="Entregar ao estoque" sub={`entrada do produto acabado · já entregue ${num(of.produced_qty ?? 0)} de ${num(of.planned_qty)}`}>
       <div className="vpl-filters">
         <div className="erp-field"><label className="erp-label erp-req" htmlFor="cl-qtd">Quantidade</label>
           <input id="cl-qtd" className="erp-input num" type="number" min={0} placeholder={num(saldo)} value={conclusao.quantidade}
@@ -167,7 +171,7 @@ export function ApontamentoTab({ of, busy, app, setApp, cons, setCons, apontamen
           ? `Faltam ${operacoesPendentes} etapa(s) do roteiro: conclua ou dispense na aba Etapas antes de concluir a ordem. Entregas parciais continuam liberadas.`
           : "Vazio, a quantidade é o saldo da ordem. Desmarque a última entrega para lançar uma entrega parcial e continuar produzindo."}
       </p>
-    </Painel>
+    </Painel>}
 
     <Painel titulo="Apontamentos" sub={`${apontamentos.length} lançamento(s)`} flush>
       {apontamentos.length === 0 ? <Vazio titulo="Nenhum apontamento ainda" /> : (
@@ -239,8 +243,9 @@ export function EtapasTab({ of, busy, operacoes, etapa, setEtapa, onAlterar, onG
               <td>{op.completed_at ? dataHora(op.completed_at) : "—"}</td>
               <td className="num">{op.actual_hours ? num(op.actual_hours) : "—"}</td>
               <td className="vpl-actions">
+                {op.service_order_code && <span className="erp-hint" title="A remessa ao terceiro põe a etapa em andamento e o recebimento de todas as peças a conclui — tudo no VTPS0100.">Com o terceiro — OS {op.service_order_code} (VTPS0100)</span>}
                 {op.can_start && <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy || !emProducao} onClick={() => op.id && onAlterar(op.id, "IN_PROGRESS")}>{op.status === "PENDING" ? "Iniciar" : "Retomar"}</button>}
-                {op.status === "IN_PROGRESS" && <>
+                {op.status === "IN_PROGRESS" && !op.service_order_code && <>
                   <button className="erp-btn erp-btn-sm" disabled={busy || !emProducao} onClick={() => op.id && onAlterar(op.id, "PAUSED")}>Pausar</button>
                   <button className="erp-btn erp-btn-sm" disabled={busy || !emProducao} onClick={() => op.id && onAlterar(op.id, "INTERRUPTED")}>Interromper</button>
                   <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy || !emProducao} onClick={() => op.id && onAlterar(op.id, "DONE")}>Concluir</button>
@@ -323,9 +328,11 @@ export function FaltasPainel({ disponibilidade }: { disponibilidade: MaterialAva
   );
 }
 
-export function MateriaisTab({ busy, materiais, disponibilidade, form, setForm, onIncluir, onAlocar, onSucata }: {
+export function MateriaisTab({ busy, materiais, disponibilidade, form, setForm, onIncluir, onAlocar, onSucata, gestor = true }: {
   busy: boolean; materiais: MaterialDTO[]; disponibilidade: MaterialAvailability | null; form: MaterialForm; setForm: (f: (p: MaterialForm) => MaterialForm) => void;
   onIncluir: () => void; onAlocar: (m: MaterialDTO) => void; onSucata: (m: MaterialDTO) => void;
+  /** Incluir material, alocar lote e destinar sucata são do PCP/almoxarifado. */
+  gestor?: boolean;
 }): JSX.Element {
   return (<>
     <CuidadosDosItens codigos={materiais.map((m) => m.item_code)} contexto="nos materiais desta ordem" />
@@ -344,8 +351,8 @@ export function MateriaisTab({ busy, materiais, disponibilidade, form, setForm, 
                 <td>{m.warehouse_id ? <EntityName code={m.warehouse_id} loader={loadWarehouses} prefix="Depósito" showCode={false} /> : "—"}</td>
                 <td>{m.automatic_issue ? "Automática" : "Manual"}</td>
                 <td className="vpl-actions">
-                  <button className="erp-btn erp-btn-sm" onClick={() => onAlocar(m)} disabled={busy} title="Escolhe os lotes pela data e pelo código do lote">Alocar lotes</button>
-                  <button className="erp-btn erp-btn-sm" onClick={() => onSucata(m)} disabled={busy}>Destinar sucata</button>
+                  {gestor && <><button className="erp-btn erp-btn-sm" onClick={() => onAlocar(m)} disabled={busy} title="Escolhe os lotes pela data e pelo código do lote">Alocar lotes</button>
+                  <button className="erp-btn erp-btn-sm" onClick={() => onSucata(m)} disabled={busy}>Destinar sucata</button></>}
                 </td>
               </tr>
             );
@@ -353,7 +360,7 @@ export function MateriaisTab({ busy, materiais, disponibilidade, form, setForm, 
         </table>
       )}
     </Painel>
-    <Painel titulo="Incluir material">
+    {gestor && <Painel titulo="Incluir material">
       <div className="erp-fieldset-body" style={{ padding: 0 }}>
         <div className="erp-field erp-c4"><label className="erp-label erp-req">Item</label>
           <LookupField value={form.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setForm((m) => ({ ...m, item_code: String(c ?? "") }))} /></div>
@@ -369,7 +376,7 @@ export function MateriaisTab({ busy, materiais, disponibilidade, form, setForm, 
           <button className="erp-btn erp-btn-primary" onClick={onIncluir} disabled={busy}>Incluir material</button>
         </div>
       </div>
-    </Painel>
+    </Painel>}
   </>);
 }
 
@@ -401,22 +408,31 @@ function corDoDesvio(desvio: number): string {
   return desvio > 0 ? "var(--v-err)" : "var(--v-ok)";
 }
 /** Um número sozinho não diz se é bom ou ruim; a faixa de 2% evita alarme por arredondamento. */
-function leituraDoDesvio(desvio: number, padrao: number): string {
+function leituraDoDesvio(desvio: number, padrao: number, rotulo = ""): string {
   if (padrao === 0) return desvio === 0 ? "—" : "sem padrão para comparar";
+  // Real zero com padrão não é economia: é o que não foi lançado na ordem.
+  if (desvio === -padrao) {
+    if (rotulo === "Material") return "nada baixado — registre o consumo";
+    if (rotulo === "Máquina e preparação" || rotulo === "Mão de obra") return "sem horas apontadas ou sem taxa do centro (VCUS0100)";
+    if (rotulo === "Serviços de terceiros") return "nada recebido do terceiro";
+    if (rotulo === "Total") return "nada lançado na ordem";
+  }
   const pct = (desvio / padrao) * 100;
   if (Math.abs(pct) < 2) return "dentro do padrão";
   const p = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   return pct > 0 ? `estourou ${p(pct)}%` : `economizou ${p(Math.abs(pct))}%`;
 }
 
-export function CustoTab({ custo, busy, onApurar }: { custo: CostDTO | null; busy: boolean; onApurar: () => void }): JSX.Element {
+export function CustoTab({ custo, busy, onApurar, onReapurarTodas }: { custo: CostDTO | null; busy: boolean; onApurar: () => void; onReapurarTodas?: () => void }): JSX.Element {
   if (!custo) {
-    return <Painel titulo="Custo da ordem"><Vazio titulo="Custo ainda não apurado" texto="A apuração soma o material consumido, as horas apontadas e os indiretos do centro, e compara com o custo padrão."
+    return <Painel titulo="Custo da ordem"><Vazio titulo="Custo ainda não apurado" texto="A apuração soma o material baixado para a ordem, as horas apontadas nas etapas (× taxas de máquina e de mão de obra do centro, VCUS0100), o serviço de terceiros recebido e os indiretos, e compara com o custo padrão do item."
       acao={<button className="erp-btn erp-btn-primary" onClick={onApurar} disabled={busy}>Apurar custo</button>} /></Painel>;
   }
   const linhas = [
     { rotulo: "Material", real: custo.material_cost_real ?? 0, padrao: custo.material_cost_std ?? 0 },
+    { rotulo: "Máquina e preparação", real: custo.machine_cost_real ?? 0, padrao: custo.machine_cost_std ?? 0 },
     { rotulo: "Mão de obra", real: custo.labor_cost_real ?? 0, padrao: custo.labor_cost_std ?? 0 },
+    { rotulo: "Serviços de terceiros", real: custo.subcontract_cost_real ?? 0, padrao: custo.subcontract_cost_std ?? 0 },
     { rotulo: "Indiretos", real: custo.overhead_cost_real ?? 0, padrao: custo.overhead_cost_std ?? 0 },
   ];
   const total = { rotulo: "Total", real: custo.total_cost_real ?? 0, padrao: custo.total_cost_std ?? 0 };
@@ -437,7 +453,8 @@ export function CustoTab({ custo, busy, onApurar }: { custo: CostDTO | null; bus
       )}
     </div>
     <Painel titulo="Real × padrão" sub={custo.settled_at ? `apurado em ${data(custo.settled_at)}` : undefined}
-      acoes={<button className="erp-btn erp-btn-sm" onClick={onApurar} disabled={busy}>Apurar de novo</button>} flush>
+      acoes={<>{onReapurarTodas && <button className="erp-btn erp-btn-sm erp-btn-ghost" onClick={onReapurarTodas} disabled={busy} title="Refaz pela regra atual (máquina, mão de obra, terceiros e indiretos) o custo de todas as OFs já apuradas da empresa">Reapurar todas as OFs</button>}
+        <button className="erp-btn erp-btn-sm" onClick={onApurar} disabled={busy}>Apurar de novo</button></>} flush>
       <table className="erp-grid">
         <thead><tr><th>Componente</th><th className="num">Real</th><th className="num">Padrão</th><th className="num">Desvio</th><th>Leitura</th></tr></thead>
         <tbody>{[...linhas, total].map((l) => {
@@ -447,12 +464,12 @@ export function CustoTab({ custo, busy, onApurar }: { custo: CostDTO | null; bus
               <td style={{ fontWeight: l.rotulo === "Total" ? 700 : 400 }}>{l.rotulo}</td>
               <td className="num">{money(l.real)}</td><td className="num">{money(l.padrao)}</td>
               <td className="num" style={{ color: corDoDesvio(desvio), fontWeight: 600 }}>{desvio > 0 ? "+" : ""}{money(desvio)}</td>
-              <td>{leituraDoDesvio(desvio, l.padrao)}</td>
+              <td>{leituraDoDesvio(desvio, l.padrao, l.rotulo)}</td>
             </tr>
           );
         })}</tbody>
       </table>
     </Painel>
-    <p className="erp-note">O desvio por componente diz onde procurar: material aponta para consumo acima da estrutura ou preço de compra; mão de obra, para tempo além do roteiro; indiretos, para o rateio do centro. É o custo unitário real que alimenta o custo médio do estoque na entrada do acabado.</p>
+    <p className="erp-note">O desvio por componente diz onde procurar: material aponta para consumo acima da estrutura ou preço de compra; máquina e mão de obra, para tempo além do roteiro ou taxa do centro (VCUS0100); terceiros, para preço ou quantidade do serviço; indiretos, para o rateio do centro. É o custo unitário real que alimenta o custo médio do estoque na entrada do acabado.</p>
   </>);
 }

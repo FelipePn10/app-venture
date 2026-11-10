@@ -338,7 +338,8 @@ export async function getPurchaseCost(itemCode: string): Promise<PurchaseCost> {
   return parsePurchaseCost(data);
 }
 export async function upsertPurchaseCost(itemCode: string, cost: number): Promise<PurchaseCost> {
-  const { data } = await httpClient.post(`${BASE}/purchase-costs`, { item_code: itemCode, cost, updated_by: currentUserId() });
+  // O servidor lê `unit_cost` e tira o autor do JWT; antes ia `cost` e o custo gravava zero.
+  const { data } = await httpClient.post(`${BASE}/purchase-costs`, { item_code: itemCode, unit_cost: cost });
   return parsePurchaseCost(data);
 }
 

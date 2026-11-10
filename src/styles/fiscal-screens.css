@@ -680,3 +680,50 @@
 .fsc-rot-flag.insp { background: var(--v-info-bg); color: var(--v-info); border-color: var(--v-info-bd); }
 
 .erp-grid .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Roteiro unificado (VENT0202) ──────────────────────────────────────────── */
+.rot-modos { gap: 6px; }
+.rot-lista-acoes { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--v-border-soft); }
+.rot-cabecalho { padding: 10px 12px 0; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.rot-cabecalho .fsc-rot-prontidao { margin-bottom: 0; }
+.rot-lote { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--v-text-2); padding: 0 4px; white-space: nowrap; }
+.rot-lote strong { color: var(--v-text); font-variant-numeric: tabular-nums; }
+
+/* O fluxo: cartões na ordem em que a peça passa. A cor diz onde a etapa corre. */
+.rot-fluxo { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px 0; margin-bottom: 12px; }
+.rot-fluxo-item { display: flex; align-items: center; }
+.rot-fluxo-seta { color: var(--v-text-3); font-size: 18px; padding: 0 6px; user-select: none; }
+.rot-etapa {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left;
+  width: 188px; min-height: 112px; padding: 9px 11px; cursor: pointer;
+  background: var(--v-surface); border: 1px solid var(--v-border-strong); border-left: 4px solid var(--v-green);
+  border-radius: var(--v-r-md); font-family: var(--v-font); color: var(--v-text);
+  transition: box-shadow .12s, transform .12s;
+}
+.rot-etapa:hover { box-shadow: var(--v-shadow-sm); transform: translateY(-1px); }
+.rot-etapa:focus-visible { outline: none; box-shadow: var(--v-focus); }
+.rot-etapa.terceiro { border-left-color: var(--v-warn); background: var(--v-warn-bg); }
+.rot-etapa.fantasma { border-left-color: var(--v-border-strong); opacity: .65; border-style: dashed; }
+.rot-etapa.alerta { border-color: var(--v-err-bd); }
+.rot-etapa.nova { align-items: center; justify-content: center; border-style: dashed; border-left-width: 1px; color: var(--v-text-2); background: transparent; }
+.rot-etapa-mais { font-size: 22px; line-height: 1; color: var(--v-green); }
+.rot-etapa-seq { font-size: 10.5px; font-weight: 800; color: var(--v-text-3); letter-spacing: .5px; }
+.rot-etapa-nome { font-size: 13px; font-weight: 700; line-height: 1.25; }
+.rot-etapa-onde { font-size: 11.5px; color: var(--v-text-2); }
+.rot-etapa-tempo { font-size: 11.5px; color: var(--v-text); font-variant-numeric: tabular-nums; }
+.rot-etapa-rodape { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 11px; color: var(--v-text-2); }
+.rot-etapa-rodape strong { color: var(--v-text); font-variant-numeric: tabular-nums; }
+.rot-tag { font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 3px; border: 1px solid var(--v-border-strong); background: var(--v-surface-2); }
+.rot-tag.refugo { color: var(--v-warn); border-color: var(--v-warn-bd); background: var(--v-warn-bg); }
+.rot-tag.insp { color: var(--v-info); border-color: var(--v-info-bd); background: var(--v-info-bg); }
+.rot-tag.erro { color: var(--v-err); border-color: var(--v-err-bd); background: var(--v-err-bg); }
+
+/* Ações da linha: lado a lado, alinhadas à direita, sem quebrar. */
+.rot-acoes { display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
+.rot-acoes-th { width: 1%; }
+/* "?" de ajuda ao lado do rótulo: o texto completo aparece ao passar o mouse. */
+.rot-ajuda {
+  display: inline-grid; place-items: center; width: 15px; height: 15px; margin-left: 4px; border-radius: 50%;
+  font-size: 10px; font-weight: 800; color: var(--v-surface); background: var(--v-text-3); cursor: help; vertical-align: 1px;
+}
+.rot-ajuda:focus-visible { outline: none; box-shadow: var(--v-focus); }

@@ -172,7 +172,7 @@ export function Vtps0100Page(): JSX.Element {
   const mudarStatus = (o: ServiceOrder, status: string) => run(async () => {
     await updateServiceOrderStatus(o.id, status);
     setOrders(await listServiceOrders(filtroStatus ? { status: filtroStatus } : undefined));
-    setFeedback({ type: "success", message: `Ordem ${o.code}: ${enumLabel(status)}.` });
+    setFeedback({ type: "success", message: `Ordem ${o.code}: ${orderStatusLabel(status)}.` });
   });
 
   const abrirMovimentos = (o: ServiceOrder) => {
@@ -446,7 +446,7 @@ export function Vtps0100Page(): JSX.Element {
             {aba === "ordens" && (
               <>
                 <div className="fsc-rot-cascata">
-                  <span>Em poder de terceiros: <strong>{num(emPoderDeTerceiros, 2)}</strong> peças</span>
+                  <span title="O que as ordens de serviço ainda devem: inclui peças que nem foram enviadas. O que está fisicamente no fornecedor aparece em Remessa e retorno.">A receber dos terceiros: <strong>{num(emPoderDeTerceiros, 2)}</strong> peças</span>
                   <span>Ordens: <strong>{orders.length}</strong></span>
                   {atrasadas > 0 && <span style={{ color: "var(--v-warn)" }}>Vencidas: <strong>{atrasadas}</strong></span>}
                   <span style={{ flex: 1 }} />
@@ -458,7 +458,7 @@ export function Vtps0100Page(): JSX.Element {
                     <table className="erp-grid">
                       <thead><tr>
                         <th style={{ width: 70 }}>Ordem</th><th>Item</th><th>Operação</th><th>Fornecedor</th>
-                        <th className="num">Enviado</th><th className="num">Voltou</th><th className="num">Está lá</th>
+                        <th className="num">Na ordem</th><th className="num" title="Peças recebidas com o serviço feito">Recebido</th><th className="num" title="Falta receber do terceiro">A receber</th>
                         <th>Prometido</th><th>Situação</th><th style={{ width: 200 }}>Ações</th>
                       </tr></thead>
                       <tbody>
@@ -473,7 +473,7 @@ export function Vtps0100Page(): JSX.Element {
                             <td className="num">{num(o.fulfilled_quantity, 2)}</td>
                             <td className="num"><strong>{num(o.pending_quantity, 2)}</strong></td>
                             <td>{dia(o.due_date)}{atrasada(o) && <span className="fsc-rot-flag" style={{ marginLeft: 6 }}>VENCIDA</span>}</td>
-                            <td><span className="erp-badge info">{enumLabel(o.status)}</span></td>
+                            <td><span className="erp-badge info">{orderStatusLabel(o.status)}</span></td>
                             <td>
                               <button className="erp-btn erp-btn-sm" onClick={() => abrirMovimentos(o)}>Remessa/retorno</button>{" "}
                               <select className="erp-input" style={{ width: 190, display: "inline-block" }} value={o.status}
@@ -482,7 +482,7 @@ export function Vtps0100Page(): JSX.Element {
                                 title={(ORDER_STATUS_TRANSITIONS[o.status] ?? []).length === 0 ? "Ordem encerrada: a situação não muda mais." : undefined}>
                                 <option value={o.status}>{orderStatusLabel(o.status)}</option>
                                 {(ORDER_STATUS_TRANSITIONS[o.status] ?? []).map((v) => (
-                                  <option key={v} value={v}>{orderStatusLabel(v)}</option>
+                                  <option key={v} value={v}>{v === "COMPLETED" ? "Encerrar com saldo (o resto não volta)" : orderStatusLabel(v)}</option>
                                 ))}
                               </select>
                             </td>
@@ -516,7 +516,7 @@ export function Vtps0100Page(): JSX.Element {
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">
                       Lançar movimento — <span style={{ fontWeight: 400, opacity: .65 }}>
-                        remessa tira da fábrica; retorno traz de volta
+                        remessa tira da fábrica; o recebimento traz a peça pronta e conclui a etapa de terceiro na OP
                       </span>
                     </div>
                     <div className="erp-fieldset-body">
@@ -636,7 +636,7 @@ export function Vtps0100Page(): JSX.Element {
       <footer className="erp-statusbar">
         <div className="erp-status-item">Preços: <strong>{prices.length}</strong></div>
         <div className="erp-status-item">Ordens: <strong>{orders.length}</strong></div>
-        {emPoderDeTerceiros > 0 && <div className="erp-status-item">Em poder de terceiros: <strong>{num(emPoderDeTerceiros, 2)}</strong></div>}
+        {emPoderDeTerceiros > 0 && <div className="erp-status-item">A receber dos terceiros: <strong>{num(emPoderDeTerceiros, 2)}</strong></div>}
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
