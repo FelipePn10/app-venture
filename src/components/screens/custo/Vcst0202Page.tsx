@@ -1,16 +1,18 @@
+import { SupportCrud } from "../cliente/SupportCrud";
 import { useState, useCallback } from "react";
 import {
   type SalesTableDTO, type SalesTablePriceDTO, type SalesPricePolicyDTO,
   listSalesTables, createSalesTable, listSalesTablePrices, createSalesTablePrice, deleteSalesTablePrice,
-  formSalesPrice, generateSalesTablePrices, listSalesPricePolicies, createSalesPricePolicy,
+  formSalesPrice, generateSalesTablePrices, listSalesPricePolicies, createSalesPricePolicy, updateSalesPricePolicy,
+  updateSalesTablePrice, listPriceHistory,
 } from "@/services/salesPricingService";
-import { errMessage, parseNum, unwrapObject } from "@/services/fiscalShared";
+import { errMessage, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadSalesPricePolicies, loadSalesTables } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type View = "tables" | "formation" | "policies";
+type View = "tables" | "headers" | "formation" | "policies";
 const iso = (d: string) => (d ? `${d}T00:00:00Z` : undefined);
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -36,6 +38,9 @@ export function Vcst0202Page(): JSX.Element {
   const [selTable, setSelTable] = useState<SalesTableDTO | null>(null);
   const [prices, setPrices] = useState<SalesTablePriceDTO[]>([]);
   const [priceForm, setPriceForm] = useState<SalesTablePriceDTO>(EMPTY_PRICE);
+  // Editar linha e histórico (eram da VCLI0600); editar política com frete (era a VCLI0202).
+  const [historico, setHistorico] = useState<{ item: string; linhas: Obj[] } | null>(null);
+  const [editPol, setEditPol] = useState<number | null>(null);
 
   // formação
   const [fTable, setFTable] = useState("");
@@ -68,8 +73,8 @@ export function Vcst0202Page(): JSX.Element {
     if (!selTable?.code) return;
     if (!priceForm.item_code.trim()) { setFeedback({ type: "error", message: "Informe o item." }); return; }
     if (!(priceForm.price > 0)) { setFeedback({ type: "error", message: "O preço precisa ser maior que zero." }); return; }
-    await createSalesTablePrice(selTable.code, priceForm); setPriceForm(EMPTY_PRICE);
-    setFeedback({ type: "success", message: "Preço incluído." });
+    if (priceForm.id) await updateSalesTablePrice({ ...priceForm, id: priceForm.id }); else await createSalesTablePrice(selTable.code, priceForm);
+    setFeedback({ type: "success", message: priceForm.id ? "Preço alterado." : "Preço incluído." }); setPriceForm(EMPTY_PRICE);
     setPrices(await listSalesTablePrices(selTable.code));
   });
   const removerPreco = (id?: number) => { if (!id || !selTable?.code) return; void run(async () => {
@@ -94,8 +99,8 @@ export function Vcst0202Page(): JSX.Element {
   const carregarPoliticas = () => run(async () => { setPolicies(await listSalesPricePolicies()); });
   const gravarPolitica = () => run(async () => {
     if (!policyForm.description.trim()) { setFeedback({ type: "error", message: "Informe a descrição." }); return; }
-    await createSalesPricePolicy({ ...policyForm, validity_start: iso(tValidFrom), validity_end: iso(tValidTo) });
-    setPolicyForm(EMPTY_POLICY); setFeedback({ type: "success", message: "Política de formação criada." });
+    if (editPol) await updateSalesPricePolicy(editPol, policyForm); else await createSalesPricePolicy({ ...policyForm, validity_start: iso(tValidFrom), validity_end: iso(tValidTo) });
+    setFeedback({ type: "success", message: editPol ? `Política ${editPol} alterada.` : "Política de formação criada." }); setPolicyForm(EMPTY_POLICY); setEditPol(null);
     setPolicies(await listSalesPricePolicies());
   });
 
@@ -116,6 +121,7 @@ export function Vcst0202Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <button className={`erp-btn${view === "tables" ? " erp-btn-dark" : ""}`} onClick={() => setView("tables")} disabled={busy}>Tabelas &amp; Preços</button>
+          <button className={`erp-btn${view === "headers" ? " erp-btn-dark" : ""}`} onClick={() => setView("headers")} disabled={busy}>Cabeçalho das tabelas</button>
           <button className={`erp-btn${view === "formation" ? " erp-btn-dark" : ""}`} onClick={() => setView("formation")} disabled={busy}>Formação de Preço</button>
           <button className={`erp-btn${view === "policies" ? " erp-btn-dark" : ""}`} onClick={() => setView("policies")} disabled={busy}>Políticas</button>
         </div>
@@ -170,28 +176,58 @@ export function Vcst0202Page(): JSX.Element {
                       <div className="erp-field erp-c2"><label className="erp-label">Disponibilidade</label><label className="erp-check"><input type="checkbox" checked={!!priceForm.blocked} onChange={(e) => setPriceForm((p) => ({ ...p, blocked: e.target.checked }))} /><span>Bloquear este preço</span></label></div>
                       <div className="erp-field erp-c5"><label className="erp-label">Fórmula/referência</label><input className="erp-input" value={priceForm.formula ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, formula: e.target.value }))} /></div>
                       <div className="erp-field erp-c5"><label className="erp-label">Observação comercial</label><input className="erp-input" value={priceForm.observation ?? ""} onChange={(e) => setPriceForm((p) => ({ ...p, observation: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarPreco} disabled={busy}>Incluir item na tabela</button></div>
+                      <div className="erp-field erp-c2" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarPreco} disabled={busy}>{priceForm.id ? "Gravar alteração" : "Incluir item na tabela"}</button>{priceForm.id ? <button className="erp-btn" style={{ marginLeft: 6 }} onClick={() => setPriceForm(EMPTY_PRICE)} disabled={busy}>Cancelar</button> : null}</div>
                       <div className="erp-field erp-c12"><span className="erp-field-hint">Aqui ficam preço, unidades, conversão e disponibilidade comercial. NCM, tributação, garantia, devolução e dados fiscais pertencem ao cadastro mestre do item, pois são usados por todas as tabelas e documentos.</span></div>
                     </div>
                   </div>
                   <div className="erp-grid-wrap">
                     <table className="erp-grid">
-                      <thead><tr><th className="num">ID</th><th>Item</th><th className="num">Preço</th><th>UM</th><th>Situação</th><th style={{ width: 70 }}></th></tr></thead>
+                      <thead><tr><th className="num">ID</th><th>Item</th><th className="num">Preço</th><th>UM</th><th>Situação</th><th style={{ width: 230 }}></th></tr></thead>
                       <tbody>
                         {prices.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem preços.</td></tr>}
                         {prices.map((pr) => (
                           <tr key={pr.id}><td className="num">{pr.id}</td><td>{pr.item_code}</td><td className="num">{money(pr.price)}</td><td>{pr.ume || "—"}</td><td>{pr.situation || "—"}</td>
-                            <td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removerPreco(pr.id)} disabled={busy}>Excluir</button></td></tr>
+                            <td style={{ whiteSpace: "nowrap" }}><button className="erp-btn erp-btn-sm" onClick={() => setPriceForm({ ...pr })} disabled={busy}>Editar</button>{" "}
+                              <button className="erp-btn erp-btn-sm" onClick={() => void run(async () => { setHistorico({ item: pr.item_code, linhas: await listPriceHistory(selTable!.code!, pr.item_code) }); })} disabled={busy}>Histórico</button>{" "}
+                              <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => removerPreco(pr.id)} disabled={busy}>Excluir</button></td></tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                  {historico && (
+                    <div className="erp-fieldset"><div className="erp-fieldset-head">Histórico de preço — item {historico.item} <button className="erp-btn erp-btn-sm" style={{ marginLeft: "auto" }} onClick={() => setHistorico(null)}>Fechar</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12"><table className="erp-grid">
+                      <thead><tr><th>Quando</th><th className="num">De</th><th className="num">Para</th><th>Origem</th><th>Motivo</th></tr></thead>
+                      <tbody>
+                        {historico.linhas.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem alterações registradas.</td></tr>}
+                        {historico.linhas.map((h, i) => <tr key={i}><td>{parseStr(h, "changed_at", "created_at") ? new Date(parseStr(h, "changed_at", "created_at")).toLocaleString("pt-BR") : "—"}</td><td className="num">{h.old_price != null ? money(parseNum(h, "old_price")) : "—"}</td><td className="num">{money(parseNum(h, "new_price"))}</td><td>{parseStr(h, "source") || "—"}</td><td>{parseStr(h, "reason") || "—"}</td></tr>)}
+                      </tbody>
+                    </table></div></div></div>
+                  )}
                 </>
               ) : <div className="erp-detail-empty"><div className="erp-detail-empty-title">Nenhuma tabela selecionada</div><div className="erp-detail-empty-sub">Selecione uma tabela na lista para gerenciar os preços.</div></div>}
             </div>
           </div>
         )}
 
+        {/* Cabeçalho completo da tabela (tolerâncias, tipo, data base, ICMS por dentro…) — era a aba Tabela de Vendas da VCLI0520. */}
+        {view === "headers" && <div className="erp-detail-body"><SupportCrud resource="sales-tables"
+            editable
+            fields={[
+              { key: "description", label: "Descrição", col: 5, required: true },
+              { key: "validity_start", label: "Vigência início", kind: "date", col: 3 },
+              { key: "validity_end", label: "Vigência fim", kind: "date", col: 3 },
+              { key: "tolerance_min_pct", label: "Tol. mín %", kind: "number", col: 2 },
+              { key: "tolerance_max_pct", label: "Tol. máx %", kind: "number", col: 2 },
+              { key: "price_formation", label: "Formação de preço", kind: "select", options: ["INFORMADO", "CUSTO_MEDIO", "CUSTO_STANDARD_TOTAL", "CUSTO_STANDARD_MATERIAL", "INFORMADO_SEM_ICMS", "MAT_OPER", "TABELA_CUSTO", "TRANSFERENCIA_IPI", "TRANSFERENCIA_UF"], col: 4 },
+              { key: "decimal_places", label: "Casas decimais", kind: "number", col: 2 },
+              { key: "composition", label: "Incoterm", kind: "select", options: ["FOB", "CIF", "EXWORK"], col: 2 },
+              { key: "table_type", label: "Tipo", kind: "select", options: ["NORMAL", "PROMOCIONAL"], col: 2 },
+              { key: "base_date", label: "Data base", kind: "select", options: ["PEDIDO", "DATA_ATUAL"], col: 2 },
+              { key: "allow_items_below_cent", label: "Permite < R$0,01", kind: "bool", col: 3 },
+              { key: "icms_interestadual_por_dentro", label: "ICMS por dentro", kind: "bool", col: 3 },
+              { key: "observation", label: "Observação", col: 6 },
+            ]}
+            columns={[{ key: "description", label: "Descrição" }, { key: "price_formation", label: "Formação" }, { key: "table_type", label: "Tipo" }, { key: "composition", label: "Incoterm" }]} /></div>}
         {view === "formation" && (
           <>
             <div className="erp-fieldset">
@@ -229,17 +265,20 @@ export function Vcst0202Page(): JSX.Element {
                 <div className="erp-field erp-c3"><label className="erp-label">Margem %</label><input className="erp-input num" type="number" value={policyForm.margin_pct} onChange={(e) => setPolicyForm((p) => ({ ...p, margin_pct: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Impostos %</label><input className="erp-input num" type="number" value={policyForm.taxes_pct} onChange={(e) => setPolicyForm((p) => ({ ...p, taxes_pct: Number(e.target.value) }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" value={policyForm.commission_pct} onChange={(e) => setPolicyForm((p) => ({ ...p, commission_pct: Number(e.target.value) }))} /></div>
-                <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gravarPolitica} disabled={busy}>Criar política</button></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Frete %</label><input className="erp-input num" type="number" value={policyForm.freight_pct ?? 0} onChange={(e) => setPolicyForm((p) => ({ ...p, freight_pct: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Despesas %</label><input className="erp-input num" type="number" value={policyForm.expenses_pct ?? 0} onChange={(e) => setPolicyForm((p) => ({ ...p, expenses_pct: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Desconto %</label><input className="erp-input num" type="number" value={policyForm.discount_pct ?? 0} onChange={(e) => setPolicyForm((p) => ({ ...p, discount_pct: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}><button className="erp-btn erp-btn-primary" onClick={gravarPolitica} disabled={busy}>{editPol ? "Gravar alteração" : "Criar política"}</button>{editPol ? <button className="erp-btn" onClick={() => { setEditPol(null); setPolicyForm(EMPTY_POLICY); }} disabled={busy}>Cancelar</button> : null}</div>
               </div>
             </div>
             <div className="erp-toolbar" style={{ borderRadius: 0 }}><div className="erp-tgroup"><button className="erp-btn" onClick={carregarPoliticas} disabled={busy}>Atualizar lista</button></div></div>
             <div className="erp-grid-wrap">
               <table className="erp-grid">
-                <thead><tr><th className="num">Código</th><th>Descrição</th><th>Fonte custo</th><th className="num">Margem</th><th className="num">Impostos</th><th className="num">Comissão</th></tr></thead>
+                <thead><tr><th className="num">Código</th><th>Descrição</th><th>Fonte custo</th><th className="num">Margem</th><th className="num">Impostos</th><th className="num">Comissão</th><th className="num">Frete</th></tr></thead>
                 <tbody>
-                  {policies.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Clique em <strong>Atualizar lista</strong>.</td></tr>}
+                  {policies.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Clique em <strong>Atualizar lista</strong>.</td></tr>}
                   {policies.map((p) => (
-                    <tr key={p.code}><td className="num">{p.code}</td><td>{p.description}</td><td>{COST_SOURCE_LABELS[p.cost_source ?? ""] ?? p.cost_source ?? "—"}</td><td className="num">{p.margin_pct ?? 0}%</td><td className="num">{p.taxes_pct ?? 0}%</td><td className="num">{p.commission_pct ?? 0}%</td></tr>
+                    <tr key={p.code} style={{ cursor: "pointer" }} title="Abrir para editar" className={editPol === p.code ? "erp-row-sel" : undefined} onClick={() => { setPolicyForm({ ...EMPTY_POLICY, ...p }); setEditPol(p.code ?? null); }}><td className="num">{p.code}</td><td>{p.description}</td><td>{COST_SOURCE_LABELS[p.cost_source ?? ""] ?? p.cost_source ?? "—"}</td><td className="num">{p.margin_pct ?? 0}%</td><td className="num">{p.taxes_pct ?? 0}%</td><td className="num">{p.commission_pct ?? 0}%</td><td className="num">{p.freight_pct ?? 0}%</td></tr>
                   ))}
                 </tbody>
               </table>

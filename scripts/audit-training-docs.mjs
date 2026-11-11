@@ -62,7 +62,7 @@ const PRE_REQUISITOS = [
 const ORDEM_ROTEIROS = [
   {
     arquivo: 'dia-2-suprimentos-estoque/roteiro-cronometrado.md',
-    etapas: ['VSUP0510', 'VSUP0500', 'VSUP0610', 'VSUP0300', 'VSUP0400', 'VPDC0200', 'VAVR0200', 'VINS0200', 'VEST0100'],
+    etapas: ['VSUP0510', 'VSUP0500', 'VPCT0100', 'VSUP0300', 'VSUP0400', 'VPDC0200', 'VAVR0200', 'VINS0200', 'VEST0100'],
     porque: 'apoios e governança devem ser ensinados antes do fornecedor e do ciclo de compra/recebimento',
   },
   {
@@ -72,7 +72,7 @@ const ORDEM_ROTEIROS = [
   },
   {
     arquivo: 'dia-4-comercial-fiscal-financeiro/roteiro-cronometrado.md',
-    etapas: ['VCLI0510', 'VCLI0500', 'VCST0202', 'VVND0310', 'VVND0300', 'VVND0200', 'VEXP0100', 'VFIS0200', 'VFIN0210'],
+    etapas: ['VCLI0500', 'VCST0202', 'VVND0300', 'VVND0200', 'VEXP0100', 'VFIS0200', 'VFIN0210'],
     porque: 'apoios, preço, orçamento e expedição são pré-requisitos do faturamento e do financeiro',
   },
 ];

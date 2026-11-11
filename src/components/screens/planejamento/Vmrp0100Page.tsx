@@ -1,3 +1,4 @@
+import { NotificarExcecoesPanel } from "./mrp/NotificarExcecoesPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type MrpException, type MrpExceptionAction, type MrpRunResult, type MrpSuggestion, type PlannedOrder, type PlannedTarget,
@@ -238,6 +239,7 @@ export function Vmrp0100Page(): JSX.Element {
             {aba === "rastreamento" && <RastreamentoTab plano={plano} versao={versao} alvo={alvo} onLimparAlvo={() => setAlvo(undefined)} />}
             {aba === "planejadas" && <PlanejadasTab ordens={planejadas} plano={plano} busy={busy} onTransicionar={transicionar}
               onVerOrigem={(o) => { const c = o.code ?? o.planned_code; if (c) verOrigem({ kind: "ORDEM_FIRME", code: c, rotulo: `a ordem ${o.order_number ?? c} (${o.item_code})` }); }} />}
+            {aba === "excecoes" && <NotificarExcecoesPanel plano={plano} />}
             {aba === "excecoes" && <ExcecoesTab excecoes={excecoes} busy={busy} onVerPerfil={verPerfil} onTratar={tratarExcecao} onEncerrarDemanda={encerrarDemandaDaExcecao}
               onVerOrigem={(e) => e.source_code && verOrigem({ kind: "ORDEM_FIRME", code: e.source_code, rotulo: `a ordem ${e.source_order_number ?? e.source_code} (${e.item_code})` })} />}
             {aba === "perfil" && <PerfilTab plano={plano} itensDoPlano={itensDoPlano} itemInicial={itemPerfil} />}

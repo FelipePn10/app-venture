@@ -20,17 +20,13 @@ check('VPCT0100 "avaliar" mostra resultado legível (não JSON cru)', !/JSON\.st
 check('VPCT0100 fornecedor usa modal', /loader=\{loadSuppliers\}/.test(vpct));
 {
   // VSUP0630 duplicava a VPCT0100 como rotina genérica (com applies_to RECEIPT,
-  // valor que o backend não reconhece). O código antigo agora abre a tela própria.
+  // valor que o backend não reconhece). Tela desativada sai de vez: só a VPCT0100.
   const rotinas = fs.readFileSync(path.join(process.cwd(), 'src/components/screens/operationalRoutines.ts'), 'utf8');
   const host = fs.readFileSync(path.join(process.cwd(), 'src/components/screens/ScreenHostPage.tsx'), 'utf8');
   const catalogo = fs.readFileSync(path.join(process.cwd(), 'src/types/erpScreen.ts'), 'utf8');
-  check('VSUP0630 abre a VPCT0100 (sem rotina genérica duplicada)', !/VSUP0630: routine\(/.test(rotinas) && /VSUP0630: <Vpct0100Page \/>/.test(host)
-    && /code: "VSUP0630"[^}]*replacedBy: "VPCT0100"/.test(catalogo));
+  check('VSUP0630 removida (só a VPCT0100 existe)', !/VSUP0630/.test(rotinas) && !/VSUP0630/.test(host) && !/"VSUP0630"/.test(catalogo));
 }
 check('VTER0100 usa freight_type FIXED/PERCENT (não CIF)', !/freight_type":"CIF"/.test(routineCatalog));
-check('VSUP0610 usa scope GLOBAL (não PURCHASE_ORDER)', !/"scope":"PURCHASE_ORDER"/.test(routineCatalog));
-check('VSUP0610 usa domain RECEIVING_NOTICE (não RECEIVING)', !/"domain":"RECEIVING"/.test(routineCatalog));
-check('VSUP0610 usa value_type BOOL (não BOOLEAN)', !/"value_type":"BOOLEAN"/.test(routineCatalog));
 check('rotina oferece opções PT-BR para freight_type/scope/domain', /freight_type: \["FIXED", "PERCENT"\]/.test(routinePage) && /scope: \["GLOBAL"/.test(routinePage) && /domain: \["PURCHASE_TABLE"/.test(routinePage));
 check('enumLabel traduz enums de compras (GLOBAL, PO_CONFIRMATION, etc.)', /GLOBAL: 'Global'/.test(enumLabels) && /PO_CONFIRMATION: 'Confirmação de pedido'/.test(enumLabels) && /RECEIVING_NOTICE/.test(enumLabels));
 

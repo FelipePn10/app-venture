@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import process from 'node:process';
 
 const routines = readFileSync(new URL('../src/components/screens/operationalRoutines.ts', import.meta.url), 'utf8');
@@ -11,16 +11,10 @@ const fiscalConfigScreen = readFileSync(new URL('../src/components/screens/fisca
 // garantia passa a ser a tela registrada no ScreenHost e o serviço que ela usa
 // falar com a rota real.
 const dedicated = {
-  VSUP0630: { page: 'Vpct0100Page', service: 'purchaseTolerancesService.ts', path: '/api/purchase-order-tolerances' },
-  VEST0300: { page: 'Vlot0100Page', service: 'lotMaskService.ts', path: '/api/lot-masks' },
   VFIN0600: { page: 'Vfin0600Page', service: 'adiantamentoService.ts', path: '/api/financial/adiantamentos' },
   VFIN0620: { page: 'Vfin0620Page', service: 'financialService.ts', path: '/conciliacao/' , base: '/api/financial' },
   VFIN0610: { page: 'Vfin0610Page', service: 'financialService.ts', path: '/cnab/remessa-240', base: '/api/financial' },
-  VCTB0600: { page: 'Vctb0600Page', service: 'accountingService.ts', path: '/sped/ecd/', base: '/api/accounting' },
-  VFIS0640: { page: 'Vfis0640Page', service: 'nfeService.ts', path: '/exits/from-load', base: '/api/fiscal' },
-  // Códigos antigos que abrem a tela própria (replacedBy no catálogo).
-  VFIS0610: { page: 'Vfis0210Page', service: 'nfeEntradaService.ts', path: '/import-key', base: '/api/fiscal/entries' },
-  VFIS0120: { page: 'Vfis0110Page', service: 'taxTableService.ts', path: '/ncm/', base: '/api/fiscal/tabelas' },
+  VAVF0300: { page: 'Vavf0300Page', service: 'procurementService.ts', path: '/supplier-scorecards', base: '/api/procurement' },
 };
 // O serviço monta `${BASE}/...`: a rota do grupo conta como declarada quando
 // o serviço da tela própria usa a base (e, na conciliação, o trecho da rota).
@@ -29,53 +23,52 @@ const dedicatedPaths = Object.values(dedicated)
   .map((d) => (d.base ? `${d.base}${d.path}` : `${d.path}/`)).join('\n');
 // A VFIS0640 também abre o DANFE, pelo mesmo serviço da nota.
 const danfePath = readFileSync(new URL('../src/services/nfeService.ts', import.meta.url), 'utf8').includes('/danfe') ? '/danfe' : '';
-const routeSources = `${routines}\n${fiscalConfigService}\n${dedicatedPaths}\n${danfePath}`;
+// As rotinas genéricas que viraram tela própria saíram do catálogo de rotinas:
+// a rota conta como declarada quando o serviço de alguma tela a usa.
+const servicesDir = new URL('../src/services/', import.meta.url);
+const allServices = readdirSync(servicesDir).filter((f) => f.endsWith('.ts'))
+  .map((f) => {
+    const src = readFileSync(new URL(f, servicesDir), 'utf8');
+    // `${BASE}/x` com BASE = '/api/y' vira '/api/y/x', para a busca por trecho.
+    const bases = Object.fromEntries([...src.matchAll(/const ([A-Z_]+)\s*=\s*'(\/api[^']*)'/g)].map((m) => [m[1], m[2]]));
+    return src.replace(/\$\{([A-Z_]+)\}/g, (all, k) => bases[k] ?? all);
+  }).join('\n');
+const routeSources = `${routines}\n${fiscalConfigService}\n${dedicatedPaths}\n${danfePath}\n${allServices}`;
+
 
 const codes = [
-  'VSUP0600', 'VAVF0300', 'VSUP0610', 'VSUP0620', 'VIMP0300', 'VAVF0203',
-  'VIMP0200',
-  'VPDC0210', 'VSUP0630', 'VSUP0640', 'VSUP0650',
-  'VCFG0100', 'VCFG0200', 'VCFG0300', 'VCFG0400', 'VCFG0500', 'VCFG0600',
-  'VTER0100', 'VTER0200', 'VTER0300', 'VTER0400',
-  'VAPS0100', 'VAPS0200', 'VAPS0300', 'VAPS0400', 'VAPS0500', 'VAPS0600',
-  'VENG0300', 'VENG0400', 'VMRP0200', 'VEST0300',
-  'VPLA0300', 'VRES0100', 'VFIS0610', 'VADM0100', 'VEXP0110', 'VEXP0120',
-  'VCLI0117', 'VCLI0202', 'VIMP0102', 'VGAR0211',
-  'VENG0500', 'VMAQ0300', 'VCAL0200', 'VPRO1100', 'VVND0600', 'VSAC0200', 'VREP0600', 'VEST0400',
-  'VFIN0600', 'VFIN0610', 'VFIN0620',
-  'VVND0610',
-  'VSUP0660', 'VSUP0670', 'VSUP0680',
-  'VENG0600', 'VENG0610', 'VCLI0600', 'VCTB0600',
-  'VFIS0620', 'VFIS0630', 'VFIS0640', 'VFIS0120',
-  'VFIS0660', 'VUTL0560',
-];
+  'VAVF0300', 'VIMP0200', 'VCFG0100',       'VGAR0211', 'VFIN0600', 'VFIN0610', 'VFIN0620',
+    ];
 
 const requiredPaths = [
   '/api/procurement/records', '/api/procurement/purchase-movements',
   '/api/procurement/receiving-inspection-routes', '/api/procurement/receiving-inspection-orders',
   '/api/procurement/supplier-scorecards', '/api/procurement/approval-limits',
   '/api/procurement/edi-messages', '/api/procurement/import-processes',
-  '/api/procurement/parameters', '/api/procurement/supplier-homologations',
+  // Parâmetros genéricos de compras saíram: nenhum fluxo os lia.
+  '/api/procurement/supplier-homologations',
   '/api/purchase-order/consultation', '/approve', '/authorize', '/receipts',
   '/api/purchase-order-tolerances/',
   '/api/configurator/sets', '/api/configurator/variables/', '/api/configurator/characteristics',
   '/api/configurator/item-characteristics/', '/api/configurator/generate-mask',
-  '/api/configurator/description-types', '/api/configurator/item-descriptions',
-  '/api/configurator/equivalent-rules', '/api/configurator/item-rules',
+  // Descrições configuradas e regras equivalentes não alimentam nenhum fluxo: saíram com a VCFG0500/0600.
+  // Regras de itens configurados (cfg_item_rules) idem.
   '/api/third-party-services/prices', '/api/third-party-services/cost',
   '/api/third-party-services/orders', '/api/third-party-services/global-conversions',
   '/api/aps/resource-groups', '/api/aps/machine-calendars', '/api/aps/machine-downtimes',
-  '/sequencing-profile', '/industrial-profile', '/api/aps/sequence/view', '/api/aps/sequence/settings',
+  // A visão tabular do sequenciamento (VAPS0600) virou o quadro da VPRO0210.
+  '/sequencing-profile', '/industrial-profile', '/api/aps/sequence/events/export', '/api/aps/sequence/settings',
   '/api/bom-headers/', '/api/drawings/', '/api/planning/run-pipeline', '/api/lot-masks/',
   '/api/planning-params/', '/api/restriction-reason/',
   '/api/fiscal/entries/import-key', '/api/audit-log',
   '/api/fiscal/config/branding', '/api/fiscal/config/logo',
   '/api/financial/adiantamentos/', '/api/financial/cnab/remessa-240', '/api/financial/conciliacao/',
-  '/api/recurring-sales/{code}/recalculate-adjustment',
-  '/api/suppliers/support/parameters/', '/api/suppliers/contacts/phones', '/api/suppliers/contacts/emails',
-  '/api/item-suppliers/supplier/', '/quality-reports', '/api/purchase-price-tables/sources',
-  '/api/purchase-price-tables/items/copy-adjustments', '/api/purchase-price-tables/sources/apply', '/candidates',
-  '/api/routing/route-operations/{routeId}/network', '/api/routing/tools/serials/',
+  '/recalculate-adjustment',
+  '/api/suppliers/contacts/phones', '/api/suppliers/contacts/emails',
+  '/quality-reports', '/api/purchase-price-tables/sources',
+  '/api/purchase-price-tables/items/copy-adjustments', '/api/purchase-price-tables/sources/apply',
+  // A rede de precedência (VENG0600) é a aba Dependências da VENT0202 (`/routes/{id}/edges`, mesmo handler).
+  '/edges', '/api/routing/tools/serials/',
   '/api/customers/support/sales-tables/prices/', '/price-history', '/generate-prices', '/api/accounting/sped/ecd/',
   '/api/fiscal/manifestacao', '/api/fiscal/inutilizacao', '/api/fiscal/ibpt/import', '/api/fiscal/ibpt/lookup',
   '/api/fiscal/exits/from-load', '/danfe', '/api/fiscal/tabelas/ncm/',
@@ -83,7 +76,8 @@ const requiredPaths = [
   '/api/fiscal/support/motivos-transferencia-dapi/', '/api/fiscal/support/codigos-ajuste-apuracao-icms/',
   '/api/fiscal/support/codigos-ajuste-icms/', '/api/fiscal/support/linhas-apuracao-icms/',
   '/api/fiscal/support/lancamentos-resumo-icms/', '/api/fiscal/support/apuracao-simples-nacional/',
-  '/api/location/ufs/', '/api/customers/support/regions/',
+  // UF e região (VUTL0560): a UF é a VLOC0100; a região é cadastro de apoio do cliente (VCLI0510).
+  '/api/location/ufs/',
 ];
 
 const failures = [];
@@ -103,9 +97,9 @@ for (const code of codes) {
 for (const path of requiredPaths) {
   if (!routeSources.includes(path)) failures.push(`${path}: rota não declarada`);
 }
-// Troca de senha tem tela própria (VSEC0100; VUSR0100 aponta para ela).
+// Troca de senha tem tela própria (VSEC0100).
 const passwordService = readFileSync(new URL('../src/services/passwordChangeService.ts', import.meta.url), 'utf8');
-if (!host.includes('VSEC0100: <Vsec0100Page />') || !host.includes('VUSR0100: <Vsec0100Page />')) failures.push('VSEC0100/VUSR0100: tela própria de troca de senha ausente');
+if (!host.includes('VSEC0100: <Vsec0100Page />')) failures.push('VSEC0100: tela própria de troca de senha ausente');
 if (!passwordService.includes("'/api/password-change-requests'") || !passwordService.includes('/mine')) failures.push('/api/password-change-requests: rota não declarada');
 if (!screens.includes('code: "VSEC0100"')) failures.push('VSEC0100: catálogo ausente');
 if (!host.includes('OPERATIONAL_ROUTINES') || !host.includes('OperationalRoutinePage')) {

@@ -1,3 +1,4 @@
+import { PerfilApsMaquina } from "./PerfilApsMaquina";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type Machine,
@@ -8,7 +9,7 @@ import {
   PREPARATION_TIME_UNITS,
   preparationUnitLabel,
   listMachines,
-  listMachineCalendars,
+  listMachineCalendars, listResourceGroups, type ResourceGroup,
   upsertMachineCalendar,
   deleteMachineCalendar,
   listMachineDowntimes,
@@ -136,6 +137,7 @@ const ABAS = [
   { id: "preparacao", label: "Preparação", hint: "Matriz de setup por transição" },
   { id: "simulador", label: "Simulador", hint: "Quanto tempo leva uma quantidade" },
   { id: "agenda", label: "Agenda", hint: "Fila da máquina (CRP/APS)" },
+  { id: "perfil", label: "APS e custos", hint: "Grupos de recursos, campos especiais e custo do centro" },
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
 
@@ -150,6 +152,8 @@ export function Vmaq0200Page(): JSX.Element {
 
   const [machines, setMachines] = useState<Machine[]>([]);
   const [calendars, setCalendars] = useState<MachineCalendar[]>([]);
+  const [grupos, setGrupos] = useState<ResourceGroup[]>([]);
+  useEffect(() => { void listResourceGroups().then(setGrupos).catch(() => setGrupos([])); }, []);
   const [types, setTypes] = useState<MachineType[]>([]);
   const [mForm, setMForm] = useState({ ...EMPTY_MACHINE });
   /** Código em edição; null = cadastrando um novo recurso. */
@@ -798,6 +802,7 @@ export function Vmaq0200Page(): JSX.Element {
 
             <div className="erp-field erp-c12"><div className="erp-sec">Disponibilidade e desempenho</div></div>
             <div className="erp-field erp-c4"><label className="erp-label">Calendário de turnos</label><select className="erp-input" value={mForm.calendar_id ?? ""} onChange={(e) => setMForm((p) => ({ ...p, calendar_id: e.target.value ? Number(e.target.value) : null }))}><option value="">Sem calendário — usar jornada diária</option>{calendars.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}</option>)}</select><span className="erp-hint">Com calendário, o planejamento respeita os turnos cadastrados. Dias sem turno ficam fechados.</span></div>
+            <div className="erp-field erp-c4"><label className="erp-label">Grupo de recursos</label><select className="erp-input" value={mForm.resource_group_id ?? ""} onChange={(e) => setMForm((p) => ({ ...p, resource_group_id: e.target.value ? Number(e.target.value) : null }))}><option value="">Sem grupo</option>{grupos.map((g) => <option key={g.id} value={g.id}>{g.code} · {g.description}</option>)}</select><span className="erp-hint">Máquinas do mesmo grupo podem substituir umas às outras no sequenciamento. Cadastre os grupos na aba APS e custos.</span></div>
             <div className="erp-field erp-c3"><label className="erp-label">Horas disponíveis por dia</label><input className="erp-input num" type="number" min="0.01" max="24" step="0.25" value={mForm.available_hours_per_day ?? ""} onChange={(e) => setMForm((p) => ({ ...p, available_hours_per_day: e.target.value === "" ? null : Number(e.target.value) }))} /><span className="erp-hint">Sem calendário: jornada diária. Vazio herda o centro de trabalho.</span></div>
             <div className="erp-field erp-c2"><label className="erp-label">Produção nominal de referência</label>
               <input className="erp-input num" type="number" value={mForm.capacity || ""}
@@ -1021,6 +1026,8 @@ export function Vmaq0200Page(): JSX.Element {
           </div></div>
         </div>
         </>)}
+
+        {aba === "perfil" && <PerfilApsMaquina machines={machines} types={types} aoMudarCadastro={() => { void listMachineTypes().then(setTypes); void listResourceGroups().then(setGrupos); }} />}
 
         {aba === "paradas" && (<>
         <div className="erp-fieldset">

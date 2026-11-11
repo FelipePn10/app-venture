@@ -1,3 +1,4 @@
+import { ComplementosRepresentantePanel } from "./ComplementosRepresentantePanel";
 import { textoLegivel } from "@/utils/textoLegivel";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
@@ -47,7 +48,7 @@ export function Vvnd0400Page(): JSX.Element {
   const [reportRows, setReportRows] = useState<Obj[] | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<DetailTab>("dados");
+  const [tab, setTab] = useState<DetailTab | "complementos">("dados");
   const [creating, setCreating] = useState(true);
   const [blockDialog, setBlockDialog] = useState(false);
   const [blockReason, setBlockReason] = useState("");
@@ -324,6 +325,7 @@ export function Vvnd0400Page(): JSX.Element {
                   <button className={`erp-tab${tab === "dados" ? " active" : ""}`} onClick={() => setTab("dados")}>Dados gerais</button>
                   <button className={`erp-tab${tab === "empresas" ? " active" : ""}`} onClick={() => setTab("empresas")}>Empresas</button>
                   <button className={`erp-tab${tab === "contatos" ? " active" : ""}`} onClick={() => setTab("contatos")}>Contatos</button>
+                  <button className={`erp-tab${tab === "complementos" ? " active" : ""}`} onClick={() => setTab("complementos")}>Complementos</button>
                 </div>
                 <div className="erp-detail-body">
                   {tab === "dados" ? (
@@ -343,6 +345,8 @@ export function Vvnd0400Page(): JSX.Element {
                         <div className="erp-field erp-c12" style={{ flexDirection: "row" }}><button className="erp-btn erp-btn-primary" onClick={salvarEdicao} disabled={busy}>{busy && <span className="erp-spin" />}Salvar alterações</button></div>
                       </div>
                     </div>
+                  ) : tab === "complementos" ? (
+                    <ComplementosRepresentantePanel rep={selected} aoMudar={() => refreshSelected(selected.code!)} aviso={setFeedback} />
                   ) : tab === "empresas" ? (
                     <>
                       <div className="erp-fieldset">

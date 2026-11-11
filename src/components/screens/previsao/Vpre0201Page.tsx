@@ -1,3 +1,8 @@
+import { ApropriacaoPrevisaoPanel } from "./ApropriacaoPrevisaoPanel";
+import { BloqueioPrevisaoPanel } from "./BloqueioPrevisaoPanel";
+import { GerarPrevisaoHistoricoPanel } from "./GerarPrevisaoHistoricoPanel";
+import { PrevisaoEstatisticaPanel } from "./PrevisaoEstatisticaPanel";
+import { PrevistoRealizadoPanel } from "./PrevistoRealizadoPanel";
 import { useState, useCallback } from "react";
 import {
   type SalesForecastDTO,
@@ -12,7 +17,23 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "manual" | "monthly" | "list";
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+/*
+ * VPRE0201 — Previsão de Vendas: a grade da previsão e, em abas, gerar (pelo
+ * histórico ou estatística), previsto × realizado e os ajustes (apropriação e
+ * bloqueio). Eram VPRE0251, VPRO0600, VPRE0301, VPRE0101 e VPRE0102.
+ */
+type AbaPrevisao = "previsao" | "historico" | "estatistica" | "realizado" | "apropriacao" | "bloqueio";
+const ABAS_PREVISAO: { id: AbaPrevisao; label: string }[] = [
+  { id: "previsao", label: "Previsão" },
+  { id: "historico", label: "Gerar pelo histórico" },
+  { id: "estatistica", label: "Gerar estatística" },
+  { id: "realizado", label: "Previsto × realizado" },
+  { id: "apropriacao", label: "Apropriação" },
+  { id: "bloqueio", label: "Bloqueio" },
+];
+
 export function Vpre0201Page(): JSX.Element {
+  const [abaPrev, setAbaPrev] = useState<AbaPrevisao>("previsao");
   const [view, setView] = useState<View>("manual");
   const thisYear = new Date().getFullYear();
 
@@ -81,13 +102,22 @@ export function Vpre0201Page(): JSX.Element {
         <nav className="erp-crumbs">
           <span className="erp-crumb-mut">Comercial &amp; Vendas</span>
           <span className="erp-crumb-sep">›</span>
-          <span className="erp-crumb-cur">Cadastro da Previsão de Vendas</span>
+          <span className="erp-crumb-cur">Previsão de Vendas</span>
           <span className="erp-crumb-code">VPRE0201</span>
         </nav>
         <div className="erp-titlebar-spacer" />
         <span className="erp-titlebar-meta">Previsão semanal manual · distribuição mensal · manutenção</span>
       </header>
 
+      <div className="erp-tabs">
+        {ABAS_PREVISAO.map((a) => <button key={a.id} className={`erp-tab${abaPrev === a.id ? " active" : ""}`} onClick={() => setAbaPrev(a.id)}>{a.label}</button>)}
+      </div>
+      {abaPrev === "historico" && <GerarPrevisaoHistoricoPanel />}
+      {abaPrev === "estatistica" && <PrevisaoEstatisticaPanel />}
+      {abaPrev === "realizado" && <PrevistoRealizadoPanel />}
+      {abaPrev === "apropriacao" && <ApropriacaoPrevisaoPanel />}
+      {abaPrev === "bloqueio" && <BloqueioPrevisaoPanel />}
+      {abaPrev === "previsao" && <div className="erp-aba-corpo">
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <button className={`erp-btn${view === "manual" ? " erp-btn-dark" : ""}`} onClick={() => setView("manual")} disabled={busy}>Semanal</button>
@@ -157,6 +187,7 @@ export function Vpre0201Page(): JSX.Element {
           </>
         )}
       </div>
+      </div>}
 
       <footer className="erp-statusbar">
         {view === "list" && <div className="erp-status-item">Linhas: <strong>{rows.length}</strong></div>}

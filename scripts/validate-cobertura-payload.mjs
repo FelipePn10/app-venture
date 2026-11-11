@@ -21,7 +21,7 @@ check('geração de lote usa lot_mask_id', /lot_mask_id: maskId/.test(read('src/
 check('vencimento do fornecedor usa payment_condition_id',
   /payment_condition_id: dueForm\.payment_condition_code/.test(read('src/components/screens/suprimento/Vsup0500Page.tsx')));
 
-// ── Tipo de nota fiscal (VCLI0530) ─────────────────────────────────────────
+// ── Tipo de nota fiscal (apoio do cliente, VCLI0500) ─────────────────────────────────────────
 const nf = read('src/components/screens/cliente/Vcli0530Page.tsx');
 for (const campo of ['lista_valor_contabil', 'sintegra_sped_fiscal', 'calc_fomentar', 'ciap',
                      'dispositivo_legal_icms_id', 'hierarchy_icms', 'cod_beneficio_fiscal', 'impostos_nfe']) {

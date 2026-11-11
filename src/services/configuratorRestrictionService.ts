@@ -245,3 +245,9 @@ export async function createRestrictionReason(description: string): Promise<Rest
     situation: parseStr(o, 'situation', 'Situation') || 'ACTIVE',
   };
 }
+
+/** Restrições que valem para um cliente (regra de venda específica dele). */
+export async function listRestrictionsByCustomer(customerCode: number): Promise<Restriction[]> {
+  const { data } = await httpClient.get(`${BASE}/customer/${customerCode}`);
+  return unwrapArray(data).map(parseRestriction);
+}

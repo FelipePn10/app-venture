@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
-  createMovement, estornarMovimento, listMovements, listMovementsByItem, listMovementTypes,
+  createMovement, estornarMovimento, listMovements, listMovementsByItem, listMovementsByWarehouse, listMovementTypes,
   type MovementDTO, type MovementTypeDTO,
 } from "@/services/stockService";
 import { LookupField } from "@/components/ui/LookupField";
@@ -38,9 +38,20 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
   const ehSaida = direcaoFixa ? tipo?.entry_exit === "SAIDA" : form.movement_type === "OUT";
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((p) => ({ ...p, [k]: v }));
 
+  // Item e almoxarifado do formulário filtram a consulta: os dois juntos, o
+  // item naquele almoxarifado; só o almoxarifado, tudo o que passou por ele
+  // (a consulta da antiga VEST0400); nenhum, os últimos movimentos da empresa.
+  const consultar = async (): Promise<MovementDTO[]> => {
+    if (form.item_code) {
+      const doItem = await listMovementsByItem(form.item_code);
+      return form.warehouse_id ? doItem.filter((m) => m.warehouse_id === form.warehouse_id) : doItem;
+    }
+    if (form.warehouse_id) return listMovementsByWarehouse(form.warehouse_id);
+    return listMovements({ limit: POR_PAGINA });
+  };
   const carregar = () => run(async () => {
-    const lista = form.item_code ? await listMovementsByItem(form.item_code) : await listMovements({ limit: POR_PAGINA });
-    setMovs(lista); setTemMais(!form.item_code && lista.length === POR_PAGINA);
+    const lista = await consultar();
+    setMovs(lista); setTemMais(!form.item_code && !form.warehouse_id && lista.length === POR_PAGINA);
   });
   const carregarMais = () => run(async () => {
     const lista = await listMovements({ limit: POR_PAGINA, offset: movs.length });
@@ -65,7 +76,7 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
     await estornarMovimento(id, motivo.trim());
     setEstornando(null); setMotivo("");
     setFeedback({ type: "success", message: `Movimento ${id} estornado.` });
-    setMovs(form.item_code ? await listMovementsByItem(form.item_code) : await listMovements({ limit: POR_PAGINA }));
+    setMovs(await consultar());
   });
 
   return (<>
@@ -110,7 +121,7 @@ export function LancamentosTab({ itemCode }: { itemCode: string }) {
     </div></div>
 
     <div className="erp-fieldset"><div className="erp-fieldset-head">Movimentos ({movs.length})</div><div className="erp-fieldset-body">
-      <div className="erp-field erp-c12"><button className="erp-btn" onClick={carregar} disabled={busy}>{form.item_code ? "Movimentos do item" : "Últimos movimentos"}</button></div>
+      <div className="erp-field erp-c12"><button className="erp-btn" onClick={carregar} disabled={busy}>{form.item_code ? (form.warehouse_id ? "Movimentos do item no almoxarifado" : "Movimentos do item") : form.warehouse_id ? "Movimentos do almoxarifado" : "Últimos movimentos"}</button></div>
       <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
         <table className="erp-grid">
           <thead><tr><th>Mov.</th><th>Data</th><th>Item</th><th>Almoxarifado</th><th>Tipo</th><th className="num">Qtd</th><th className="num">Valor</th><th>Lote</th><th>Endereço</th><th>Origem</th><th></th></tr></thead>

@@ -780,3 +780,8 @@ select.erp-input { appearance: none; cursor: pointer; padding-right: 26px;
 .erp-plano-previa li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .erp-plano-erro { margin: 6px 0 8px; color: var(--v-err); font-weight: 600; }
 @media (max-width: 1100px) { .erp-plano-tabelas, .erp-plano-topo { grid-template-columns: minmax(0, 1fr); } }
+
+/* Barra + conteúdo de uma aba que fica abaixo das abas da tela: ocupam juntos a
+   linha elástica da grade da .erp-screen (título, abas, corpo, rodapé). */
+.erp-aba-corpo { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.erp-aba-corpo > .erp-content { flex: 1; min-height: 0; }

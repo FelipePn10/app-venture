@@ -59,6 +59,10 @@ export interface SalesOrderItemDTO {
 }
 
 export interface SalesOrderDTO {
+  /** Andamento do pedido (análise comercial/financeira e conferência). */
+  commercial_analysis_status?: string;
+  financial_analysis_status?: string;
+  conference_status?: string;
   code?: number;
   order_number?: number;
   enterprise_code: number;
@@ -192,6 +196,9 @@ function parseOrder(raw: unknown): SalesOrderDTO {
     discount_value: parseNum(o, 'discount_value', 'DiscountValue'),
     surcharge_value: parseNum(o, 'surcharge_value', 'SurchargeValue'),
     is_blocked: parseBool(o, 'is_blocked', 'IsBlocked'),
+    commercial_analysis_status: parseStr(o, 'commercial_analysis_status') || undefined,
+    financial_analysis_status: parseStr(o, 'financial_analysis_status') || undefined,
+    conference_status: parseStr(o, 'conference_status') || undefined,
     is_firm: parseBool(o, 'is_firm', 'IsFirm'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
     is_nfce: parseBool(o, 'is_nfce', 'IsNfce'),
@@ -220,16 +227,17 @@ export async function listSalesOrders(): Promise<SalesOrderDTO[]> {
   const { data } = await httpClient.get(`${BASE}/list`);
   return unwrapArray(data).map(parseOrder);
 }
+/** Busca com filtros combinados (situação, cliente, análise e conferência). */
+export async function searchSalesOrders(filtro: { status?: string; customer_code?: number; commercial_analysis_status?: string; financial_analysis_status?: string; conference_status?: string }): Promise<SalesOrderDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/search`, { params: { ...filtro, limit: 500 } });
+  return unwrapArray(data).map(parseOrder);
+}
 export async function getSalesOrder(code: number): Promise<SalesOrderDTO> {
   const { data } = await httpClient.get(`${BASE}/${code}`);
   return parseOrder(data);
 }
 export async function listSalesOrdersByCustomer(customerCode: number): Promise<SalesOrderDTO[]> {
   const { data } = await httpClient.get(`${BASE}/customer/${customerCode}`);
-  return unwrapArray(data).map(parseOrder);
-}
-export async function listSalesOrdersByStatus(status: string): Promise<SalesOrderDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/status/${status}`);
   return unwrapArray(data).map(parseOrder);
 }
 export async function createSalesOrder(dto: SalesOrderDTO): Promise<SalesOrderDTO> {
@@ -273,4 +281,18 @@ export async function updateSalesOrderItem(itemCode: string, item: SalesOrderIte
 }
 export async function cancelSalesOrderItem(itemCode: number): Promise<void> {
   await httpClient.delete(`${BASE}/items/${itemCode}/cancel`);
+}
+
+// ── Andamento do pedido (era a rotina genérica VVND0600) ──
+export async function analyzeSalesOrder(code: number, area: 'COMMERCIAL' | 'FINANCIAL', status: 'APPROVED' | 'REJECTED' | 'NOT_ANALYZED', reason: string): Promise<void> {
+  await httpClient.post(`${BASE}/${code}/analyze`, { area, status, reason });
+}
+export async function attendSalesOrder(code: number, reason: string, eventDate: string): Promise<void> {
+  await httpClient.post(`${BASE}/${code}/attend`, { reason, event_date: eventDate });
+}
+export async function conferSalesOrder(code: number, status: 'PENDING' | 'CONFERRED' | 'DIVERGENT', reason: string): Promise<void> {
+  await httpClient.post(`${BASE}/${code}/conference`, { status, reason });
+}
+export async function saveSalesOrderDelayReason(code: number, reason: string, action: string): Promise<void> {
+  await httpClient.post(`${BASE}/${code}/delay-reason`, { reason, action });
 }

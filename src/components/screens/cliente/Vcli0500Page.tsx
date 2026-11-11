@@ -1,3 +1,4 @@
+import { ApoioClientePanel } from "./ApoioClientePanel";
 import { useState, useCallback, useEffect } from "react";
 import { pedirTexto } from "@/components/ui/dialogos";
 import { enumLabel } from "@/utils/enumLabels";
@@ -11,7 +12,7 @@ import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShare
 import { validateCNPJOrCPF } from "@/utils/validation";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Mode = "list" | "edit";
+type Mode = "list" | "edit" | "apoio";
 type Folder = "dados" | "enderecos" | "contatos";
 const SYS = "00000000-0000-0000-0000-000000000000";
 const EMPTY: CustomerDTO = { name: "", document_type: "CNPJ", document_number: "", payment_cond_visibility: "SOMENTE_VINCULADOS", is_corporate: false };
@@ -52,7 +53,7 @@ export function Vcli0500Page(): JSX.Element {
   useEffect(() => { void reload(); }, [reload]);
 
   const setF = <K extends keyof CustomerDTO>(k: K, v: CustomerDTO[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
-  function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setCnpjData(null); setAddr(EMPTY_ADDR); setFolder("dados"); setMode("edit"); setFeedback(null); }
+  function novo() { if (mode === "apoio") void reload(); setForm(EMPTY); setEditing(false); setDetail(null); setEstabs([]); setCnpjData(null); setAddr(EMPTY_ADDR); setFolder("dados"); setMode("edit"); setFeedback(null); }
 
   async function buscarCnpj() {
     if (form.document_type !== "CNPJ") { setFeedback({ type: "error", message: "Auto-fill disponível apenas para CNPJ." }); return; }
@@ -204,7 +205,9 @@ export function Vcli0500Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastro</span>
           <button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy}>+ Novo</button>
-          <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button></div>
+          <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
+          <button className={`erp-btn${mode === "apoio" ? " erp-btn-primary" : ""}`} onClick={() => { if (mode === "apoio") { setMode("list"); void reload(); } else { setMode("apoio"); setFeedback(null); } }} disabled={busy}
+            title="Região, segmento, tipos, portadores, tipo de NF e de imposto">Cadastros de apoio</button></div>
         {mode === "edit" && (
           <div className="erp-tgroup"><span className="erp-tgroup-label">Ações</span>
             <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : editing ? "Atualizar" : "Salvar"}</button>
@@ -221,7 +224,9 @@ export function Vcli0500Page(): JSX.Element {
       <div className="erp-content">
         <section className="erp-detail-panel">
           <div className="erp-tabs">
-            {mode === "list"
+            {mode === "apoio"
+              ? <button className="erp-tab active">Cadastros de apoio</button>
+              : mode === "list"
               ? <button className="erp-tab active">Listagem</button>
               : <>
                   <button className={`erp-tab ${folder === "dados" ? "active" : ""}`} onClick={() => setFolder("dados")}>Dados</button>
@@ -232,6 +237,8 @@ export function Vcli0500Page(): JSX.Element {
           <div className="erp-detail-body">
             {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
             {cnpjData && mode === "edit" && <div className="erp-note"><strong>Consulta cadastral:</strong> situação {cnpjData.registration_status || "não informada"}; abertura {cnpjData.opening_date || "não informada"}; natureza jurídica {cnpjData.legal_nature || "não informada"}; porte {cnpjData.size || "não informado"}; CNAE principal {cnpjData.main_activity?.code || "não informado"} {cnpjData.main_activity?.description ? `— ${cnpjData.main_activity.description}` : ""}; CNAEs secundários {cnpjData.secondary_activities.map((item) => item.code).filter(Boolean).join(", ") || "não informados"}; IEs {cnpjData.state_registrations.map((item) => `${item.uf} ${item.number}${item.enabled ? " ativa" : " inativa"}`).join(", ") || cnpjData.state_registration || "não informadas"}; endereço {[cnpjData.address?.street, cnpjData.address?.number, cnpjData.address?.neighborhood, cnpjData.address?.city, cnpjData.address?.uf, cnpjData.address?.zip_code].filter(Boolean).join(", ") || "não informado"}; telefone {cnpjData.phone || "não informado"}; e-mail {cnpjData.email || "não informado"}; Simples Nacional {cnpjData.simples_optant ? "sim" : "não"}; MEI {cnpjData.mei ? "sim" : "não"}. Os campos disponíveis foram preenchidos e permanecem editáveis para conferência.</div>}
+
+            {mode === "apoio" && <ApoioClientePanel />}
 
             {mode === "list" && (
               <div className="erp-fieldset"><div className="erp-fieldset-head">Clientes ({list.length})</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">

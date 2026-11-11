@@ -10,6 +10,8 @@ import { rotuloDaChave } from "@/services/amostragemService";
 import { type Instrumento, listarInstrumentos, normalizarGrupo } from "@/services/metrologiaService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems, loadSuppliers } from "@/services/lookups";
 import { useAcessoStore } from "@/store/acessoStore";
 import { useAuthStore } from "@/store/authStore";
 
@@ -56,7 +58,7 @@ export function Vins0300Page(): JSX.Element {
 
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
-  const [filtro, setFiltro] = useState({ status: "ABERTO", origem: "", item: "" });
+  const [filtro, setFiltro] = useState({ status: "ABERTO", origem: "", item: "", fornecedor: "" });
   const [lista, setLista] = useState<LoteInspecao[]>([]);
   const [aberto, setAberto] = useState<LoteInspecao | null>(null);
   const [almox, setAlmox] = useState<AlmoxDestino[]>([]);
@@ -74,7 +76,7 @@ export function Vins0300Page(): JSX.Element {
   const recarregar = useCallback(async () => {
     setBusy(true);
     try {
-      setLista(await listarLotes({ status: filtro.status, origem: filtro.origem, item: Number(filtro.item) || undefined }));
+      setLista(await listarLotes({ status: filtro.status, origem: filtro.origem, item: Number(filtro.item) || undefined, fornecedor: Number(filtro.fornecedor) || undefined }));
     } catch (e) {
       setFeedback({ type: "error", message: errMessage(e, "Falha ao carregar os lotes de inspeção.") });
     } finally { setBusy(false); }
@@ -103,7 +105,7 @@ export function Vins0300Page(): JSX.Element {
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
-  // Laudos do fornecedor do item (anexados no vínculo item × fornecedor, VSUP0670): os do fornecedor do lote, ou de
+  // Laudos do fornecedor do item (anexados no vínculo item × fornecedor, VSUP0130): os do fornecedor do lote, ou de
   // todos os fornecedores do item quando o lote não tem fornecedor.
   const [laudos, setLaudos] = useState<(ItemSupplierQualityReport & { fornecedor: number })[]>([]);
   const loteDosLaudos = aberto?.id;
@@ -275,13 +277,13 @@ export function Vins0300Page(): JSX.Element {
                     <option value="MANUAL">Manual</option><option value="RECEBIMENTO">Recebimento</option><option value="DEVOLUCAO">Devolução</option><option value="FINAL">Final</option>
                   </select></div>
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Item</label>
-                  <input className="erp-input" inputMode="numeric" value={novo.item} onChange={(e) => setNovo((n) => ({ ...n, item: e.target.value }))} /></div>
+                  <LookupField value={novo.item || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setNovo((n) => ({ ...n, item: c ? String(c) : "" }))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Quantidade</label>
                   <input className="erp-input" inputMode="decimal" value={novo.quantidade} onChange={(e) => setNovo((n) => ({ ...n, quantidade: e.target.value }))} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Almoxarifado de inspeção</label>
                   {selAlmox(novo.almox, (v) => setNovo((n) => ({ ...n, almox: v })), inspecao)}</div>
-                <div className="erp-field erp-c1"><label className="erp-label">Fornecedor</label>
-                  <input className="erp-input" inputMode="numeric" value={novo.fornecedor} onChange={(e) => setNovo((n) => ({ ...n, fornecedor: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+                  <LookupField value={Number(novo.fornecedor) || undefined} loader={loadSuppliers} entityLabel="fornecedor" clearable onChange={(c) => setNovo((n) => ({ ...n, fornecedor: c ? String(c) : "" }))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Lote / corrida</label>
                   <input className="erp-input" value={novo.lote} onChange={(e) => setNovo((n) => ({ ...n, lote: e.target.value }))} /></div>
                 <div className="erp-field erp-c12" style={{ display: "flex", gap: 8 }}>
@@ -300,8 +302,10 @@ export function Vins0300Page(): JSX.Element {
                 <select className="erp-input" value={filtro.origem} onChange={(e) => setFiltro((f) => ({ ...f, origem: e.target.value }))}>
                   <option value="">Todas</option>{Object.entries(ROTULO_ORIGEM).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Item</label>
-                <input className="erp-input" inputMode="numeric" value={filtro.item} onChange={(e) => setFiltro((f) => ({ ...f, item: e.target.value }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Item</label>
+                <LookupField value={filtro.item || undefined} loader={loadItems} entityLabel="item" clearable onChange={(c) => setFiltro((f) => ({ ...f, item: c ? String(c) : "" }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label>
+                <LookupField value={Number(filtro.fornecedor) || undefined} loader={loadSuppliers} entityLabel="fornecedor" clearable onChange={(c) => setFiltro((f) => ({ ...f, fornecedor: c ? String(c) : "" }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">&nbsp;</label>
                 <button className="erp-btn" onClick={() => void recarregar()} disabled={busy}>Consultar</button></div>
               <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
@@ -405,7 +409,7 @@ export function Vins0300Page(): JSX.Element {
 
                 <div className="erp-fieldset"><div className="erp-fieldset-head">Laudos do fornecedor — <span style={{ fontWeight: 400, opacity: 0.65 }}>{aberto.relatorios_fornecedor?.length ?? 0} vinculado(s)</span></div><div className="erp-fieldset-body">
                   <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
-                    {laudos.length === 0 ? <p style={{ margin: 0 }}>Nenhum laudo cadastrado para {aberto.supplier_code ? `o fornecedor ${aberto.supplier_code} neste item` : "os fornecedores deste item"} (VSUP0670).</p> : (
+                    {laudos.length === 0 ? <p style={{ margin: 0 }}>Nenhum laudo cadastrado para {aberto.supplier_code ? `o fornecedor ${aberto.supplier_code} neste item` : "os fornecedores deste item"} (VSUP0130).</p> : (
                       <table className="erp-grid">
                         <thead><tr><th>Laudo</th><th>Fornecedor</th><th>Data</th><th>Situação</th><th>Arquivo</th><th>Observação</th><th /></tr></thead>
                         <tbody>

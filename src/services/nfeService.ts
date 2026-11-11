@@ -826,3 +826,8 @@ export function rotuloDaNota(nota: { numero_nf?: number; serie?: string }, semNu
   if (!nota.numero_nf) return semNumero;
   return `NF-e ${nota.numero_nf}${nota.serie ? `/${nota.serie}` : ""}`;
 }
+
+/** Inutiliza uma faixa de numeração da NF-e de saída na SEFAZ. Não se desfaz. */
+export async function inutilizarNumeracao(dto: { serie: number; numero_inicial: number; numero_final: number; justificativa: string }): Promise<void> {
+  await httpClient.post('/api/fiscal/inutilizacao', dto);
+}

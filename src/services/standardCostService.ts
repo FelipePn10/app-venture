@@ -300,10 +300,6 @@ export async function calculateStandardCost(itemCode: string, mask?: string, lot
   });
   return parseCost(data);
 }
-export async function getStandardCost(itemCode: string): Promise<StandardCost> {
-  const { data } = await httpClient.get(`${BASE}/items/${encodeURIComponent(itemCode)}`);
-  return parseCost(data);
-}
 /** O backend não expõe list-all de custo padrão (`GET /` → 404); retorna []. */
 export async function listStandardCosts(): Promise<StandardCost[]> {
   return [];

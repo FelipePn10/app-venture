@@ -46,7 +46,7 @@ check('serviço do pedido lê a situação da alçada', /alcada_status/.test(ped
 // ── Rodada 2: pedido completo numa tela só ─────────────────────────────────
 const tela = (n) => read(`src/components/screens/suprimento/pedido/${n}.tsx`);
 const menu = read('src/types/erpScreen.ts');
-check('VSUP0200 saiu do menu e o atalho abre as sugestões na VPDC0200', !/code: "VSUP0200"/.test(menu) && /VSUP0200: <Vpdc0200Page key="VSUP0200" visaoInicial="sugestoes" \/>/.test(host));
+check('VSUP0200 removida: as sugestões do MRP são uma visão da VPDC0200', !/"VSUP0200"/.test(menu) && !/VSUP0200/.test(host) && /SugestoesMRP/.test(read('src/components/screens/suprimento/Vpdc0200Page.tsx')));
 check('VPDC0200 tem as visões de sugestões, acompanhamento e previsão', /SugestoesMRP/.test(pedido) && /AcompanhamentoEntregas/.test(pedido) && /PrevisaoPagamentosPanel/.test(pedido));
 check('sugestão do MRP escolhe o fornecedor na lista (sem prompt)', /loadSuppliers/.test(tela('SugestoesMRP')) && !/window\.prompt/.test(tela('SugestoesMRP')));
 check('PDF e envio por e-mail com histórico', /downloadOrderPdf/.test(tela('PedidoEnvioPanel')) && /sendOrder/.test(tela('PedidoEnvioPanel')) && /listShipments/.test(tela('PedidoEnvioPanel')));

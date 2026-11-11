@@ -1,10 +1,11 @@
+import { HistoricoComprasPanel } from "./pedido/HistoricoComprasPanel";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { confirmar } from "@/components/ui/dialogos";
 import {
   type PurchaseOrderDTO, type PurchaseOrderItemDTO,
   FREIGHT_TYPES, FREIGHT_VALUE_TYPES, FREIGHT_VALUE_MODES, UTILIZATION_TYPES, DEMAND_TYPES,
   listOrders, getOrderDetail, createOrder, updateOrder, cancelOrder, addOrderItem,
-  approveOrder, authorizeOrder, updateOrderItem, cancelOrderItem,
+  approveOrder, authorizeOrder, updateOrderItem, cancelOrderItem, consultOrders,
 } from "@/services/purchaseOrderService";
 import { errMessage, unwrapObject } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -20,6 +21,7 @@ import {
 import { getRequisition, type RequisitionItemDTO } from "@/services/purchaseRequisitionService";
 import { HistoricoPrecoPanel } from "./pedido/HistoricoPrecoPanel";
 import { PedidoNotasPanel } from "./pedido/PedidoNotasPanel";
+import { RecebimentoFisicoPanel } from "./pedido/RecebimentoFisicoPanel";
 import { PrevisaoPagamentosPanel } from "./pedido/PrevisaoPagamentosPanel";
 import { PedidoEnvioPanel } from "./pedido/PedidoEnvioPanel";
 import { FollowupLinha } from "./pedido/FollowupLinha";
@@ -42,7 +44,7 @@ import { hojeLocal } from "@/utils/dataLocal";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "capa" | "itens" | "transporte" | "notas" | "pagamentos" | "envio";
 /** Visões da tela: os pedidos e as rotinas de compras que cruzam pedidos. */
-export type VisaoCompras = "pedidos" | "sugestoes" | "acompanhamento" | "previsao";
+export type VisaoCompras = "pedidos" | "sugestoes" | "acompanhamento" | "previsao" | "historico";
 
 const CAPA_INICIAL: PurchaseOrderDTO = {
   currency_code: "BRL",
@@ -103,8 +105,8 @@ const SITUACAO_LINHA: Record<string, string> = {
 
 type EdicaoLinha = { code: number; qtd: string; preco: string; desc: string; ipi: string; entrega: string; almox: string };
 
-export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: VisaoCompras } = {}): JSX.Element {
-  const [visao, setVisao] = useState<VisaoCompras>(visaoInicial);
+export function Vpdc0200Page(): JSX.Element {
+  const [visao, setVisao] = useState<VisaoCompras>("pedidos");
   const [aba, setAba] = useState<Aba>("capa");
   const [acompanhando, setAcompanhando] = useState<number | null>(null);
   const [pedidos, setPedidos] = useState<PurchaseOrderDTO[]>([]);
@@ -140,9 +142,22 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
+  // Filtros da lista (eram a consulta da VPDC0210). Situação filtra aqui; os
+  // demais vão à consulta do backend, que procura pelas linhas do pedido.
+  const [filtro, setFiltro] = useState<{ situacao: string; fornecedor?: number; item?: string; entregaAte: string }>({ situacao: "", entregaAte: "" });
   const carregarLista = useCallback(() => executar(async () => {
-    setPedidos(await listOrders());
-  }), [executar]);
+    const porConsulta = filtro.fornecedor || filtro.item || filtro.entregaAte;
+    const [todos, achados] = await Promise.all([
+      listOrders(),
+      porConsulta ? consultOrders({
+        supplier_from: filtro.fornecedor, supplier_to: filtro.fornecedor,
+        item_from: filtro.item ? Number(filtro.item) : undefined, item_to: filtro.item ? Number(filtro.item) : undefined,
+        delivery_to: filtro.entregaAte || undefined, limit: 500,
+      }) : Promise.resolve(null),
+    ]);
+    const codigos = achados ? new Set(achados.map((o) => Number(unwrapObject(o)["code"]))) : null;
+    setPedidos(todos.filter((p) => (!filtro.situacao || p.status === filtro.situacao) && (!codigos || codigos.has(Number(p.code)))));
+  }), [executar, filtro]);
   useEffect(() => { carregarLista(); }, [carregarLista]);
 
   function novo() {
@@ -355,6 +370,7 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
           <button className={`erp-btn${visao === "sugestoes" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("sugestoes")}>Sugestões do MRP</button>
           <button className={`erp-btn${visao === "acompanhamento" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("acompanhamento")}>Acompanhamento de entregas</button>
           <button className={`erp-btn${visao === "previsao" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("previsao")}>Previsão de pagamentos</button>
+          <button className={`erp-btn${visao === "historico" ? " erp-btn-dark" : ""}`} onClick={() => setVisao("historico")}>Histórico de compras</button>
         </div>
         {visao === "pedidos" && (<>
         <div className="erp-tgroup">
@@ -421,6 +437,7 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
         {visao === "sugestoes" && <SugestoesMRP onFeedback={setFeedback} onPedidoGerado={(c, aviso) => { void carregarLista(); void abrir(c, aviso); }} />}
         {visao === "acompanhamento" && <AcompanhamentoEntregas onAbrirPedido={(c) => void abrir(c)} />}
         {visao === "previsao" && <div className="erp-detail-body"><PrevisaoPagamentosPanel onAbrirPedido={(c) => void abrir(c)} /></div>}
+        {visao === "historico" && <div className="erp-detail-body"><HistoricoComprasPanel onAbrirPedido={(c) => { setVisao("pedidos"); void abrir(c); }} /></div>}
 
         {visao === "pedidos" && aberto && !editavel && (
           <div className="erp-feedback info">
@@ -448,8 +465,14 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
               <span className="erp-panel-title">Pedidos</span>
               <span className="erp-count">{pedidos.length}</span>
             </div>
-            <div className="pdc-inline">
-              <button className="erp-btn erp-btn-sm" onClick={carregarLista} disabled={busy}>Recarregar</button>
+            <div className="pdc-inline" style={{ flexWrap: "wrap", gap: 6 }}>
+              <select className="erp-input" style={{ height: 30, flex: "1 1 120px" }} aria-label="Situação" value={filtro.situacao} onChange={(e) => setFiltro((f) => ({ ...f, situacao: e.target.value }))}>
+                <option value="">Todas as situações</option>{Object.entries(SITUACAO_ROTULO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <div style={{ flex: "1 1 160px" }}><LookupField value={filtro.fornecedor} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Fornecedor" clearable onChange={(c) => setFiltro((f) => ({ ...f, fornecedor: c ? Number(c) : undefined }))} /></div>
+              <div style={{ flex: "1 1 160px" }}><LookupField value={filtro.item || undefined} loader={loadItems} entityLabel="item" placeholder="Item" clearable onChange={(c) => setFiltro((f) => ({ ...f, item: c ? String(c) : undefined }))} /></div>
+              <input className="erp-input" type="date" style={{ height: 30, flex: "1 1 120px" }} title="Entrega até" aria-label="Entrega até" value={filtro.entregaAte} onChange={(e) => setFiltro((f) => ({ ...f, entregaAte: e.target.value }))} />
+              <button className="erp-btn erp-btn-sm" onClick={carregarLista} disabled={busy}>Atualizar</button>
             </div>
             <div className="erp-list">
               {pedidos.length === 0 && <div className="erp-grid-empty">Nenhum pedido.</div>}
@@ -615,6 +638,9 @@ export function Vpdc0200Page({ visaoInicial = "pedidos" }: { visaoInicial?: Visa
                 </div>
               )}
 
+              {aba === "notas" && aberto && (situacao === "APPROVED" || situacao === "PARTIAL") && (
+                <RecebimentoFisicoPanel code={aberto} itens={itens} nomeItem={nomeItem} aoReceber={() => void abrir(aberto)} />
+              )}
               {aba === "notas" && aberto && <PedidoNotasPanel code={aberto} itens={itens} nomeItem={nomeItem} />}
               {aba === "pagamentos" && aberto && <PrevisaoPagamentosPanel code={aberto} />}
               {aba === "envio" && aberto && (

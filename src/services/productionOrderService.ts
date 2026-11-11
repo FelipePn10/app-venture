@@ -111,7 +111,7 @@ export interface CostDTO {
   machine_cost_real?: number;
   machine_cost_std?: number;
   machine_variance?: number;
-  /** Serviço de terceiros recebido (preço do pedido, da VTER0100 ou do roteiro). */
+  /** Serviço de terceiros recebido (preço do pedido, da VTPS0100 ou do roteiro). */
   subcontract_cost_real?: number;
   subcontract_cost_std?: number;
   subcontract_variance?: number;
@@ -608,4 +608,17 @@ export async function createProductionScanToken(dto: { production_order_id: numb
 export async function scanProductionOrder(dto: ProductionScanDTO): Promise<ProductionScanResult> {
   const { data } = await httpClient.post('/api/production-order/scanner/scan', dto);
   return unwrapObject(data) as unknown as ProductionScanResult;
+}
+
+// ── Estoque da manufatura (aba Manufatura da VENT0800; era a VPRO1100) ──
+/** A = sistema escolhe o lote, I = operador informa, E = estorno ao lote de origem. */
+export async function configureManufacturingStock(dto: { lot_return_mode: 'A' | 'I' | 'E'; auto_issue_lots: boolean; movement_from?: string; movement_to?: string }): Promise<void> {
+  await httpClient.put(`${BASE}/manufacturing-stock-settings`, dto);
+}
+export async function configureWarehouseAddress(dto: { warehouse_id: number; address: string; is_active: boolean }): Promise<void> {
+  await httpClient.put(`${BASE}/warehouse-addresses`, dto);
+}
+export async function listWarehouseAddresses(warehouseId: number): Promise<{ address: string; is_active: boolean }[]> {
+  const { data } = await httpClient.get('/api/warehouse-addresses', { params: { warehouse_id: String(warehouseId) } });
+  return unwrapArray(data).map((r) => { const o = unwrapObject(r); return { address: parseStr(o, 'address', 'Address'), is_active: o.is_active !== false }; }).filter((a) => a.address);
 }

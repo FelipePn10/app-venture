@@ -27,6 +27,7 @@ import {
 import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
 import { StructureFormulaTester } from './StructureFormulaTester';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
+import { StructureVersionsPanel } from './StructureVersionsPanel';
 import { hojeLocal } from "@/utils/dataLocal";
 import { useUnidades, useRotulosDeUnidades } from "@/hooks/useUnidades";
 
@@ -745,6 +746,7 @@ export function Vent0210Page(): JSX.Element {
   // O configurador não tem tela própria: é este painel, aberto pelo botão da
   // barra de ações com o item pai já carregado.
   const [configuradorAberto, setConfiguradorAberto] = useState(false);
+  const [versoesAbertas, setVersoesAbertas] = useState(false);
   const [historicoAberto, setHistoricoAberto] = useState(false);
   const [problemas, setProblemas]             = useState<string[] | null>(null);
   /** Detalhe recolhido dá a largura inteira para a grade de componentes. */
@@ -1290,6 +1292,9 @@ export function Vent0210Page(): JSX.Element {
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.4"/><path d="M8 4.4V8l2.4 1.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Histórico
             </button>
+            <button className="fe-btn fe-btn-ghost" onClick={() => setVersoesAbertas(true)} disabled={!rootInfo} title={rootInfo ? 'Versões aprovadas da estrutura (MBOM / EBOM)' : 'Busque o item pai para ver as versões'}>
+              Versões
+            </button>
             <button className="fe-btn fe-btn-danger" onClick={handleLimpar}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Limpar
@@ -1635,6 +1640,10 @@ export function Vent0210Page(): JSX.Element {
           onUseMask={(mask) => void handleUsarMascaraConfigurada(mask)}
           onClose={() => setConfiguradorAberto(false)}
         />
+      )}
+
+      {versoesAbertas && rootInfo && (
+        <StructureVersionsPanel itemCode={rootInfo.code} itemName={rootInfo.name} mask={rootMascara.trim() || undefined} onClose={() => setVersoesAbertas(false)} />
       )}
 
       {historicoAberto && rootInfo && (

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { type Machine, listMachines, DOWNTIME_TYPES } from "@/services/machineService";
+import { DOWNTIME_TYPES } from "@/services/machineService";
+import { type MaquinaDoPosto, listMaquinasDoPosto } from "@/services/lookups";
 import {
   machineStopStatus, openMachineStop, closeMachineStop, type MachineStop,
 } from "@/services/apsService";
@@ -42,8 +43,8 @@ function duracao(minutos: number): string {
 }
 
 export function Vpro1200Page(): JSX.Element {
-  const [machines, setMachines] = useState<Machine[]>([]);
-  const [machineCode, setMachineCode] = useState(0);
+  const [machines, setMachines] = useState<MaquinaDoPosto[]>([]);
+  const [machineId, setMachineId] = useState(0);
   const [status, setStatus] = useState<MachineStop | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -56,9 +57,9 @@ export function Vpro1200Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  useEffect(() => { void run(async () => { setMachines(await listMachines()); }); }, [run]);
+  useEffect(() => { void run(async () => { setMachines(await listMaquinasDoPosto()); }); }, [run]);
 
-  const maquina = machines.find((m) => m.code === machineCode);
+  const maquina = machines.find((m) => m.id === machineId);
   const parada = status?.open === true;
 
   const consultar = useCallback((id: number) => run(async () => {
@@ -112,17 +113,16 @@ export function Vpro1200Page(): JSX.Element {
             <label htmlFor="vpro1200-maquina">Posto</label>
             <select
               id="vpro1200-maquina"
-              value={machineCode || ""}
+              value={machineId || ""}
               onChange={(e) => {
-                const code = Number(e.target.value);
-                setMachineCode(code); setStatus(null); setFeedback(null);
-                const m = machines.find((x) => x.code === code);
-                if (m) void consultar(m.id);
+                const id = Number(e.target.value);
+                setMachineId(id); setStatus(null); setFeedback(null);
+                if (id) void consultar(id);
               }}
             >
               <option value="">Escolha a máquina deste posto</option>
               {machines.filter((m) => m.is_active).map((m) => (
-                <option key={m.code} value={m.code}>{m.code} · {m.name}</option>
+                <option key={m.id} value={m.id}>{m.code} · {m.name}</option>
               ))}
             </select>
             {maquina && status && (

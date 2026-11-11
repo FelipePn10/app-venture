@@ -232,7 +232,7 @@ export function EtapaEditor({ routeId, etapa, proximaSequencia, ops, documentos,
                     <div className="erp-field erp-c2"><label className="erp-label">Custo por peça</label>
                       <input className="erp-input num" type="number" min={0} step="0.0001" value={form.cost_per_unit ?? ""} placeholder={herdado(lib, "cost_per_unit")}
                         onChange={(e) => set("cost_per_unit", numOuVazio(e.target.value))} />
-                      <span className="erp-field-hint">Usado se a VTER0100 não tiver preço.</span></div>
+                      <span className="erp-field-hint">Usado se a VTPS0100 não tiver preço.</span></div>
                     <div className="erp-field erp-c4"><label className="erp-label">O que remeter</label>
                       <select className="erp-input" value={form.third_party_remittance ?? ""} onChange={(e) => set("third_party_remittance", e.target.value || undefined)}>
                         <option value="">Herda ({enumLabel(lib?.third_party_remittance ?? "DEMAND_ITEMS")})</option>

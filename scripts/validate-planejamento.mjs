@@ -11,13 +11,13 @@ const check = (name, condition) => {
   console.log(`✓ ${name}`);
 };
 
-const vpre0301 = read('src/components/screens/previsao/Vpre0301Page.tsx');
+const vpre0301 = read('src/components/screens/previsao/PrevistoRealizadoPanel.tsx');
 const routinePage = read('src/components/screens/OperationalRoutinePage.tsx')
   + read('src/utils/fieldLabels.ts');
 const enumLabels = read('src/utils/enumLabels.ts');
 
-check('VPRE0301 não exibe endpoint técnico ao usuário', !/não é exposto por/.test(vpre0301) && !/pendente de integração de endpoint/.test(vpre0301));
-check('VPRE0301 coluna realizado usa "—" (não "n/d")', /—/.test(vpre0301) && !/n\/d/.test(vpre0301));
+check('Previsto × realizado (VPRE0201) não exibe endpoint técnico ao usuário', !/não é exposto por/.test(vpre0301) && !/pendente de integração de endpoint/.test(vpre0301));
+check('Previsto × realizado (VPRE0201) coluna realizado usa "—" (não "n/d")', /—/.test(vpre0301) && !/n\/d/.test(vpre0301));
 check('rotina traduz enums de manutenção/parada (downtime_type)', /downtime_type: \["MAINTENANCE", "BREAKDOWN", "SETUP", "QUALITY"\]/.test(routinePage));
 check('enumLabel traduz MAINTENANCE/BREAKDOWN/SETUP', /MAINTENANCE: 'Manutenção'/.test(enumLabels) && /BREAKDOWN: 'Quebra'/.test(enumLabels));
 

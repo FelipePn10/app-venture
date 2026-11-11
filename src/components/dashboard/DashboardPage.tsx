@@ -4,7 +4,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WindowControls } from "@/components/window/WindowControls";
 import {
   ERP_SCREENS,
-  menuScreens,
   screensForRole,
   MODULE_META,
   PARENT_CATEGORIES,
@@ -23,8 +22,18 @@ const MAX_RECENTS   = 5;
 const MAX_FAVORITES = 8;
 const LS_FAVORITES_KEY = "venture_erp_favorites";
 
+/**
+ * Favorito de tela que saiu do sistema some da lista: a tela desativada não
+ * deixa atalho para trás.
+ */
 function loadFavorites(): string[] {
-  try { const raw = localStorage.getItem(LS_FAVORITES_KEY); return raw ? (JSON.parse(raw) as string[]) : []; }
+  try {
+    const raw = localStorage.getItem(LS_FAVORITES_KEY);
+    const lidos = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(lidos)) return [];
+    const existentes = new Set(ERP_SCREENS.map((s) => s.code));
+    return [...new Set(lidos.filter((c): c is string => typeof c === "string" && existentes.has(c)))];
+  }
   catch { return []; }
 }
 function saveFavorites(favs: string[]) { try { localStorage.setItem(LS_FAVORITES_KEY, JSON.stringify(favs)); } catch { /* noop */ } }
@@ -76,8 +85,7 @@ export function DashboardPage(): JSX.Element {
   const carregarAcesso = useAcessoStore((s) => s.carregar);
   useEffect(() => { void carregarAcesso(); }, [carregarAcesso, user?.id]);
   const visibleScreens = useMemo(() => screensForRole(ERP_SCREENS, user?.role, acesso), [user?.role, acesso]);
-  /** O menu e a contagem não repetem as telas que só têm outro código. */
-  const menuVisibleScreens = useMemo(() => menuScreens(visibleScreens), [visibleScreens]);
+  const menuVisibleScreens = visibleScreens;
   /** Áreas e módulos que sobram depois do recorte do perfil. */
   const visibleModules = useMemo(() => new Set(menuVisibleScreens.map((s) => s.module)), [menuVisibleScreens]);
   const visibleAreas = useMemo(

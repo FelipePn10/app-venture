@@ -289,6 +289,11 @@ export async function listMovements(pagina: { limit?: number; offset?: number } 
   const { data } = await httpClient.get('/api/stock/movements/list', { params: pagina });
   return unwrapArray(data).map(parseMovement);
 }
+/** Movimentos de um almoxarifado (era a consulta da VEST0400). */
+export async function listMovementsByWarehouse(warehouseId: number): Promise<MovementDTO[]> {
+  const { data } = await httpClient.get(`/api/stock/movements/warehouse/${warehouseId}`);
+  return unwrapArray(data).map(parseMovement);
+}
 export async function listMovementsByItem(itemCode: string): Promise<MovementDTO[]> {
   const { data } = await httpClient.get(`/api/stock/movements/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseMovement);

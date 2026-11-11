@@ -12,7 +12,8 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadCarriers, loadItems, loadWarehouses } from "@/services/lookups";
+import { loadCarriers, loadItems, loadProductionOrders, loadPurchaseOrders, loadSalesOrders, loadWarehouses } from "@/services/lookups";
+import { CargasPanel } from "./CargasPanel";
 import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
@@ -31,7 +32,8 @@ export function Vexp0100Page(): JSX.Element {
   const [volumes, setVolumes] = useState<ShipmentVolumeDTO[]>([]);
   const [events, setEvents] = useState<ShipmentEventDTO[]>([]);
   const [newForm, setNewForm] = useState<ShipmentDTO>({ reference_type: "SALES_ORDER", sales_order_code: 0 });
-  const [autoFillCode, setAutoFillCode] = useState("");
+  const [autoFillCode, setAutoFillCode] = useState<number | undefined>();
+  const [aba, setAba] = useState<"romaneios" | "cargas">("romaneios");
   const [itemForm, setItemForm] = useState<ShipmentItemDTO>({ ...EMPTY_ITEM });
   const [volForm, setVolForm] = useState<ShipmentVolumeDTO>({ ...EMPTY_VOL });
   const [transport, setTransport] = useState({ freight_modality: "CIF", freight_value: 0, insurance_value: 0, vehicle_plate: "", driver_name: "", antt_code: "", seals: "", estimated_delivery: "" });
@@ -63,8 +65,8 @@ export function Vexp0100Page(): JSX.Element {
     if (created.code) await reload(created.code);
   });
   const autoFill = () => run(async () => {
-    const c = Number(autoFillCode);
-    if (!c) { setFeedback({ type: "error", message: "Informe o código do pedido de venda." }); return; }
+    const c = autoFillCode;
+    if (!c) { setFeedback({ type: "error", message: "Escolha o pedido de venda." }); return; }
     const created = await autoFillSalesOrder(c);
     setFeedback({ type: "success", message: `Romaneio ${created.code} gerado do pedido ${c}.` });
     setList(await listShipments());
@@ -107,6 +109,7 @@ export function Vexp0100Page(): JSX.Element {
         <div className="erp-titlebar-spacer" />
       </header>
 
+      {aba === "romaneios" && (
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Status</span>
           <select className="erp-input" style={{ width: 130, height: 32 }} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -114,24 +117,37 @@ export function Vexp0100Page(): JSX.Element {
           </select>
           <button className="erp-btn" onClick={listar} disabled={busy}>Listar</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Auto-fill (pedido venda)</span>
-          <input className="erp-input num" style={{ width: 100, height: 32 }} type="number" value={autoFillCode} placeholder="cód." onChange={(e) => setAutoFillCode(e.target.value)} />
+          <div style={{ width: 220 }}><LookupField value={autoFillCode} loader={loadSalesOrders} entityLabel="pedido de venda" placeholder="Pedido de venda" onChange={(c) => setAutoFillCode(c ? Number(c) : undefined)} /></div>
           <button className="erp-btn" onClick={autoFill} disabled={busy}>Gerar</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
           <ExportButton title="VEXP0100 — Romaneio" filename="vexp0100" /></div>
       </div>
+      )}
 
       <div className="erp-content">
+        <div className="erp-tabs">
+          <button className={`erp-tab${aba === "romaneios" ? " active" : ""}`} onClick={() => setAba("romaneios")}>Romaneios</button>
+          <button className={`erp-tab${aba === "cargas" ? " active" : ""}`} onClick={() => setAba("cargas")}>Cargas</button>
+        </div>
+        {aba === "cargas" ? <CargasPanel /> : (
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Romaneio de Expedição</button></div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Novo romaneio</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c3"><label className="erp-label">Tipo</label>
-            <select className="erp-input" value={newForm.reference_type} onChange={(e) => setNewForm((p) => ({ ...p, reference_type: e.target.value as never }))}>
+            <select className="erp-input" value={newForm.reference_type} onChange={(e) => setNewForm((p) => ({ ...p, reference_type: e.target.value as never, sales_order_code: undefined, purchase_order_code: undefined, production_order_code: undefined }))}>
               <option value="SALES_ORDER">Pedido de Venda</option><option value="PURCHASE_ORDER">Pedido de Compra</option><option value="PRODUCTION_ORDER">Ordem de Produção</option>
             </select></div>
-          <div className="erp-field erp-c3"><label className="erp-label erp-req">Código do pedido</label><input className="erp-input num" type="number" value={newForm.sales_order_code || ""} onChange={(e) => setNewForm((p) => ({ ...p, sales_order_code: Number(e.target.value) }))} /></div>
+          {/* Cada tipo grava no seu campo: antes o código ia sempre para
+              sales_order_code, e o romaneio de compra ou de OF nascia apontando
+              para um pedido de venda. */}
+          <div className="erp-field erp-c3"><label className="erp-label erp-req">{newForm.reference_type === "PURCHASE_ORDER" ? "Pedido de compra" : newForm.reference_type === "PRODUCTION_ORDER" ? "Ordem de fabricação" : "Pedido de venda"}</label>
+            <LookupField key={newForm.reference_type}
+              value={newForm.reference_type === "PURCHASE_ORDER" ? newForm.purchase_order_code : newForm.reference_type === "PRODUCTION_ORDER" ? newForm.production_order_code : newForm.sales_order_code || undefined}
+              loader={newForm.reference_type === "PURCHASE_ORDER" ? loadPurchaseOrders : newForm.reference_type === "PRODUCTION_ORDER" ? loadProductionOrders : loadSalesOrders}
+              entityLabel="pedido"
+              onChange={(c) => { const v = c ? Number(c) : undefined; setNewForm((p) => ({ ...p, sales_order_code: p.reference_type === "SALES_ORDER" ? v : undefined, purchase_order_code: p.reference_type === "PURCHASE_ORDER" ? v : undefined, production_order_code: p.reference_type === "PRODUCTION_ORDER" ? v : undefined })); }} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><LookupField value={newForm.carrier_code || undefined} loader={loadCarriers} entityLabel="transportadora" onChange={(code) => setNewForm((p) => ({ ...p, carrier_code: code ? Number(code) : undefined }))} /></div>
           <div className="erp-field erp-c4" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar romaneio</button></div>
         </div></div>
@@ -244,7 +260,9 @@ export function Vexp0100Page(): JSX.Element {
             </div>
           </>
         )}
-      </div></section></div>
+      </div></section>
+        )}
+      </div>
 
       <footer className="erp-statusbar">
         <div style={{display:"contents"}}><div className="erp-status-item">Romaneios: <strong>{list.length}</strong></div>{selected && <div className="erp-status-item">Aberto: <strong>{selected.code}</strong></div>}</div>

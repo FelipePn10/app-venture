@@ -39,6 +39,10 @@ export interface MachineType {
   /** A operação exige um operador dedicado? Entra no cálculo de mão de obra. */
   requires_operator?: boolean;
   is_active: boolean;
+  /** Custeio e capacidade do centro no sequenciamento (aba Perfil e APS da VMAQ0200). */
+  machine_cost_center_id?: number;
+  labor_cost_center_id?: number;
+  capacity_hours?: string;
 }
 
 export interface CreateMachineTypeDTO {
@@ -67,7 +71,15 @@ function parse(raw: unknown): MachineType | null {
     type: String(o.type ?? o.Type ?? ''),
     requires_operator: o.requires_operator === true || o.RequiresOperator === true,
     is_active: o.is_active !== false && o.IsActive !== false,
+    machine_cost_center_id: Number(o.machine_cost_center_id) || undefined,
+    labor_cost_center_id: Number(o.labor_cost_center_id) || undefined,
+    capacity_hours: o.capacity_hours ? String(o.capacity_hours) : undefined,
   };
+}
+
+/** Centros de custo de máquina e de mão de obra e capacidade (horas/dia) do centro. Só administrador. */
+export async function saveWorkCenterSequencing(id: number, dto: { machine_cost_center_id?: number; labor_cost_center_id?: number; capacity_hours: string }): Promise<void> {
+  await httpClient.put(`/api/aps/work-centers/${id}/sequencing`, { machine_cost_center_id: dto.machine_cost_center_id ?? null, labor_cost_center_id: dto.labor_cost_center_id ?? null, capacity_hours: dto.capacity_hours || '0' });
 }
 
 function unwrap(raw: unknown): unknown[] {

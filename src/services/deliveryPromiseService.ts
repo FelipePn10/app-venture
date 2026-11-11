@@ -8,7 +8,7 @@ const BASE = '/api/delivery-promise';
  * Ocupação diária de tanque/setor, reserva comercial de capacidade (simula ou
  * grava), expiração de reservas vencidas e reprogramação em lote de datas de
  * entrega (respeitando linhas/pedidos com data firme). Os parâmetros e o
- * calendário por item ficam em serviços próprios (VPME0102 / VPME0102ITE).
+ * calendário por item ficam em serviços próprios (VPME0102ITE e seus Parâmetros).
  */
 export interface TankReservationLine {
   item_code: string;
@@ -77,7 +77,7 @@ export async function rescheduleBatch(payload: RescheduleRequest): Promise<Obj> 
   return unwrapObject(data);
 }
 
-/** Tanque / linha de capacidade da promessa de entrega (VPME0102). */
+/** Tanque / linha de capacidade da promessa de entrega (VPME0102ITE (Parâmetros)). */
 export interface LinhaDeCapacidade { code: number; description: string; daily_capacity: number; uom: string; is_active: boolean }
 
 export async function listarLinhasDeCapacidade(): Promise<LinhaDeCapacidade[]> {

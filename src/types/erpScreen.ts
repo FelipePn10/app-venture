@@ -80,18 +80,6 @@ export interface ErpScreen {
   title: string;
   description: string;
   module: ErpModule;
-  /**
-   * Código antigo de uma função que já tem tela própria. Ele continua abrindo
-   * (favoritos, atalhos e o hábito de quem digita o código), mas abre a tela
-   * indicada aqui e não aparece no menu — antes eram duas telas para o mesmo
-   * cadastro, uma delas um formulário genérico com payload de exemplo errado.
-   */
-  replacedBy?: string;
-}
-
-/** Telas do menu: o catálogo sem os códigos que apenas apontam para outra tela. */
-export function menuScreens(screens: ErpScreen[]): ErpScreen[] {
-  return screens.filter((screen) => !screen.replacedBy);
 }
 
 /**
@@ -157,8 +145,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   // ── Módulos de plataforma / novos (backend recém-exposto)
   {
     code: "VPCT0100",
-    title: "Tolerâncias de Pedido de Compra",
-    description: "Faixas de tolerância de quantidade, preço e total por operação e fornecedor, com bloqueio ou alerta.",
+    title: "Parâmetros de Compras",
+    description: "Tolerâncias de quantidade, preço e total (bloqueio ou alerta) e alçadas de aprovação do pedido de compra.",
     module: "suprimento",
   },
   {
@@ -180,12 +168,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "planejamento",
   },
   {
-    code: "VBOM0100",
-    title: "Cabeçalhos de Estrutura (BOM)",
-    description: "Versão, tipo de estrutura de engenharia/fabricação e situação por item.",
-    module: "engenharia",
-  },
-  {
     code: "VLOT0100",
     title: "Máscaras de Lote/Série",
     description: "Compor o número de lote/série por partes (caractere/data/sequencial) e gerar o próximo lote.",
@@ -196,13 +178,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     title: "Histórico de Alterações",
     description: "Consultar quem realizou cada ação, quando aconteceu e qual cadastro ou processo foi afetado (somente ADMIN).",
     module: "cadastros",
-  },
-  {
-    code: "VUSR0100",
-    title: "Solicitações de Troca de Senha",
-    description: "Solicitar, aprovar, concluir ou rejeitar solicitações de troca de senha de usuários.",
-    module: "cadastros",
-    replacedBy: "VSEC0100",
   },
   {
     code: "VNOT0100",
@@ -217,12 +192,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "almoxarifado",
   },
   // ── Comercial
-  {
-    code: "VENT0100",
-    title: "Consulta de Pedido de Venda",
-    description: "Consultar todos os pedidos de vendas.",
-    module: "comercial",
-  },
   // ── Produção
   {
     code: "VPRO0200",
@@ -237,40 +206,10 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "producao",
   },
   {
-    code: "VPRO0300",
-    title: "Custo Padrão",
-    description: "Calcular o custo padrão (material + operação + overhead) com rollup multinível.",
-    module: "producao",
-  },
-  {
-    code: "VPRO0400",
-    title: "Qualidade — Pontos de Inspeção",
-    description: "Cadastrar pontos de inspeção (recebimento/processo/final) e registrar laudos.",
-    module: "producao",
-  },
-  {
     code: "VPRO0500",
     title: "Manutenção Preventiva",
-    description: "Planos de manutenção e ordens (PLANNED→IN_PROGRESS→DONE); horas descontadas no CRP.",
-    module: "producao",
-  },
-  {
-    code: "VPRO0600",
-    title: "Previsão Estatística",
-    description: "Prever demanda com modelos estatísticos (Holt-Winters, suavização, média móvel) — menor MAPE.",
-    module: "producao",
-  },
-  {
-    code: "VPRO0700",
-    title: "Alertas de Exceções MRP",
-    description: "Consolidar e notificar exceções do MRP via webhook e/ou e-mail.",
-    module: "producao",
-  },
-  {
-    code: "VPRO0800",
-    title: "Restrições e Configurador",
-    description: "Definir regras de validade de combinações de atributos e avaliá-las com um contexto.",
-    module: "producao",
+    description: "Planos de manutenção por máquina, geração das ordens, início e conclusão com as horas de parada (descontadas da capacidade) e ordens por centro de trabalho.",
+    module: "manutencao",
   },
   {
     code: "VCUT0100",
@@ -300,39 +239,15 @@ export const ERP_SCREENS: ErpScreen[] = [
 
   // ── Engenharia / PDM
   {
-    code: "VPME0102",
-    title: "Parâmetros de Promessa de Entrega",
-    description: "Configurar os parâmetros globais do módulo de promessa de entrega.",
-    module: "engenharia",
-  },
-  {
     code: "VPME0102ITE",
     title: "Calendário de Promessa de Entrega por Item",
     description: "Cadastrar dias úteis e não úteis para enchimento de tanques por item e máscara.",
     module: "engenharia",
   },
   {
-    code: "VITM0100",
-    title: "Item & Prontidão para o MRP",
-    description: "Listar itens, cadastrar (pastas PDM/Almox/Engenharia/Planejamento) e validar a prontidão para o MRP (checklist de BOM/roteiro/fornecedor/conversão) + estrutura.",
-    module: "engenharia",
-  },
-  {
-    code: "VMAQ0101",
-    title: "Tipos de Máquina",
-    description: "Cadastrar categorias de equipamento (corte, dobra, solda, pintura, torno…).",
-    module: "engenharia",
-  },
-  {
     code: "VMAQ0200",
     title: "Máquinas, Tempos e Cálculo",
     description: "Cadastrar máquinas (capacidade/eficiência), tempos por item × máquina, agenda e calcular o tempo de produção (ciclos, setup, gargalo).",
-    module: "engenharia",
-  },
-  {
-    code: "VENT0108",
-    title: "Calendário Financeiro",
-    description: "Manutenção dos dias não úteis do calendário financeiro.",
     module: "engenharia",
   },
   {
@@ -354,21 +269,9 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "engenharia",
   },
   {
-    code: "VENT0204",
-    title: "Cadastro de Grupo",
-    description: "Cadastro e manutenção de grupos do PDM.",
-    module: "engenharia",
-  },
-  {
     code: "VENT0202",
     title: "Roteiro de Fabricação",
     description: "Roteiros dos itens, modelos de roteiro e biblioteca de operações: etapas, centros, tempos, dependências, materiais por etapa, custo e tempo real.",
-    module: "engenharia",
-  },
-  {
-    code: "VENT0363",
-    title: "Relatório de Tempo de Centro de Trabalho",
-    description: "Listar os tempos de fabricação por centro de trabalho.",
     module: "engenharia",
   },
 
@@ -402,33 +305,9 @@ export const ERP_SCREENS: ErpScreen[] = [
 
   // ── Previsão de Vendas
   {
-    code: "VPRE0101",
-    title: "Tabela de Apropriação",
-    description: "Determinar o percentual de acomodação dos itens nos dias da semana.",
-    module: "planejamento",
-  },
-  {
-    code: "VPRE0102",
-    title: "Bloqueio de Previsão de Vendas",
-    description: "Informar períodos em que as previsões de venda devem estar bloqueadas.",
-    module: "planejamento",
-  },
-  {
     code: "VPRE0201",
-    title: "Cadastro da Previsão de Vendas",
-    description: "Cadastrar a previsão de vendas manualmente e dar manutenção nas previsões geradas.",
-    module: "planejamento",
-  },
-  {
-    code: "VPRE0251",
-    title: "Geração de Previsão de Vendas",
-    description: "Gerar previsão de vendas com base no histórico de pedidos e/ou faturamento.",
-    module: "planejamento",
-  },
-  {
-    code: "VPRE0301",
-    title: "Listagem Vendas Previsto X Realizado",
-    description: "Listar e comparar a previsão de vendas com o realizado por período.",
+    title: "Previsão de Vendas",
+    description: "Lançar, gerar (histórico ou estatística) e comparar com o realizado a previsão de vendas; apropriação e bloqueio.",
     module: "planejamento",
   },
 
@@ -443,12 +322,6 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
 
   // ── Cliente
-  {
-    code: "VCLI0202",
-    title: "Cadastro de Percentuais de Frete Por Cliente",
-    description: "Cadastrar percentuais de frete por cliente e estabelecimentos.",
-    module: "cliente",
-  },
 
   // ── Custos
   {
@@ -471,26 +344,8 @@ export const ERP_SCREENS: ErpScreen[] = [
   },
 
   // ── PDV
-  {
-    code: "VPDV0253",
-    title: "Console de Acompanhamento de Pedidos",
-    description: "Visão completa dos pedidos de venda em aberto e sua situação.",
-    module: "pdv",
-  },
 
   // ── Manutenção
-  {
-    code: "VMAN0202",
-    title: "Apontamento de Ordens de Serviço de Manutenção",
-    description: "Realizar movimentações das ordens de serviço de manutenções.",
-    module: "manutencao",
-  },
-  {
-    code: "VMAN0401",
-    title: "Consulta Ordens de Serviço",
-    description: "Listar as ordens de serviço de manutenção realizadas.",
-    module: "manutencao",
-  },
 
   // ── Suprimento
   {
@@ -550,12 +405,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "assistencia",
   },
   {
-    code: "VATC0110",
-    title: "Pós-venda do Item",
-    description: "Perfil de pós-venda do item: controle por número de série e máscara de geração da série na entrega da OF.",
-    module: "assistencia",
-  },
-  {
     code: "VATC0300",
     title: "Ordem de Serviço",
     description: "Atendimento do chamado no cliente ou na fábrica: agenda, técnico, horas, peças do estoque, despesas, garantia e faturamento.",
@@ -585,64 +434,16 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Cadastrar chamados com dados do consumidor, tipo, garantia, motivo, responsável e posição.",
     module: "assistencia",
   },
-  {
-    code: "VATC0480",
-    title: "Consulta de Chamados",
-    description: "Consultar chamados cadastrados por diversos filtros como tipo, data, grupo, motivo, consumidor, responsável e situação.",
-    module: "assistencia",
-  },
-  {
-    code: "VATC0380",
-    title: "Relatório de Chamados",
-    description: "Listar chamados com opções de filtro por data, UF, cidade, consumidor, responsável, tipo, grupo, motivo, posição e situação.",
-    module: "assistencia",
-  },
 
   // ── Cliente
-  {
-    code: "VCLI0117",
-    title: "Cadastro de Permissões e Restrições de Venda",
-    description: "Restringir ou permitir a venda de itens ou classificação fiscal para clientes, estabelecimentos ou representantes.",
-    module: "cliente",
-  },
   {
     code: "VCLI0500",
     title: "Cadastro de Cliente",
     description: "Cadastrar clientes (matriz/filiais), dados fiscais, apoios vinculados, endereços, contatos e bloqueio/desbloqueio.",
     module: "cliente",
   },
-  {
-    code: "VCLI0510",
-    title: "Apoio de Cliente — Básico",
-    description: "Manter os cadastros de apoio básicos: região, segmento de mercado, tipo de contato, tipo de cliente, portador e grupo de portadores.",
-    module: "cliente",
-  },
-  {
-    code: "VCLI0520",
-    title: "Apoio de Cliente — Comercial",
-    description: "Manter condições de pagamento (com parcelas) e tabelas de vendas usadas pelo pedido de venda.",
-    module: "cliente",
-  },
-  {
-    code: "VCLI0530",
-    title: "Apoio de Cliente — Fiscal",
-    description: "Manter tipos de nota fiscal de saída e tipos de imposto (composição de base de cálculo) padrão do cliente.",
-    module: "cliente",
-  },
 
   // ── Planejamento
-  {
-    code: "VPLC0211",
-    title: "Cadastro de Orientações de Entrega",
-    description: "Incluir informações no romaneio de entrega para orientar o motorista em outras atividades.",
-    module: "planejamento",
-  },
-  {
-    code: "VPLC0200",
-    title: "Montagem de Carga",
-    description: "Selecionar pedidos e gerar cargas para faturamento, etiquetas e emissão de notas fiscais por carga.",
-    module: "planejamento",
-  },
 
   // ── PDV
   {
@@ -663,74 +464,20 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Visualizar histórico de recorrências ativas e inativas para um cliente/estabelecimento.",
     module: "pdv",
   },
-  {
-    code: "VRE0203",
-    title: "Consulta de Comissões Futuras",
-    description: "Apresentar projeção de recorrências de comissão ativas para um período futuro.",
-    module: "pdv",
-  },
 
   // ── Engenharia
-  {
-    code: "VENG0204",
-    title: "Cadastro de Regras de Variáveis Equivalentes",
-    description: "Cadastrar regras para itens configurados conforme a configuração do item pai.",
-    module: "engenharia",
-  },
-  {
-    code: "VITE0313",
-    title: "Geração de Máscara para Itens Configurados",
-    description: "Gerar combinações válidas de itens configurados para novas máscaras.",
-    module: "engenharia",
-  },
-  {
-    code: "VITE0114",
-    title: "Cadastro de Grupos (PDM)",
-    description: "Cadastrar grupos para a Padronização da Descrição dos Materiais.",
-    module: "engenharia",
-  },
-  {
-    code: "VITE0115",
-    title: "Cadastro de Modificadores (PDM)",
-    description: "Cadastrar modificadores referentes aos grupos do PDM.",
-    module: "engenharia",
-  },
   {
     code: "VITE0116",
     title: "Padrão Descritivo (PDM)",
     description: "Modificadores de cada grupo e modelo de atributos que gera a descrição técnica do item.",
     module: "engenharia",
   },
-  {
-    code: "VITE0118",
-    title: "Cadastro de Regras de Itens Configurados",
-    description: "Cadastrar regras para itens configurados e definir onde estas regras devem ser executadas.",
-    module: "engenharia",
-  },
-  {
-    code: "VITE0129",
-    title: "Recarga de Descrições de Itens Configurados",
-    description: "Recarregar e renderizar descrições configuradas usando as regras vigentes.",
-    module: "engenharia",
-  },
 
   // ── Suprimento (Contratos)
   {
     code: "VCON0200",
-    title: "Cadastro de Contratos de Fornecedores",
+    title: "Contratos de Fornecedores",
     description: "Cadastrar contratos com fornecedores para acompanhamento de quantidades contratadas e recebidas.",
-    module: "suprimento",
-  },
-  {
-    code: "VCON0400",
-    title: "Consulta de Contratos de Fornecedores",
-    description: "Visualizar dados referentes aos contratos de fornecedores.",
-    module: "suprimento",
-  },
-  {
-    code: "VCON0202",
-    title: "Baixa de Saldo / Cancelamento do Contrato",
-    description: "Consumir saldo de linhas do contrato (baixa) e cancelar o contrato via status.",
     module: "suprimento",
   },
   {
@@ -739,38 +486,14 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Agendar doca, informar itens esperados, acompanhar conferência e tratar divergências antes da entrada fiscal.",
     module: "suprimento",
   },
-  {
-    code: "VVOR0202",
-    title: "Cadastro de Itens por Fornecedor",
-    description: "Configurar o cadastro de itens personalizados para cada fornecedor.",
-    module: "suprimento",
-  },
 
   // ── Contabilidade / Utilitários
-  {
-    code: "VUTL0555",
-    title: "Cadastro de UFs e Países",
-    description: "Cadastrar Unidades Federativas (com código IBGE) e Países. Municípios não têm cadastro próprio no backend.",
-    module: "contabilidade",
-  },
 
   // ── Importação
   {
     code: "VIMP0200",
     title: "Console de Processos de Importação",
     description: "Manutenção e acompanhamento dos processos de importação, centralizando informações em um único local.",
-    module: "importacao",
-  },
-  {
-    code: "VIMP0102",
-    title: "Conhecimentos de Transporte (CT-e)",
-    description: "Cadastrar, consultar e autorizar conhecimentos de transporte (CT-e) vinculáveis às entradas e processos de importação.",
-    module: "importacao",
-  },
-  {
-    code: "VIMP0101",
-    title: "Status Logístico da Carga",
-    description: "Acompanhar a situação logística dos processos de importação: aberto, nacionalizado ou cancelado.",
     module: "importacao",
   },
 
@@ -812,55 +535,13 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "inspecao",
   },
   {
-    code: "VINS0106",
-    title: "Cadastro de Ocorrências",
-    description: "Cadastrar ocorrências para itens na inspeção.",
-    module: "inspecao",
-  },
-  {
-    code: "VINS0400",
-    title: "Consulta de Ocorrências / Ordens de Inspeção",
-    description: "Consultar ocorrências cadastradas e ordens de inspeção detalhadas.",
-    module: "inspecao",
-  },
-  {
-    code: "VINS0313",
-    title: "Consulta de Inspeções de Recebimento",
-    description: "Gerar relatório em Excel com os dados das inspeções de recebimento.",
-    module: "inspecao",
-  },
-  {
     code: "VINS0200",
     title: "Cadastro do Roteiro de Inspeção",
-    description: "Cadastrar o roteiro de inspeção para itens que serão inspecionados.",
-    module: "inspecao",
-  },
-  {
-    code: "VINS0201",
-    title: "Manutenção das Ordens de Inspeções",
-    description: "Mostrar e gerenciar ordens que podem ser inspecionadas ou analisadas.",
-    module: "inspecao",
-  },
-  {
-    code: "VINS0206",
-    title: "Tratamento das Ordens de Inspeção",
-    description: "Analisar quantidades inspecionadas e efetivar a destinação física (aprovado/rejeitado/retrabalho).",
+    description: "Roteiro de inspeção de recebimento por item ou classificação e planos de inspeção de processo e final com as características a medir.",
     module: "inspecao",
   },
 
   // ── Avaliação de Fornecedores
-  {
-    code: "VAVF0101",
-    title: "Cadastro de Parâmetros de Avaliação de Fornecedores",
-    description: "Cadastrar pesos, notas e intervalos de avaliação para o IQF dos fornecedores.",
-    module: "inspecao",
-  },
-  {
-    code: "VAVF0204",
-    title: "Envio de IQF aos Fornecedores",
-    description: "Calcular e enviar o IQF aos fornecedores com layout de e-mail personalizado.",
-    module: "inspecao",
-  },
 
   // ── Fiscal & Financeiro
   {
@@ -872,20 +553,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIN0110",
     title: "Condições de Pagamento",
-    description: "Cadastrar condições de pagamento (parcelas em dias) do módulo financeiro.",
+    description: "A condição de pagamento única (parcelas com percentual e evento) usada por cliente, fornecedor, orçamento, pedido e faturamento.",
     module: "financeiro",
   },
   {
     code: "VFIN0120",
-    title: "Plano de Contas",
-    description: "Manter o plano de contas (tipo/natureza, hierarquia).",
-    module: "financeiro",
-  },
-  {
-    code: "VFIN0130",
-    title: "Centros de Custo",
-    description: "Agora no cadastro único de centros de custo (VCTB0102).",
-    replacedBy: "VCTB0102",
+    title: "Plano de Contas Gerencial",
+    description: "O plano gerencial (títulos, DRE e rateio), com a conta contábil vinculada a cada conta.",
     module: "financeiro",
   },
   {
@@ -910,7 +584,7 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VFIN0400",
     title: "Apuração de Impostos",
     description: "Apurar ICMS/IPI/PIS/COFINS por competência.",
-    module: "financeiro",
+    module: "fiscal",
   },
   {
     code: "VFIN0500",
@@ -991,13 +665,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "fiscal",
   },
   {
-    code: "VFIS0330",
-    title: "Redução / Substituição / Diferimento de ICMS",
-    description: "Unificada em VFIS0320 — Parâmetros ICMS/IPI: redução, substituição e diferimento ficam na regra de ICMS/IPI, a única que a nota usa.",
-    module: "fiscal",
-    replacedBy: "VFIS0320",
-  },
-  {
     code: "VFIS0340",
     title: "Apuração do Simples Nacional",
     description: "Apuração mensal do Simples Nacional por anexo.",
@@ -1022,33 +689,9 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "fiscal",
   },
   {
-    code: "VFIS0500",
-    title: "Motivos de Transferência DAPI",
-    description: "Cadastrar motivos de transferência usados na DAPI.",
-    module: "fiscal",
-  },
-  {
     code: "VFIS0510",
-    title: "Códigos de Ajuste de Apuração ICMS (5.1.1)",
-    description: "Códigos de ajuste de apuração ICMS do SPED Fiscal por UF.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0520",
-    title: "Códigos de Ajuste ICMS (5.2/5.3/5.6/5.7)",
-    description: "Códigos de ajuste ICMS para benefícios, incentivos e estornos.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0530",
-    title: "Linhas de Apuração de ICMS",
-    description: "Linhas do bloco E do SPED Fiscal (apuração de ICMS).",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0540",
-    title: "Lançamentos Resumo de ICMS",
-    description: "Resumo de ICMS por período/UF/CFOP e notas vinculadas (+ adicionais C197).",
+    title: "Tabelas da Apuração de ICMS",
+    description: "Códigos de ajuste (5.1.1 e 5.2 a 5.7), linhas de apuração e motivos de transferência DAPI.",
     module: "fiscal",
   },
   {
@@ -1096,12 +739,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "cadastros",
   },
   {
-    code: "VPRI0100",
-    title: "Prioridade de Ordens",
-    description: "Cadastrar níveis de prioridade usados pelo APS no sequenciamento.",
-    module: "cadastros",
-  },
-  {
     code: "VCTB0200",
     title: "Contabilidade (SPED ECD)",
     description: "Plano de contas, contas contábeis, lançamentos e balancete (escrituração).",
@@ -1137,7 +774,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VEXP0100",
     title: "Expedição / Romaneio",
-    description: "Montar romaneio de expedição: itens, conferência e despacho (OPEN→SEPARATED→CONFERRED→SHIPPED).",
+    description: "Romaneios (separação, conferência, volumes e despacho) e cargas: montar com os romaneios prontos, caixa de despacho, orientações ao motorista, faturar e despachar.",
     module: "almoxarifado",
   },
   {
@@ -1156,12 +793,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     code: "VVND0300",
     title: "Orçamento de Venda",
     description: "Registrar propostas comerciais (capa + itens), acompanhar carteira, liberar/bloquear, cancelar/descancelar com motivo, atender, anexar documentos, gerar DAV/Pré-Venda e converter o saldo aberto em pedido de venda.",
-    module: "comercial",
-  },
-  {
-    code: "VVND0310",
-    title: "Parâmetros de Orçamento",
-    description: "Configurar por empresa os rótulos dos campos comerciais, cliente consumidor final, padrão NFC-e, frete CIF mínimo e redespacho, além dos padrões de comissão e motivos de cancelamento usados no VVND0300.",
     module: "comercial",
   },
   {
@@ -1188,83 +819,22 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Consultar ocupação diária de tanque/setor, criar/simular reserva comercial de capacidade, expirar reservas vencidas e reprogramar datas de entrega em lote.",
     module: "comercial",
   },
-  {
-    code: "VEXR0100",
-    title: "Reprogramação de Entrega",
-    description: "Registrar e consultar reprogramações de data de entrega por pedido (data original × nova × motivo).",
-    module: "comercial",
-  },
   // ── Fechamento funcional 2026: compras, configurador, terceiros, APS e engenharia
-  { code: "VSUP0600", title: "Inspeção de Recebimento", description: "Roteiros, ordens, resultados, análise e destinação de inspeções de compra.", module: "inspecao" },
-  { code: "VAVF0300", title: "Scorecard e IQF do Fornecedor", description: "Cálculo automático, lançamento manual e histórico do IQF.", module: "inspecao" },
-  { code: "VSUP0610", title: "Alçadas e Parâmetros de Compras", description: "Limites de aprovação e parâmetros operacionais de suprimentos.", module: "suprimento" },
-  { code: "VSUP0620", title: "EDI de Fornecedores", description: "Confirmações eletrônicas de pedidos e divergências de quantidade, preço e prazo.", module: "suprimento" },
-  { code: "VIMP0300", title: "Importação e Custo Nacionalizado", description: "Processos, despesas, rateio e recálculo do custo de importação.", module: "importacao" },
-  { code: "VAVF0203", title: "Homologação de Fornecedores", description: "Faixas, validade e geração de vínculos de itens do fornecedor.", module: "inspecao" },
-  { code: "VPDC0210", title: "Consulta, Aprovação e Recebimento de Pedidos", description: "Consulta operacional, alçada e recebimento físico do pedido de compra.", module: "suprimento" },
+  { code: "VAVF0300", title: "Avaliação de Fornecedores", description: "IQF calculado do histórico, histórico de avaliações e homologação do fornecedor.", module: "inspecao" },
   { code: "VCFG0100", title: "Conjuntos e Variáveis do Configurador", description: "Conjuntos de respostas, variáveis, máscaras e traduções.", module: "engenharia" },
-  { code: "VCFG0200", title: "Características do Configurador", description: "Tipos, fórmulas, limites, idiomas e itens de recebimento.", module: "engenharia" },
-  { code: "VCFG0300", title: "Características por Item", description: "Ordenação e comportamento das características de cada item configurável.", module: "engenharia" },
-  { code: "VCFG0400", title: "Geração de Máscaras Configuradas", description: "Geração individual ou cartesiana de máscaras por respostas.", module: "engenharia" },
-  { code: "VCFG0500", title: "Descrições Configuradas", description: "Tipos, linhas e renderização de descrições de itens configurados.", module: "engenharia" },
-  { code: "VCFG0600", title: "Regras do Configurador", description: "Regras equivalentes pai-filho e regras de preenchimento do item.", module: "engenharia" },
-  { code: "VTER0100", title: "Preços de Serviços de Terceiros", description: "Preços, vigência, fórmula, reajuste, cópia e histórico.", module: "suprimento" },
-  { code: "VTER0200", title: "Ordens de Serviço de Terceiros", description: "Geração pela OF e acompanhamento de requisição, compra e execução.", module: "suprimento" },
-  { code: "VTER0300", title: "Remessas e Retornos de Terceiros", description: "Movimentos de remessa, retorno, recebimento e ajuste.", module: "suprimento" },
-  { code: "VTER0400", title: "Conversões Globais de Terceiros", description: "Fatores globais de conversão de unidades para terceiros.", module: "suprimento" },
-  { code: "VAPS0100", title: "Grupos e Parâmetros de Recursos APS", description: "Agrupamento, capacidade, calendário e criticidade de recursos.", module: "producao" },
-  { code: "VAPS0200", title: "Calendários de Máquinas", description: "Intervalos semanais de disponibilidade para capacidade finita.", module: "producao" },
-  { code: "VAPS0300", title: "Paradas de Máquinas", description: "Indisponibilidades planejadas e emergenciais de recursos.", module: "manutencao" },
-  { code: "VAPS0400", title: "Perfil de Operadores APS", description: "Contatos, funções, supervisão e centros de custo de operadores.", module: "producao" },
-  { code: "VAPS0500", title: "Perfil Industrial de Máquinas", description: "Preparação, responsáveis, serviços, itens e campos especiais.", module: "producao" },
-  { code: "VAPS0600", title: "Cálculo e Consulta do Sequenciamento APS", description: "Cálculo, recursos, visão, exportação e parâmetros do sequenciamento.", module: "producao" },
-  { code: "VENG0300", title: "Cabeçalho e Revisão de Estrutura BOM", description: "Versão, efetividade e status da estrutura do produto.", module: "engenharia" },
-  { code: "VENG0400", title: "Desenhos e Revisões", description: "Desenhos, revisões, distribuição, características e parâmetros fabris.", module: "engenharia" },
-  { code: "VMRP0200", title: "Pipeline MRP → CRP → APS", description: "Execução coordenada do planejamento de materiais, capacidade e sequência.", module: "planejamento" },
-  { code: "VEST0300", title: "Máscaras de Lote e Série", description: "Composição e geração automática de códigos de lote e série.", module: "almoxarifado", replacedBy: "VLOT0100" },
   // Beneficiamento — material do cliente em poder da empresa. Telas NOVAS: o
   // estoque próprio (VEST0100) segue como está. Prefixo VBEN, e não VTER, porque
   // VTER* é o sentido oposto (serviço que MANDAMOS para fora).
   { code: "VBEN0100", title: "Beneficiamento — Remessas e Retorno Fiscal", description: "Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria.", module: "beneficiamento" },
   { code: "VBEN0200", title: "Estoque de Terceiros — Material do Cliente", description: "Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio.", module: "beneficiamento" },
   { code: "VBEN0300", title: "Horas de Beneficiamento", description: "Horas trabalhadas nas ordens de fabricação de beneficiamento, por cliente e pedido: apontamentos e horas lançadas nas operações do roteiro.", module: "beneficiamento" },
-  { code: "VSUP0630", title: "Tolerâncias de Pedido de Compra", description: "Faixas e ações para desvios de quantidade, preço e prazo.", module: "suprimento", replacedBy: "VPCT0100" },
-  { code: "VSUP0640", title: "Registros Operacionais de Compras", description: "Ocorrências normalizadas de compra, recebimento e inspeção.", module: "suprimento" },
-  { code: "VSUP0650", title: "Histórico de Movimentos de Compra", description: "Rastreabilidade consolidada de movimentos por fornecedor e item.", module: "suprimento" },
   { code: "VSEC0100", title: "Troca de Senha", description: "Solicitar a troca da própria senha, acompanhar a aprovação e definir a nova senha; o administrador aprova ou rejeita as solicitações da empresa.", module: "cadastros" },
-  { code: "VPLA0300", title: "Parâmetros do Planejamento", description: "Parâmetros numerados consumidos pelo MRP e planejamento industrial.", module: "planejamento" },
-  { code: "VRES0100", title: "Motivos de Restrição", description: "Cadastro de motivos usados nas restrições comerciais e de configuração.", module: "comercial" },
-  { code: "VEXP0110", title: "Gestão de Cargas de Expedição", description: "Montagem, liberação, carregamento e despacho de cargas.", module: "almoxarifado" },
-  { code: "VEXP0120", title: "Instruções e Caixas de Despacho", description: "Orientações de entrega e posições físicas da expedição.", module: "almoxarifado" },
-  { code: "VENG0500", title: "Estruturas Avançadas", description: "Manutenção, explosão e onde-usado de estruturas.", module: "engenharia" },
-  { code: "VMAQ0300", title: "Tempos e Programação de Máquina", description: "Tempos produtivos e agenda da máquina.", module: "engenharia" },
-  { code: "VCAL0200", title: "Dias Úteis Prometidos por Item", description: "Calendário mensal efetivo da promessa do item.", module: "planejamento" },
-  { code: "VPRO1100", title: "Estoque da Manufatura", description: "Parâmetros de lotes, baixas e endereçamento produtivo.", module: "producao" },
   { code: "VPRO1200", title: "Parada de Máquina", description: "Terminal de chão de fábrica: registrar que a máquina parou e que voltou, sem digitar horário.", module: "producao" },
-  { code: "VVND0600", title: "Workflow do Pedido de Venda", description: "Análise, atendimento, conferência e atrasos.", module: "comercial" },
-  { code: "VVND0610", title: "Reajuste de Venda Recorrente", description: "Recalcular e justificar o reajuste de um contrato recorrente.", module: "comercial" },
   { code: "VVND0700", title: "Devolução de Venda", description: "Devolução do cliente pela NF de venda: NF-e de entrada própria ou NF do cliente, estoque de volta, abatimento, crédito, comissão e séries.", module: "comercial" },
   { code: "VVND0710", title: "Contrato de Venda", description: "Contrato de fornecimento com o cliente: itens com preço fixado, teto, vigência, programação e pedidos de chamada pelo saldo.", module: "comercial" },
-  { code: "VSUP0660", title: "Parâmetros e Contatos do Fornecedor", description: "Configurar regras do fornecedor e complementar contatos persistidos.", module: "suprimento" },
-  { code: "VSUP0670", title: "Itens e Qualidade do Fornecedor", description: "Consultar itens e anexar relatórios de qualidade ao vínculo com o fornecedor.", module: "suprimento" },
-  { code: "VSUP0680", title: "Fontes de Preços de Compra", description: "Selecionar fontes, candidatos e ajustes para tabelas de preços de compra.", module: "suprimento" },
-  { code: "VENG0600", title: "Rede de Precedência do Roteiro", description: "Manter dependências e sobreposição entre operações do roteiro.", module: "engenharia" },
-  { code: "VENG0610", title: "Seriais Físicos de Ferramentas", description: "Consultar e manter instâncias serializadas de ferramentas.", module: "engenharia" },
-  { code: "VCLI0600", title: "Manutenção Avançada de Preços de Venda", description: "Consultar histórico, alterar linhas e gerar preços por política.", module: "comercial" },
-  { code: "VCTB0600", title: "SPED ECD", description: "Gerar o arquivo da Escrituração Contábil Digital.", module: "contabilidade" },
-  { code: "VFIS0620", title: "Manifestação e Inutilização de NF-e", description: "Transmitir eventos fiscais de destinatário e faixas inutilizadas.", module: "fiscal" },
-  { code: "VFIS0630", title: "Tabela IBPT", description: "Importar a tabela oficial e consultar carga tributária por NCM e UF.", module: "fiscal" },
-  { code: "VFIS0640", title: "Faturamento de Carga e DANFE", description: "Gerar NF-e a partir da carga e consultar documentos autorizados.", module: "fiscal" },
   { code: "VAPR0100", title: "Aprovações", description: "Solicitações por alçada (crédito do pedido, política comercial do orçamento) e políticas de aprovação.", module: "cadastros" },
   { code: "VADM0200", title: "Perfis de Acesso", description: "Perfis da empresa com permissão por módulo e ação, e os perfis de cada usuário.", module: "cadastros" },
   { code: "VFIS0670", title: "Reforma Tributária (IBS/CBS)", description: "Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e tabela oficial de classificação tributária.", module: "fiscal" },
-  { code: "VFIS0120", title: "Exclusão de Tributação NCM", description: "Unificada em VFIS0110 — Tabelas Tributárias: use o botão Desativar na linha do NCM.", module: "fiscal", replacedBy: "VFIS0110" },
-  { code: "VFIS0660", title: "Consultas de Parâmetros Fiscais", description: "Consultar cadastros fiscais por chaves e filtros específicos.", module: "fiscal" },
-  { code: "VUTL0560", title: "Consulta de UF e Região", description: "Localizar UF e região comercial por suas chaves.", module: "contabilidade" },
-  { code: "VSAC0200", title: "Relatórios e Anexos do Atendimento", description: "Etiquetas, relatórios e documentos do chamado.", module: "assistencia" },
-  { code: "VREP0600", title: "Complementos do Representante", description: "Segmentos, planos, interesses e correspondência.", module: "comercial" },
-  { code: "VEST0400", title: "Consultas de Estoque por Almoxarifado", description: "Movimentos e saldos persistidos por almoxarifado.", module: "almoxarifado" },
   { code: "VFIS0600", title: "SPED EFD ICMS/IPI", description: "EFD do mês gerada das notas de entrada, saída e CT-e, com a apuração do ICMS e do IPI.", module: "fiscal" },
-  { code: "VFIS0610", title: "Importação de NF-e por Chave", description: "Unificada em VFIS0210 — NF-e de Entrada: use Pela chave; a nota fica pendente para conciliar e aprovar.", module: "fiscal", replacedBy: "VFIS0210" },
-  { code: "VADM0100", title: "Trilha de Auditoria", description: "Consulta administrativa de alterações por usuário, rota e período.", module: "cadastros" },
+
 ];

@@ -2,7 +2,7 @@ import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject } from '@/ser
 
 /**
  * Motivos de Restrição (`/api/restriction-reason`) — tabela de apoio das Restrições
- * (ver configurador/VPRO0800). `situation` ATIVO/INATIVO.
+ * (aba Restrições da VCFG0100). `situation` ACTIVE/INACTIVE.
  */
 const BASE = '/api/restriction-reason';
 
@@ -16,7 +16,7 @@ function parse(raw: unknown): RestrictionReason {
   return {
     code: parseNum(o, 'code', 'Code') || undefined,
     description: parseStr(o, 'description', 'Description'),
-    situation: parseStr(o, 'situation', 'Situation') || 'ATIVO',
+    situation: parseStr(o, 'situation', 'Situation') || 'ACTIVE',
   };
 }
 export async function listRestrictionReasons(): Promise<RestrictionReason[]> {

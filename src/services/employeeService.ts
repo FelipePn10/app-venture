@@ -57,3 +57,31 @@ export async function updateEmployee(dto: EmployeeDTO): Promise<EmployeeDTO> {
 export async function deactivateEmployee(code: number): Promise<void> {
   await httpClient.delete(`${BASE}/${code}/deactivate`);
 }
+
+// ── Contatos e funções do funcionário (era a rotina genérica VAPS0400) ──
+export interface EmployeeContact { contact_type: 'PHONE' | 'EMAIL'; value: string; is_primary: boolean }
+export interface EmployeeFunction { function_name: string; cost_center_id?: number; is_supervisor: boolean; is_manager: boolean }
+export interface EmployeeProfile { contacts: EmployeeContact[]; functions: EmployeeFunction[]; credit_limit: string }
+/** Sem perfil gravado o backend responde 404: vale o perfil vazio. */
+export async function getEmployeeProfile(employeeId: number): Promise<EmployeeProfile> {
+  try {
+    const { data } = await httpClient.get(`/api/aps/employees/${employeeId}/sequencing-profile`);
+    const o = (data ?? {}) as Record<string, unknown>;
+    const arr = (v: unknown) => (Array.isArray(v) ? (v as Record<string, unknown>[]) : []);
+    return {
+      contacts: arr(o.contacts).map((c) => ({ contact_type: c.contact_type === 'EMAIL' ? 'EMAIL' : 'PHONE', value: String(c.value ?? ''), is_primary: c.is_primary === true })),
+      functions: arr(o.functions).map((f) => ({ function_name: String(f.function_name ?? ''), cost_center_id: Number(f.cost_center_id) || undefined, is_supervisor: f.is_supervisor === true, is_manager: f.is_manager === true })),
+      credit_limit: String(o.credit_limit ?? '0'),
+    };
+  } catch (e) {
+    if ((e as { response?: { status?: number } })?.response?.status === 404) return { contacts: [], functions: [], credit_limit: '0' };
+    throw e;
+  }
+}
+export async function saveEmployeeProfile(employeeId: number, p: EmployeeProfile): Promise<void> {
+  await httpClient.put(`/api/aps/employees/${employeeId}/sequencing-profile`, {
+    contacts: p.contacts.map((c) => ({ ...c, value: c.value.trim() })),
+    functions: p.functions.map((f) => ({ ...f, function_name: f.function_name.trim(), cost_center_id: f.cost_center_id ?? null })),
+    credit_limit: p.credit_limit || '0',
+  });
+}

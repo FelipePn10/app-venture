@@ -376,7 +376,7 @@ check('descancelamento reusa o motivo do cancelamento', () => {
 
 // ─── 7. Tipos de item (ItemType ganhou SERVICO na v1.1.0) ────────────────────
 
-check('tipos de item do cadastro (VITM0100)', () => {
+check('tipos de item do cadastro', () => {
   const go = read('internal/domain/enums/types/ItemType.go');
   const backendTypes = new Set([...go.matchAll(/return "(\w+)"/g)].map((m) => m[1]).filter((v) => v !== 'UNKNOWN'));
   const screen = readFront('src/components/screens/engenharia/Vent0200Page.tsx');

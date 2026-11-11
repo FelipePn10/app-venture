@@ -5,6 +5,7 @@ const BASE = '/api/location';
 // ─── Países ─────────────────────────────────────────────────────────────────
 
 export interface CountryDTO {
+  id?: number;
   sigla: string;
   name: string;
   ddi?: string;
@@ -16,6 +17,7 @@ export interface CountryDTO {
 function parseCountry(raw: unknown): CountryDTO {
   const o = unwrapObject(raw);
   return {
+    id: parseNum(o, 'id', 'ID') || undefined,
     sigla: parseStr(o, 'sigla', 'Sigla'),
     name: parseStr(o, 'name', 'Name'),
     ddi: parseStr(o, 'ddi', 'Ddi', 'DDI'),
@@ -45,8 +47,12 @@ export async function getCountryUfs(sigla: string): Promise<UfDTO[]> {
 // ─── UFs ────────────────────────────────────────────────────────────────────
 
 export interface UfDTO {
+  /** O backend altera a UF pelo id e vincula o país pela sigla. */
+  id?: number;
   sigla: string;
   name: string;
+  country_sigla?: string;
+  /** Vem na resposta; o envio usa a sigla. */
   country_id?: number;
   ibge_code?: string;
   is_active?: boolean;
@@ -55,9 +61,10 @@ export interface UfDTO {
 function parseUf(raw: unknown): UfDTO {
   const o = unwrapObject(raw);
   return {
+    id: parseNum(o, 'id', 'ID') || undefined,
     sigla: parseStr(o, 'sigla', 'Sigla'),
     name: parseStr(o, 'name', 'Name'),
-    country_id: parseNum(o, 'country_id', 'CountryId', 'CountryID'),
+    country_id: parseNum(o, 'country_id', 'CountryID') || undefined,
     ibge_code: parseStr(o, 'ibge_code', 'IbgeCode'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };

@@ -1,7 +1,8 @@
+import { PlanosDeInspecaoPanel } from "./PlanosDeInspecaoPanel";
 import { useState, useCallback } from "react";
 import {
   type InspectionBasis, type InspectionStepKind, type InspectionAppointmentMode,
-  createInspectionRoute, getInspectionRoute,
+  createInspectionRoute, getInspectionRoute, listInspectionRoutes,
 } from "@/services/procurementService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -49,7 +50,8 @@ export function Vins0200Page(): JSX.Element {
   const [stepForm, setStepForm] = useState({ ...STEP_INI });
   const [steps, setSteps] = useState<Step[]>([]);
   const [criado, setCriado] = useState<Obj | null>(null);
-  const [consultaId, setConsultaId] = useState("");
+  const [roteiros, setRoteiros] = useState<Obj[]>([]);
+  const [aba, setAba] = useState<"recebimento" | "planos">("recebimento");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -174,7 +176,9 @@ export function Vins0200Page(): JSX.Element {
     setCapa({ ...CAPA_INI }); setSteps([]);
   });
 
-  const consultar = () => run(async () => { const id = Number(consultaId); if (!id) { setFeedback({ type: "error", message: "Informe o id do roteiro." }); return; } setCriado(await getInspectionRoute(id)); });
+  // Antes só abria digitando o id interno do roteiro.
+  const listarRoteiros = () => run(async () => { setRoteiros(await listInspectionRoutes()); });
+  const rotuloRoteiro = (r: Obj) => `${r.basis === "CLASSIFICATION" ? `Classificação ${String(r.classification_code ?? "")}` : `Item ${String(r.item_code ?? "")}${r.mask ? ` (${String(r.mask)})` : ""}`} · desde ${String(r.valid_from ?? "").slice(0, 10)}${r.is_active === false ? " · inativo" : ""}`;
 
   return (
     <div className="erp-screen">
@@ -192,24 +196,33 @@ export function Vins0200Page(): JSX.Element {
         <span className="erp-titlebar-meta">{steps.length} etapa(s)</span>
       </header>
 
+      {aba === "recebimento" && (
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Roteiro</span>
           <button className="erp-btn erp-btn-primary" onClick={salvar} disabled={busy}>{busy && <span className="erp-spin" />}Criar roteiro</button>
         </div>
         <div className="erp-tgroup">
-          <span className="erp-tgroup-label">Consultar pelo código</span>
-          <input className="erp-tinput" style={{ width: 80 }} type="number" value={consultaId} onChange={(e) => setConsultaId(e.target.value)} />
-          <button className="erp-btn erp-btn-dark" onClick={consultar} disabled={busy}>Abrir</button>
+          <span className="erp-tgroup-label">Roteiros cadastrados</span>
+          <select className="erp-tselect" style={{ width: 300 }} aria-label="Roteiro cadastrado" value="" onFocus={() => { if (!roteiros.length) void listarRoteiros(); }}
+            onChange={(e) => { const id = Number(e.target.value); if (id) void run(async () => { setCriado(await getInspectionRoute(id)); }); }}>
+            <option value="">{roteiros.length ? "Abrir um roteiro…" : "Clique para listar"}</option>
+            {roteiros.map((r) => <option key={String(r.id)} value={String(r.id)}>{rotuloRoteiro(r)}</option>)}
+          </select>
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VINS0200 — Roteiro de Inspeção" filename="vins0200" /></div>
       </div>
+      )}
 
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Roteiro de inspeção</button></div>
+          <div className="erp-tabs">
+            <button className={`erp-tab${aba === "recebimento" ? " active" : ""}`} onClick={() => setAba("recebimento")}>Recebimento (roteiros)</button>
+            <button className={`erp-tab${aba === "planos" ? " active" : ""}`} onClick={() => setAba("planos")}>Processo e final (planos)</button>
+          </div>
+          {aba === "planos" ? <div className="erp-detail-body"><PlanosDeInspecaoPanel /></div> : (
           <div className="erp-detail-body">
             <div className="erp-fieldset">
               <div className="erp-fieldset-head">Capa do roteiro (por item ou classificação)</div>
@@ -319,6 +332,7 @@ export function Vins0200Page(): JSX.Element {
               </div>
             )}
           </div>
+          )}
         </section>
       </div>
 

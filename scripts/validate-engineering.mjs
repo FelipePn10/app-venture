@@ -57,7 +57,8 @@ check('Roteiro: origem de operação traduzida', /enumLabel\(o\)/.test(roteiro) 
 check('Roteiro: item usa modal', /loader=\{loadItems\}/.test(roteiro));
 check('VPRO0900 item usa modal', /loader=\{loadItems\}/.test(vpro0900));
 check('VMAQ0200 item/máscara usam modal', /loader=\{loadItems\}/.test(vmaq0200) && /loader=\{loadItemMasks\}/.test(vmaq0200));
-check('VENT0204 não envia enterprise_id/created_by', /VENT0204[\s\S]*?Família de produtos"/.test(routineCatalog) && !/VENT0204[\s\S]*?enterprise_id/.test(routineCatalog));
+// VENT0204 (grupo PDM em JSON cru) foi removida: o grupo PDM fica na VITE0116 (Grupos e modificadores).
+check('VENT0204 removida (o grupo PDM fica na VITE0116)', !/"VENT0204"/.test(read('src/types/erpScreen.ts')) && !/VENT0204/.test(routineCatalog));
 check('lookups expõe operações de roteiro', /loadOperations/.test(lookups) && /manufacturingRoutingService/.test(lookups));
 check('rotina traduz rótulos de roteiro (is_standard, network, critical_path)', /is_standard: "Padrão"/.test(routinePage) && /network: "Rede"/.test(routinePage) && /critical_path: "Caminho crítico"/.test(routinePage));
 check('rotina usa modal para operação e grupo', /grupo pdm\|pdm\|grupo/.test(routinePage) && /operação\|operation/.test(routinePage));
@@ -85,7 +86,7 @@ check('não existe outra tela de roteiro', !/VENT0115/.test(host) && !/VENT0115/
 check('roteiro tem modo de modelos', /listRouteTemplates/.test(roteiro) && /Modelos/.test(roteiro));
 for (const code of ['VPRO0100', 'VSUP0510', 'VCON0100']) {
   check(`${code} saiu do catálogo`, !catalogo.includes(`code: "${code}"`));
-  check(`${code} explica para onde foi`, new RegExp(`${code}: \\{`).test(host));
+  check(`${code} não abre mais (sem tela de "mudou de lugar")`, !new RegExp(`\\b${code}\\b`).test(host));
 }
 check('VSUP0500 absorveu os cadastros de apoio', /Cadastros de apoio/.test(read('src/components/screens/suprimento/Vsup0500Page.tsx')));
 
@@ -152,7 +153,6 @@ check('lookup de item-base aceita os dois sinais (is_base OU nature 2)',
 check('lookup de item-base não devolve lista vazia quando ninguém está marcado',
   /marcados\.length > 0 \? marcados : todos/.test(lookups));
 check('serviço de itens lê os marcadores', /is_base: parseBool/.test(read('src/services/itemService.ts')));
-check('VITM0100 mostra os marcadores combinados', /naturezaLegivel/.test(read('src/components/screens/engenharia/Vitm0100Page.tsx')));
 
 // ── Conferência e produtividade na estrutura ───────────────────────────────
 check('VENT0210 lista TODOS os problemas, não só o primeiro', /function listarProblemas/.test(vent0210) && /problemas\.push\(/.test(vent0210));
@@ -207,9 +207,8 @@ check('serviço do configurador gera máscara individual e em lote',
   /generateMaskTyped/.test(cfgSrv) && /generateMasksBatch/.test(cfgSrv));
 check('serviço de restrições usa os sete operadores do mercado',
   ['EQUAL', 'DIFFERENT', 'GREATER', 'LESS', 'BELONGS', 'NOT_BELONGS', 'INVALID'].every((o) => restrSrv.includes(`'${o}'`)));
-check('rotina crua de restrição usa o corpo real da API',
-  /"dominants":\[\{"question_id"/.test(routineCatalog) && !/"attribute":"customer_code"/.test(routineCatalog));
-check('rotinas cruas apontam para a tela guiada', /use a VCFG0100/.test(routineCatalog));
+// As rotinas cruas do configurador e de restrição (VCFG0200–0600, VCLI0117) saíram: só a VCFG0100.
+check('rotinas cruas do configurador removidas', !/"VCFG0[2-6]00"/.test(routineCatalog) && !/VCLI0117/.test(routineCatalog));
 check('máscara barra medida fora do limite antes de gerar', /informe um valor entre/.test(cfgMascara));
 check('máscara mostra o código configurado completo', /Código configurado/.test(cfgMascara));
 

@@ -43,6 +43,17 @@ export function Vcal0100Page(): JSX.Element {
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
+  // Clicar no dia alterna útil × não útil (como na antiga VENT0108). Sem registro, o dia de semana é útil e o fim de semana não.
+  async function alternar(dia: number) {
+    const reg = days.find((d) => d.day === dia);
+    const dow = new Date(year, month - 1, dia).getDay();
+    const utilHoje = reg ? reg.is_workday : dow !== 0 && dow !== 6;
+    setBusy(true); setFeedback(null);
+    try { await createCalendarDay({ year, month, day: dia, is_workday: !utilHoje, description: reg?.description }); await reload(); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+  const diasNoMes = new Date(year, month, 0).getDate();
+  const primeiroDow = new Date(year, month - 1, 1).getDay();
   const workdays = days.filter((d) => d.is_workday).length;
   const holidays = days.filter((d) => !d.is_workday).length;
 
@@ -77,7 +88,20 @@ export function Vcal0100Page(): JSX.Element {
           <div className="erp-metric"><div className="erp-metric-label">Registrados</div><div className="erp-metric-value">{days.length}</div></div>
         </div>
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Mês — clique no dia para alternar útil / não útil</div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 4, maxWidth: 560 }}>
+            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => <div key={d} style={{ fontSize: 11, fontWeight: 700, textAlign: "center", opacity: 0.6 }}>{d}</div>)}
+            {Array.from({ length: primeiroDow }, (_, i) => <div key={`v${i}`} />)}
+            {Array.from({ length: diasNoMes }, (_, i) => i + 1).map((dia) => {
+              const reg = days.find((d) => d.day === dia);
+              const dow = new Date(year, month - 1, dia).getDay();
+              const util = reg ? reg.is_workday : dow !== 0 && dow !== 6;
+              return <button key={dia} className={`erp-btn erp-btn-sm${util ? "" : " erp-btn-danger"}`} style={{ fontWeight: reg ? 700 : 400 }} title={`${reg?.description ? reg.description + " · " : ""}${util ? "útil" : "não útil"}${reg ? "" : " (padrão)"}`} disabled={busy} onClick={() => void alternar(dia)}>{dia}</button>;
+            })}
+          </div>
+          <span className="erp-hint">Em negrito, os dias registrados; os demais seguem o padrão (segunda a sexta úteis).</span>
+        </div></div></div>
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Registrar dia com descrição</div><div className="erp-fieldset-body">
           <div className="erp-field erp-c2"><label className="erp-label erp-req">Dia</label><input className="erp-input num" type="number" min={1} max={31} value={newDay.day} onChange={(e) => setNewDay((p) => ({ ...p, day: Number(e.target.value) }))} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Dia útil?</label>
             <div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={newDay.is_workday} onChange={(e) => setNewDay((p) => ({ ...p, is_workday: e.target.checked }))} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{newDay.is_workday ? "Útil" : "Não útil"}</span></div></div>

@@ -1,3 +1,4 @@
+import { SpedEcdPanel } from "./SpedEcdPanel";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   type AccountingPlanDTO, type AccountDTO, type JournalEntryDTO, type Balancete, type AccountNature, type PlanStatus,
@@ -13,7 +14,7 @@ import { OpcoesLookup } from "@/components/ui/OpcoesLookup";
 import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type Tab = "plans" | "accounts" | "journal" | "balancete" | "entrada";
+type Tab = "plans" | "accounts" | "journal" | "balancete" | "entrada" | "ecd";
 
 const money = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const hojeISO = () => hojeLocal();
@@ -194,6 +195,7 @@ export function Vctb0200Page(): JSX.Element {
             <button role="tab" aria-selected={tab === "journal"} className={`erp-tab ${tab === "journal" ? "active" : ""}`} onClick={() => { setTab("journal"); void loadJournal(); }}>Lançamentos</button>
             <button role="tab" aria-selected={tab === "balancete"} className={`erp-tab ${tab === "balancete" ? "active" : ""}`} onClick={() => setTab("balancete")}>Balancete</button>
             <button role="tab" aria-selected={tab === "entrada"} className={`erp-tab ${tab === "entrada" ? "active" : ""}`} onClick={() => void abrirEntrada()}>Contabilização automática</button>
+            <button role="tab" aria-selected={tab === "ecd"} className={`erp-tab ${tab === "ecd" ? "active" : ""}`} onClick={() => setTab("ecd")}>SPED ECD</button>
           </div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
@@ -281,6 +283,7 @@ export function Vctb0200Page(): JSX.Element {
             </div>
           )}
 
+          {tab === "ecd" && <SpedEcdPanel />}
           {tab === "entrada" && paramsCarregados && (
             <div className="erp-fieldset-body">
               <div className="erp-field erp-c12"><div className="erp-feedback info"><div>

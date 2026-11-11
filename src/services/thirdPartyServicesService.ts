@@ -327,10 +327,10 @@ export async function addServiceOrderMovement(id: number, body: Obj): Promise<Se
   return parseMovement(data);
 }
 
-/** Gera ordens de serviço a partir de uma OF (operações externas do roteiro). */
-export async function generateOrdersFromProduction(productionOrderId: number, body: Obj = {}): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/production-orders/${productionOrderId}/orders`, body);
-  return unwrapObject(data);
+/** Gera as ordens de serviço que faltam na OF (operações externas do roteiro). Devolve quantas a OF tem depois disso. */
+export async function generateOrdersFromProduction(productionOrderId: number): Promise<number> {
+  const { data } = await httpClient.post(`${BASE}/production-orders/${productionOrderId}/orders`, {});
+  return unwrapArray(data).length;
 }
 
 // ─── conversões globais ───────────────────────────────────────────────────────

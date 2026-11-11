@@ -1,3 +1,4 @@
+import { ParametrosPromessaPage } from "./ParametrosPromessaPage";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { enumLabel } from "@/utils/enumLabels";
 import { humanizeApiError } from '@/services/apiError';
@@ -63,6 +64,7 @@ function extractErrorMessage(err: unknown): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Vpme0102ItePage(): JSX.Element {
+  const [verParametros, setVerParametros] = useState(false);
   const today = useMemo(() => new Date(), []);
 
   // ── Item + mask ───────────────────────────────────────────────────────────
@@ -276,6 +278,8 @@ export function Vpme0102ItePage(): JSX.Element {
   [localNaoUteis, mes]);
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
+
+  if (verParametros) return <ParametrosPromessaPage onVoltar={() => setVerParametros(false)} />;
 
   return (
     <>
@@ -628,6 +632,7 @@ export function Vpme0102ItePage(): JSX.Element {
 
           <div className="ite-action-group">
             <span className="ite-action-label">Ações</span>
+            <button className="ite-btn" onClick={() => setVerParametros(true)}>Parâmetros</button>
             <button
               className="ite-btn ite-btn-primary"
               onClick={() => void handleSalvar()}

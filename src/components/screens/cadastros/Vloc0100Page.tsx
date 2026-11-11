@@ -10,7 +10,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "countries" | "ufs";
 const EMPTY_C: CountryDTO = { sigla: "", name: "", ddi: "", bacen_code: "", sis_comex: "" };
-const EMPTY_U: UfDTO = { sigla: "", name: "", country_id: undefined, ibge_code: "" };
+const EMPTY_U: UfDTO = { sigla: "", name: "", country_sigla: "BR", ibge_code: "" };
 
 export function Vloc0100Page(): JSX.Element {
   const [tab, setTab] = useState<Tab>("countries");
@@ -38,7 +38,7 @@ export function Vloc0100Page(): JSX.Element {
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function saveUf() {
-    if (!uForm.sigla.trim() || !uForm.name.trim()) { setFeedback({ type: "error", message: "Sigla e nome da UF são obrigatórios." }); return; }
+    if (!uForm.sigla.trim() || !uForm.name.trim() || (!uEdit && !uForm.country_sigla)) { setFeedback({ type: "error", message: "Sigla, nome e país da UF são obrigatórios." }); return; }
     setBusy(true); setFeedback(null);
     try { if (uEdit) await updateUf(uForm); else await createUf(uForm); setFeedback({ type: "success", message: `UF ${uForm.sigla} salva.` }); setUForm(EMPTY_U); setUEdit(false); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
@@ -97,7 +97,7 @@ export function Vloc0100Page(): JSX.Element {
               
                 <div className="erp-field erp-c2"><label className="erp-label erp-req">Sigla</label><input className="erp-input" maxLength={2} value={uForm.sigla} disabled={uEdit} onChange={(e) => setUForm((p) => ({ ...p, sigla: e.target.value.toUpperCase() }))} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label erp-req">Nome</label><input className="erp-input" value={uForm.name} onChange={(e) => setUForm((p) => ({ ...p, name: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">País (ID)</label><input className="erp-input num" type="number" value={uForm.country_id ?? ""} onChange={(e) => setUForm((p) => ({ ...p, country_id: e.target.value ? Number(e.target.value) : undefined }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label erp-req">País</label><select className="erp-input" value={uForm.country_sigla ?? ""} disabled={uEdit} onChange={(e) => setUForm((p) => ({ ...p, country_sigla: e.target.value }))}><option value="">Escolha…</option>{countries.map((c) => <option key={c.sigla} value={c.sigla}>{c.sigla} · {c.name}</option>)}</select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Cód. IBGE</label><input className="erp-input" value={uForm.ibge_code ?? ""} onChange={(e) => setUForm((p) => ({ ...p, ibge_code: e.target.value }))} /></div>
                 <div className="erp-field erp-c12" style={{ flexDirection: "row", gap: 8 }}>
                   <button className="erp-btn erp-btn-primary" onClick={() => void saveUf()} disabled={busy}>{uEdit ? "Atualizar" : "Adicionar"}</button>
@@ -107,8 +107,8 @@ export function Vloc0100Page(): JSX.Element {
                 <thead><tr><th>Sigla</th><th>Nome</th><th>País</th><th>IBGE</th><th style={{ width: 70 }}>Ações</th></tr></thead>
                 <tbody>
                   {ufs.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma UF.</td></tr>}
-                  {ufs.map((u) => <tr key={u.sigla}><td style={{ fontWeight: 600 }}>{u.sigla}</td><td>{u.name}</td><td>{u.country_id}</td><td>{u.ibge_code}</td>
-                    <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => { setUForm({ ...EMPTY_U, ...u }); setUEdit(true); }}>Editar</button></td></tr>)}
+                  {ufs.map((u) => <tr key={u.sigla}><td style={{ fontWeight: 600 }}>{u.sigla}</td><td>{u.name}</td><td>{countries.find((c) => c.id === u.country_id)?.sigla ?? "—"}</td><td>{u.ibge_code}</td>
+                    <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => { setUForm({ ...EMPTY_U, ...u, country_sigla: countries.find((c) => c.id === u.country_id)?.sigla ?? "" }); setUEdit(true); }}>Editar</button></td></tr>)}
                 </tbody></table></div>
             </div>
           )}

@@ -261,6 +261,32 @@ export async function exportGanttMonth(year: number, month: number, format: 'svg
   const { data } = await httpClient.get(`${BASE}/gantt/month/${year}/${month}/export`, { params: { format, group_by: groupBy }, responseType: 'blob' });
   return data as Blob;
 }
+/**
+ * Eventos do sequenciamento (início/fim de cada operação programada) em CSV,
+ * para levar a programação a uma planilha ou a outro sistema.
+ */
+export async function exportSequencingEventsCsv(): Promise<Blob> {
+  const { data } = await httpClient.post(`${BASE}/sequence/events/export`, {}, { params: { format: 'csv' }, responseType: 'blob' });
+  return data as Blob;
+}
+export interface SequencingResource { id: number; code: number; name: string; work_center_id: number; is_active: boolean }
+/** Máquinas que o sequenciamento enxerga (respeita o parâmetro de recursos ativos). */
+export async function listSequencingResources(): Promise<SequencingResource[]> {
+  const { data } = await httpClient.get(`${BASE}/sequence/resources`);
+  return unwrapArray(data).map((r) => {
+    const o = unwrapObject(r);
+    return { id: parseNum(o, 'id'), code: parseNum(o, 'code'), name: parseStr(o, 'name'), work_center_id: parseNum(o, 'work_center_id'), is_active: parseBool(o, 'is_active') };
+  });
+}
+/** Parâmetro do sequenciamento: listar só recursos ativos (padrão) ou todos. */
+export async function getSequencingSettings(): Promise<{ list_only_active_resources: boolean }> {
+  const { data } = await httpClient.get(`${BASE}/sequence/settings`);
+  const o = unwrapObject(data);
+  return { list_only_active_resources: o['list_only_active_resources'] === undefined ? true : parseBool(o, 'list_only_active_resources') };
+}
+export async function saveSequencingSettings(listOnlyActive: boolean): Promise<void> {
+  await httpClient.put(`${BASE}/sequence/settings`, { list_only_active_resources: listOnlyActive });
+}
 /** Exporta o quadro de range como SVG/PDF (blob para download). */
 export async function exportGanttBoard(from: string, to: string | undefined, format: 'svg' | 'pdf', scale: GanttScale = 'day', groupBy: GanttGroupBy = 'work_center'): Promise<Blob> {
   const params: Obj = { from, scale, group_by: groupBy, format };

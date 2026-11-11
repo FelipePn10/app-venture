@@ -4,9 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import {
   type SalesOrderDTO,
   type SalesOrderItemDTO,
-  listSalesOrders,
-  listSalesOrdersByCustomer,
-  listSalesOrdersByStatus,
+  listSalesOrders, searchSalesOrders,
   getSalesOrder,
   createSalesOrder,
   cancelSalesOrder,
@@ -34,10 +32,12 @@ import {
   type RateioComissaoLinhaDTO,
 } from "@/services/salesCommissionService";
 import { hojeLocal } from "@/utils/dataLocal";
+import { ReprogramacaoEntregaPanel } from "./ReprogramacaoEntregaPanel";
+import { AndamentoPedidoPanel } from "./AndamentoPedidoPanel";
 import { AtendimentoMrpPanel } from "./AtendimentoMrpPanel";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type DetailTab = "dados" | "itens" | "comissao" | "mrp";
+type DetailTab = "dados" | "itens" | "comissao" | "mrp" | "entrega" | "andamento";
 const today = () => hojeLocal();
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -65,6 +65,8 @@ export function Vvnd0200Page(): JSX.Element {
   const [newItem, setNewItem] = useState<SalesOrderItemDTO>(EMPTY_ITEM);
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  // Andamento: "campo=valor" da busca (análise comercial/financeira ou conferência).
+  const [filterAndamento, setFilterAndamento] = useState("");
   const [listSearch, setListSearch] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -145,10 +147,12 @@ export function Vvnd0200Page(): JSX.Element {
   }); };
 
   const listarTodos = () => run(async () => { setOrders(await listSalesOrders()); });
+  // Os filtros se somam (antes escolher o cliente apagava a situação e
+  // vice-versa): vão juntos para a busca do backend.
   const aplicarFiltro = () => run(async () => {
-    if (filterCustomer) { setOrders(await listSalesOrdersByCustomer(Number(filterCustomer))); return; }
-    if (filterStatus) { setOrders(await listSalesOrdersByStatus(filterStatus)); return; }
-    setOrders(await listSalesOrders());
+    if (!filterCustomer && !filterStatus && !filterAndamento) { setOrders(await listSalesOrders()); return; }
+    const [campo, valor] = filterAndamento.split("=");
+    setOrders(await searchSalesOrders({ status: filterStatus || undefined, customer_code: filterCustomer ? Number(filterCustomer) : undefined, ...(campo ? { [campo]: valor } : {}) }));
   });
 
   const novoPedido = () => { setCreating(true); setSelected(null); setNewOrder(EMPTY_ORDER); setTab("dados"); setFeedback(null); };
@@ -259,10 +263,19 @@ export function Vvnd0200Page(): JSX.Element {
         <div className="erp-tspacer" />
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Filtrar</span>
-          <div style={{ width: 170 }}><LookupField value={filterCustomer ? Number(filterCustomer) : undefined} loader={loadCustomers} entityLabel="cliente" placeholder="Cliente (todos)" onChange={(code) => { setFilterCustomer(code ? String(code) : ""); setFilterStatus(""); }} /></div>
-          <select className="erp-tselect" style={{ width: 130 }} value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setFilterCustomer(""); }}>
+          <div style={{ width: 170 }}><LookupField value={filterCustomer ? Number(filterCustomer) : undefined} loader={loadCustomers} entityLabel="cliente" placeholder="Cliente (todos)" onChange={(code) => setFilterCustomer(code ? String(code) : "")} /></div>
+          <select className="erp-tselect" style={{ width: 130 }} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
             <option value="">Todos status</option>
             <option value="R">Rascunho</option><option value="P">Confirmado</option><option value="F">Faturado</option><option value="CANCELLED">Cancelado</option>
+          </select>
+          <select className="erp-tselect" style={{ width: 190 }} aria-label="Andamento" value={filterAndamento} onChange={(e) => setFilterAndamento(e.target.value)}>
+            <option value="">Todo andamento</option>
+            <option value="commercial_analysis_status=NOT_ANALYZED">Análise comercial pendente</option>
+            <option value="financial_analysis_status=NOT_ANALYZED">Análise financeira pendente</option>
+            <option value="commercial_analysis_status=REJECTED">Reprovado no comercial</option>
+            <option value="financial_analysis_status=REJECTED">Reprovado no financeiro</option>
+            <option value="conference_status=PENDING">Conferência pendente</option>
+            <option value="conference_status=DIVERGENT">Conferência com divergência</option>
           </select>
           <button className="erp-btn" onClick={aplicarFiltro} disabled={busy}>Aplicar</button>
           <button className="erp-btn" onClick={listarTodos} disabled={busy}>Listar todos</button>
@@ -417,6 +430,8 @@ export function Vvnd0200Page(): JSX.Element {
                 <button className={`erp-tab${tab === "itens" ? " active" : ""}`} onClick={() => setTab("itens")}>Itens ({items.length})</button>
                 <button className={`erp-tab${tab === "comissao" ? " active" : ""}`} onClick={() => setTab("comissao")}>Comissão ({rateioLinhas.length})</button>
                 <button className={`erp-tab${tab === "mrp" ? " active" : ""}`} onClick={() => setTab("mrp")} disabled={isDraft} title={isDraft ? "O pedido entra no MRP depois de confirmado" : undefined}>Atendimento (MRP)</button>
+                <button className={`erp-tab${tab === "entrega" ? " active" : ""}`} onClick={() => setTab("entrega")} disabled={selected.status === "CANCELLED"} title="Reprogramar a data de entrega e ver o histórico de remarcações">Entrega</button>
+                <button className={`erp-tab${tab === "andamento" ? " active" : ""}`} onClick={() => setTab("andamento")} disabled={isDraft} title={isDraft ? "Análise e conferência valem depois de confirmar o pedido" : "Análise comercial e financeira, conferência, atendimento e atraso"}>Andamento</button>
               </div>
               <div className="erp-detail-body">
                 {tab === "dados" && (
@@ -516,6 +531,8 @@ export function Vvnd0200Page(): JSX.Element {
                 )}
 
                 {tab === "mrp" && selected.code && <AtendimentoMrpPanel orderCode={selected.code} />}
+                {tab === "andamento" && selected.code && <AndamentoPedidoPanel pedido={selected} aoMudar={() => void refreshSelected(selected.code!)} />}
+                {tab === "entrega" && selected.code && <ReprogramacaoEntregaPanel orderCode={selected.code} aoReprogramar={() => void refreshSelected(selected.code!)} />}
 
                 {tab === "comissao" && (
                   <div className="erp-fieldset">

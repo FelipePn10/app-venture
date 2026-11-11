@@ -28,7 +28,7 @@ export function SetoresSecao(): JSX.Element {
   const abrirPessoas = (s: Setor) => { setAberto(s.code); setMarcados(s.members.map((m) => m.user_id)); };
   return (<>
     <div className="erp-fieldset" id="setores"><div className="erp-fieldset-head">Setores</div><div className="erp-fieldset-body">
-      <div className="erp-field erp-c12"><small className="erp-hint">O setor é usado como destinatário de alertas e como responsável, em cada grupo do PDM (VITE0114), pelo planejamento e pelas compras dos itens. Troque as pessoas aqui quando alguém sair ou mudar de área.</small></div>
+      <div className="erp-field erp-c12"><small className="erp-hint">O setor é usado como destinatário de alertas e como responsável, em cada grupo do PDM (VITE0116 — Grupos e modificadores), pelo planejamento e pelas compras dos itens. Troque as pessoas aqui quando alguém sair ou mudar de área.</small></div>
       {aviso && <div className={`erp-field erp-c12 erp-feedback ${aviso.tipo}`}>{aviso.texto}</div>}
       <div className="erp-field erp-c3"><label className="erp-label erp-req">Código</label><input className="erp-input" id="setor-codigo" maxLength={60} value={form.code} placeholder="COMPRAS" onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} /></div>
       <div className="erp-field erp-c5"><label className="erp-label erp-req">Nome</label><input className="erp-input" id="setor-nome" maxLength={120} value={form.name} placeholder="Compras de aço" onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>

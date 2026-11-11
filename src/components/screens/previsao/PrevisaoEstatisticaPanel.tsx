@@ -1,0 +1,95 @@
+import { useState } from "react";
+import { type HistoryPoint, type ForecastResult, statisticalForecast } from "@/services/forecastService";
+import { errMessage } from "@/services/fiscalShared";
+import { LookupField } from "@/components/ui/LookupField";
+import { loadItems } from "@/services/lookups";
+import { ExportButton } from "@/components/ui/ExportButton";
+
+type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
+const num = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+
+const SEED: HistoryPoint[] = [
+  { period: "2026-01", quantity: 120 }, { period: "2026-02", quantity: 135 },
+  { period: "2026-03", quantity: 118 }, { period: "2026-04", quantity: 142 }, { period: "2026-05", quantity: 130 },
+];
+
+export function PrevisaoEstatisticaPanel(): JSX.Element {
+  const [itemCode, setItemCode] = useState("");
+  const [periodsAhead, setPeriodsAhead] = useState("3");
+  const [history, setHistory] = useState<HistoryPoint[]>(SEED);
+  const [result, setResult] = useState<ForecastResult | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [busy, setBusy] = useState(false);
+
+  function setH(i: number, patch: Partial<HistoryPoint>) { setHistory((p) => p.map((h, idx) => (idx === i ? { ...h, ...patch } : h))); }
+  function addRow() { setHistory((p) => [...p, { period: "", quantity: 0 }]); }
+  function removeRow(i: number) { setHistory((p) => p.filter((_, idx) => idx !== i)); }
+
+  async function calcular() {
+    const c = itemCode.trim(); const pa = Number(periodsAhead);
+    if (!c) { setFeedback({ type: "error", message: "Informe o código do item." }); return; }
+    const hist = history.filter((h) => h.period.trim());
+    if (hist.length < 2) { setFeedback({ type: "error", message: "Informe ao menos 2 períodos de histórico." }); return; }
+    setBusy(true); setFeedback(null);
+    try {
+      const r = await statisticalForecast({ item_code: c, history: hist, periods: pa || 1 });
+      setResult(r); setFeedback({ type: "success", message: `Modelo selecionado: ${r.model} (MAPE ${num(r.mape_pct)}%).` });
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="erp-aba-corpo">
+
+      <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Item</span>
+          <div className="erp-tlookup"><LookupField value={itemCode || undefined} loader={loadItems} entityLabel="item" placeholder="Selecionar item" onChange={(code) => setItemCode(String(code ?? ""))} /></div>
+          <span className="erp-tgroup-label">Períodos à frente</span>
+          <input className="erp-input" style={{ width: 60, height: 32 }} type="number" value={periodsAhead} onChange={(e) => setPeriodsAhead(e.target.value)} />
+          <button className="erp-btn erp-btn-primary" onClick={() => void calcular()} disabled={busy}>{busy ? "..." : "Prever"}</button></div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Relatório</span>
+          <ExportButton title="VPRE0201 — Previsão Estatística" filename="vpre0201-estatistica" />
+        </div>
+      </div>
+
+      <div className="erp-content">
+        <section className="erp-detail-panel">
+          <div className="erp-detail-body">
+        {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Histórico <button className="erp-btn" onClick={addRow}>+ Período</button></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+          <table className="erp-grid">
+            <thead><tr><th>Período (YYYY-MM)</th><th>Quantidade</th><th style={{ width: 60 }}></th></tr></thead>
+            <tbody>
+              {history.map((h, i) => (
+                <tr key={i}>
+                  <td><input className="erp-input" style={{ height: 30, width: 130 }} value={h.period} placeholder="2026-01" onChange={(e) => setH(i, { period: e.target.value })} /></td>
+                  <td><input className="erp-input num" style={{ height: 30, width: 120 }} type="number" value={h.quantity} onChange={(e) => setH(i, { quantity: Number(e.target.value) })} /></td>
+                  <td><button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => removeRow(i)} disabled={history.length <= 2}>✕</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div></div></div>
+
+        {result && (
+          <>
+            <div className="erp-metrics">
+              <div className="erp-metric"><div className="erp-metric-label">Modelo</div><div className="erp-metric-value" style={{ fontSize: 15 }}>{result.model}</div></div>
+              <div className="erp-metric"><div className="erp-metric-label">MAPE</div><div className="erp-metric-value">{num(result.mape_pct)}%</div></div>
+              <div className="erp-metric"><div className="erp-metric-label">Item</div><div className="erp-metric-value">{result.item_code}</div></div>
+            </div>
+            <div className="erp-fieldset"><div className="erp-fieldset-head">Previsão — <span style={{fontWeight:400,opacity:0.65}}>{result.forecasts.length} período(s)</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+              <table className="erp-grid">
+                <thead><tr><th>Período futuro</th><th>Quantidade prevista</th></tr></thead>
+                <tbody>
+                  {result.forecasts.map((qty, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{`+${i + 1}`}</td><td>{num(qty)}</td></tr>)}
+                </tbody>
+              </table>
+            </div></div></div>
+          </>
+        )}
+      </div></section></div>
+
+    </div>
+  );
+}

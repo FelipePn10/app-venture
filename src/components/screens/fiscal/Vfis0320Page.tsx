@@ -353,7 +353,7 @@ export function Vfis0320Page(): JSX.Element {
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Parâmetros — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body">
           <div className="erp-field erp-c12"><p className="erp-note" style={{ margin: 0 }}>
-            Redução, substituição e diferimento de ICMS (a antiga VFIS0330) ficam aqui, na regra — é a única que a nota usa.
+            Redução, substituição e diferimento de ICMS ficam aqui, na regra — é a única que a nota usa.
             Ordem de precedência: a regra desta tela vence; sem regra, valem as <strong>Tabelas Tributárias (VFIS0110)</strong> — ICMS
             interno da UF, interestadual e IPI/PIS/COFINS do NCM —; e, por último, a alíquota da Configuração Fiscal (VFIS0100).
             Para conferir qual regra vale numa venda, use o <strong>Simulador de Tributação (VFIS0325)</strong>.
@@ -365,7 +365,7 @@ export function Vfis0320Page(): JSX.Element {
               {list.length === 0 && <tr><td colSpan={10} className="erp-grid-empty">Nenhum parâmetro cadastrado.</td></tr>}
               {list.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.id}{p.origem_reducao_id ? <span className="erp-badge erp-badge-gray" title={`Copiada da regra ${p.origem_reducao_id} da antiga VFIS0330`} style={{ marginLeft: 4 }}>da VFIS0330</span> : null}</td><td style={{ fontWeight: 600 }}>{p.uf}</td>
+                  <td>{p.id}{p.origem_reducao_id ? <span className="erp-badge erp-badge-gray" title={`Copiada da regra ${p.origem_reducao_id} do cadastro antigo de redução e substituição`} style={{ marginLeft: 4 }}>migrada</span> : null}</td><td style={{ fontWeight: 600 }}>{p.uf}</td>
                   <td>{p.ncm_code || (p.item_code ? `Item ${p.item_code}` : "—")}</td>
                   <td>{p.operation_type}</td>
                   <td>{p.icms_pct_contrib}</td><td>{p.icms_pct_non_contrib}</td>

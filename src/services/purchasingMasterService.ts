@@ -216,3 +216,16 @@ export async function listInspectionQualityReports(inspectionOrderId: number): P
 export async function unlinkInspectionQualityReport(inspectionOrderId: number, qualityReportId: number): Promise<void> {
   await httpClient.delete(`/api/procurement/receiving-inspection-orders/${inspectionOrderId}/quality-reports/${qualityReportId}`);
 }
+
+// ── Preços das compras para a tabela (VSUP0120) ──
+export async function listPurchasePriceSources(params: { start: string; end: string; supplier_code?: number; table_code?: number; source?: string }): Promise<Obj[]> {
+  const { data } = await httpClient.get('/api/purchase-price-tables/sources', { params });
+  return unwrapArray(data).map(unwrapObject);
+}
+export async function applyPurchasePriceSources(tableCode: number, overwrite: boolean, selections: { source_type: string; source_id: number }[]): Promise<number> {
+  const { data } = await httpClient.post('/api/purchase-price-tables/sources/apply', { table_code: tableCode, overwrite, selections });
+  return Number(unwrapObject(data).applied ?? 0);
+}
+export async function copyPriceAdjustments(sourceItemId: number, targetItemId: number, mode: 'REPLACE' | 'ADD'): Promise<void> {
+  await httpClient.post('/api/purchase-price-tables/items/copy-adjustments', { source_item_id: sourceItemId, target_item_id: targetItemId, mode });
+}

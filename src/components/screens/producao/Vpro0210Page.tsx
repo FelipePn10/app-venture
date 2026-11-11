@@ -1,7 +1,8 @@
+import { PrioridadesOrdemPanel } from "./PrioridadesOrdemPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type GanttBar, type GanttBoard, type GanttEntry, type GanttGroupBy, type RescheduleResult,
-  SEQUENCE_DIRECTIONS, exportGanttMonth, ganttByOrder, ganttByWorkCenter, ganttMonth, rescheduleGantt, sequenceAps,
+  SEQUENCE_DIRECTIONS, exportGanttMonth, exportSequencingEventsCsv, getSequencingSettings, saveSequencingSettings, listSequencingResources, type SequencingResource, ganttByOrder, ganttByWorkCenter, ganttMonth, rescheduleGantt, sequenceAps,
 } from "@/services/apsService";
 import { downloadBlob } from "@/services/fileDownload";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -11,6 +12,7 @@ import { ApsGanttBoard } from "./crp/ApsGanttBoard";
 import { type Aba, Abas, Aviso, Cabecalho, Kpis, Painel, Rodape, Selo, Vazio } from "../planejamento/planUi";
 import { dataHora, horas, num } from "../planejamento/planFormat";
 import { useAcao } from "../planejamento/planHooks";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * APS — sequenciamento das ordens nos centros e o quadro (Gantt).
@@ -64,6 +66,25 @@ export function Vpro0210Page(): JSX.Element {
   const [rem, setRem] = useState({ sequencia: "", inicio: "", centro: undefined as number | undefined, cascata: true });
   const [resultadoRem, setResultadoRem] = useState<RescheduleResult | null>(null);
   const [centros, setCentros] = useState<Map<number, string>>(new Map());
+
+  // Parâmetros do sequenciamento (eram a rotina genérica VAPS0600): ver é de
+  // todos, trocar é do administrador (a rota de gravação exige ADMIN).
+  const isAdmin = useAuthStore((s) => s.user?.role?.toUpperCase() === "ADMIN");
+  const [soAtivos, setSoAtivos] = useState<boolean | null>(null);
+  const [verParametros, setVerParametros] = useState(false);
+  const [recursos, setRecursos] = useState<SequencingResource[]>([]);
+  const abrirParametros = () => run(async () => {
+    const [p, r] = await Promise.all([getSequencingSettings(), listSequencingResources()]);
+    setSoAtivos(p.list_only_active_resources); setRecursos(r); setVerParametros(true);
+  });
+  const gravarParametro = (v: boolean) => run(async () => {
+    await saveSequencingSettings(v); setSoAtivos(v); setRecursos(await listSequencingResources());
+    setFeedback({ type: "success", message: "Parâmetro do sequenciamento gravado." });
+  });
+  const exportarEventos = () => run(async () => {
+    downloadBlob(await exportSequencingEventsCsv(), `aps-eventos-${diaLocal(new Date())}.csv`);
+    setFeedback({ type: "success", message: "Eventos do sequenciamento exportados em CSV." });
+  });
 
   const nomeCentro = useCallback((id?: number) => (id ? centros.get(id) ?? `Centro ${id}` : "—"), [centros]);
 
@@ -163,7 +184,11 @@ export function Vpro0210Page(): JSX.Element {
           <button className="erp-btn erp-btn-primary" onClick={() => void sequenciar()} disabled={busy}>{busy && <span className="erp-spin" />}Sequenciar ordens</button>
         </div>
         <div className="erp-tspacer" />
-        <div className="erp-tgroup"><ExportButton title="VPRO0210 — APS (Sequenciamento e Gantt)" filename="vpro0210" /></div>
+        <div className="erp-tgroup">
+          <button className="erp-btn" onClick={() => void abrirParametros()} disabled={busy}>Parâmetros</button>
+          <button className="erp-btn" onClick={() => void exportarEventos()} disabled={busy} title="Início e fim de cada operação programada, em planilha">Exportar eventos (CSV)</button>
+          <ExportButton title="VPRO0210 — APS (Sequenciamento e Gantt)" filename="vpro0210" />
+        </div>
       </div>
 
       <div className="erp-content">
@@ -171,6 +196,26 @@ export function Vpro0210Page(): JSX.Element {
           <Abas abas={ABAS} ativa={aba} onChange={setAba} />
           <div className="erp-detail-body">
             <Aviso feedback={feedback} busy={busy} />
+            {verParametros && soAtivos !== null && (
+              <div className="erp-fieldset">
+                <div className="erp-fieldset-head">Parâmetros do sequenciamento</div>
+                <div className="erp-fieldset-body">
+                  <div className="erp-field erp-c9">
+                    <label className="erp-check"><input type="checkbox" checked={soAtivos} disabled={busy || !isAdmin} onChange={(e) => void gravarParametro(e.target.checked)} /> Listar só as máquinas ativas como recursos do sequenciamento</label>
+                    <span className="erp-field-hint">{isAdmin ? "Desligado, as máquinas inativas também aparecem na lista de recursos abaixo." : "Somente o administrador altera este parâmetro."}</span>
+                  </div>
+                  <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={() => setVerParametros(false)}>Fechar</button></div>
+                  <div className="erp-field erp-c12"><table className="erp-grid">
+                    <thead><tr><th>Máquina</th><th>Centro de trabalho</th><th>Situação</th></tr></thead>
+                    <tbody>
+                      {recursos.length === 0 && <tr><td colSpan={3} className="erp-grid-empty">Nenhuma máquina ligada a um centro de trabalho.</td></tr>}
+                      {recursos.map((r) => <tr key={r.id}><td>{r.code} · {r.name}</td><td>{nomeCentro(r.work_center_id)}</td><td>{r.is_active ? "Ativa" : "Inativa"}</td></tr>)}
+                    </tbody>
+                  </table></div>
+                </div>
+              </div>
+            )}
+            {verParametros && <PrioridadesOrdemPanel />}
 
             {aba === "quadro" && (<>
               <Painel titulo="Período">

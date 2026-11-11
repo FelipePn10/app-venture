@@ -12,6 +12,7 @@ import { type CfgItemCharacteristic, listItemQuestions } from "@/services/config
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadCustomers, loadItemClassifications, loadSalesDivisions } from "@/services/lookups";
 import { errMessage } from "@/services/fiscalShared";
+import { MotivosRestricaoPanel, RestricoesDoClientePanel } from "./MotivosERestricoesDoCliente";
 
 /**
  * Restrições e dependências (FENG0116 no FoccoERP).
@@ -70,6 +71,7 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
   const [auditoria, setAuditoria] = useState<RestrictionEvaluation | null>(null);
   const [respostasAudit, setRespostasAudit] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
+  const [apoio, setApoio] = useState(false);
 
   const executar = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -430,6 +432,14 @@ export function RestricoesTab({ aviso, itemCode, onItemChange }: Props): JSX.Ele
             </div>
           </div>
         </div>
+
+        <div className="cfgw-actions" style={{ margin: "4px 0 8px" }}>
+          <button className="erp-btn erp-btn-sm" onClick={() => setApoio((v) => !v)}>{apoio ? "Fechar motivos e consulta por cliente" : "Motivos e consulta por cliente"}</button>
+        </div>
+        {apoio && <>
+          <MotivosRestricaoPanel aviso={aviso} onMudou={() => void listRestrictionReasons().then(setMotivos)} />
+          <RestricoesDoClientePanel aviso={aviso} />
+        </>}
       </div>
     </section>
   );

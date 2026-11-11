@@ -1,3 +1,4 @@
+import { RelatorioChamadosPanel } from "./RelatorioChamadosPanel";
 import { useState, useCallback, useEffect } from "react";
 import { type Garantia, ROTULO_ORIGEM_GARANTIA, consultarGarantia } from "@/services/posVendaService";
 import {
@@ -13,7 +14,7 @@ import { loadItems, loadCustomers, loadEstablishments, loadPaymentConditions, lo
 import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type View = "calls" | "aux";
+type View = "calls" | "aux" | "relatorio";
 const today = () => hojeLocal();
 
 const STATUS_META: Record<string, { label: string; badge: string }> = {
@@ -33,6 +34,9 @@ const EMPTY_ITEM: TACallItemDTO = { sequence: 1, item_code: "", quantity: 1, war
 export function Vatc0280Page(): JSX.Element {
   const [view, setView] = useState<View>("calls");
   const [calls, setCalls] = useState<TACallDTO[]>([]);
+  const [fStatus, setFStatus] = useState("");
+  const [fTexto, setFTexto] = useState("");
+  const visiveis = calls.filter((c) => (!fStatus || c.status === fStatus) && (!fTexto.trim() || `${c.subject} ${c.consumer_name ?? ""} ${c.call_number ?? c.code} ${c.customer_code}`.toLowerCase().includes(fTexto.trim().toLowerCase())));
   const [selected, setSelected] = useState<TACallDTO | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<TACallDTO>(EMPTY_CALL);
@@ -245,6 +249,7 @@ export function Vatc0280Page(): JSX.Element {
         <div className="erp-tgroup">
           <button className={`erp-btn${view === "calls" ? " erp-btn-dark" : ""}`} onClick={() => setView("calls")} disabled={busy}>Chamados</button>
           <button className={`erp-btn${view === "aux" ? " erp-btn-dark" : ""}`} onClick={() => setView("aux")} disabled={busy}>Grupos · Motivos · Responsáveis</button>
+          <button className={`erp-btn${view === "relatorio" ? " erp-btn-dark" : ""}`} onClick={() => setView("relatorio")} disabled={busy}>Relatório</button>
         </div>
         {view === "calls" && <><span style={{ color: "var(--v-text-3)" }}>|</span><div className="erp-tgroup"><button className="erp-btn erp-btn-primary" onClick={novoChamado} disabled={busy}>Novo chamado</button><button className="erp-btn" onClick={() => carregarChamados()} disabled={busy}>Atualizar</button></div></>}
         <div className="erp-tspacer" />
@@ -254,15 +259,21 @@ export function Vatc0280Page(): JSX.Element {
       <div className="erp-content">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
 
+        {view === "relatorio" && <div className="erp-detail-body"><RelatorioChamadosPanel /></div>}
         {view === "calls" && (
           <div className="erp-main vatc-calls-main">
             <div className="erp-list-panel">
+              {/* Filtros (eram a VATC0480 — Consulta de Chamados). */}
+              <div style={{ display: "flex", gap: 6, padding: 6 }}>
+                <select className="erp-tselect" aria-label="Situação" value={fStatus} onChange={(e) => setFStatus(e.target.value)}><option value="">Todas as situações</option>{Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+                <input className="erp-tinput" style={{ flex: 1, minWidth: 0 }} placeholder="Assunto, consumidor, nº ou cliente" value={fTexto} onChange={(e) => setFTexto(e.target.value)} />
+              </div>
               <div className="erp-grid-wrap">
                 <table className="erp-grid vatc-call-list-grid">
                   <thead><tr><th className="num">Nº</th><th className="num">Cliente</th><th>Assunto</th><th>Status</th></tr></thead>
                   <tbody>
-                    {calls.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">Nenhum chamado.</td></tr>}
-                    {calls.map((c) => (
+                    {visiveis.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">{calls.length ? "Nenhum chamado com os filtros." : "Nenhum chamado."}</td></tr>}
+                    {visiveis.map((c) => (
                       <tr key={c.code} onClick={() => abrirDetalhe(c.code)} className={selected?.code === c.code ? "erp-row-sel" : ""} style={{ cursor: "pointer" }}>
                         <td className="num">{c.call_number ?? c.code}</td><td className="num">{c.customer_code}</td><td><span className="vatc-subject-ellipsis" title={c.subject}>{c.subject}</span></td><td>{badge(c.status)}</td>
                       </tr>

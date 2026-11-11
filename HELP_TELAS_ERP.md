@@ -66,7 +66,7 @@ CLIENTE → Orçamento (VVND0300) → Pedido de Venda (VVND0200)
                                        NF-e de Saída (VFIS0200) ◄─────┘
                                        │ autorizar: baixa estoque, contas a receber, pedido faturado
                                        ▼
-                         Romaneio / Carga (VEXP0100 / VEXP0110) → ENTREGA
+                         Romaneio / Carga (VEXP0100)              → ENTREGA
 ```
 
 Quase toda seta é automática: confirmar o pedido gera a demanda do MRP e reserva o
@@ -156,49 +156,35 @@ regra de cada linha.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VENT0100](#vent0100--consulta-de-pedido-de-venda) | Consulta de Pedido de Venda | Consultar todos os pedidos de vendas. |
 | [VCST0202](#vcst0202--tabelas-de-venda-e-preços-por-item) | Tabelas de Venda e Preços por Item | Criar tabelas de venda, vincular itens, manter preços, unidades, vigência e políticas comerciais. |
 | [VVND0100](#vvnd0100--divisão-de-vendas) | Divisão de Vendas | Cadastrar divisões de vendas (equipe/região/unidade) associáveis ao pedido. |
 | [VVND0200](#vvnd0200--pedido-de-venda) | Pedido de Venda | Gerir pedidos de venda: capa, itens, confirmação (crédito/reserva/demanda), bloqueio e cancelamento (R→P→F). |
 | [VVND0300](#vvnd0300--orçamento-de-venda) | Orçamento de Venda | Registrar propostas comerciais (capa + itens), acompanhar carteira, liberar/bloquear, cancelar/descancelar com motivo, atender, anexar documentos, gerar DAV/Pré-Venda e converter o saldo aberto em pedido de venda. |
-| [VVND0310](#vvnd0310--parâmetros-de-orçamento) | Parâmetros de Orçamento | Configurar por empresa os rótulos dos campos comerciais, cliente consumidor final, padrão NFC-e, frete CIF mínimo e redespacho, além dos padrões de comissão e motivos de cancelamento usados no VVND0300. |
 | [VVND0400](#vvnd0400--representantes) | Representantes | Cadastrar vendedores/gerentes/prepostos: dados, documento, território, comissão, tipos, pastas (empresas, telefones, e-mails), bloqueio, relatório cadastral e ficha de acompanhamento. |
 | [VVND0500](#vvnd0500--metas-de-vendas) | Metas de Vendas | Definir metas comerciais por período, representante e cliente (valor/quantidade), acompanhar previsto × realizado, premiação e saldos excedentes. |
 | [VSAC0100](#vsac0100--atendimento-ao-consumidor-sac) | Atendimento ao Consumidor (SAC) | Centralizar consumidores finais, chamados de SAC (recebido/efetuado/garantia), reclamações com sintomas, visitas técnicas, retornos e indicadores. |
 | [VDPR0100](#vdpr0100--promessa-de-entrega--ocupação-e-reservas) | Promessa de Entrega — Ocupação e Reservas | Consultar ocupação diária de tanque/setor, criar/simular reserva comercial de capacidade, expirar reservas vencidas e reprogramar datas de entrega em lote. |
-| [VEXR0100](#vexr0100--reprogramação-de-entrega) | Reprogramação de Entrega | Registrar e consultar reprogramações de data de entrega por pedido (data original × nova × motivo). |
-| [VRES0100](#vres0100--motivos-de-restrição) | Motivos de Restrição | Cadastro de motivos usados nas restrições comerciais e de configuração. |
-| [VVND0600](#vvnd0600--workflow-do-pedido-de-venda) | Workflow do Pedido de Venda | Análise, atendimento, conferência e atrasos. |
-| [VVND0610](#vvnd0610--reajuste-de-venda-recorrente) | Reajuste de Venda Recorrente | Recalcular e justificar o reajuste de um contrato recorrente. |
 | [VVND0700](#vvnd0700--devolução-de-venda) | Devolução de Venda | Devolução do cliente pela NF de venda: NF-e de entrada própria ou NF do cliente, estoque de volta, abatimento, crédito, comissão e séries. |
 | [VVND0710](#vvnd0710--contrato-de-venda) | Contrato de Venda | Contrato de fornecimento com o cliente: itens com preço fixado, teto, vigência, programação e pedidos de chamada pelo saldo. |
-| [VCLI0600](#vcli0600--manutenção-avançada-de-preços-de-venda) | Manutenção Avançada de Preços de Venda | Consultar histórico, alterar linhas e gerar preços por política. |
-| [VREP0600](#vrep0600--complementos-do-representante) | Complementos do Representante | Segmentos, planos, interesses e correspondência. |
 
 **[PDV / Pedidos](#pdv--pedidos)** — Acompanhamento da carteira, políticas de desconto e frete, vendas recorrentes e comissões.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VPDV0253](#vpdv0253--console-de-acompanhamento-de-pedidos) | Console de Acompanhamento de Pedidos | Visão completa dos pedidos de venda em aberto e sua situação. |
 | [VPDV0108](#vpdv0108--cadastro-de-política-comercial-de-descontos) | Cadastro de Política Comercial de Descontos | Cadastrar políticas comerciais de descontos com prioridades, sequências e validade. |
 | [VPDV0111](#vpdv0111--cadastro-de-política-comercial-de-fretes) | Cadastro de Política Comercial de Fretes | Determinar valor do frete/seguro com base em critérios definidos pela transportadora. |
 | [VVRE0200](#vvre0200--console-de-vendas-recorrentes) | Console de Vendas Recorrentes | Visualizar histórico de recorrências ativas e inativas para um cliente/estabelecimento. |
-| [VRE0203](#vre0203--consulta-de-comissões-futuras) | Consulta de Comissões Futuras | Apresentar projeção de recorrências de comissão ativas para um período futuro. |
 
 **[Assistência Técnica](#assistência-técnica)** — Chamados de assistência técnica e os relatórios do atendimento.
 
 | Código | Tela | Para que serve |
 |---|---|---|
 | [VATC0100](#vatc0100--base-instalada) | Base Instalada | Equipamentos por número de série: onde estão, em que nota foram vendidos, instalação, transferência, baixa e histórico. |
-| [VATC0110](#vatc0110--pós-venda-do-item) | Pós-venda do Item | Perfil de pós-venda do item: controle por número de série e máscara de geração da série na entrega da OF. |
 | [VATC0300](#vatc0300--ordem-de-serviço) | Ordem de Serviço | Atendimento do chamado no cliente ou na fábrica: agenda, técnico, horas, peças do estoque, despesas, garantia e faturamento. |
 | [VATC0310](#vatc0310--sla-da-assistência) | SLA da Assistência | Prazo de resposta e de solução do chamado por prioridade e por cliente; painel de chamados em risco e vencidos. |
 | [VATC0320](#vatc0320--recuperação-junto-ao-fornecedor) | Recuperação junto ao Fornecedor | Cobrar do fornecedor o custo da garantia de componente com falha: reclamação, aceite ou recusa e ressarcimento. |
 | [VATC0400](#vatc0400--indicadores-do-pós-venda) | Indicadores do Pós-venda | Custo da garantia por item, defeito e lote, recuperado de fornecedores, taxa de falha, MTBF, SLA cumprido e tempo de atendimento. |
 | [VATC0280](#vatc0280--cadastro-de-chamados) | Cadastro de Chamados | Cadastrar chamados com dados do consumidor, tipo, garantia, motivo, responsável e posição. |
-| [VATC0480](#vatc0480--consulta-de-chamados) | Consulta de Chamados | Consultar chamados cadastrados por diversos filtros como tipo, data, grupo, motivo, consumidor, responsável e situação. |
-| [VATC0380](#vatc0380--relatório-de-chamados) | Relatório de Chamados | Listar chamados com opções de filtro por data, UF, cidade, consumidor, responsável, tipo, grupo, motivo, posição e situação. |
-| [VSAC0200](#vsac0200--relatórios-e-anexos-do-atendimento) | Relatórios e Anexos do Atendimento | Etiquetas, relatórios e documentos do chamado. |
 
 **[Garantia](#garantia)** — Devolução de garantia (RMA) ligada ao chamado.
 
@@ -210,12 +196,7 @@ regra de cada linha.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VCLI0202](#vcli0202--cadastro-de-percentuais-de-frete-por-cliente) | Cadastro de Percentuais de Frete Por Cliente | Cadastrar percentuais de frete por cliente e estabelecimentos. |
-| [VCLI0117](#vcli0117--cadastro-de-permissões-e-restrições-de-venda) | Cadastro de Permissões e Restrições de Venda | Restringir ou permitir a venda de itens ou classificação fiscal para clientes, estabelecimentos ou representantes. |
 | [VCLI0500](#vcli0500--cadastro-de-cliente) | Cadastro de Cliente | Cadastrar clientes (matriz/filiais), dados fiscais, apoios vinculados, endereços, contatos e bloqueio/desbloqueio. |
-| [VCLI0510](#vcli0510--apoio-de-cliente--básico) | Apoio de Cliente — Básico | Manter os cadastros de apoio básicos: região, segmento de mercado, tipo de contato, tipo de cliente, portador e grupo de portadores. |
-| [VCLI0520](#vcli0520--apoio-de-cliente--comercial) | Apoio de Cliente — Comercial | Manter condições de pagamento (com parcelas) e tabelas de vendas usadas pelo pedido de venda. |
-| [VCLI0530](#vcli0530--apoio-de-cliente--fiscal) | Apoio de Cliente — Fiscal | Manter tipos de nota fiscal de saída e tipos de imposto (composição de base de cálculo) padrão do cliente. |
 
 **[Custos / Precificação](#custos--precificação)** — Custo-padrão do produto e margem de contribuição.
 
@@ -231,38 +212,14 @@ regra de cada linha.
 | Código | Tela | Para que serve |
 |---|---|---|
 | [VDES0100](#vdes0100--desenhos-técnicos) | Desenhos Técnicos | Cadastrar desenhos (código/dígito/formato), revisões com vigência/aprovação e características. |
-| [VBOM0100](#vbom0100--cabeçalhos-de-estrutura-bom) | Cabeçalhos de Estrutura (BOM) | Versão, tipo de estrutura de engenharia/fabricação e situação por item. |
-| [VPME0102](#vpme0102--parâmetros-de-promessa-de-entrega) | Parâmetros de Promessa de Entrega | Configurar os parâmetros globais do módulo de promessa de entrega. |
 | [VPME0102ITE](#vpme0102ite--calendário-de-promessa-de-entrega-por-item) | Calendário de Promessa de Entrega por Item | Cadastrar dias úteis e não úteis para enchimento de tanques por item e máscara. |
-| [VITM0100](#vitm0100--item--prontidão-para-o-mrp) | Item & Prontidão para o MRP | Listar itens, cadastrar (pastas PDM/Almox/Engenharia/Planejamento) e validar a prontidão para o MRP (checklist de BOM/roteiro/fornecedor/conversão) + estrutura. |
-| [VMAQ0101](#vmaq0101--tipos-de-máquina) | Tipos de Máquina | Cadastrar categorias de equipamento (corte, dobra, solda, pintura, torno…). |
 | [VMAQ0200](#vmaq0200--máquinas-tempos-e-cálculo) | Máquinas, Tempos e Cálculo | Cadastrar máquinas (capacidade/eficiência), tempos por item × máquina, agenda e calcular o tempo de produção (ciclos, setup, gargalo). |
-| [VENT0108](#vent0108--calendário-financeiro) | Calendário Financeiro | Manutenção dos dias não úteis do calendário financeiro. |
 | [VENT0200](#vent0200--cadastro-de-itens) | Cadastro de Itens | Cadastro e manutenção de itens do estoque. |
 | [VENT0250](#vent0250--governança-do-cadastro) | Governança do Cadastro | Liberação do cadastro do item por área, campos obrigatórios, bloqueio, descontinuação com substituto e histórico campo a campo. |
 | [VENT0210](#vent0210--cadastro-de-estrutura-de-produtos) | Cadastro de Estrutura de Produtos | Realize o cadastro das estruturas dos produtos. |
-| [VENT0204](#vent0204--cadastro-de-grupo) | Cadastro de Grupo | Cadastro e manutenção de grupos do PDM. |
 | [VENT0202](#vent0202--roteiro-de-fabricação) | Roteiro de Fabricação | Roteiros dos itens, modelos de roteiro e biblioteca de operações. |
-| [VENT0363](#vent0363--relatório-de-tempo-de-centro-de-trabalho) | Relatório de Tempo de Centro de Trabalho | Listar os tempos de fabricação por centro de trabalho. |
-| [VENG0204](#veng0204--cadastro-de-regras-de-variáveis-equivalentes) | Cadastro de Regras de Variáveis Equivalentes | Cadastrar regras para itens configurados conforme a configuração do item pai. |
-| [VITE0313](#vite0313--geração-de-máscara-para-itens-configurados) | Geração de Máscara para Itens Configurados | Gerar combinações válidas de itens configurados para novas máscaras. |
-| [VITE0114](#vite0114--cadastro-de-grupos-pdm) | Cadastro de Grupos (PDM) | Cadastrar grupos para a Padronização da Descrição dos Materiais. |
-| [VITE0115](#vite0115--cadastro-de-modificadores-pdm) | Cadastro de Modificadores (PDM) | Cadastrar modificadores referentes aos grupos do PDM. |
 | [VITE0116](#vite0116--padrão-descritivo-pdm) | Padrão Descritivo (PDM) | Modificadores de cada grupo e modelo de atributos que gera a descrição técnica do item. |
-| [VITE0118](#vite0118--cadastro-de-regras-de-itens-configurados) | Cadastro de Regras de Itens Configurados | Cadastrar regras para itens configurados e definir onde estas regras devem ser executadas. |
-| [VITE0129](#vite0129--recarga-de-descrições-de-itens-configurados) | Recarga de Descrições de Itens Configurados | Recarregar e renderizar descrições configuradas usando as regras vigentes. |
 | [VCFG0100](#vcfg0100--conjuntos-e-variáveis-do-configurador) | Conjuntos e Variáveis do Configurador | Conjuntos de respostas, variáveis, máscaras e traduções. |
-| [VCFG0200](#vcfg0200--características-do-configurador) | Características do Configurador | Tipos, fórmulas, limites, idiomas e itens de recebimento. |
-| [VCFG0300](#vcfg0300--características-por-item) | Características por Item | Ordenação e comportamento das características de cada item configurável. |
-| [VCFG0400](#vcfg0400--geração-de-máscaras-configuradas) | Geração de Máscaras Configuradas | Geração individual ou cartesiana de máscaras por respostas. |
-| [VCFG0500](#vcfg0500--descrições-configuradas) | Descrições Configuradas | Tipos, linhas e renderização de descrições de itens configurados. |
-| [VCFG0600](#vcfg0600--regras-do-configurador) | Regras do Configurador | Regras equivalentes pai-filho e regras de preenchimento do item. |
-| [VENG0300](#veng0300--cabeçalho-e-revisão-de-estrutura-bom) | Cabeçalho e Revisão de Estrutura BOM | Versão, efetividade e status da estrutura do produto. |
-| [VENG0400](#veng0400--desenhos-e-revisões) | Desenhos e Revisões | Desenhos, revisões, distribuição, características e parâmetros fabris. |
-| [VENG0500](#veng0500--estruturas-avançadas) | Estruturas Avançadas | Manutenção, explosão e onde-usado de estruturas. |
-| [VMAQ0300](#vmaq0300--tempos-e-programação-de-máquina) | Tempos e Programação de Máquina | Tempos produtivos e agenda da máquina. |
-| [VENG0600](#veng0600--rede-de-precedência-do-roteiro) | Rede de Precedência do Roteiro | Manter dependências e sobreposição entre operações do roteiro. |
-| [VENG0610](#veng0610--seriais-físicos-de-ferramentas) | Seriais Físicos de Ferramentas | Consultar e manter instâncias serializadas de ferramentas. |
 
 **[Produção](#produção)** — Ordem de produção, capacidade (CRP), sequenciamento (APS), plano de corte, ferramentas e paradas.
 
@@ -270,30 +227,16 @@ regra de cada linha.
 |---|---|---|
 | [VPRO0200](#vpro0200--crp--capacity-requirements-planning) | CRP — Capacity Requirements Planning | Calcular carga por centro de trabalho/dia e identificar sobrecargas de um plano MRP. |
 | [VPRO0210](#vpro0210--aps--sequenciamento--gantt) | APS — Sequenciamento / Gantt | Sequenciar ordens em capacidade finita (EDD) e visualizar o Gantt por ordem/centro. |
-| [VPRO0300](#vpro0300--custo-padrão) | Custo Padrão | Calcular o custo padrão (material + operação + overhead) com rollup multinível. |
-| [VPRO0400](#vpro0400--qualidade--pontos-de-inspeção) | Qualidade — Pontos de Inspeção | Cadastrar pontos de inspeção (recebimento/processo/final) e registrar laudos. |
-| [VPRO0500](#vpro0500--manutenção-preventiva) | Manutenção Preventiva | Planos de manutenção e ordens (PLANNED→IN_PROGRESS→DONE); horas descontadas no CRP. |
-| [VPRO0600](#vpro0600--previsão-estatística) | Previsão Estatística | Prever demanda com modelos estatísticos (Holt-Winters, suavização, média móvel) — menor MAPE. |
-| [VPRO0700](#vpro0700--alertas-de-exceções-mrp) | Alertas de Exceções MRP | Consolidar e notificar exceções do MRP via webhook e/ou e-mail. |
-| [VPRO0800](#vpro0800--restrições-e-configurador) | Restrições e Configurador | Definir regras de validade de combinações de atributos e avaliá-las com um contexto. |
 | [VCUT0100](#vcut0100--plano-de-corte) | Plano de Corte | Otimizar aproveitamento de matéria-prima (nesting 1D/2D/true-shape): demanda, estoque, otimizar, firmar (baixa + retalhos), programa, agenda e export SVG/DXF/PDF. |
 | [VPRO0900](#vpro0900--ordem-de-produção) | Ordem de Produção | Gerir a OF: ciclo OPEN→IN_PROGRESS→COMPLETED→CLOSED, apontamentos, consumos (OUT), conclusão (IN+lote), custo real e sucata. |
 | [VPRO1000](#vpro1000--ficha-de-produção-da-ferramenta) | Ficha de Produção da Ferramenta | Vincular a série física de ferramenta em cada operação da OF (substituição com histórico) e cadastrar ferramentas/séries com vida útil. |
-| [VAPS0100](#vaps0100--grupos-e-parâmetros-de-recursos-aps) | Grupos e Parâmetros de Recursos APS | Agrupamento, capacidade, calendário e criticidade de recursos. |
-| [VAPS0200](#vaps0200--calendários-de-máquinas) | Calendários de Máquinas | Intervalos semanais de disponibilidade para capacidade finita. |
-| [VAPS0400](#vaps0400--perfil-de-operadores-aps) | Perfil de Operadores APS | Contatos, funções, supervisão e centros de custo de operadores. |
-| [VAPS0500](#vaps0500--perfil-industrial-de-máquinas) | Perfil Industrial de Máquinas | Preparação, responsáveis, serviços, itens e campos especiais. |
-| [VAPS0600](#vaps0600--cálculo-e-consulta-do-sequenciamento-aps) | Cálculo e Consulta do Sequenciamento APS | Cálculo, recursos, visão, exportação e parâmetros do sequenciamento. |
-| [VPRO1100](#vpro1100--estoque-da-manufatura) | Estoque da Manufatura | Parâmetros de lotes, baixas e endereçamento produtivo. |
 | [VPRO1200](#vpro1200--parada-de-máquina) | Parada de Máquina | Terminal de chão de fábrica: registrar que a máquina parou e que voltou, sem digitar horário. |
 
 **[Manutenção](#manutenção)** — Ordens de manutenção e paradas de máquina.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VMAN0202](#vman0202--apontamento-de-ordens-de-serviço-de-manutenção) | Apontamento de Ordens de Serviço de Manutenção | Realizar movimentações das ordens de serviço de manutenções. |
-| [VMAN0401](#vman0401--consulta-ordens-de-serviço) | Consulta Ordens de Serviço | Listar as ordens de serviço de manutenção realizadas. |
-| [VAPS0300](#vaps0300--paradas-de-máquinas) | Paradas de Máquinas | Indisponibilidades planejadas e emergenciais de recursos. |
+| [VPRO0500](#vpro0500--manutenção-preventiva) | Manutenção Preventiva | Planos de manutenção por máquina, geração das ordens, início e conclusão com as horas de parada (descontadas da capacidade) e ordens por centro de trabalho. |
 
 **[Planejamento](#planejamento)** — MRP, pipeline de planejamento, previsão de vendas, demandas e cargas.
 
@@ -302,23 +245,14 @@ regra de cada linha.
 | [VPLN0100](#vpln0100--pipeline-de-planejamento-mrpcrpaps) | Pipeline de Planejamento (MRP→CRP→APS) | Executar MRP, CRP e APS num único disparo com parecer de viabilidade, e manter parâmetros de planejamento. |
 | [VPLA0102](#vpla0102--demanda-independente) | Demanda Independente | Produzir ou comprar sem pedido de venda: estoque, amostra, feira, consumo interno, assistência, projeto; consumo pela venda e OF direta. |
 | [VMRP0100](#vmrp0100--mrp--planejamento-de-materiais) | MRP — Planejamento de Materiais | Rodar o MRP por plano, analisar sugestões de ordens, firmar (→ Ordem Planejada/OF), perfil MRP por item, exceções e regras configuradas. |
-| [VPRE0101](#vpre0101--tabela-de-apropriação) | Tabela de Apropriação | Determinar o percentual de acomodação dos itens nos dias da semana. |
-| [VPRE0102](#vpre0102--bloqueio-de-previsão-de-vendas) | Bloqueio de Previsão de Vendas | Informar períodos em que as previsões de venda devem estar bloqueadas. |
-| [VPRE0201](#vpre0201--cadastro-da-previsão-de-vendas) | Cadastro da Previsão de Vendas | Cadastrar a previsão de vendas manualmente e dar manutenção nas previsões geradas. |
-| [VPRE0251](#vpre0251--geração-de-previsão-de-vendas) | Geração de Previsão de Vendas | Gerar previsão de vendas com base no histórico de pedidos e/ou faturamento. |
-| [VPRE0301](#vpre0301--listagem-vendas-previsto-x-realizado) | Listagem Vendas Previsto X Realizado | Listar e comparar a previsão de vendas com o realizado por período. |
-| [VPLC0211](#vplc0211--cadastro-de-orientações-de-entrega) | Cadastro de Orientações de Entrega | Incluir informações no romaneio de entrega para orientar o motorista em outras atividades. |
-| [VPLC0200](#vplc0200--montagem-de-carga) | Montagem de Carga | Selecionar pedidos e gerar cargas para faturamento, etiquetas e emissão de notas fiscais por carga. |
-| [VMRP0200](#vmrp0200--pipeline-mrp--crp--aps) | Pipeline MRP → CRP → APS | Execução coordenada do planejamento de materiais, capacidade e sequência. |
-| [VPLA0300](#vpla0300--parâmetros-do-planejamento) | Parâmetros do Planejamento | Parâmetros numerados consumidos pelo MRP e planejamento industrial. |
+| [VPRE0201](#vpre0201--previsão-de-vendas) | Previsão de Vendas | Lançar, gerar (histórico ou estatística) e comparar com o realizado a previsão de vendas; apropriação e bloqueio. |
 | [VPLA0310](#vpla0310--política-de-planejamento-por-item) | Política de Planejamento por Item | Estratégia (consumo pela venda ou sob encomenda), janela de consumo, horizonte firme e tempo de segurança por item ou classificação. |
-| [VCAL0200](#vcal0200--dias-úteis-prometidos-por-item) | Dias Úteis Prometidos por Item | Calendário mensal efetivo da promessa do item. |
 
 **[Suprimento](#suprimento)** — Fornecedores, pedido de compra, solicitação, cotação, contratos, recebimento e serviços de terceiros.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VPCT0100](#vpct0100--tolerâncias-de-pedido-de-compra) | Tolerâncias de Pedido de Compra | Faixas de tolerância de quantidade, preço e total por operação e fornecedor, com bloqueio ou alerta. |
+| [VPCT0100](#vpct0100--parâmetros-de-compras) | Parâmetros de Compras | Tolerâncias de quantidade, preço e total (bloqueio ou alerta) e alçadas de aprovação do pedido de compra. |
 | [VTPS0100](#vtps0100--serviços-de-terceiros) | Serviços de Terceiros | Preços de serviço por item×fornecedor×operação e ordens de serviço (OF→requisição→OC). |
 | [VPDC0200](#vpdc0200--pedido-de-compra) | Pedido de Compra | Pedido de compra completo: capa, itens, alçada, PDF e envio ao fornecedor por e-mail, acompanhamento de entregas, histórico de preço, notas por linha, previsão de pagamentos e sugestões do MRP. |
 | [VSUP0500](#vsup0500--cadastro-de-fornecedor) | Cadastro de Fornecedor | Cadastrar fornecedores/transportadoras: dados, endereço, pastas (telefones/emails/vencimentos/contatos/empresas), SEFAZ, auto-fill CNPJ e bloqueio. |
@@ -328,23 +262,8 @@ regra de cada linha.
 | [VSUP0130](#vsup0130--fornecedor-preferencial-por-item) | Fornecedor Preferencial por Item | Vincular fornecedores a um item com ranking de preferência, código/descrição/UM do item no fornecedor e lead time. |
 | [VSUP0300](#vsup0300--solicitação-de-compra) | Solicitação de Compra | Registrar solicitações de compra (itens com saldo/atendimento) e gerar pedidos agrupando por fornecedor. |
 | [VSUP0400](#vsup0400--cotação-de-compra) | Cotação de Compra | Liberar itens para cotação, registrar preços por fornecedor, selecionar o vencedor e gerar pedidos. |
-| [VCON0200](#vcon0200--cadastro-de-contratos-de-fornecedores) | Cadastro de Contratos de Fornecedores | Cadastrar contratos com fornecedores para acompanhamento de quantidades contratadas e recebidas. |
-| [VCON0400](#vcon0400--consulta-de-contratos-de-fornecedores) | Consulta de Contratos de Fornecedores | Visualizar dados referentes aos contratos de fornecedores. |
-| [VCON0202](#vcon0202--baixa-de-saldo--cancelamento-do-contrato) | Baixa de Saldo / Cancelamento do Contrato | Consumir saldo de linhas do contrato (baixa) e cancelar o contrato via status. |
+| [VCON0200](#vcon0200--contratos-de-fornecedores) | Contratos de Fornecedores | Cadastrar, consultar o saldo, baixar saldo e encerrar contratos com fornecedores. |
 | [VAVR0200](#vavr0200--aviso-de-recebimento) | Aviso de Recebimento | Agendar doca, informar itens esperados, acompanhar conferência e tratar divergências antes da entrada fiscal. |
-| [VVOR0202](#vvor0202--cadastro-de-itens-por-fornecedor) | Cadastro de Itens por Fornecedor | Configurar o cadastro de itens personalizados para cada fornecedor. |
-| [VSUP0610](#vsup0610--alçadas-e-parâmetros-de-compras) | Alçadas e Parâmetros de Compras | Limites de aprovação e parâmetros operacionais de suprimentos. |
-| [VSUP0620](#vsup0620--edi-de-fornecedores) | EDI de Fornecedores | Confirmações eletrônicas de pedidos e divergências de quantidade, preço e prazo. |
-| [VPDC0210](#vpdc0210--consulta-aprovação-e-recebimento-de-pedidos) | Consulta, Aprovação e Recebimento de Pedidos | Consulta operacional, alçada e recebimento físico do pedido de compra. |
-| [VTER0100](#vter0100--preços-de-serviços-de-terceiros) | Preços de Serviços de Terceiros | Preços, vigência, fórmula, reajuste, cópia e histórico. |
-| [VTER0200](#vter0200--ordens-de-serviço-de-terceiros) | Ordens de Serviço de Terceiros | Geração pela OF e acompanhamento de requisição, compra e execução. |
-| [VTER0300](#vter0300--remessas-e-retornos-de-terceiros) | Remessas e Retornos de Terceiros | Movimentos de remessa, retorno, recebimento e ajuste. |
-| [VTER0400](#vter0400--conversões-globais-de-terceiros) | Conversões Globais de Terceiros | Fatores globais de conversão de unidades para terceiros. |
-| [VSUP0640](#vsup0640--registros-operacionais-de-compras) | Registros Operacionais de Compras | Ocorrências normalizadas de compra, recebimento e inspeção. |
-| [VSUP0650](#vsup0650--histórico-de-movimentos-de-compra) | Histórico de Movimentos de Compra | Rastreabilidade consolidada de movimentos por fornecedor e item. |
-| [VSUP0660](#vsup0660--parâmetros-e-contatos-do-fornecedor) | Parâmetros e Contatos do Fornecedor | Configurar regras do fornecedor e complementar contatos persistidos. |
-| [VSUP0670](#vsup0670--itens-e-qualidade-do-fornecedor) | Itens e Qualidade do Fornecedor | Consultar itens e anexar relatórios de qualidade ao vínculo com o fornecedor. |
-| [VSUP0680](#vsup0680--fontes-de-preços-de-compra) | Fontes de Preços de Compra | Selecionar fontes, candidatos e ajustes para tabelas de preços de compra. |
 
 **[Almoxarifado](#almoxarifado)** — Almoxarifados, estoque, inventário, lotes, expedição e o material de terceiros (beneficiamento).
 
@@ -356,22 +275,16 @@ regra de cada linha.
 | [VEST0100](#vest0100--central-de-estoque) | Central de Estoque | Posição e ATP por situação, extrato (kardex), lançamentos com tipo e centro de custo, transferências, requisições ao almoxarifado, reservas, separação, lotes, reposição e análises (giro, cobertura, parados). |
 | [VEST0200](#vest0200--inventário-e-tipos-de-movimento) | Inventário e Tipos de Movimento | Inventário físico com foto do saldo, contagem e recontagem, diferenças valorizadas e fechamento que lança os ajustes; tipos de movimento com as regras do lançamento manual. |
 | [VEST0150](#vest0150--coletor-de-estoque) | Coletor de Estoque | Tela para leitor de código de barras: consulta, separação de ondas, contagem de inventário, movimentação entre endereços e etiquetas. |
-| [VEXP0100](#vexp0100--expedição--romaneio) | Expedição / Romaneio | Montar romaneio de expedição: itens, conferência e despacho (OPEN→SEPARATED→CONFERRED→SHIPPED). |
+| [VEXP0100](#vexp0100--expedição--romaneio) | Expedição / Romaneio | Romaneios (separação, conferência, volumes e despacho) e cargas: montar com os romaneios prontos, caixa de despacho, orientações ao motorista, faturar e despachar. |
 | [VBEN0100](#vben0100--beneficiamento--remessas-e-retorno-fiscal) | Beneficiamento — Remessas e Retorno Fiscal | Receber a NF-e de remessa do cliente (CFOP 5901) ligada ao pedido de beneficiamento, acompanhar o saldo por linha, lançar retorno, sobra e sucata, e faturar numa nota única o serviço (5124) e a devolução do material (5902/5903), com histórico e auditoria. |
 | [VBEN0200](#vben0200--estoque-de-terceiros--material-do-cliente) | Estoque de Terceiros — Material do Cliente | Inventário do material que pertence ao cliente e está em poder da empresa, ordenado pelo prazo fiscal de retorno, e a movimentação de entrada e saída no período. Não entra na valoração do estoque próprio. |
 | [VBEN0300](#vben0300--horas-de-beneficiamento) | Horas de Beneficiamento | Horas trabalhadas nas ordens de fabricação de beneficiamento, por cliente e pedido: apontamentos e horas lançadas nas operações do roteiro. |
-| [VEXP0110](#vexp0110--gestão-de-cargas-de-expedição) | Gestão de Cargas de Expedição | Montagem, liberação, carregamento e despacho de cargas. |
-| [VEXP0120](#vexp0120--instruções-e-caixas-de-despacho) | Instruções e Caixas de Despacho | Orientações de entrega e posições físicas da expedição. |
-| [VEST0400](#vest0400--consultas-de-estoque-por-almoxarifado) | Consultas de Estoque por Almoxarifado | Movimentos e saldos persistidos por almoxarifado. |
 
 **[Importação](#importação)** — Processos de importação e custo nacionalizado.
 
 | Código | Tela | Para que serve |
 |---|---|---|
 | [VIMP0200](#vimp0200--console-de-processos-de-importação) | Console de Processos de Importação | Manutenção e acompanhamento dos processos de importação, centralizando informações em um único local. |
-| [VIMP0102](#vimp0102--conhecimentos-de-transporte-ct-e) | Conhecimentos de Transporte (CT-e) | Cadastrar, consultar e autorizar conhecimentos de transporte (CT-e) vinculáveis às entradas e processos de importação. |
-| [VIMP0101](#vimp0101--status-logístico-da-carga) | Status Logístico da Carga | Acompanhar a situação logística dos processos de importação: aberto, nacionalizado ou cancelado. |
-| [VIMP0300](#vimp0300--importação-e-custo-nacionalizado) | Importação e Custo Nacionalizado | Processos, despesas, rateio e recálculo do custo de importação. |
 
 **[Inspeção](#inspeção)** — Qualidade: lote de inspeção, amostragem NBR 5426, CAPA/8D, metrologia, certificados, documentos e avaliação de fornecedores.
 
@@ -383,17 +296,8 @@ regra de cada linha.
 | [VINS0500](#vins0500--não-conformidades-e-capa8d) | Não conformidades e CAPA/8D | Não conformidades com lote de inspeção, CAPA pelo 8D ou simples (5 porquês, Ishikawa), ações com responsável e prazo e verificação de eficácia. |
 | [VINS0300](#vins0300--lotes-de-inspeção) | Lotes de Inspeção | Lote único de inspeção (recebimento, processo, final): resultados por unidade da amostra, avaliação NBR 5426 e decisão de uso que libera o estoque. |
 | [VINS0110](#vins0110--amostragem-nbr-5426) | Amostragem NBR 5426 | Calculadora da norma, procedimentos de amostragem e severidade (normal, apertada, atenuada) por item e fornecedor. |
-| [VINS0106](#vins0106--cadastro-de-ocorrências) | Cadastro de Ocorrências | Cadastrar ocorrências para itens na inspeção. |
-| [VINS0400](#vins0400--consulta-de-ocorrências--ordens-de-inspeção) | Consulta de Ocorrências / Ordens de Inspeção | Consultar ocorrências cadastradas e ordens de inspeção detalhadas. |
-| [VINS0313](#vins0313--consulta-de-inspeções-de-recebimento) | Consulta de Inspeções de Recebimento | Gerar relatório em Excel com os dados das inspeções de recebimento. |
-| [VINS0200](#vins0200--cadastro-do-roteiro-de-inspeção) | Cadastro do Roteiro de Inspeção | Cadastrar o roteiro de inspeção para itens que serão inspecionados. |
-| [VINS0201](#vins0201--manutenção-das-ordens-de-inspeções) | Manutenção das Ordens de Inspeções | Mostrar e gerenciar ordens que podem ser inspecionadas ou analisadas. |
-| [VINS0206](#vins0206--tratamento-das-ordens-de-inspeção) | Tratamento das Ordens de Inspeção | Analisar quantidades inspecionadas e efetivar a destinação física (aprovado/rejeitado/retrabalho). |
-| [VAVF0101](#vavf0101--cadastro-de-parâmetros-de-avaliação-de-fornecedores) | Cadastro de Parâmetros de Avaliação de Fornecedores | Cadastrar pesos, notas e intervalos de avaliação para o IQF dos fornecedores. |
-| [VAVF0204](#vavf0204--envio-de-iqf-aos-fornecedores) | Envio de IQF aos Fornecedores | Calcular e enviar o IQF aos fornecedores com layout de e-mail personalizado. |
-| [VSUP0600](#vsup0600--inspeção-de-recebimento) | Inspeção de Recebimento | Roteiros, ordens, resultados, análise e destinação de inspeções de compra. |
-| [VAVF0300](#vavf0300--scorecard-e-iqf-do-fornecedor) | Scorecard e IQF do Fornecedor | Cálculo automático, lançamento manual e histórico do IQF. |
-| [VAVF0203](#vavf0203--homologação-de-fornecedores) | Homologação de Fornecedores | Faixas, validade e geração de vínculos de itens do fornecedor. |
+| [VINS0200](#vins0200--cadastro-do-roteiro-de-inspeção) | Cadastro do Roteiro de Inspeção | Roteiro de inspeção de recebimento por item ou classificação e planos de inspeção de processo e final com as características a medir. |
+| [VAVF0300](#vavf0300--avaliação-de-fornecedores) | Avaliação de Fornecedores | IQF calculado do histórico, histórico de avaliações e homologação do fornecedor. |
 
 ### Administrativo & Financeiro
 
@@ -402,13 +306,11 @@ regra de cada linha.
 | Código | Tela | Para que serve |
 |---|---|---|
 | [VFIN0100](#vfin0100--contas-bancárias) | Contas Bancárias | Cadastrar contas bancárias com saldo inicial e chave PIX. |
-| [VFIN0110](#vfin0110--condições-de-pagamento) | Condições de Pagamento | Cadastrar condições de pagamento (parcelas em dias) do módulo financeiro. |
-| [VFIN0120](#vfin0120--plano-de-contas) | Plano de Contas | Manter o plano de contas (tipo/natureza, hierarquia). |
-| [VFIN0130](#vfin0130--centros-de-custo) | Centros de Custo | Cadastrar centros de custo. |
+| [VFIN0110](#vfin0110--condições-de-pagamento) | Condições de Pagamento | A condição de pagamento única (parcelas com percentual e evento) usada por cliente, fornecedor, orçamento, pedido e faturamento. |
+| [VFIN0120](#vfin0120--plano-de-contas-gerencial) | Plano de Contas Gerencial | O plano gerencial (títulos, DRE e rateio), com a conta contábil vinculada a cada conta. |
 | [VFIN0200](#vfin0200--contas-a-pagar) | Contas a Pagar | Lançar, aprovar, baixar e cancelar contas a pagar; rateio e visão por plano de contas; aging. |
 | [VFIN0210](#vfin0210--contas-a-receber) | Contas a Receber | Lançar, baixar e cancelar contas a receber; aging. |
 | [VFIN0300](#vfin0300--fluxo-de-caixa-e-saldos) | Fluxo de Caixa e Saldos | Extrato realizado, projeção de caixa e saldos das contas. |
-| [VFIN0400](#vfin0400--apuração-de-impostos) | Apuração de Impostos | Apurar ICMS/IPI/PIS/COFINS por competência. |
 | [VFIN0500](#vfin0500--relatórios-fiscais-e-financeiros) | Relatórios Fiscais e Financeiros | Relatórios R01–R19 (livros, DRE, aging, curva ABC, produtos). |
 | [VFIN0600](#vfin0600--adiantamentos-de-clientes-e-fornecedores) | Adiantamentos de Clientes e Fornecedores | Registrar, consultar e aplicar antecipações em contas a pagar ou receber. |
 | [VFIN0610](#vfin0610--remessa-bancária-cnab-240) | Remessa Bancária CNAB 240 | Gerar arquivo de remessa CNAB 240 para envio ao banco. |
@@ -428,34 +330,23 @@ regra de cada linha.
 | [VFIS0320](#vfis0320--parâmetros-icmsipi) | Parâmetros ICMS/IPI | Parâmetros básicos de ICMS/IPI por NCM/Item, UF e operação. |
 | [VFIS0325](#vfis0325--simulador-de-tributação) | Simulador de Tributação | Calcular ICMS, IPI, PIS/COFINS, ST e DIFAL de uma venda como a NF-e vai calcular, por cliente, UF, finalidade e tipo de nota — sem gravar nada. |
 | [VFIS0340](#vfis0340--apuração-do-simples-nacional) | Apuração do Simples Nacional | Apuração mensal do Simples Nacional por anexo. |
+| [VFIS0345](#vfis0345--ciap--crédito-do-icms-do-ativo) | CIAP — Crédito do ICMS do Ativo | Bens do ativo imobilizado, parcelas mensais do crédito de ICMS pelo índice das saídas, Bloco G da EFD e crédito no E111. |
 | [VFIS0350](#vfis0350--classificações-fiscais) | Classificações Fiscais | Cadastro de classificação fiscal de mercadorias (NCM/CEST), idiomas e atributos de exportação. |
 | [VFIS0360](#vfis0360--tipos-de-operação-de-entrada) | Tipos de Operação de Entrada | Natureza fiscal das compras, grupos de estado e validação UF×natureza. |
-| [VFIS0500](#vfis0500--motivos-de-transferência-dapi) | Motivos de Transferência DAPI | Cadastrar motivos de transferência usados na DAPI. |
-| [VFIS0510](#vfis0510--códigos-de-ajuste-de-apuração-icms-511) | Códigos de Ajuste de Apuração ICMS (5.1.1) | Códigos de ajuste de apuração ICMS do SPED Fiscal por UF. |
-| [VFIS0520](#vfis0520--códigos-de-ajuste-icms-52535657) | Códigos de Ajuste ICMS (5.2/5.3/5.6/5.7) | Códigos de ajuste ICMS para benefícios, incentivos e estornos. |
-| [VFIS0530](#vfis0530--linhas-de-apuração-de-icms) | Linhas de Apuração de ICMS | Linhas do bloco E do SPED Fiscal (apuração de ICMS). |
-| [VFIS0540](#vfis0540--lançamentos-resumo-de-icms) | Lançamentos Resumo de ICMS | Resumo de ICMS por período/UF/CFOP e notas vinculadas (+ adicionais C197). |
+| [VFIS0510](#vfis0510--tabelas-da-apuração-de-icms) | Tabelas da Apuração de ICMS | Códigos de ajuste (5.1.1 e 5.2 a 5.7), linhas de apuração e motivos de transferência DAPI. |
+| [VFIN0400](#vfin0400--apuração-de-impostos) | Apuração de Impostos | Apurar ICMS/IPI/PIS/COFINS por competência e manter os lançamentos de resumo do ICMS. |
 | [VFIS0550](#vfis0550--restituição--ressarcimento-de-icms-st) | Restituição / Ressarcimento de ICMS ST | Pedidos de restituição/ressarcimento/complementação de ICMS ST. |
 | [VFIS0560](#vfis0560--notas-especiais-de-ajuste) | Notas Especiais de Ajuste | Notas complementares e de ajuste de apuração de ICMS (com itens). |
 | [VNFS0100](#vnfs0100--nfs-e-nota-fiscal-de-serviço) | NFS-e (Nota Fiscal de Serviço) | Emitir, autorizar e cancelar NFS-e (modelo ABRASF via Focus), com cálculo de ISS. |
-| [VFIS0620](#vfis0620--manifestação-e-inutilização-de-nf-e) | Manifestação e Inutilização de NF-e | Transmitir eventos fiscais de destinatário e faixas inutilizadas. |
-| [VFIS0630](#vfis0630--tabela-ibpt) | Tabela IBPT | Importar a tabela oficial e consultar carga tributária por NCM e UF. |
-| [VFIS0640](#vfis0640--faturamento-de-carga-e-danfe) | Faturamento de Carga e DANFE | Gerar NF-e a partir da carga e consultar documentos autorizados. |
 | [VFIS0670](#vfis0670--reforma-tributária-ibscbs) | Reforma Tributária (IBS/CBS) | Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e tabela oficial de classificação tributária. |
-| [VFIS0120](#vfis0120--exclusão-de-tributação-ncm) | Exclusão de Tributação NCM | Remover tributação NCM obsoleta de forma controlada. |
-| [VFIS0660](#vfis0660--consultas-de-parâmetros-fiscais) | Consultas de Parâmetros Fiscais | Consultar cadastros fiscais por chaves e filtros específicos. |
 | [VFIS0600](#vfis0600--sped-efd-icmsipi) | SPED EFD ICMS/IPI | EFD do mês gerada das notas de entrada, saída e CT-e, com a apuração do ICMS e do IPI. |
-| [VFIS0610](#vfis0610--importação-de-nf-e-por-chave) | Importação de NF-e por Chave | Importação da NF-e de compra, baixa do pedido e entrada em estoque. |
 
 **[Contabilidade](#contabilidade)** — Plano contábil, lançamentos, balancete, contabilização automática e ECD.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VCTB0102](#vctb0102--cadastro-de-centro-de-custo) | Cadastro de Centro de Custo | Cadastrar e vincular centros de custo às empresas. |
-| [VUTL0555](#vutl0555--cadastro-de-ufs-e-países) | Cadastro de UFs e Países | Cadastrar Unidades Federativas (com código IBGE) e Países. Municípios não têm cadastro próprio no backend. |
+| [VCTB0102](#vctb0102--centros-de-custo) | Cadastro de Centro de Custo | Cadastrar e vincular centros de custo às empresas. |
 | [VCTB0200](#vctb0200--contabilidade-sped-ecd) | Contabilidade (SPED ECD) | Plano de contas, contas contábeis, lançamentos e balancete (escrituração). |
-| [VCTB0600](#vctb0600--sped-ecd) | SPED ECD | Gerar o arquivo da Escrituração Contábil Digital. |
-| [VUTL0560](#vutl0560--consulta-de-uf-e-região) | Consulta de UF e Região | Localizar UF e região comercial por suas chaves. |
 
 **[Cadastros & Plataforma](#cadastros--plataforma)** — Empresa, funcionários, calendários, acesso, aprovações, alertas e auditoria.
 
@@ -468,86 +359,17 @@ regra de cada linha.
 | [VLOC0100](#vloc0100--localização-países-e-ufs) | Localização (Países e UFs) | Manter países e UFs (base para endereços e regras fiscais). |
 | [VCLA0100](#vcla0100--classificação-de-itens) | Classificação de Itens | Manter máscaras de classificação e a árvore de classificações de itens. |
 | [VCAL0100](#vcal0100--calendário-industrial) | Calendário Industrial | Cadastrar dias úteis/não úteis da fábrica, consumidos pelo planejamento. |
-| [VPRI0100](#vpri0100--prioridade-de-ordens) | Prioridade de Ordens | Cadastrar níveis de prioridade usados pelo APS no sequenciamento. |
 | [VSEC0100](#vsec0100--troca-de-senha) | Troca de Senha | Solicitar a troca da própria senha, acompanhar a aprovação e definir a nova senha; o administrador aprova ou rejeita as solicitações da empresa. |
 | [VAPR0100](#vapr0100--aprovações) | Aprovações | Solicitações por alçada (crédito do pedido, política comercial do orçamento) e políticas de aprovação. |
 | [VADM0200](#vadm0200--perfis-de-acesso) | Perfis de Acesso | Perfis da empresa com permissão por módulo e ação, e os perfis de cada usuário. |
-| [VADM0100](#vadm0100--trilha-de-auditoria) | Trilha de Auditoria | Consulta administrativa de alterações por usuário, rota e período. |
 
 ---
-
-## Telas que mudaram de lugar
-
-Estes códigos antigos ainda abrem — por favoritos, atalhos ou hábito —, mas levam à
-tela nova, que faz o mesmo e mais. Eles não aparecem no menu.
-
-| Código antigo | Era | Agora é |
-|---|---|---|
-| VCON0100 | Tipos de Contratos | **VCON0200** — Cadastro de Contratos de Fornecedores |
-| VEST0300 | Máscaras de Lote e Série | **VLOT0100** — Máscaras de Lote/Série |
-| VFIS0330 | Redução / Substituição / Diferimento de ICMS | **VFIS0320** — Parâmetros ICMS/IPI |
-| VPRO0100 | Roteiro de Fabricação | **VENT0202** — Cadastro do Roteiro de Fabricação |
-| VSUP0510 | Apoio de Fornecedores | **VSUP0500** — Cadastro de Fornecedor |
-| VSUP0630 | Tolerâncias de Pedido de Compra | **VPCT0100** — Tolerâncias de Pedido de Compra |
-| VUSR0100 | Solicitações de Troca de Senha | **VSEC0100** — Troca de Senha |
-
-#### VCON0100 — Tipos de Contratos
-
-Código antigo: abre a [VCON0200 — Cadastro de Contratos de Fornecedores](#vcon0200--cadastro-de-contratos-de-fornecedores).
-
-#### VEST0300 — Máscaras de Lote e Série
-
-Código antigo: abre a [VLOT0100 — Máscaras de Lote/Série](#vlot0100--máscaras-de-lotesérie).
-
-#### VFIS0330 — Redução / Substituição / Diferimento de ICMS
-
-Código antigo: abre a [VFIS0320 — Parâmetros ICMS/IPI](#vfis0320--parâmetros-icmsipi).
-
-#### VPRO0100 — Roteiro de Fabricação
-
-Código antigo: abre a [VENT0202 — Roteiro de Fabricação](#vent0202--roteiro-de-fabricação).
-
-#### VSUP0510 — Apoio de Fornecedores
-
-Código antigo: abre a [VSUP0500 — Cadastro de Fornecedor](#vsup0500--cadastro-de-fornecedor).
-
-#### VSUP0630 — Tolerâncias de Pedido de Compra
-
-Código antigo: abre a [VPCT0100 — Tolerâncias de Pedido de Compra](#vpct0100--tolerâncias-de-pedido-de-compra).
-
-#### VUSR0100 — Solicitações de Troca de Senha
-
-Código antigo: abre a [VSEC0100 — Troca de Senha](#vsec0100--troca-de-senha).
 
 # Comercial & Vendas
 
 ## Comercial
 
 *Orçamento, pedido de venda, representantes, metas, SAC e promessa de entrega.*
-
-#### VENT0100 — Consulta de Pedido de Venda
-
-*Rotina de consulta (console de operações). Não altera o pedido.*
-
-**Para que serve.** Consultar a carteira de pedidos de venda e os itens de um
-pedido sem correr o risco de alterar nada. Para criar, confirmar, bloquear ou
-cancelar, use a **VVND0200**.
-
-**Operações disponíveis.**
-
-| Operação | O que traz |
-|---|---|
-| Consultar | Todos os pedidos da empresa |
-| Abrir pedido | A capa de um pedido (informe o número) |
-| Consultar itens | As linhas do pedido, com quantidade, saldo e situação |
-| Consultar por cliente | Os pedidos de um cliente (informe o código) |
-
-**Dica.** Para filtros combinados (situação, análise, conferência, período),
-use a **VVND0600**; para a visão gerencial com indicadores, a **VPDV0253**.
-
-**Telas relacionadas.** VVND0200 (pedido), VVND0600 (workflow), VPDV0253 (console).
-
----
 
 #### VCST0202 — Tabelas de Venda e Preços por Item
 
@@ -557,7 +379,7 @@ item sem preço ativo em nenhuma tabela não entra no pedido.
 
 **Antes de começar.**
 - Itens cadastrados (VENT0200). Para calcular preço sugerido, o item precisa ter
-  custo (VCUS0100 / VPRO0300).
+  custo (VCUS0100).
 
 **Passo a passo.**
 1. **Nova tabela de venda:** informe descrição, casas decimais, formação do
@@ -565,24 +387,30 @@ item sem preço ativo em nenhuma tabela não entra no pedido.
 2. Selecione a tabela na lista e use **Incluir item na tabela**: item, preço de
    venda, unidade de venda e unidade comercial (com o preço convertido, quando
    são diferentes), situação, disponibilidade, fórmula/referência e observação
-   comercial.
+   comercial. Na grade, **Editar** abre a linha para alterar o preço e
+   **Histórico** mostra cada mudança (de, para, origem e motivo).
 3. **Formação de preço:** escolha tabela e item e clique em **Calcular preço
    sugerido** — custo base + margem % + impostos %, ou o resultado da política
    escolhida.
 4. **Gerar preços em lote:** escolha tabela e política, liste os itens separados
    por vírgula e clique em **Gerar preços**. O sistema grava os preços (inclui ou
    atualiza) e guarda o histórico da alteração.
-5. **Nova política de formação de preço:** fonte de custo, margem, impostos,
-   prioridade e comissão — reutilizável na geração em lote.
+5. **Cabeçalho das tabelas** (botão na barra): o cadastro completo da tabela —
+   vigência, tolerâncias mínima e máxima % (preço abaixo do piso bloqueia o
+   pedido), formação de preço, casas decimais, incoterm, tipo, data base, *permite
+   valor abaixo de R$ 0,01*, *ICMS por dentro* e observação.
+6. **Nova política de formação de preço:** fonte de custo, margem, impostos,
+   prioridade, comissão, **frete**, despesas e desconto — reutilizável na geração em
+   lote. Clique numa política da lista para alterá-la.
 
 **Regras e cuidados.**
 - O preço precisa ser maior que zero.
 - Dados fiscais do produto (NCM, tributação) não ficam aqui: ficam no cadastro
   do item e nas regras fiscais, porque valem para qualquer tabela.
-- O cliente pode ter uma **tabela padrão** (VCLI0500/VCLI0520). Quando o item
+- O cliente pode ter uma **tabela padrão** (VCLI0500). Quando o item
   existe em mais de uma tabela, o pedido pede para escolher a tabela.
 
-**Telas relacionadas.** VCLI0600 (manutenção avançada e histórico), VPDV0108
+**Telas relacionadas.** VPDV0108
 (política de descontos), VVND0200, VVND0300.
 
 ---
@@ -642,8 +470,24 @@ crédito, reserva de estoque, demanda para o MRP, expedição e faturamento.
 6. Aba **Atendimento (MRP):** depois de confirmado, mostra como o MRP vai atender
    cada linha — estoque, ordens firmes, sugestões, o que falta e o que vai chegar
    atrasado. É só consulta; a ação é no MRP (VMRP0100).
-7. O pedido passa a **Faturado (F)** sozinho quando a NF-e de saída é autorizada
+7. Aba **Entrega:** reprograma a data de entrega dos itens. A prévia mostra, por
+   linha, saldo, reservas, demanda, ordens, compras, expedição e faturamento e
+   sugere a nova data. Marque os itens, informe a nova data e o motivo (ou
+   **Aplicar aos marcados**) e **Reprogramar itens marcados**. A nova data tem de
+   ser posterior à atual; item sem saldo ou já faturado não reprograma; é tudo ou
+   nada. Embaixo, o **histórico** de remarcações do pedido. Para vários pedidos de
+   uma vez, use a VDPR0100.
+8. O pedido passa a **Faturado (F)** sozinho quando a NF-e de saída é autorizada
    (VFIS0200).
+
+**Consultar a carteira.** Os filtros se somam: cliente, situação e andamento
+(análise comercial ou financeira pendente ou reprovada, conferência pendente ou
+com divergência). O pedido aberto mostra itens e saldos.
+
+**Aba Andamento.** Depois de confirmado: aprovar ou reprovar a **análise
+comercial** e a **financeira**, marcar a **conferência** (conferido ou com
+divergência), **registrar o atendimento** (com a data) e **registrar o atraso**
+(o que será feito). Toda decisão pede um motivo, que fica no histórico do pedido.
 
 **Bloquear, desbloquear e cancelar.**
 - **Bloquear/Desbloquear:** bloqueio manual ou de crédito. Se a empresa tiver a
@@ -654,8 +498,7 @@ crédito, reserva de estoque, demanda para o MRP, expedição e faturamento.
   cancelados junto. **Não cancela** se algum título já teve recebimento ou se o
   título veio da NF de saída — nesse caso cancele primeiro a nota.
 
-**Telas relacionadas.** VVND0300 (orçamento que vira pedido), VEXR0100
-(reprogramação), VVND0600 (análise, conferência, atraso), VFIS0200 (faturar),
+**Telas relacionadas.** VVND0300 (orçamento que vira pedido), VDPR0100 (reprogramação em lote), VFIS0200 (faturar),
 VEXP0100 (romaneio), VMRP0100.
 
 ---
@@ -666,7 +509,7 @@ VEXP0100 (romaneio), VMRP0100.
 convertê-la em pedido de venda sem redigitar nada.
 
 **Antes de começar.** Cliente (VCLI0500), itens com preço em tabela (VCST0202) e
-os parâmetros do orçamento (VVND0310).
+os parâmetros do orçamento (botão **Parâmetros** da tela).
 
 **Passo a passo.**
 1. **Identificação:** número, estabelecimento, cliente, tipo, representante e
@@ -700,16 +543,8 @@ os parâmetros do orçamento (VVND0310).
 - Com alterações não salvas na capa, as ações de situação ficam travadas (elas
   recarregam o registro e perderiam o que foi digitado).
 
-**Telas relacionadas.** VVND0310, VVND0200, VCST0202.
-
----
-
-#### VVND0310 — Parâmetros de Orçamento
-
-**Para que serve.** Configurar, por empresa, as regras de apoio do orçamento de
-venda. Qualquer usuário consulta; só administrador grava.
-
-**O que se configura.**
+**Parâmetros (botão da tela).** As regras de apoio do orçamento, por empresa.
+Qualquer usuário consulta; só administrador grava.
 - **Rótulos dos campos comerciais:** como chamar os campos "ordem de compra" e
   "autorização de entrega".
 - **NFC-e e consumidor final:** cliente consumidor final padrão, padrão NFC-e e
@@ -721,10 +556,10 @@ venda. Qualquer usuário consulta; só administrador grava.
 - **Motivos de cancelamento:** código, descrição e os indicadores **D** (permite
   descancelar) e **C** (exige complemento).
 
-**Botões.** *Salvar parâmetros*, *Restaurar padrões* (volta aos valores do
-sistema), *Gravar padrão*, *Gravar motivo*.
+*Salvar parâmetros*, *Restaurar padrões* (volta aos valores do sistema), *Gravar
+padrão* e *Gravar motivo*. **Voltar aos orçamentos** retorna à lista.
 
-**Telas relacionadas.** VVND0300.
+**Telas relacionadas.** VVND0200, VCST0202.
 
 ---
 
@@ -742,6 +577,9 @@ atuam (com a comissão padrão de cada uma) e os contatos.
 3. Aba **Empresas:** vincule cada estabelecimento em que ele vende, com a
    **comissão padrão %**. É essa comissão que o orçamento e o pedido usam.
 4. Aba **Contatos:** telefones (DDD + número) e e-mails.
+5. Aba **Complementos:** segmentos de mercado, planos de venda, interesses
+   (classificações de item), endereços de correspondência e as contas da
+   contabilização da comissão (gerada e estornada) da empresa atual.
 
 **Ações.** *Bloquear* (pede motivo — o representante sai dos seletores de novas
 operações), *Desbloquear*, *Relatório* (cadastral), *Relatório individual* e
@@ -751,8 +589,7 @@ operações), *Desbloquear*, *Relatório* (cadastral), *Relatório individual* e
 a empresa do usuário: um representante só aparece na empresa em que está
 vinculado.
 
-**Telas relacionadas.** VREP0600 (segmentos, planos, endereços), VRE0203
-(comissões futuras), VVND0500 (metas).
+**Telas relacionadas.** VVRE0200 (comissões futuras), VVND0500 (metas).
 
 ---
 
@@ -773,7 +610,7 @@ previsto × realizado.
    - **Saldo de meta:** o que sobra ou falta vai para o próximo período.
 5. **Relatório:** previsto × realizado.
 
-**Telas relacionadas.** VVND0400, VPRE0301.
+**Telas relacionadas.** VVND0400, VPRE0201 (Previsto × realizado).
 
 ---
 
@@ -793,9 +630,12 @@ retornos.
 4. **Registrar retorno / contato:** descreva o contato e, se houver, o próximo
    contato. Mude a posição do chamado (pendente, agendado, resolvido).
 5. **Relatório:** chamados do período.
+6. **Documentos do chamado** (com o chamado aberto): anexe PDF, imagem ou texto
+   (até 10 MiB) com observação; baixe ou exclua.
+7. **Relatórios** (botão na barra): etiquetas de consumidores, relatório de
+   contatos e etiquetas de chamados.
 
-**Telas relacionadas.** VATC0280 (assistência técnica), VSAC0200 (relatórios e
-anexos).
+**Telas relacionadas.** VATC0280 (assistência técnica).
 
 ---
 
@@ -817,84 +657,7 @@ lote.
    ou itens específicos, nova data e motivo. Pedidos e itens com **data firme**
    são ignorados.
 
-**Telas relacionadas.** VPME0102 (parâmetros da promessa), VPME0102ITE, VEXR0100.
-
----
-
-#### VEXR0100 — Reprogramação de Entrega
-
-**Para que serve.** Mudar a data de entrega de itens de um pedido de venda,
-registrando o motivo.
-
-**Passo a passo.**
-1. Escolha o pedido. A grade mostra item, quantidade solicitada, saldo, data
-   atual e o planejamento.
-2. Marque os itens (ou *Selecionar todos os itens permitidos*), informe a **nova
-   data** e o **motivo comum** e clique em **Aplicar**.
-
-**Regras.**
-- A nova data tem de ser posterior à atual.
-- Itens sem saldo ou já com nota autorizada não podem ser reprogramados.
-- É tudo ou nada: uma linha inválida desfaz a reprogramação inteira.
-- A data nova vai para a demanda do MRP e para as reservas do saldo. Ordens de
-  produção e de compra firmes **não** são mexidas — a decisão fica com o
-  planejamento.
-- Cada reprogramação fica no histórico do pedido (data antiga, nova e motivo).
-
-**Telas relacionadas.** VVND0200, VDPR0100 (reprogramação em lote).
-
----
-
-#### VRES0100 — Motivos de Restrição
-
-**Para que serve.** Cadastro simples dos motivos usados nas restrições de venda e
-de configuração (ex.: "produto em descontinuação").
-
-**Como usar.** Clique em **Novo**, informe a descrição e a situação e grave. Para
-alterar, selecione o motivo na lista.
-
-**Telas relacionadas.** VCLI0117 (restrições de venda), VPRO0800.
-
----
-
-#### VVND0600 — Workflow do Pedido de Venda
-
-*Rotina de operações (console).*
-
-**Para que serve.** Executar as decisões que vêm depois do cadastro do pedido:
-análise comercial e financeira, atendimento manual, conferência logística e
-motivo de atraso.
-
-**Operações disponíveis.**
-
-| Operação | O que faz |
-|---|---|
-| Consultar pedidos (filtros) | Situação, análise comercial/financeira, conferência, liberação, cliente, representante, item e período de emissão |
-| Abrir pedido / Listar por situação | Consulta |
-| Analisar | Registra a análise da área (COMERCIAL ou FINANCEIRO): aprovado ou rejeitado, com motivo |
-| Atender | Atendimento manual com motivo e data — encerra o pedido no fluxo |
-| Conferir | Conferência logística: conferido ou divergente (divergência exige motivo) |
-| Motivo de atraso | Motivo e ação planejada para pedido atrasado |
-
-**Situações do pedido:** R (rascunho), P (confirmado), A (em análise), F
-(faturado), CANCELLED (cancelado).
-
-**Telas relacionadas.** VVND0200, VPDV0253.
-
----
-
-#### VVND0610 — Reajuste de Venda Recorrente
-
-*Rotina de operações (console).*
-
-**Para que serve.** Recalcular o valor de um contrato de venda recorrente pelo
-percentual de reajuste e registrar o motivo.
-
-**Operações.** *Consultar recorrência*, *Listar recorrências* e **Recalcular
-reajuste** — informe o percentual (o contratual; negativo só para redução
-autorizada) e o motivo, com a base contratual.
-
-**Telas relacionadas.** VVRE0200 (console de vendas recorrentes).
+**Telas relacionadas.** VPME0102ITE (calendário e Parâmetros), VVND0200.
 
 ---
 
@@ -986,62 +749,9 @@ se a linha for alterada no pedido (VVND0100), vale o que for gravado lá.
 
 ---
 
-#### VCLI0600 — Manutenção Avançada de Preços de Venda
-
-*Rotina de operações (console).*
-
-**Para que serve.** Ajustes pontuais nas tabelas de venda que a VCST0202 não
-mostra direto.
-
-**Operações.**
-
-| Operação | O que faz |
-|---|---|
-| Preço do item | Preço atual de um item em uma tabela |
-| Histórico de preços | Todas as alterações de preço da tabela (filtro por item) |
-| Alterar preço | Altera uma linha de preço |
-| Excluir preço | Remove uma linha de preço |
-| Gerar preços | Geração em lote pela política comercial, com motivo |
-
-**Telas relacionadas.** VCST0202.
-
----
-
-#### VREP0600 — Complementos do Representante
-
-*Rotina de operações (console).*
-
-**Para que serve.** Manter os dados complementares do representante que não
-estão na VVND0400.
-
-**Operações.** Consultar o representante; listar planos de venda, classificações
-de interesse e segmentos de mercado; **vincular segmento**, **plano de vendas** e
-**interesse** (classificação de item); cadastrar **endereço de correspondência**;
-e configurar a **integração contábil da comissão** (contas de débito e crédito e
-centro de custo).
-
-**Telas relacionadas.** VVND0400.
-
----
-
 ## PDV / Pedidos
 
 *Acompanhamento da carteira, políticas de desconto e frete, vendas recorrentes e comissões.*
-
-#### VPDV0253 — Console de Acompanhamento de Pedidos
-
-*Rotina de operações (console).*
-
-**Para que serve.** Acompanhar a carteira: posição do pedido, itens e saldos e as
-reprogramações já feitas. Não altera nada.
-
-**Operações.** *Consultar* (todos os pedidos), *Pedidos faturados*, *Abrir
-posição* (capa do pedido), *Itens e saldos* e *Reprogramações* (histórico de
-datas do pedido).
-
-**Telas relacionadas.** VVND0200, VEXR0100, VVND0600.
-
----
 
 #### VPDV0108 — Cadastro de Política Comercial de Descontos
 
@@ -1081,7 +791,7 @@ pedido e simular o frete de uma venda.
 **Regra.** Preencha o teto da faixa: sem o valor máximo, a política vale para
 qualquer valor de pedido.
 
-**Telas relacionadas.** VPDV0108, VCLI0202.
+**Telas relacionadas.** VPDV0108, VCST0202 (políticas de preço com frete %).
 
 ---
 
@@ -1101,6 +811,9 @@ manutenção mensal): vigência, valor, reajuste e a geração mensal dos pedido
 3. **Listar** mostra os contratos com valor mensal, situação e as ações
    permitidas. **Receita mensal** projeta o faturamento mês a mês entre duas datas.
 4. **Cancelar** pede motivo e confirmação.
+5. **Reajuste** (com o contrato aberto): percentual e motivo; aplica o reajuste
+   pontual ao contrato. Use o percentual do contrato; negativo só para redução
+   autorizada.
 
 **Abas de apoio.**
 - **Parâmetros:** até que dia do mês o faturamento cai na competência corrente e
@@ -1112,24 +825,14 @@ manutenção mensal): vigência, valor, reajuste e a geração mensal dos pedido
 **Regra.** Na rodada mensal informe a competência (AAAA-MM) do pedido gerado: a
 segunda geração do mesmo contrato no mesmo mês é recusada como duplicidade.
 
-**Telas relacionadas.** VVND0610 (reajuste pontual), VVND0200.
+**Comissões futuras** (aba no topo): quanto de comissão vai ser pago e quando.
+- **Projeção:** por mês, representante e cliente — base, valor, comissão % e comissão.
+- **Razão de comissões:** os lançamentos do período (competência, pedido, evento e
+  situação).
+- **Configuração:** o evento de competência e a divisão da comissão entre
+  **faturamento** e **recebimento** (os dois somam 100%).
 
----
-
-#### VRE0203 — Consulta de Comissões Futuras
-
-**Para que serve.** Ver quanto de comissão vai ser pago e quando, e o razão das
-comissões já lançadas.
-
-**Visões.**
-- **Projeção:** por mês, representante e cliente — base, valor base, comissão %
-  e comissão.
-- **Razão de comissões:** os lançamentos do período (competência, pedido, evento
-  e situação).
-- **Configuração:** o evento de competência e a divisão da comissão entre o
-  **faturamento** e o **recebimento** — os dois percentuais têm de somar 100%.
-
-**Telas relacionadas.** VVND0400, VVND0310 (padrões de comissão).
+**Telas relacionadas.** VVND0200, VVND0400.
 
 ---
 
@@ -1145,7 +848,7 @@ e onde foi instalado e tudo o que aconteceu com ele. É o ponto de partida da
 garantia e da assistência técnica.
 
 **De onde vêm as séries.**
-- **Produção:** a entrega da OF de item que controla série (VATC0110) cria as
+- **Produção:** a entrega da OF de item que controla série (aba Pós-venda da VENT0200) cria as
   séries em estoque — informadas na entrega ou geradas pela máscara.
 - **Cadastro:** o bloco *Cadastrar séries* registra equipamentos vendidos antes do
   sistema (no cliente, com data de venda e instalação) ou estoque comprado — uma
@@ -1168,36 +871,7 @@ garantia e da assistência técnica.
   unidade, a autorização leva a série ao cliente da nota e o cancelamento a devolve
   ao estoque.
 
-**Telas relacionadas.** VATC0110, VPRO0900, VFIS0200, VATC0280.
-
----
-
-#### VATC0110 — Pós-venda do Item
-
-**Para que serve.** Dizer, por item, como o pós-venda o acompanha. Equipamento é
-rastreado por **número de série**; peça sob encomenda segue rastreada pela nota e
-pelo lote.
-
-**Como usar.** Escolha o item, marque **Controla número de série** e, se quiser que
-o sistema gere a série, escolha a **máscara** (VLOT0100 — ex.: BAL-0001). Sem
-máscara, a série é digitada na entrega da OF. A lista mostra os itens com perfil.
-
-**Garantia.** Prazo em **meses** e de quando conta — **da venda** (data da NF) ou
-**da instalação** (se registrada na Base Instalada; sem ela, conta da venda) — e a
-cobertura: **peças**, **mão de obra**, **deslocamento do técnico**. Sem meses no
-perfil, vale o *tempo de garantia (dias)* do cadastro do item (VENT0200). A
-garantia vale até o último dia do prazo, inclusive.
-
-**Onde a garantia é usada.** No item do chamado (VATC0280), na Base Instalada
-(VATC0100) e na consulta de garantia: com série, pela data de venda/instalação da
-série; sem série (peça sob encomenda), pela **NF de venda ao cliente**.
-
-**O que muda ao ligar o controle de série.**
-- A entrega da OF (VPRO0900) passa a pedir/gerar uma série por unidade (só
-  quantidade inteira).
-- A NF de saída (VFIS0200) exige as séries das linhas desse item.
-
-**Telas relacionadas.** VATC0100, VLOT0100.
+**Telas relacionadas.** VENT0200 (aba Pós-venda), VPRO0900, VFIS0200, VATC0280.
 
 ---
 
@@ -1264,7 +938,7 @@ liberação e NF.
   tem uma CAPA só.
 - **Cobrar do fornecedor** abre a reclamação de custo de garantia (VATC0320).
 
-**Telas relacionadas.** VATC0280, VATC0100, VATC0110, VATC0310, VATC0320, VATC0400, VINS0500, VVND0100.
+**Telas relacionadas.** VATC0280, VATC0100, VENT0200 (aba Pós-venda), VATC0310, VATC0320, VATC0400, VINS0500, VVND0100.
 
 ---
 
@@ -1403,49 +1077,11 @@ garantia** (um funcionário ou um cliente).
 **Situações do chamado.** Pendente, Em análise, Aguardando devolução,
 Aguardando pedido/ordem, Atendido, Encerrado e Cancelado.
 
-**Telas relacionadas.** VATC0480 (consulta), VATC0380 (relatório), VGAR0211
-(devolução/RMA), VSAC0100 (SAC).
+**Consultar e relatório.** A lista de chamados filtra por **situação** e por texto
+(assunto, consumidor, número ou cliente). **Relatório** (barra) gera os indicadores
+dos chamados, com filtro em todas as colunas e exportação.
 
----
-
-#### VATC0480 — Consulta de Chamados
-
-**Para que serve.** Consultar os chamados de assistência e seus itens, sem
-alterar nada.
-
-**Como usar.** Filtre pela situação (Pendente, Em análise, Aguardando devolução,
-Aguardando pedido/ordem, Atendido, Encerrado, Cancelado). Selecione o chamado
-para ver capa, diagnóstico, solução e os itens com série, motivo, complemento,
-garantia e situação.
-
-**Telas relacionadas.** VATC0280.
-
----
-
-#### VATC0380 — Relatório de Chamados
-
-**Para que serve.** Gerar a listagem completa dos chamados de assistência para
-análise ou exportação.
-
-**Como usar.** Clique em **Gerar relatório** e, se quiser, em **Exportar** (Excel
-ou PDF).
-
-**Telas relacionadas.** VATC0280, VATC0480.
-
----
-
-#### VSAC0200 — Relatórios e Anexos do Atendimento
-
-**Para que serve.** Guardar documentos dos chamados de SAC e gerar as listagens do
-atendimento.
-
-**Como usar.**
-- **Documentos do chamado:** escolha o chamado, o arquivo (até 10 MB) e as
-  observações e anexe. A grade permite baixar e excluir.
-- **Relatórios:** *Etiquetas de consumidores*, *Relatório de contatos* e
-  *Etiquetas de chamados*. O resultado aparece na grade e pode ser exportado.
-
-**Telas relacionadas.** VSAC0100.
+**Telas relacionadas.** VGAR0211 (devolução/RMA), VSAC0100 (SAC).
 
 ---
 
@@ -1481,56 +1117,17 @@ contato).
 
 *Cadastro de clientes e os cadastros de apoio (região, portador, condição de pagamento, tabela de venda, tipos de nota).*
 
-#### VCLI0202 — Cadastro de Percentuais de Frete Por Cliente
-
-*Rotina de operações (console).*
-
-**Para que serve.** Manter as políticas de formação de preço — fonte de custo,
-prioridade, sequência, escopo e os componentes como o percentual de frete — que
-a VCST0202 usa para calcular e gerar preços.
-
-**Operações.** *Listar políticas*, *Criar política*, *Abrir política* e *Alterar
-política*.
-
-**Telas relacionadas.** VCST0202 (onde a política é aplicada), VPDV0111 (frete
-do pedido).
-
----
-
-#### VCLI0117 — Cadastro de Permissões e Restrições de Venda
-
-*Rotina de operações (console).*
-
-**Para que serve.** Impedir ou permitir a venda de um item conforme o cliente e o
-contexto da venda (canal, região, configuração), com motivo cadastrado.
-
-**Operações.**
-
-| Operação | O que faz |
-|---|---|
-| Listar / Abrir restrição | Consulta |
-| Criar restrição | Item, situação, motivo (VRES0100) e as condições que disparam a regra |
-| Restrições do cliente / do item | O que vale para um cliente ou para um item |
-| Alterar restrição | Muda situação, item ou motivo |
-| **Avaliar venda** | Testa cliente + item + contexto e diz se a venda é permitida e por quê |
-| Desativar | Tira a restrição de uso sem apagar o histórico |
-
-**Dica.** Antes de ativar uma regra nova, use **Avaliar venda** com um cliente e
-um item reais para conferir o efeito.
-
-**Telas relacionadas.** VRES0100, VVND0200, VVND0300.
-
----
-
 #### VCLI0500 — Cadastro de Cliente
 
 **Para que serve.** Cadastrar os clientes da empresa, com endereços e contatos.
 Cada empresa tem o seu cadastro: um cliente da empresa A não aparece nem é
 alterado na empresa B.
 
-**Antes de começar.** Os cadastros de apoio, nesta ordem: região, segmento, tipo
-de contato, tipo de cliente, portador e grupo (VCLI0510); condição de pagamento e
-tabela de venda (VCLI0520); tipo de NF de saída e tipo de imposto (VCLI0530).
+**Antes de começar.** Os **Cadastros de apoio** (botão da própria tela), nesta
+ordem: região, segmento, tipo de contato, tipo de cliente, portador e grupo de
+portadores, tipo de NF de saída e tipo de imposto. No grupo de portadores, o
+vínculo portador ↔ grupo é escolhido nas listas. Condição de pagamento: VFIN0110;
+tabela de venda: VCST0202.
 
 **Passo a passo.**
 1. Clique em **+ Novo**. Em **Dados** informe razão social/nome, fantasia, tipo
@@ -1557,78 +1154,7 @@ tabela de venda (VCLI0520); tipo de NF de saída e tipo de imposto (VCLI0530).
 **Bloquear / Desbloquear.** O cliente bloqueado não passa na confirmação de
 pedido. O motivo fica no histórico.
 
-**Telas relacionadas.** VCLI0510, VCLI0520, VCLI0530, VVND0200, VFIS0320.
-
----
-
-#### VCLI0510 — Apoio de Cliente — Básico
-
-**Para que serve.** Os cadastros de apoio que classificam o cliente e a cobrança.
-
-**Abas.**
-
-| Aba | O que cadastra |
-|---|---|
-| Região | Descrição, UF e cidade |
-| Segmento | Descrição, segmento pai e se o segmento retém PIS/COFINS (com o indicador da retenção) |
-| Tipo Contato | Descrição |
-| Tipo Cliente | Descrição, retenção e indicador |
-| Portador | Banco/carteira de cobrança: categoria, dias de entrega, cobrança, *usa limite de crédito*, *considera disponível*, *adia para dia útil*, dias de recebimento e de compensação e limite |
-| Grupo Portadores | Agrupa portadores (informe grupo e portador para vincular) |
-
-**Regra do portador.** Com *usa limite de crédito*, o pedido com esse portador
-passa pela análise de crédito; com *considera disponível*, o limite é descontado
-dos pedidos em aberto.
-
-**Telas relacionadas.** VCLI0500, VCLI0520.
-
----
-
-#### VCLI0520 — Apoio de Cliente — Comercial
-
-**Para que serve.** Condições de pagamento (com as parcelas) e tabelas de venda.
-
-**Aba Condição de Pagamento.**
-1. Descrição, portador, tipo de análise de crédito, início das parcelas,
-   despesas, prazo médio, *Especial*, *Gera receita* e *À vista*.
-2. **Parcelas:** percentual do total, de quando conta o prazo, dias para o
-   vencimento e documento. A tela mostra a soma dos percentuais — a condição só
-   fecha quando chega a 100%. Entrada é pagamento no ato (prazo em dias não se
-   aplica).
-3. Use o **valor de referência** e a **data de entrega** para ver os vencimentos
-   que a condição gera.
-
-**Tipo de análise de crédito.** *Sempre analisa*, *Bloqueia sempre* ou *Libera
-sem análise*. Condição sem *Gera receita* não cria conta a receber (amostra,
-operação interna).
-
-**Aba Tabela de Vendas.** Descrição, vigência, tolerâncias mínima e máxima % (o
-preço abaixo do piso bloqueia o pedido), formação de preço, casas decimais,
-incoterm, tipo, data base, *permite valor abaixo de R$ 0,01*, *ICMS por dentro* e
-observação. Os preços dos itens são mantidos na VCST0202.
-
-**Telas relacionadas.** VFIN0110, VCST0202, VVND0200.
-
----
-
-#### VCLI0530 — Apoio de Cliente — Fiscal
-
-**Para que serve.** Os tipos de nota fiscal de saída e os tipos de imposto.
-
-**Aba Tipo de NF de Saída.** Define o comportamento da nota:
-- natureza, movimento de estoque, situação do ICMS e percentuais padrão
-  (ICMS, redução, IPI, PIS, COFINS, ISSQN, IR, CSLL, INSS);
-- o que a nota faz: *gera receita*, *atualiza estoque*, *gera título*, *conta
-  metas*, *exige pedido*, *baixa pedido*, *título de devolução*, *exige SUFRAMA*;
-- o que o motor fiscal calcula: **ICMS-ST**, **diferimento**, **PIS/COFINS** e
-  **DIFAL** — desmarcado, o cálculo não acontece nas notas desse tipo;
-- modelo da NF e os CSTs/CSOSN padrão, presunções de IR/CSLL, a descrição
-  impressa na nota e os livros e arquivos em que entra (registro de saída,
-  ICMS/IPI, SPED Fiscal).
-
-**Aba Tipo de Imposto.** Agrupamento usado nas regras de ICMS/IPI (VFIS0320).
-
-**Telas relacionadas.** VFIS0110, VFIS0320, VFIS0200.
+**Telas relacionadas.** VFIN0110, VCST0202, VVND0200, VFIS0320.
 
 ---
 
@@ -1687,8 +1213,9 @@ custos indiretos (energia, depreciação, supervisão, aluguel).
    hora-homem.
 4. **Custo de compra por item:** o custo unitário de compra. Depois de alterar,
    reapure os produtos que consomem o item.
-5. **Apurações anteriores:** histórico do item e **o que mudou** desde a
-   apuração anterior, componente a componente.
+5. **Histórico:** **Listar todos** mostra o custo-padrão vigente de cada item
+   (material, operação, indiretos e total); abaixo, as apurações anteriores de um
+   item e **o que mudou** desde a apuração anterior, componente a componente.
 6. **Rateio contábil:** bases de alocação (critério de rateio) e a distribuição
    dos custos indiretos de um centro de custo para outros, por período.
 
@@ -1701,7 +1228,7 @@ custos indiretos (energia, depreciação, supervisão, aluguel).
   usa o substituto quando é o caso e cobra cada operação do roteiro na taxa do
   **seu** centro de trabalho.
 
-**Telas relacionadas.** VPRO0300 (custo padrão), VENT0210, VENT0202, VCUS0200.
+**Telas relacionadas.** VENT0210, VENT0202, VCUS0200.
 
 ---
 
@@ -1713,55 +1240,38 @@ custos indiretos (energia, depreciação, supervisão, aluguel).
 
 #### VDES0100 — Desenhos Técnicos
 
-**Para que serve.** Cadastrar o desenho técnico de um item e controlar as revisões
-(qual está valendo, desde quando, por quê e quem aprovou).
+**Para que serve.** A tela única do desenho técnico: cadastro, revisões com
+vigência e aprovação, cópias controladas, as características do configurador
+que escolhem o desenho e o código de desenho de cada item.
 
 **Passo a passo.**
-1. **Novo desenho:** código, dígito, formato, item, unidade de medida e
-   descrição → **Criar desenho**.
-2. Selecione o desenho e use **+ revisão**: revisão, data de início, motivo e
-   aprovador. A grade marca qual é a revisão **atual**.
+1. **Novo desenho:** código, dígito, formato, modelo, item (busca pelo nome),
+   descrição, unidade, peso, data de criação e material → **Criar desenho**.
+   Para corrigir, abra o desenho na lista, altere e **Gravar alterações**.
+2. Aba **Revisões:** revisão, vigência (de/até), aprovador e data da aprovação,
+   motivo e material. Marque **Vigente** na revisão que vale; a grade mostra o
+   código composto (desenho + dígito + formato + revisão). **Alterar** e
+   **Excluir** ficam na linha.
+3. **Cópias** (na linha da revisão): registre a quem a cópia controlada foi
+   entregue e quando. Ao emitir a revisão nova, a lista diz quem precisa trocar
+   a cópia antiga.
+4. Aba **Características:** para produto configurado, diga quando este desenho
+   vale — característica, condição (igual, diferente, maior, menor, pertence) e a
+   resposta. Sem vínculo, o desenho vale para qualquer configuração.
+5. Aba **Código por item:** escolha o item (e a máscara, se for configurado),
+   **Consultar** e **Gravar código**. É o código impresso na ordem e na estrutura.
 
-**Telas relacionadas.** VENG0400 (distribuição controlada, características e
-parâmetros), VENT0200.
+**Parâmetros** (barra da tela): *nova revisão replica para o item vinculado* —
+ligado, a revisão vigente atualiza sozinha o código de desenho do item.
 
----
+**Desativar** tira o desenho das listas de escolha; revisões e vínculos ficam.
+**Mostrar desativados** traz os antigos de volta à lista para consulta.
 
-#### VBOM0100 — Cabeçalhos de Estrutura (BOM)
-
-**Para que serve.** Controlar as versões da estrutura de um item: tipo, vigência e
-situação de cada versão. As linhas (componentes) ficam na VENT0210.
-
-**Passo a passo.**
-1. Escolha o item e, se ele for configurado, a máscara cadastrada.
-2. **Novo cabeçalho:** tipo e vigência a partir de. A versão é numerada sozinha.
-3. Na lista, mude a situação da versão (ex.: **aprovada** ou **obsoleta**).
-
-**Regra.** A máscara precisa existir para o item.
-
-**Telas relacionadas.** VENT0210, VENG0300.
-
----
-
-#### VPME0102 — Parâmetros de Promessa de Entrega
-
-**Para que serve.** Ligar e ajustar a promessa de entrega da empresa.
-
-**Parâmetros.** Utilizar promessa de entrega; bloquear pedidos na promessa;
-bloquear exportação na promessa; quebrar ocupação de tanque; recalcular após
-liberação; reprogramar pedidos carregados; permitir alteração da data de
-entrega. Marque e salve.
-
-**Tanques / linhas de capacidade.** A seção no fim da tela cadastra cada linha
-(código, descrição, capacidade por dia e unidade) e permite desativá-la. O item
-escolhe a sua linha em VENT0200 › Planejamento, e a promessa de entrega reparte a
-quantidade pela capacidade diária dessa linha, nos dias úteis (ex.: 300 un numa
-linha de 120/dia ocupam três dias: 120, 120 e 60). O item não aceita linha
-inexistente ou desativada.
-
-**Telas relacionadas.** VDPR0100, VPME0102ITE, VENT0200.
+**Telas relacionadas.** VENT0200 (item), VENT0210 (estrutura), VCFG0100
+(configurador).
 
 ---
+
 
 #### VPME0102ITE — Calendário de Promessa de Entrega por Item
 
@@ -1772,39 +1282,15 @@ inexistente ou desativada.
 dias para marcar ou desmarcar como não úteis e salve. A mensagem diz quantos dias
 foram marcados e quantos restaurados.
 
-**Telas relacionadas.** VPME0102, VENT0108, VCAL0200.
+**Parâmetros** (botão na barra; "← Voltar ao calendário" retorna): liga e ajusta a
+promessa de entrega da empresa — utilizar promessa; bloquear pedidos e exportação
+na promessa; quebrar ocupação de tanque; recalcular após liberação; reprogramar
+pedidos carregados; permitir alterar a data de entrega. No fim, os **tanques /
+linhas de capacidade** (código, descrição, capacidade por dia e unidade). O item
+escolhe a sua linha em VENT0200 › Planejamento, e a promessa reparte a quantidade
+pela capacidade diária nos dias úteis (300 un numa linha de 120/dia: 120, 120 e 60).
 
----
-
-#### VITM0100 — Item & Prontidão para o MRP
-
-**Para que serve.** Conferir, antes de colocar um item em operação, se ele tem tudo
-o que o planejamento precisa.
-
-**Como usar.** **Listar** traz os itens (código, descrição técnica, natureza, tipo,
-nível na estrutura, tipo de MRP e situação). Selecione um item:
-- **Prontidão do item:** ✅ pronto ou ⚠️ não pronto, com as **pendências** (o que
-  impede) e os **alertas** (o que convém corrigir);
-- **Estrutura / BOM:** os componentes, quantidades e perdas.
-
-**O que é conferido.**
-- Item **fabricado:** precisa de estrutura e de roteiro.
-- Item **comprado:** precisa de fornecedor preferencial; alerta se faltar
-  conversão de unidade quando a unidade de compra difere da de estoque.
-
-**Telas relacionadas.** VENT0200, VENT0210, VENT0202, VVOR0202.
-
----
-
-#### VMAQ0101 — Tipos de Máquina
-
-**Para que serve.** Cadastrar os tipos de máquina (torno, prensa, solda...) usados
-para classificar os recursos na VMAQ0200.
-
-**Como usar.** Código (número positivo), nome, tipo e descrição. A lista mostra a
-situação de cada tipo.
-
-**Telas relacionadas.** VMAQ0200.
+**Telas relacionadas.** VDPR0100, VCAL0100, VENT0200.
 
 ---
 
@@ -1819,7 +1305,7 @@ pergunta, na ordem em que se cadastra.
 | Aba | O que se faz |
 |---|---|
 | **Centros de trabalho** | Os centros (recursos) e as máquinas que atendem cada um |
-| **Máquinas** | Cadastro completo: código, nome, natureza, tipo, marca, calendário de turnos, horas por dia **ou** produção nominal de referência, eficiência padrão %, tempo de preparação, centro de custo, localização, uso, fornecedor, aquisição e responsável pela manutenção |
+| **Máquinas** | Cadastro completo: código, nome, natureza, tipo, marca, calendário de turnos, **grupo de recursos**, horas por dia **ou** produção nominal de referência, eficiência padrão %, tempo de preparação, centro de custo, localização, uso, fornecedor, aquisição e responsável pela manutenção |
 | **Turnos** | Calendários de turno (dia, início, fim) e as horas por semana |
 | **Paradas** | **Máquina parou** (abre a parada agora — a máquina deixa de contar como disponível) e **Voltou a produzir**; ou lance uma parada que já aconteceu (de/até e motivo) — o planejamento deixa de ocupar esse período |
 | **Consumíveis** | O que a máquina consome por hora de usinagem e quanto rende por carga e o tempo de troca |
@@ -1827,6 +1313,7 @@ pergunta, na ordem em que se cadastra.
 | **Preparação** | Famílias de preparação e a **matriz de setup**: quanto tempo leva trocar de um item (ou família) para outro no centro |
 | **Simulador** | Quanto tempo leva produzir uma quantidade: ciclos, setup, produção, total e eficiência aplicada |
 | **Agenda** | A fila da máquina no dia (CRP/APS): reordenar, prioridade manual, situação e apontamento do que saiu |
+| **APS e custos** | **Grupos de recursos** (máquinas que o sequenciamento pode trocar entre si), **campos especiais** da máquina (potência, tensão, curso…) e o **custo e a capacidade do centro**: centro de custo da máquina e da mão de obra e horas por dia (administrador) |
 
 **Regras e cuidados.**
 - A máquina precisa de jornada diária **ou** de produção nominal de referência.
@@ -1838,20 +1325,7 @@ pergunta, na ordem em que se cadastra.
 - O simulador calcula o tempo da ordem; a sobrecarga depende das demais ordens e
   do calendário — confira no CRP (VPRO0200).
 
-**Telas relacionadas.** VMAQ0101, VENT0202, VPRO0200, VPRO0210, VAPS0200,
-VAPS0300.
-
----
-
-#### VENT0108 — Calendário Financeiro
-
-**Para que serve.** Definir os dias úteis e não úteis da empresa (feriados,
-recesso). Vencimentos, prazos e planejamento usam este calendário.
-
-**Como usar.** Escolha ano e mês, clique nos dias para marcar ou desmarcar como
-não úteis e salve. A mensagem diz quantos dias foram atualizados.
-
-**Telas relacionadas.** VCAL0100 (calendário industrial), VPME0102ITE.
+**Telas relacionadas.** VENT0202, VPRO0200, VPRO0210, VPRO0500.
 
 ---
 
@@ -1889,7 +1363,7 @@ matéria-prima, embalagem, ferramenta, serviço. Quase tudo no sistema começa a
 4. **Planejamento:**
    - *Política:* tipo de planejamento, curva ABC, nível na estrutura (1 = produto
      final, 9 = matéria-prima) e tanque/linha de capacidade (escolhida na lista das
-     linhas cadastradas em VPME0102, com a capacidade por dia).
+     linhas cadastradas em VPME0102ITE (Parâmetros), com a capacidade por dia).
    - *Tamanho do lote:* mínimo, múltiplo e máximo. O MRP arredonda as ordens por eles
      e divide a necessidade acima do máximo.
    - *Prazos e estoque de segurança:* prazo de compra e de fabricação (o MRP usa
@@ -1901,7 +1375,7 @@ matéria-prima, embalagem, ferramenta, serviço. Quase tudo no sistema começa a
      reposição, pelo calendário industrial (sábado trabalhado conta, feriado não), +
      estoque de segurança. A reposição (VEST) e o MRP usam este mesmo número.
    - *Responsáveis:* o setor que planeja e o que compra o item, com as pessoas,
-     vêm do grupo (VITE0114). Para mudar, altere o grupo, não o item.
+     vêm do grupo (VITE0116 — Grupos e modificadores). Para mudar, altere o grupo, não o item.
    - *Produção:* momento da baixa de material, forma de apontamento, crítico
      (destacado nos alertas de estoque), fantasma (o MRP passa direto aos
      componentes) e ativo no MRP.
@@ -1940,8 +1414,14 @@ armazenagem aparecem em destaque na OF, na entrada de nota, na requisição, na
 separação, no recebimento pelo coletor, nas etiquetas de item e na expedição, e
 saem no romaneio.
 7. **Prontidão** (item já gravado): diz se o item está pronto para comprar, produzir,
-   estocar, vender e faturar, o que falta e em qual tela resolver. A **prévia fiscal**
-   mostra o que vai à nota e à EFD e o que a SEFAZ recusaria.
+   estocar, vender e faturar, o que falta e em qual tela resolver. Para quem pode
+   ativar item, **Pronto para o MRP** lista o que impede e o que merece atenção antes
+   de o item entrar no planejamento. A **prévia fiscal** mostra o que vai à nota e à
+   EFD e o que a SEFAZ recusaria.
+8. **Pós-venda** (item já gravado): se o item é rastreado por **número de série** e
+   com que máscara a série nasce na entrega da OF, a **garantia** (meses, se conta
+   da venda ou da instalação, o que cobre) e observações. Item com série exige a
+   série na NF de saída e entra na base instalada (VATC0100).
 
 **Achar o item por outro código.** Em qualquer campo de item do sistema, a busca
 acha também pelo código anterior, pela referência do fabricante, pelo código do
@@ -1985,7 +1465,7 @@ corrigido. A lista mostra também os itens inativos — é aqui que se reativa.
 - **Tolerância de falta:** encerra a linha do pedido de compra quando a falta cabe nela.
 
 **Telas relacionadas.** VITE0116 (padrão descritivo), VENT0210 (estrutura), VENT0202
-(roteiro), VITM0100 (prontidão), VSUP0110 (conversão de UM), VFIS0350 (classificação fiscal),
+(roteiro), VSUP0110 (conversão de UM), VFIS0350 (classificação fiscal),
 VENT0250 (governança do cadastro).
 
 ---
@@ -2091,22 +1571,27 @@ perdas e vigências que o MRP explode e o custo soma.
   **não dá entrada do produto no estoque** — o material volta ao cliente na nota
   de beneficiamento (VBEN0100). Não pode ser marcado junto com co-produto.
 
-**Telas relacionadas.** VBOM0100, VENG0500 (onde usado, explosão), VENT0200,
+**Versões da estrutura** (botão **Versões**, com o item aberto). É o controle de
+revisão da lista de materiais, como no SAP e na revisão de estrutura do Protheus:
+
+- **Abrir nova versão:** tipo — **Fabricação (MBOM)**, a que a produção usa, ou
+  **Engenharia (EBOM)**, a do projeto — e a data a partir da qual vale. Nasce como
+  rascunho, com o número seguinte.
+- **Aprovar:** grava a **foto** da estrutura daquele momento e torna obsoleta a
+  versão aprovada anterior do mesmo tipo. Estrutura vazia não é aprovada.
+- **O que mudou:** compara a versão aprovada com a estrutura de agora — componente
+  incluído, removido ou alterado (quantidade, unidade, perda, fórmula, validade).
+- **Descartar / Tornar obsoleta:** a versão não volta a valer. Aprovada não volta a
+  rascunho: para mudar, abra outra versão.
+
+**Efeito na produção.** Depois que o item ganha a primeira versão de fabricação, ele
+fica sob controle de versão: a OF (manual ou firmada pelo MRP) só é criada com uma
+**MBOM aprovada e vigente**, e a prontidão do item (VENT0200) mostra *Impede* enquanto
+não houver. Se a estrutura mudar depois da aprovação, a prontidão avisa (*Atenção*)
+para revisar e aprovar uma nova versão. Item sem versão nenhuma funciona como antes.
+
+**Telas relacionadas.** VENT0200 (cadastro e onde o item é usado),
 VCFG0100 (máscara do configurado), VBEN0100.
-
----
-
-#### VENT0204 — Cadastro de Grupo
-
-*Rotina de operações (console).*
-
-**Para que serve.** Consultar, cadastrar e alterar os grupos (famílias) PDM da
-empresa.
-
-**Operações.** *Consultar*, *Abrir grupo*, *Cadastrar* (código e descrição) e
-*Alterar grupo*. Para o cadastro em formulário, use a **VITE0114**.
-
-**Telas relacionadas.** VITE0114, VITE0115, VITE0116.
 
 ---
 
@@ -2156,83 +1641,7 @@ os modelos (roteiros sem item) são um modo dela.
 a usam continuam. Roteiro desativado deixa de entrar no próximo MRP/CRP; ao
 reativar, volta como alternativo se outro já for o padrão.
 
-**Telas relacionadas.** VENT0210, VMAQ0200, VCUS0100, VTER0100, VPRO0900, VPRO0200,
-VENG0600.
-
----
-
-#### VENT0363 — Relatório de Tempo de Centro de Trabalho
-
-*Rotina de consulta (console).*
-
-**Para que serve.** Consultar tempos de operação e lead time para analisar carga e
-tempo padrão. Não altera roteiros nem ordens.
-
-**Operações.** *Consultar* (operações), *Tempos do roteiro*, *Lead time crítico*
-(do roteiro) e *Carga CRP do plano*.
-
-**Telas relacionadas.** VENT0202, VPRO0200.
-
----
-
-#### VENG0204 — Cadastro de Regras de Variáveis Equivalentes
-
-*Rotina de operações (console).*
-
-**Para que serve.** Relacionar características do item pai com as do filho no
-produto configurado (ex.: a cor do armário define a cor da porta).
-
-**Operações.** *Consultar regras* de um item pai, *Cadastrar*, *Abrir*,
-*Alterar*, *Excluir* e **Aplicar** (testa as respostas do pai e mostra o que
-resulta no filho).
-
-**Telas relacionadas.** VCFG0600, VCFG0100.
-
----
-
-#### VITE0313 — Geração de Máscara para Itens Configurados
-
-*Rotina de operações (console).*
-
-**Para que serve.** Gerar uma máscara a partir das respostas informadas, opcionalmente
-gravando-a.
-
-**Dica.** Para responder as perguntas e ver a máscara se formando, use a
-**VCFG0100**, aba *Configurar e gerar máscara*.
-
----
-
-#### VITE0114 — Cadastro de Grupos (PDM)
-
-**Para que serve.** Cadastrar os grupos PDM (famílias de itens) que compõem a
-descrição técnica padronizada. Cada empresa tem os seus códigos. A lista mostra quantos
-itens usam cada grupo. Nome repetido é recusado e grupo **inativo** deixa de ser
-oferecido para item novo, sem mexer nos itens que já o usam.
-
-**Como usar.** **Novo**: o código é sugerido e não muda depois; informe a
-descrição. Grupos não são excluídos — altere a descrição quando preciso.
-
-**Responsáveis.** Ao editar um grupo, escolha o setor que **planeja** e o setor
-que **compra** os itens dele (os setores e as pessoas ficam na VNOT0100, aba
-Setores). Todo item do grupo herda esses responsáveis: a VENT0200 mostra o setor
-e as pessoas na aba Planejamento, e a cobertura do MRP mostra o setor como
-planejador. Grupo sem responsável mostra o planejador antigo do item, quando há.
-
-**Telas relacionadas.** VITE0115, VITE0116, VENT0200, VNOT0100.
-
----
-
-#### VITE0115 — Cadastro de Modificadores (PDM)
-
-**Para que serve.** Cadastrar os modificadores PDM (o qualificador que vem depois
-do grupo: "PARAFUSO **SEXTAVADO**").
-
-**Como usar.** **Novo**: o código é gerado pelo sistema; informe a descrição. Cada
-empresa tem os seus modificadores. A lista mostra quantos itens usam cada um. Nome
-repetido é recusado e modificador **inativo** deixa de ser oferecido para item novo. O
-vínculo com os grupos e os atributos ficam na VITE0116.
-
-**Telas relacionadas.** VITE0114, VITE0116.
+**Telas relacionadas.** VENT0210, VMAQ0200, VCUS0100, VTPS0100, VPRO0900, VPRO0200.
 
 ---
 
@@ -2248,39 +1657,21 @@ crie os atributos (texto, número ou lista de valores), com prefixo, unidade e o
 use **Testar o padrão** para ver a descrição gerada. Na lista de valores, escreva um por
 linha; para abreviar na descrição, use `ZINCADO BRANCO=ZB`.
 
+**Grupos e modificadores** (botão na barra): o cadastro dos grupos PDM (famílias de
+itens) e dos modificadores (o qualificador depois do grupo: "PARAFUSO
+**SEXTAVADO**"). O código do grupo é sugerido e não muda; o do modificador é gerado.
+Cada empresa tem os seus; a lista mostra quantos itens usam cada um. Nome repetido é
+recusado e o **inativo** deixa de ser oferecido para item novo, sem mexer nos itens
+que já o usam. Não se exclui — altere a descrição. Ao editar um grupo, escolha o
+setor que **planeja** e o que **compra** os itens dele (setores na VNOT0100): todo
+item do grupo herda esses responsáveis.
+
 **Importante.** Grupo sem modificador marcado aceita todos. Modificador sem atributos
 mantém a descrição livre. Item antigo continua como está até alguém preencher os
 atributos dele. **Identifica o item** diz quais atributos entram na conferência de
 duplicidade: dois itens com os mesmos valores são apontados na VENT0200.
 
-**Telas relacionadas.** VITE0114, VITE0115, VENT0200.
-
----
-
-#### VITE0118 — Cadastro de Regras de Itens Configurados
-
-*Rotina de operações (console).*
-
-**Para que serve.** Regras que preenchem campos do item configurado a partir das
-respostas do configurador (ex.: a descrição ou o peso).
-
-**Operações.** *Consultar regras do item*, *Cadastrar*, **Avaliar** (com as
-respostas, mostra o resultado), *Abrir*, *Alterar* e *Excluir*.
-
-**Telas relacionadas.** VCFG0600, VCFG0100.
-
----
-
-#### VITE0129 — Recarga de Descrições de Itens Configurados
-
-*Rotina de operações (console).*
-
-**Para que serve.** Recarregar as linhas de uma descrição de item configurado
-depois que o modelo da descrição mudou.
-
-**Operações.** *Abrir descrição* e *Recarregar linhas*.
-
-**Telas relacionadas.** VCFG0500.
+**Telas relacionadas.** VENT0200, VNOT0100.
 
 ---
 
@@ -2304,153 +1695,16 @@ resposta forma o código (máscara) do item.
    LARGURA pertencer a 400, 450 ENTÃO a PROFUNDIDADE é inválida*. Informe o
    motivo (comercial, técnico, processo ou global) e a abrangência (item,
    classificação ou divisão de vendas; ou só para um cliente). A **auditoria**
-   explica por que uma pergunta some.
+   explica por que uma pergunta some. **Motivos e consulta por cliente** (no fim
+   da aba) mantém os motivos de restrição (editar, inativar, excluir) e lista as
+   restrições próprias de um cliente. Toda restrição precisa de ao menos um SE e
+   um ENTÃO.
 5. **Configurar e gerar:** responda as perguntas e veja a máscara se formar.
    **Gerar combinações** cria de uma vez todas as combinações de um recorte de
    respostas; as restrições já removem as impossíveis.
 
-**Telas relacionadas.** VCFG0200 a VCFG0600 (manutenção avançada), VENT0210,
-VPRO0800.
-
----
-
-#### VCFG0200 — Características do Configurador
-
-*Rotina de operações (manutenção avançada).*
-
-**Para que serve.** Manutenção avançada das características (perguntas): traduções,
-itens vinculados e itens de recebimento. O cadastro guiado é a **VCFG0100**.
-
-**Operações.** Listar, cadastrar, abrir, alterar e excluir característica;
-traduzir (idioma, descrição e máscara) e excluir tradução; listar itens
-vinculados; listar, vincular e excluir itens de recebimento.
-
-**Cuidado.** *Alterar característica* substitui a característica **inteira**:
-campo que não vier preenchido é gravado vazio. Abra a característica antes e
-altere a partir do que veio.
-
----
-
-#### VCFG0300 — Características por Item
-
-*Rotina de operações (manutenção avançada).*
-
-**Para que serve.** Manutenção avançada do vínculo item × característica (marcas de
-especial, desenho e carga, fórmula e respostas padrão). Para ordenar com setas,
-use a **VCFG0100**.
-
-**Operações.** Listar as características do item, adicionar, alterar e excluir o
-vínculo.
-
----
-
-#### VCFG0400 — Geração de Máscaras Configuradas
-
-*Rotina de operações.*
-
-**Para que serve.** Gerar máscara (individual ou em lote) enviando as respostas
-diretamente. Para ver a máscara se formando, use a **VCFG0100**.
-
-**Operações.** *Gerar máscara* e *Gerar máscaras em lote* (com o recorte de
-respostas e a opção de gravar).
-
----
-
-#### VCFG0500 — Descrições Configuradas
-
-*Rotina de operações.*
-
-**Para que serve.** Montar descrições do item configurado (comercial, técnica)
-que mudam conforme as respostas.
-
-**Operações.** Tipos de descrição (listar, cadastrar, abrir, alterar, excluir);
-descrição do item (cadastrar, listar, abrir, excluir); **atualizar linhas**,
-**recarregar linhas** e **renderizar** (mostra o texto final para um conjunto de
-respostas).
-
----
-
-#### VCFG0600 — Regras do Configurador
-
-*Rotina de operações.*
-
-**Para que serve.** Reúne as regras equivalentes pai-filho (como a VENG0204) e as
-regras que preenchem campos do item (como a VITE0118), com **aplicar** e
-**avaliar** para testar antes de usar.
-
----
-
-#### VENG0300 — Cabeçalho e Revisão de Estrutura BOM
-
-*Rotina de operações.*
-
-**Para que serve.** Criar o cabeçalho da estrutura (item, máscara, tipo e vigência),
-consultar por item e alterar a situação (ex.: aprovada). O cadastro em
-formulário é a **VBOM0100**.
-
----
-
-#### VENG0400 — Desenhos e Revisões
-
-*Rotina de operações.*
-
-**Para que serve.** A manutenção completa do desenho técnico, além do que a VDES0100
-faz.
-
-**Operações.**
-- Desenho: listar, cadastrar, abrir, alterar e excluir.
-- Revisões: adicionar, listar, alterar e excluir.
-- **Distribuição controlada:** registre quem recebeu a cópia de cada revisão e
-  quando.
-- **Características:** vincule respostas do configurador ao desenho (o desenho
-  que vale para cada configuração).
-- **Código por item:** consulte e mantenha o código do desenho por item e
-  máscara.
-- **Parâmetros fabris:** por exemplo, replicar a revisão do desenho.
-
----
-
-#### VENG0500 — Estruturas Avançadas
-
-*Rotina de operações.*
-
-**Para que serve.** Consultas da estrutura que a VENT0210 não mostra numa tela só.
-
-**Operações.** *Alterar componente*; *Filhos diretos*; **Consultar estrutura**
-(explosão por item, máscara, data de efetividade e número de níveis — 0 = todos);
-**Onde usado** (em que estruturas um componente entra).
-
----
-
-#### VMAQ0300 — Tempos e Programação de Máquina
-
-*Rotina de operações.*
-
-**Para que serve.** Registrar o tempo produtivo de um item numa máquina e programar
-uma ordem na máquina. Os mesmos cadastros, em formulário, ficam nas abas
-*Produtividade* e *Agenda* da **VMAQ0200**.
-
----
-
-#### VENG0600 — Rede de Precedência do Roteiro
-
-*Rotina de operações.*
-
-**Para que serve.** Definir ou remover a dependência entre duas etapas de um
-roteiro, com sobreposição %. Em formulário, com o caminho crítico, use a aba
-*Rede de dependências* da **VENT0202**.
-
----
-
-#### VENG0610 — Seriais Físicos de Ferramentas
-
-*Rotina de operações.*
-
-**Para que serve.** Consultar, corrigir (número de série, situação, local,
-observações) e desativar as unidades físicas de cada ferramenta.
-
-**Telas relacionadas.** VPRO1000 (ficha de produção da ferramenta), VENT0202
-(ferramentas da etapa).
+**Telas relacionadas.** VENT0210 (o botão Configurador abre esta configuração
+direto na estrutura).
 
 ---
 
@@ -2482,7 +1736,7 @@ carga e dias em sobrecarga (clicáveis — levam à aba que explica o número).
 turnos e as paradas das máquinas (VMAQ0200). Máquina sem calendário ou etapa sem
 tempo distorcem a carga.
 
-**Telas relacionadas.** VMRP0100, VPRO0210, VMAQ0200, VMRP0200.
+**Telas relacionadas.** VMRP0100, VPRO0210, VMAQ0200, VPLN0100.
 
 ---
 
@@ -2507,99 +1761,18 @@ tudo num quadro (Gantt) e remanejar quando precisa.
 da entrega). Ordens que não cabem no prazo são reprogramadas para frente, e a
 mensagem lista quais.
 
-**Telas relacionadas.** VPRO0200, VPRO0900, VAPS0600, VMAQ0200 (agenda da
+**Barra da tela.**
+- **Parâmetros:** a lista das máquinas que o sequenciamento enxerga, com o
+  centro e a situação, e a opção *listar só as máquinas ativas* (o administrador
+  altera). Abaixo, as **faixas de prioridade das ordens**: o MRP dá a cada ordem
+  planejada a prioridade cuja faixa de **quantidade** (em unidades do item) a
+  contém; as faixas não podem se sobrepor.
+- **Exportar eventos (CSV):** o início e o fim de cada operação programada, em
+  planilha, para levar a programação a outro sistema.
+
+
+**Telas relacionadas.** VPRO0200, VPRO0900, VMAQ0200 (agenda da
 máquina).
-
----
-
-#### VPRO0300 — Custo Padrão
-
-**Para que serve.** Calcular e consultar o custo padrão do item (material,
-operação, overhead e total).
-
-**Como usar.** Informe o item e calcule; a lista mostra os custos padrão já
-gravados. Para a composição detalhada, os indiretos e o histórico, use a
-**VCUS0100**.
-
-**Telas relacionadas.** VCUS0100, VPRO0900 (custo real × padrão).
-
----
-
-#### VPRO0400 — Qualidade — Pontos de Inspeção
-
-**Para que serve.** Planos de inspeção de processo por item, os laudos de inspeção e
-as não conformidades de produção.
-
-**Passo a passo.**
-1. **Novo plano de inspeção:** item, momento (em que ponto do processo) e
-   descrição. **Buscar planos** lista os do item.
-2. **Nova característica:** nome, valor nominal, tolerâncias, unidade e se é
-   crítica.
-3. **Novo registro de inspeção (laudo):** plano, lote, resultado, observações e
-   as medições por característica.
-4. **Consultar registros:** por OF, lote ou item.
-5. **Registrar não conformidade:** item, quantidade, descrição e severidade;
-   depois escolha a **disposição** (destino do material).
-
-**Telas relacionadas.** VINS0300 (lote de inspeção), VINS0500 (NC e CAPA),
-VENT0202 (inspeção na etapa do roteiro).
-
----
-
-#### VPRO0500 — Manutenção Preventiva
-
-**Para que serve.** Planos de manutenção preventiva por máquina e as ordens geradas
-a partir deles.
-
-**Passo a passo.**
-1. **Novo plano:** máquina, centro, descrição, frequência, intervalo (dias) e
-   horas estimadas.
-2. Gere as ordens para um horizonte (dias).
-3. Em **Ordens** do plano: **Iniciar**, **Concluir** (com as horas reais) ou
-   **Cancelar** cada ordem.
-
-**Telas relacionadas.** VMAN0202, VMAN0401, VAPS0300 (paradas), VAPS0500.
-
----
-
-#### VPRO0600 — Previsão Estatística
-
-**Para que serve.** Projetar a demanda de um item a partir do histórico.
-
-**Como usar.** Informe o item e o histórico (período AAAA-MM e quantidade; **+
-Período** acrescenta linhas — são necessários ao menos 2). O sistema escolhe o
-modelo que melhor explica o histórico, mostra o erro médio (MAPE %) e a quantidade
-prevista dos períodos futuros.
-
-**Telas relacionadas.** VPRE0251 (geração da previsão de vendas), VPRE0201.
-
----
-
-#### VPRO0700 — Alertas de Exceções MRP
-
-**Para que serve.** Ver as mensagens de exceção do último MRP e avisar os
-responsáveis.
-
-**Abas.**
-- **Exceções do plano:** escolha o plano. A tela mostra os cinco tipos de
-  mensagem do MRP com o que fazer em cada um. Vermelho pede ação imediata;
-  amarelo é excesso ou cancelamento. Filtre por item ou texto. Esta aba não envia
-  nada.
-- **Notificar:** envia as exceções por **webhook** (começa com http:// ou
-  https://) e/ou **e-mails**.
-
-**Telas relacionadas.** VMRP0100.
-
----
-
-#### VPRO0800 — Restrições e Configurador
-
-**Para que serve.** Regras simples de restrição por atributo (nome, atributo,
-operador, valor) e o teste de uma restrição contra um contexto.
-
-**Como usar.** Cadastre a regra; em **Avaliar**, escolha a restrição e informe o
-contexto (em JSON) para ver o resultado. Para o configurador completo, use a
-**VCFG0100** (aba Restrições).
 
 ---
 
@@ -2690,7 +1863,7 @@ estoque (entrega) move.
 6. **Custo:** custo real × padrão nos mesmos componentes do custo padrão
    (VCUS0100): **material** (o que saiu do estoque para a OF), **máquina e
    preparação** e **mão de obra** (horas apontadas nas etapas × taxas do centro),
-   **serviços de terceiros** (peças recebidas × preço do pedido, da VTER0100 ou do
+   **serviços de terceiros** (peças recebidas × preço do pedido, da VTPS0100 ou do
    roteiro) e **indiretos** (absorvidos na proporção do padrão). Sem custo padrão,
    o desvio não aparece (não há com o que comparar). Concluir a OF com material
    da lista sem baixa pede confirmação: o custo ficaria sem esse material.
@@ -2698,7 +1871,7 @@ estoque (entrega) move.
    custo das OFs apuradas antes da mudança (sem máquina e terceiros).
 
 **Entrega ao estoque.** Informe depósito do acabado, quantidade e lote. Item que
-controla número de série (VATC0110) pede as **séries** — uma por linha, uma por
+controla número de série (aba Pós-venda da VENT0200) pede as **séries** — uma por linha, uma por
 unidade; vazio, se o perfil tiver máscara, o sistema gera. Entrega
 parcial mantém a OF em produção; a entrega **final** conclui. Não dá para
 concluir com quantidade zero se houver ordem de serviço de terceiro pendente.
@@ -2725,88 +1898,13 @@ em cada operação da ordem, e a vida útil de cada uma.
    perto do limite (80% dá tempo de pedir a afiação). É possível zerar a vida
    útil (após afiação) ou inativar.
 4. **Nova série:** número de série, situação e localização da cópia física.
+   **Desativar** tira da lista a série sucateada ou extraviada (o histórico fica).
 
-**Telas relacionadas.** VENG0610, VENT0202, VPRO0900.
+**Perfil de posto (operador).** O operador abre a **Ficha de Produção** para
+conferir a ferramenta e a série de cada operação e o histórico de substituições.
+Cadastrar, vincular e substituir ficam com o PCP e a ferramentaria.
 
----
-
-#### VAPS0100 — Grupos e Parâmetros de Recursos APS
-
-*Rotina de operações (administrador).*
-
-**Para que serve.** Organizar os recursos para o sequenciamento: grupos de recursos
-(ex.: CORTE), e para cada recurso o grupo, calendário, localização, se é crítico
-e se está ativo; para cada centro, os centros de custo de máquina e de mão de obra
-e a capacidade em horas.
-
-**Telas relacionadas.** VAPS0200, VAPS0600, VMAQ0200.
-
----
-
-#### VAPS0200 — Calendários de Máquinas
-
-*Rotina de operações (administrador).*
-
-**Para que serve.** Os intervalos semanais de disponibilidade (dia da semana, início
-e fim) que limitam o sequenciamento finito. Em formulário, use a aba *Turnos* da
-**VMAQ0200**.
-
----
-
-#### VAPS0400 — Perfil de Operadores APS
-
-*Rotina de operações (administrador).*
-
-**Para que serve.** O perfil do funcionário para o sequenciamento: contatos, funções
-(com centro de custo, supervisor e gerente).
-
-**Operações.** Consultar e salvar o perfil; alterar e desativar contato; alterar e
-desativar função.
-
----
-
-#### VAPS0500 — Perfil Industrial de Máquinas
-
-*Rotina de operações (administrador).*
-
-**Para que serve.** O perfil industrial da máquina: uso, aquisição, preparação,
-marca, responsáveis, **serviços preventivos** (com frequência e os itens trocados)
-e campos especiais (ex.: potência).
-
-**Operações.** Consultar e salvar o perfil; alterar e desativar serviço, item do
-serviço e campo especial.
-
----
-
-#### VAPS0600 — Cálculo e Consulta do Sequenciamento APS
-
-*Rotina de operações.*
-
-**Para que serve.** Rodar o motor de sequenciamento e consultar o resultado sem o
-quadro gráfico.
-
-**Operações.** *Executar sequenciamento* (a partir de uma data, para ordens,
-máquinas, centros ou operações escolhidos); *Consultar* recursos; *Abrir visão*
-de um período; *Exportar eventos*; *Reprogramar operação* (com cascata); *Salvar
-parâmetros* (ex.: listar só recursos ativos — administrador).
-
-**Dica.** Para o dia a dia, use o quadro da **VPRO0210**.
-
----
-
-#### VPRO1100 — Estoque da Manufatura
-
-*Rotina de operações.*
-
-**Para que serve.** Parâmetros de estoque da produção.
-
-**Operações.**
-- **Parâmetros gerais:** modo de retorno de lote, baixa automática de lotes,
-  período de movimentação.
-- **Controle por item:** unidade de estoque, se controla lote e endereço, tipo de
-  grupo de inventário e baixa automática.
-- **Endereços de almoxarifado:** se o almoxarifado é WMS e o almoxarifado
-  intermediário de saída.
+**Telas relacionadas.** VENT0202, VPRO0900.
 
 ---
 
@@ -2825,6 +1923,9 @@ no momento em que acontece. Fica aberto ao lado da máquina o turno inteiro.
 A parada já desconta a disponibilidade da máquina no planejamento. Parada
 retroativa, correção e consulta por período ficam na **VMAQ0200**, aba Paradas.
 
+**Perfil de posto (operador).** A tela está no menu do operador e funciona com
+esse perfil: ele escolhe a máquina, abre e fecha a parada — nada mais da agenda.
+
 **Telas relacionadas.** VMAQ0200, VPRO0200.
 
 ---
@@ -2833,41 +1934,31 @@ retroativa, correção e consulta por período ficam na **VMAQ0200**, aba Parada
 
 *Ordens de manutenção e paradas de máquina.*
 
-#### VMAN0202 — Apontamento de Ordens de Serviço de Manutenção
+#### VPRO0500 — Manutenção Preventiva
 
-*Rotina de operações.*
+**Para que serve.** Planos de manutenção preventiva por máquina e o ciclo das
+ordens geradas a partir deles. As horas de parada saem da capacidade da máquina
+no planejamento.
 
-**Para que serve.** Executar uma ordem de manutenção preventiva já gerada: iniciar e
-concluir, com as horas reais. Não altera o plano.
+**Passo a passo.**
+1. **Novo plano:** escolha a máquina e, se quiser, o centro de trabalho (busca
+   pelo nome), descreva o que é feito e informe a frequência, o intervalo em dias
+   e as horas previstas → **Criar plano**.
+2. **Gerar ordens:** informe o horizonte em dias e clique em **Gerar**. A coluna
+   *Próxima* mostra a data da próxima ordem de cada plano.
+3. **Ordens** (na linha do plano): **Iniciar** quando a manutenção começa e
+   **Concluir** informando as horas reais de parada; **Cancelar** pede
+   confirmação. **+ Ordem manual** cria uma ordem para hoje.
+4. Aba **Ordens por centro de trabalho:** escolha o centro e o período para ver
+   todas as ordens das máquinas dele, com as mesmas ações.
 
-**Operações.** *Ordens do plano* (informe o plano), **Iniciar ordem** e **Concluir
-ordem** (com as horas reais).
+**Desativar** um plano para as próximas gerações; as ordens já geradas ficam.
 
-**Telas relacionadas.** VPRO0500 (planos e geração das ordens), VMAN0401.
-
----
-
-#### VMAN0401 — Consulta Ordens de Serviço
-
-*Rotina de consulta.*
-
-**Para que serve.** Consultar as ordens de manutenção por plano ou por centro de
-trabalho, sem apontar nem alterar.
-
----
-
-#### VAPS0300 — Paradas de Máquinas
-
-*Rotina de operações (administrador).*
-
-**Para que serve.** Registrar indisponibilidades planejadas ou emergenciais da
-máquina (início, fim, tipo — ex.: manutenção — e motivo) e consultar por máquina e
-período. O planejamento não ocupa a máquina nesses períodos.
-
-**Dica.** Para registrar a parada na hora em que acontece, use a **VPRO1200**; para
-a manutenção em formulário, a aba *Paradas* da **VMAQ0200**.
+**Telas relacionadas.** VMAQ0200 (máquina, agenda e paradas), VPRO0200 (carga de
+máquina), VPRO1200 (parada no chão de fábrica).
 
 ---
+
 
 ## Planejamento
 
@@ -2903,7 +1994,7 @@ programar a rodada automática, simular cenários e manter os parâmetros.
 **Regra.** Só um cálculo de planejamento roda por vez; uma segunda execução
 simultânea é recusada.
 
-**Telas relacionadas.** VMRP0100, VPRO0200, VPRO0210, VMRP0200.
+**Telas relacionadas.** VMRP0100, VPRO0200, VPRO0210.
 
 ---
 
@@ -2924,7 +2015,7 @@ use a **programação** (ex.: 100 peças em 4 entregas a cada 7 dias).
 
 | Família | Motivos | Como se encerra |
 |---|---|---|
-| Expectativa de venda | Produção para estoque, Reposição, Antecipação de venda | O **pedido de venda consome** a demanda (só o pedido confirmado ou faturado; rascunho e orçamento não consomem): o MRP planeja o maior dos dois, nunca a soma. Pedido com entrega até 30 dias depois da data da demanda consome (parâmetros 46/47 da VPLA0300). Passada a janela sem venda, ela **vence** e sai do cálculo |
+| Expectativa de venda | Produção para estoque, Reposição, Antecipação de venda | O **pedido de venda consome** a demanda (só o pedido confirmado ou faturado; rascunho e orçamento não consomem): o MRP planeja o maior dos dois, nunca a soma. Pedido com entrega até 30 dias depois da data da demanda consome (parâmetros 46/47 da VPLN0100). Passada a janela sem venda, ela **vence** e sai do cálculo |
 | Finalidade própria | Amostra, Feira, Consumo interno, Assistência, Projeto | A venda não consome. Ela segura o estoque até a saída: o que a OF da demanda entrega fica **reservado** para ela (nenhum pedido de venda pega). **Atender** lança a saída no estoque (com o tipo de movimento), consome a reserva e baixa o saldo da demanda. Estornar a saída na Central de Estoque devolve o saldo; encerrar a demanda libera a reserva |
 
 **A demanda aberta mostra** o que a venda já consumiu, o que já saiu para a
@@ -2960,7 +2051,7 @@ está.
 direto. Antes de 28/10/2026 a confirmação gerava uma demanda por linha, e o
 pedido entrava duas vezes no cálculo; essas demandas foram canceladas.
 
-**Telas relacionadas.** VMRP0100, VPRO0900, VEST0100, VPLA0300, VPRE0201.
+**Telas relacionadas.** VMRP0100, VPRO0900, VEST0100, VPLN0100, VPRE0201.
 
 ---
 
@@ -2979,7 +2070,7 @@ planejador.
 | **Cobertura** | Para cada item: até quando o estoque cobre e até quando estoque + ordens firmes cobrem, com farol (crítico, atenção, coberto). Filtre por planejador ou tipo e firme a planejada que cobre a falta sem sair da tela |
 | **Sugestões** | O resultado do cálculo: item, tipo (fabricação/compra), quantidade, necessidade, início e término, máquina e tempo. Filtre por item, tipo e atraso e **firme em lote**. *Para quem é* mostra os pedidos e demandas que a sugestão atende |
 | **Ordens planejadas** | As ordens já criadas, com as transições **Firmar**, **Liberar** e **Voltar para planejada** (em lote) |
-| **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como). **Horizonte firme**: a sugestão precisava começar dentro do horizonte firme (VPLA0310/VPLA0300) e foi para o fim dele; a mensagem diz quanto ela chega depois da necessidade — firme a ordem à mão se precisar antes e marque como tratada. **Demanda vencida** (estoque que passou da janela de consumo sem venda) e **demanda atrasada** (amostra, feira, projeto com saldo e data vencida): **Encerrar saldo** encerra a demanda (VPLA0102) ali mesmo |
+| **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como). **Horizonte firme**: a sugestão precisava começar dentro do horizonte firme (VPLA0310/parâmetros da VPLN0100) e foi para o fim dele; a mensagem diz quanto ela chega depois da necessidade — firme a ordem à mão se precisar antes e marque como tratada. **Demanda vencida** (estoque que passou da janela de consumo sem venda) e **demanda atrasada** (amostra, feira, projeto com saldo e data vencida): **Encerrar saldo** encerra a demanda (VPLA0102) ali mesmo. **Enviar as exceções por webhook ou e-mail** manda a lista do plano a quem precisa saber |
 | **Rastreamento** | De cada pedido ou demanda até as compras dos componentes, e de uma ordem até quem depende dela — "esta compra serve a quem?" e "o que falta para este pedido sair?" |
 | **Perfil do item** | O perfil por data: demanda, planejadas, firmes e estoque projetado — e quando o estoque fura. Também as regras configuradas do item: **Campo** `lead_time` (prazo em dias úteis) ou `lote_minimo`, o **Valor** e, se a regra for só para uma configuração, a **Condição da máscara** (igual, diferente ou faixa "mínimo-máximo"). Sem condição, a regra vale para o item inteiro |
 | **Planos** | Cadastro dos planos (código, nome, abrangência, classificação) e as empresas inter-fábrica de cada plano. Na abrangência *um item de ordem*, busque o pedido pelo **número** e escolha a linha |
@@ -2999,40 +2090,16 @@ seguintes.
 **O que o MRP não planeja.** Item de terceiro, item com tipo MRP *projeto*, item
 de estrutura comercial e item com estoque suficiente.
 
-**Antes de calcular.** Itens prontos (VITM0100), estrutura (VENT0210), roteiro
+**Antes de calcular.** Itens prontos (VENT0200 (aba Prontidão)), estrutura (VENT0210), roteiro
 (VENT0202), parâmetros de lote e segurança (VENT0200, aba Planejamento) e
 fornecedor preferencial dos comprados.
 
-**Telas relacionadas.** VPLN0100, VPRO0700, VPRO0900, VPRO0200, VSUP0400 (cotação
+**Telas relacionadas.** VPLN0100, VPRO0900, VPRO0200, VSUP0400 (cotação
 de compra), VVND0200 (aba Atendimento).
 
 ---
 
-#### VPRE0101 — Tabela de Apropriação
-
-**Para que serve.** Repartir a previsão semanal pelos dias da semana (quanto de cada
-semana cai na segunda, na terça...).
-
-**Como usar.** Descrição e o percentual de cada dia — a soma dos sete dias tem de
-dar 100%. Marque **Definir como padrão** para a tabela usada por omissão.
-
-**Telas relacionadas.** VPRE0201.
-
----
-
-#### VPRE0102 — Bloqueio de Previsão de Vendas
-
-**Para que serve.** Travar um período para que ninguém altere a previsão (ex.: mês
-já fechado com a diretoria).
-
-**Como usar.** Início, fim (não pode ser antes do início) e motivo. Semanas cuja
-segunda-feira cai no período passam a ser recusadas na gravação.
-
-**Telas relacionadas.** VPRE0201, VPRE0251.
-
----
-
-#### VPRE0201 — Cadastro da Previsão de Vendas
+#### VPRE0201 — Previsão de Vendas
 
 **Para que serve.** Lançar a previsão de vendas por item.
 
@@ -3044,107 +2111,29 @@ segunda-feira cai no período passam a ser recusadas na gravação.
   quantidades quebradas; *Atualizar existente* sobrescreve o que já houver.
 - **Consultar previsões:** por ano ou por item (o item prevalece sobre o ano).
 
-**Telas relacionadas.** VPRE0251, VPRE0301, VPRE0102, VCAL0100.
+**Abas.**
+- **Gerar pelo histórico:** itens (e máscara), a **fonte** (pedidos ou faturamento) e
+  o período do histórico; o período a gerar (semana e ano) e a **projeção %** (ex.:
+  +10%). *Aceita fração* e *Atualizar existente* se for o caso. Grava nas previsões.
+- **Gerar estatística:** item e histórico (AAAA-MM e quantidade, ao menos 2 períodos):
+  o sistema escolhe o modelo que melhor explica o histórico, mostra o erro médio
+  (MAPE %) e a quantidade prevista dos próximos períodos.
+- **Previsto × realizado:** no ano, por item, o previsto contra o realizado (pedidos
+  e/ou faturamento), a diferença e a aderência (% atendida).
+- **Apropriação:** como a previsão semanal se reparte pelos dias da semana; a soma
+  dos sete dias tem de dar 100%. *Definir como padrão* marca a tabela usada por
+  omissão.
+- **Bloqueio:** trava um período (início, fim e motivo) para ninguém alterar a
+  previsão; semanas cuja segunda-feira cai no período são recusadas na gravação.
 
----
-
-#### VPRE0251 — Geração de Previsão de Vendas
-
-**Para que serve.** Gerar a previsão a partir do histórico, em vez de digitar.
-
-**Como usar.** Escolha os itens (e máscara), a **fonte do histórico** (pedidos ou
-faturamento) e o período do histórico; depois o período a gerar (semana e ano
-inicial e final) e a **projeção %** (ex.: +10% sobre o histórico). Marque *Aceita
-fração* e *Atualizar existente* se for o caso. O resultado é gravado no cadastro
-de previsões.
-
-**Telas relacionadas.** VPRE0201, VPRO0600 (previsão estatística).
-
----
-
-#### VPRE0301 — Listagem Vendas Previsto X Realizado
-
-**Para que serve.** Comparar, no ano, o previsto com o realizado de cada item.
-
-**Como usar.** Escolha o ano e a fonte do realizado (pedidos e/ou faturamento). A
-grade mostra item, máscara, semanas, previsto, realizado, diferença e aderência
-(% da previsão atendida).
-
-**Telas relacionadas.** VPRE0201, VVND0500.
-
----
-
-#### VPLC0211 — Cadastro de Orientações de Entrega
-
-*Rotina de operações.*
-
-**Para que serve.** Registrar instruções de entrega ligadas à carga e ao cliente
-(ex.: "Agendamento obrigatório", "Entregar só após confirmação").
-
-**Operações.** *Consultar* (por carga; só as ativas) e *Cadastrar* (carga, cliente,
-título e instrução).
-
-**Telas relacionadas.** VPLC0200, VEXP0110, VEXP0120.
-
----
-
-#### VPLC0200 — Montagem de Carga
-
-*Rotina de operações.*
-
-**Para que serve.** Montar a carga com os romaneios e as notas antes da liberação
-logística.
-
-**Operações.** *Consultar* (por situação e transportadora); *Cadastrar* a carga
-(descrição, transportadora, placa, motorista); *Abrir carga*; *Adicionar* e
-*Remover romaneio*; *Adicionar nota fiscal*.
-
-**Telas relacionadas.** VEXP0110 (gestão de cargas), VEXP0100 (romaneio),
-VFIS0640 (faturar a carga).
-
----
-
-#### VMRP0200 — Pipeline MRP → CRP → APS
-
-*Rotina de operações.*
-
-**Para que serve.** Disparar o pipeline de planejamento com os parâmetros enviados
-diretamente (plano, número inicial das ordens, recalcular níveis, sequenciar a
-partir de). Para o resultado legível e o parecer de viabilidade, use a
-**VPLN0100**.
-
----
-
-#### VPLA0300 — Parâmetros do Planejamento
-
-*Rotina de operações.*
-
-**Para que serve.** Consultar e alterar os parâmetros numerados do MRP e do
-planejamento. A mesma lista, editável na linha, está na aba *Parâmetros de
-planejamento* da **VPLN0100**.
-
-**Consumo pela venda (46 e 47).** Um pedido de venda com entrega na data V
-consome a previsão e a demanda de estoque (VPLA0102) com data entre V − 46 dias
-e V + 47 dias. Padrão: 30 e 0. O parâmetro 11 tira do cálculo a previsão das
-semanas que já passaram.
-
-**Horizonte firme (48).** De hoje até hoje + 48 dias corridos, o MRP não cria
-ordem nova: a sugestão que precisaria começar nesse período começa no fim dele, e
-o MRP avisa com a mensagem *Horizonte firme* (VMRP0100, aba Exceções). Padrão 0
-(desligado).
-
-**Tempo de segurança (49).** A ordem planejada chega 49 dias úteis antes da
-necessidade, para absorver atraso de produção ou de fornecedor. Padrão 0.
-
-Os quatro valores (46 a 49) valem para os itens sem política própria. Para mudar
-só alguns itens ou uma família, use a **VPLA0310**.
+**Telas relacionadas.** VCAL0100, VVND0500.
 
 ---
 
 #### VPLA0310 — Política de Planejamento por Item
 
 **Para que serve.** Dar a um item, ou a uma classificação de itens, um jeito
-próprio de ser planejado, em vez dos parâmetros da empresa (VPLA0300).
+próprio de ser planejado, em vez dos parâmetros da empresa (VPLN0100, Parâmetros).
 
 **O que se define.**
 
@@ -3154,7 +2143,7 @@ próprio de ser planejado, em vez dos parâmetros da empresa (VPLA0300).
 | **Consumo: dias antes / depois** | A janela em que um pedido consome a previsão e a demanda de estoque, contada da entrega do pedido. Com 0 dias antes e 15 depois, o pedido só consome o que vem depois dele. |
 | **Horizonte firme** | Dias corridos, a partir de hoje, em que o MRP não cria ordem nova para o item. A sugestão vai para o fim do horizonte e o MRP avisa. Para atender antes, firme a ordem à mão. |
 | **Tempo de segurança** | Dias úteis que a ordem chega antes da necessidade. |
-| **Lote por período** | **Por dia**, **por semana** (segunda a domingo) ou **por mês**: as necessidades do item no mesmo período viram uma ordem só, na data da primeira. Sem agrupamento, uma ordem por necessidade. A empresa tem o seu no parâmetro 50 (VPLA0300). |
+| **Lote por período** | **Por dia**, **por semana** (segunda a domingo) ou **por mês**: as necessidades do item no mesmo período viram uma ordem só, na data da primeira. Sem agrupamento, uma ordem por necessidade. A empresa tem o seu no parâmetro 50 (VPLN0100, Parâmetros). |
 | **Lote máximo** | Só na política do item. A necessidade acima dele vira várias ordens, cada uma com no máximo esse valor (ajustado ao lote múltiplo do item); a última leva o resto. |
 
 **Herança.** Campo vazio herda. A ordem é: a política do **item**; depois a da
@@ -3177,18 +2166,7 @@ Demanda de estoque, reposição ou antecipação de venda de item **sob encomend
 não se cadastra; a que já existia aparece como *Sob encomenda* e fica fora do
 cálculo.
 
-**Telas relacionadas.** VPLA0300, VPLA0102, VMRP0100, VPRE0101.
-
----
-
-#### VCAL0200 — Dias Úteis Prometidos por Item
-
-*Rotina de consulta.*
-
-**Para que serve.** Ver o calendário efetivo do mês que a promessa de entrega usa
-para um item e uma configuração (máscara; use "-" quando não houver).
-
-**Telas relacionadas.** VPME0102ITE, VENT0108, VCAL0100.
+**Telas relacionadas.** VPLN0100, VPLA0102, VMRP0100, VPRE0201.
 
 ---
 
@@ -3196,18 +2174,26 @@ para um item e uma configuração (máscara; use "-" quando não houver).
 
 *Fornecedores, pedido de compra, solicitação, cotação, contratos, recebimento e serviços de terceiros.*
 
-#### VPCT0100 — Tolerâncias de Pedido de Compra
+#### VPCT0100 — Parâmetros de Compras
 
 **Para que serve.** Definir quanto a nota de entrada ou o aviso de recebimento pode
-divergir do pedido de compra e o que o sistema faz quando passa disso.
+divergir do pedido de compra e o que o sistema faz quando passa disso, e até que
+valor o pedido aprova sozinho.
 
-**Como usar.**
+**Aba Tolerâncias de quantidade e preço.**
 1. **Nova regra:** tipo (**quantidade**, **preço do item** ou **total dos
    produtos**), a que se aplica (NF de entrada, aviso de recebimento ou os dois),
    fornecedor (opcional — vazio vale para todos), intervalo mínimo e máximo,
    limite, unidade (% ou valor fixo) e **ação**: **avisar** ou **bloquear**.
 2. **Avaliar (esperado × real):** informe os dois números e veja que regra dispara
    e qual ação resulta.
+
+**Aba Alçadas de aprovação** (administrador grava). Para todos os fornecedores ou
+para um: **aprova sozinho até** (R$), **bloqueia acima de** (R$, opcional) e
+vigência. Na aprovação do pedido: até o primeiro valor passa direto; acima dele
+precisa da autorização superior; acima do bloqueio nem ela libera. Vale a alçada
+do fornecedor; sem ela, a geral; sem nenhuma, o pedido aprova sem controle de
+valor. Uma alçada nova vigente substitui a anterior.
 
 **Telas relacionadas.** VPDC0200, VAVR0200, VFIS0210.
 
@@ -3230,15 +2216,21 @@ voltou de cada ordem.
    **está lá** agora, a data prometida e a situação. *Vencida* = ainda há peça no
    terceiro e a data prometida passou.
 3. **Remessa e retorno:** lance o movimento da ordem (tipo, quantidade,
-   documento, lote, observação) e veja o histórico.
+   documento, lote, observação). Abaixo, o **histórico da ordem**: cada mudança
+   de situação e cada movimento, com data e documento.
 4. **Conversões de unidade:** da unidade do fornecedor para a nossa (de, para,
    fator).
 
 **De onde vem a ordem.** Da ordem de produção, quando o roteiro tem etapa externa
 (a firmação no MRP já cria a requisição de serviço).
 
-**Telas relacionadas.** VENT0202 (operação externa), VPRO0900, VTER0100 a
-VTER0400 (manutenção avançada).
+**Gerar ordens de uma OF** (aba Ordens de serviço, administrador): para a OF
+criada antes de o roteiro ganhar a etapa em terceiro. Etapa que já tem ordem não
+é duplicada, e OF encerrada ou cancelada não gera ordem.
+
+
+**Telas relacionadas.** VENT0202 (operação externa), VPRO0900 (ordem de
+fabricação).
 
 ---
 
@@ -3248,7 +2240,12 @@ VTER0400 (manutenção avançada).
 recebimento confere depois.
 
 **Visões da tela.** **Pedidos** (o cadastro), **Sugestões do MRP**,
-**Acompanhamento de entregas** e **Previsão de pagamentos**.
+**Acompanhamento de entregas**, **Previsão de pagamentos** e **Histórico de compras**
+(por fornecedor e item: pedido, recebido, cancelado, em aberto e preço de cada
+linha; clique para abrir o pedido).
+
+**Filtrar a lista de pedidos.** Situação, fornecedor, item (procura nas linhas do
+pedido) e *entrega até*.
 
 **Passo a passo (Pedidos).**
 1. **Novo — aba Capa:** fornecedor, emissão, entrega prevista, moeda,
@@ -3273,7 +2270,13 @@ recebimento confere depois.
 6. **Aba Enviar ao fornecedor:** o PDF do pedido, os e-mails do cadastro (o
    contato "de pedido de compra" vem sugerido) e o histórico de envios —
    inclusive os que falharam e por quê.
-7. **Aba Notas e recebimentos:** que notas de entrada atenderam cada linha.
+7. **Aba Notas e recebimentos:** que notas de entrada atenderam cada linha e,
+   com o pedido aprovado, **Receber material** — para quando o material chega
+   antes da nota. Informe, por linha, a quantidade recebida, o almoxarifado, o
+   lote, a validade, a corrida e o certificado (obrigatórios quando o cadastro do
+   item exige) e **Registrar recebimento**. Item com roteiro de inspeção entra no
+   almoxarifado de inspeção e abre o lote (VINS0300). Quando a nota chegar, a
+   entrada fiscal não lança de novo o que já entrou.
 8. **Aba Pagamentos previstos:** as parcelas que o pedido ainda vai gerar.
 
 **Depois da aprovação** a capa e as linhas não mudam mais; só se **elimina o saldo**
@@ -3291,7 +2294,7 @@ fornecedor e **Gerar pedido** (passa pela alçada como qualquer pedido) ou
 atraso. **Registrar contato** grava a nova data prometida, com quem se falou e o
 que foi dito; a data passa a valer aqui e na previsão de pagamentos.
 
-**Telas relacionadas.** VSUP0300 (solicitação), VSUP0400 (cotação), VPDC0210,
+**Telas relacionadas.** VSUP0300 (solicitação), VSUP0400 (cotação),
 VAVR0200, VFIS0210 (NF de entrada), VFIN0200.
 
 ---
@@ -3326,7 +2329,7 @@ padrão e usar a unidade de estoque.
 
 **Bloquear / desbloquear** o fornecedor está na lista.
 
-**Telas relacionadas.** VSUP0130, VSUP0140 (transportadora), VPDC0200, VSUP0660.
+**Telas relacionadas.** VSUP0130, VSUP0140 (transportadora), VPDC0200.
 
 ---
 
@@ -3361,7 +2364,13 @@ item, preço, UM, quantidade mínima e fornecedor; acrescente **descontos e
 acréscimos em cadeia** (natureza, cálculo, valor) — a ordem importa, cada um
 incide sobre o resultado do anterior.
 
-**Telas relacionadas.** VPDC0200 (preço sugerido no pedido), VSUP0680.
+**Buscar preços das compras** (com a tabela aberta): período, fornecedor e origem
+(pedidos, notas de entrada ou os dois) listam os preços praticados; marque os que
+vão para a tabela e **Levar para a tabela**. Item que já tem preço só muda se
+marcar **Substituir**. **Copiar descontos e acréscimos** leva a cadeia de um item
+da tabela para outro (substituindo ou acrescentando).
+
+**Telas relacionadas.** VPDC0200 (preço sugerido no pedido).
 
 ---
 
@@ -3386,7 +2395,7 @@ avaliação pelas ocorrências.
 destino (UF ou CEP), peso, volume e valor da carga e **Cotar frete**: a tela
 compara todas as transportadoras com total e previsão de entrega.
 
-**Não confundir** com o *portador* (VCLI0510), que é o cadastro financeiro de
+**Não confundir** com o *portador* (Cadastros de apoio da VCLI0500), que é o cadastro financeiro de
 cobrança.
 
 ---
@@ -3397,7 +2406,7 @@ cobrança.
 preferencial), lead time, o código e a descrição do item no fornecedor e a UM.
 
 **Por que importa.** O MRP e a geração de pedidos usam o fornecedor preferencial;
-item comprado sem fornecedor não está pronto para o MRP (VITM0100). O código no
+item comprado sem fornecedor não está pronto para o MRP (VENT0200 (aba Prontidão)). O código no
 fornecedor é o que a importação da NF-e usa para reconhecer o item.
 
 **Regra do código no fornecedor.** O código do fornecedor **não pode ser o código
@@ -3408,7 +2417,11 @@ mesma regra vale quando a entrada de nota (VFIS0210) aprende o vínculo: ali, a
 recusa pede para desmarcar **lembrar vínculo** na linha, e a nota é lançada sem
 memorizar o código.
 
-**Telas relacionadas.** VVOR0202, VSUP0670, VFIS0610, VFIS0210.
+**Laudos de qualidade** (ao abrir um vínculo): data, situação (pendente, aprovado,
+rejeitado, expirado), arquivo PDF/PNG/JPEG até 10 MB e observação. O lote de
+inspeção (VINS0300) lista e vincula esses laudos.
+
+**Telas relacionadas.** VINS0300, VFIS0210.
 
 ---
 
@@ -3450,34 +2463,24 @@ material; o comprador atende gerando pedidos.
 
 ---
 
-#### VCON0200 — Cadastro de Contratos de Fornecedores
+#### VCON0200 — Contratos de Fornecedores
 
-**Para que serve.** Registrar o contrato de fornecimento: quantidades e preços
-acordados por um período.
+**Para que serve.** Registrar o contrato de fornecimento (quantidades e preços
+acordados por um período) e acompanhar o saldo de cada linha.
 
-**Como usar.** **Capa:** empresa, fornecedor, número do contrato, situação,
-descrição, moeda, vigência e índice de reajuste. **Linhas:** item, máscara, UM,
-quantidade contratada (positiva), preço unitário e pedido mínimo. O sistema
-devolve o número interno do contrato.
+**Como usar.**
+1. A lista à esquerda mostra os contratos da empresa; filtre pela **situação**.
+2. **Novo contrato:** **capa** (fornecedor, número, situação, descrição, moeda,
+   vigência e índice de reajuste) e **linhas** (item, máscara, UM, quantidade
+   contratada positiva, preço unitário e pedido mínimo). **Criar contrato** abre o
+   contrato criado.
+3. **Contrato aberto:** cada linha com contratada, consumida e **saldo**.
+   **Baixar saldo** (só em contrato **Ativo**, sem passar do saldo) consome a
+   quantidade informada. **Mudar situação** ativa, suspende, encerra ou cancela;
+   encerrar e cancelar pedem confirmação, porque o saldo restante deixa de poder
+   ser consumido.
 
-**Telas relacionadas.** VCON0400, VCON0202, VPDC0200 (linha atende contrato).
-
----
-
-#### VCON0400 — Consulta de Contratos de Fornecedores
-
-**Para que serve.** Ver os contratos e o saldo de cada linha (contratada, consumida,
-saldo) e mudar a situação do contrato.
-
----
-
-#### VCON0202 — Baixa de Saldo / Cancelamento do Contrato
-
-**Para que serve.** Baixar saldo de uma linha do contrato ou encerrar o contrato.
-
-**Como usar.** Informe o número interno e **Abrir**. Selecione a linha e a
-**quantidade a baixar** (só em contrato ativo e até o saldo). **Cancelar
-contrato** encerra todo o contrato.
+**Telas relacionadas.** VPDC0200 (linha atende contrato).
 
 ---
 
@@ -3498,158 +2501,6 @@ doca e registrar as divergências na chegada.
 
 ---
 
-#### VVOR0202 — Cadastro de Itens por Fornecedor
-
-*Rotina de operações.*
-
-**Para que serve.** Consultar os itens de um fornecedor e manter os **relatórios de
-qualidade** do vínculo item × fornecedor (data, situação e o arquivo — PDF, PNG ou
-JPEG).
-
-**Telas relacionadas.** VSUP0130, VSUP0670.
-
----
-
-#### VSUP0610 — Alçadas e Parâmetros de Compras
-
-*Rotina de operações (gravação só por administrador).*
-
-**Para que serve.** Os limites de aprovação de compra e os parâmetros de
-suprimentos.
-
-**Operações.**
-- **Alçadas:** escopo (ex.: por fornecedor), moeda, **valor até o qual aprova
-  sozinho** e **valor acima do qual bloqueia**, vigência e observação.
-- **Parâmetros:** por domínio (ex.: aviso de recebimento — exigir aviso), com
-  chave, valor e tipo.
-
-**Telas relacionadas.** VPDC0200, VAPR0100.
-
----
-
-#### VSUP0620 — EDI de Fornecedores
-
-*Rotina de operações.*
-
-**Para que serve.** Receber as confirmações eletrônicas do fornecedor (quantidade,
-preço e data confirmados) e evidenciar as divergências contra o pedido, com as
-tolerâncias.
-
-**Operações.** Consultar (por fornecedor e situação), registrar mensagem e abrir.
-
----
-
-#### VPDC0210 — Consulta, Aprovação e Recebimento de Pedidos
-
-*Rotina de operações.*
-
-**Para que serve.** A consulta operacional dos pedidos de compra com filtros por
-faixa (pedido, fornecedor, item), tipo de solicitação, comprador, emissão,
-entrega, kanban e posição; e as ações **Aprovar**, **Autorizar alçada**
-(administrador) e **Registrar recebimento** físico (linha, quantidade,
-almoxarifado e lote).
-
-**Dica.** O mesmo ciclo, em formulário, está na **VPDC0200**.
-
----
-
-#### VTER0100 — Preços de Serviços de Terceiros
-
-*Rotina de operações (gravação só por administrador).*
-
-**Para que serve.** Manutenção avançada dos preços de serviço: consultar por faixas,
-cadastrar, alterar, **resolver o preço** de um item numa data, **consultar o
-custo do serviço**, histórico, reajustar, copiar/mover e excluir. Em formulário,
-use a aba *Preços de serviço* da **VTPS0100**.
-
----
-
-#### VTER0200 — Ordens de Serviço de Terceiros
-
-*Rotina de operações.*
-
-**Para que serve.** Consultar as ordens (por situação e fornecedor), emitir o
-relatório, **gerar as ordens a partir da OF**, abrir e mudar a situação (com a
-requisição e o pedido de compra vinculados). Em formulário: **VTPS0100**.
-
----
-
-#### VTER0300 — Remessas e Retornos de Terceiros
-
-*Rotina de operações.*
-
-**Para que serve.** Registrar os movimentos da ordem de serviço (remessa, retorno,
-recebimento, ajuste — com lote e almoxarifado) e ver o histórico. O registro não
-duplica se for enviado duas vezes. Em formulário: **VTPS0100**, aba *Remessa e
-retorno*.
-
----
-
-#### VTER0400 — Conversões Globais de Terceiros
-
-*Rotina de operações (administrador).*
-
-**Para que serve.** Os fatores de conversão de unidades usados no custo e nos
-movimentos de terceiros (ex.: KG → UN). Em formulário: **VTPS0100**, aba
-*Conversões de unidade*.
-
----
-
-#### VSUP0640 — Registros Operacionais de Compras
-
-*Rotina de operações.*
-
-**Para que serve.** Ocorrências operacionais de compra, recebimento e inspeção
-(tipo, situação, fornecedor, pedido, item, quantidade, referência): consultar,
-cadastrar, abrir e mudar a situação.
-
----
-
-#### VSUP0650 — Histórico de Movimentos de Compra
-
-*Rotina de consulta.*
-
-**Para que serve.** Consolidar os movimentos de compra por fornecedor e item para
-rastrear e analisar as compras.
-
----
-
-#### VSUP0660 — Parâmetros e Contatos do Fornecedor
-
-*Rotina de operações.*
-
-**Para que serve.** Os parâmetros corporativos do cadastro de fornecedores (os mesmos
-dos *Cadastros de apoio* da VSUP0500) e a inclusão de telefones e e-mails em
-contatos já gravados.
-
----
-
-#### VSUP0670 — Itens e Qualidade do Fornecedor
-
-*Rotina de operações.*
-
-**Para que serve.** Consultar os itens do fornecedor (inclusive buscando pelo código
-ou descrição do fornecedor), manter os relatórios de qualidade do vínculo e
-associá-los (ou removê-los) às ordens de inspeção de recebimento.
-
----
-
-#### VSUP0680 — Fontes de Preços de Compra
-
-*Rotina de operações.*
-
-**Para que serve.** Atualizar a tabela de preço de compra a partir das compras
-reais.
-
-**Operações.** **Consultar fontes** (preços vindos de pedidos e notas num período,
-por fornecedor ou tabela), **Consultar candidatos** de uma tabela, **Aplicar fonte
-de preço** (com ou sem sobrescrever) e **Copiar e reajustar itens** entre linhas
-da tabela.
-
-**Telas relacionadas.** VSUP0120.
-
----
-
 ## Almoxarifado
 
 *Almoxarifados, estoque, inventário, lotes, expedição e o material de terceiros (beneficiamento).*
@@ -3657,8 +2508,7 @@ da tabela.
 #### VLOT0100 — Máscaras de Lote/Série
 
 **Para que serve.** Definir como o número de lote ou de série é formado (por partes:
-texto fixo, data, sequência...) e gerar o próximo número. Também abre pelo código
-antigo VEST0300.
+texto fixo, data, sequência...) e gerar o próximo número.
 
 **Como usar.**
 1. **Nova máscara:** aplicação (lote ou série), descrição e, se quiser, item e
@@ -3700,6 +2550,11 @@ cadastro do item, VENT0200 — aba Estoque).
 2. Abas **Clientes** e **Fornecedores:** para almoxarifado de terceiro
    (consignação, material do cliente).
 3. Para alterar, busque pelo código — o código não muda.
+4. Aba **Manufatura:** os parâmetros de estoque da produção (como a devolução
+   escolhe o lote, baixa automática de lotes e a janela de movimentação; só o
+   administrador grava) e os **endereços** de cada almoxarifado usados na baixa
+   por endereço (incluir e inativar). O controle de lote e de endereço por item
+   fica no cadastro do item.
 
 **Regras importantes.**
 - **Sem "saldo negativo" marcado**, qualquer saída que deixe o almoxarifado (ou o
@@ -3735,7 +2590,7 @@ análises. O item escolhido na barra de cima vale para todas as abas.
 | **Análises** | Giro, cobertura, itens parados, **acuracidade** das contagens, idade do estoque, **curva ABC** do valor consumido e lotes vencidos ou a vencer |
 
 **Telas relacionadas.** VEST0200 (inventário e tipos de movimento), VEST0500,
-VENT0800, VEST0400.
+VENT0800.
 
 ---
 
@@ -3782,8 +2637,9 @@ consumo.
 que peso e em que transporte.
 
 **Passo a passo.**
-1. **Novo romaneio** (tipo e transportadora) ou **Gerar** a partir do pedido de
-   venda (informe o código do pedido).
+1. **Novo romaneio:** escolha o tipo (pedido de venda, pedido de compra ou ordem
+   de fabricação) e busque o documento pelo nome; ou **Gerar** a partir de um
+   pedido de venda escolhido na lista.
 2. **Itens:** item, quantidade, depósito e pesos unitários. Confira cada item
    (planejado × conferido; a divergência fica marcada).
 3. **Volumes / packing:** espécie, peso bruto, dimensões (a cubagem é calculada) e
@@ -3797,7 +2653,28 @@ do item. Item perigoso ou com condição de armazenagem gera, depois da tabela d
 itens, a seção **Cuidados no transporte e na armazenagem** (ONU, classe e
 condição), com o texto inteiro. Na tela, o mesmo aviso aparece acima dos itens.
 
-**Telas relacionadas.** VVND0200, VFIS0200, VEXP0110 (cargas), VPLC0200, VENT0200.
+**Aba Cargas.** A carga agrupa os romaneios que saem no mesmo veículo. O fluxo é
+uma linha reta: romaneio conferido → entra na carga → liberar → carregar →
+faturar → despachar.
+1. **+ Nova:** descrição, transportadora, saída e entrega previstas, placa,
+   motorista, rota, caixa de despacho (doca), origem e destino.
+2. Abra a carga. Em **Romaneios prontos** aparecem os romaneios separados ou
+   conferidos que não estão em outra carga: **Incluir** põe na carga, **Tirar**
+   devolve (enquanto a carga está planejada ou liberada).
+3. O botão do topo segue o fluxo: **Liberar carga** → **Iniciar carregamento** →
+   **Concluir carregamento** → **Despachar**. **Cancelar** devolve os romaneios.
+4. **Faturar carga** (carregando ou carregada): os itens e os preços vêm dos
+   romaneios e o destinatário, do cadastro do cliente; confira série, datas, CFOP
+   e natureza e clique em **Criar NF-e da carga**. A nota nasce como rascunho para
+   transmitir na VFIS0200. Uma nota já emitida pode ser **vinculada** à carga.
+5. **Orientações de entrega:** o recado ao motorista (para um cliente da carga ou
+   para todos), com prioridade.
+
+Sem carga aberta, a aba mostra as **caixas de despacho** (docas e posições da
+expedição): cadastre o código, a descrição e a zona; a coluna *Ocupada por* diz
+qual carga está nela.
+
+**Telas relacionadas.** VVND0200, VFIS0200, VENT0200.
 
 ---
 
@@ -3894,43 +2771,6 @@ ligá-la ao pedido de venda.
 
 ---
 
-#### VEXP0110 — Gestão de Cargas de Expedição
-
-*Rotina de operações.*
-
-**Para que serve.** Conduzir a carga até o despacho: montar (romaneios e notas) e
-avançar o ciclo.
-
-**Operações.** Consultar (situação, transportadora, período); cadastrar; abrir;
-adicionar e remover romaneio; adicionar nota fiscal; **Liberar carga**, **Iniciar
-carregamento**, **Concluir carregamento**, **Despachar** e **Cancelar**; vincular
-caixa de despacho; **Monitor geral**, **Monitor de separação** e **Painel
-logístico**.
-
-**Telas relacionadas.** VPLC0200, VEXP0100, VEXP0120, VFIS0640.
-
----
-
-#### VEXP0120 — Instruções e Caixas de Despacho
-
-*Rotina de operações.*
-
-**Para que serve.** As instruções de entrega por carga e cliente e as **caixas de
-despacho** (posições físicas da expedição: código, descrição, almoxarifado e zona)
-usadas na montagem das cargas.
-
----
-
-#### VEST0400 — Consultas de Estoque por Almoxarifado
-
-*Rotina de consulta.*
-
-**Para que serve.** Os movimentos de um almoxarifado, o saldo pontual de um item
-(com lote) e todos os saldos do almoxarifado. Para a consulta completa, use a
-**VEST0100**.
-
----
-
 ## Importação
 
 *Processos de importação e custo nacionalizado.*
@@ -3949,36 +2789,10 @@ nacionalizado** de cada item (FOB + frete, seguro, impostos e despesas rateados)
 4. **Recalcular landed:** a grade mostra o FOB unitário e o **custo nacionalizado
    unitário** de cada item.
 5. Mude a situação do processo (aberto → nacionalizado, ou cancelado).
+   A lista à esquerda filtra por **situação** (aberto, nacionalizado, cancelado).
 
-**Telas relacionadas.** VIMP0101, VIMP0300, VFIS0210 (NF de entrada de
+**Telas relacionadas.** VFIS0210 (NF de entrada de
 importação).
-
----
-
-#### VIMP0102 — Conhecimentos de Transporte (CT-e)
-
-*Rotina de operações.*
-
-**Para que serve.** Cadastrar, consultar e autorizar os CT-e ligados às entradas e
-aos processos logísticos. Para emitir e consultar em formulário, use a
-**VFIS0220**.
-
----
-
-#### VIMP0101 — Status Logístico da Carga
-
-**Para que serve.** Acompanhar e mudar a situação dos processos de importação:
-**aberto** (em trânsito) → **nacionalizado**, ou **cancelado**. O cadastro e o
-custeio ficam na VIMP0200.
-
----
-
-#### VIMP0300 — Importação e Custo Nacionalizado
-
-*Rotina de operações.*
-
-**Para que serve.** As mesmas operações da VIMP0200 enviadas diretamente: consultar
-por situação, cadastrar, abrir, **recalcular** e mudar a situação.
 
 ---
 
@@ -3990,9 +2804,7 @@ por situação, cadastrar, abrir, **recalcular** e mudar a situação.
 > usa um só objeto, o **lote de inspeção** (VINS0300). A amostragem segue a NBR
 > 5426 (VINS0110); a não conformidade é tratada por CAPA/8D (VINS0500); os
 > instrumentos ficam na metrologia (VINS0600); o certificado ao cliente e os
-> documentos controlados, nas VINS0700 e VINS0800. As telas antigas de ordem de
-> inspeção (VINS0201, VINS0206, VINS0313, VINS0400) continuam funcionando, mas
-> trabalham sobre os lotes de inspeção.
+> documentos controlados, nas VINS0700 e VINS0800.
 
 #### VINS0700 — Certificados de Qualidade
 
@@ -4032,7 +2844,7 @@ formulários, planos de inspeção e especificações.
 - Há no máximo um rascunho e uma vigente por documento.
 - **Quem elaborou não aprova** (outra pessoa precisa aprovar).
 - Revisão aprovada não muda de conteúdo.
-- O desenho de engenharia continua na VDES0100 / VENG0400.
+- O desenho de engenharia continua na VDES0100.
 
 ---
 
@@ -4107,8 +2919,12 @@ de processo e final, os resultados e a **decisão de uso** que libera o estoque.
   aprovação da NF de entrada, quando o item tem roteiro de inspeção (VINS0200). O
   material fica no **almoxarifado de inspeção**.
 - **Processo:** abertos na criação da OF para cada etapa com plano de inspeção.
-- **Manual, final ou devolução:** **Novo lote manual** (destino, origem, item,
-  quantidade, almoxarifado de inspeção, fornecedor, lote/corrida).
+- **Manual, final ou devolução:** **Novo lote manual** (origem, item e
+  fornecedor escolhidos pela busca, quantidade, almoxarifado de inspeção e
+  lote/corrida).
+
+**Consultar.** A lista filtra por situação, origem, item e fornecedor; o botão
+Exportar leva a lista para planilha ou PDF.
 
 O lote já vem com as características do plano e o **plano de amostragem** (VINS0110)
 pela severidade corrente. Quando o *skip-lot* dispensa, o lote abre como
@@ -4124,7 +2940,7 @@ pela severidade corrente. Quando o *skip-lot* dispensa, o lote abre como
    destino; informe o **tratamento** e o motivo.
 
 **Laudos do fornecedor.** O bloco lista os laudos anexados no vínculo item ×
-fornecedor (VSUP0670): os do fornecedor do lote, ou os de todos os fornecedores do
+fornecedor (VSUP0130): os do fornecedor do lote, ou os de todos os fornecedores do
 item quando o lote não tem fornecedor. Com o lote aberto, **Vincular** liga o laudo
 ao lote e **Desvincular** desfaz. O arquivo do laudo baixa pelo nome.
 
@@ -4182,30 +2998,6 @@ justifica; a inspeção recomeça em apertada.
 
 ---
 
-#### VINS0106 — Cadastro de Ocorrências
-
-**Para que serve.** Registrar uma ocorrência operacional de qualidade ou de
-recebimento: tipo, situação, fornecedor, item, quantidade e referência.
-
-**Telas relacionadas.** VINS0400, VSUP0640.
-
----
-
-#### VINS0400 — Consulta de Ocorrências / Ordens de Inspeção
-
-**Para que serve.** Consultar (só leitura) as ocorrências e as ordens de inspeção,
-com tipo, fornecedor, item, referência, situação, quantidade e origem.
-
----
-
-#### VINS0313 — Consulta de Inspeções de Recebimento
-
-**Para que serve.** Consultar (só leitura) as inspeções de recebimento: item,
-máscara, quantidade, origem, fornecedor, situação e data. Para trabalhar o lote,
-use a **VINS0300**.
-
----
-
 #### VINS0200 — Cadastro do Roteiro de Inspeção
 
 **Para que serve.** Definir o que inspecionar no recebimento de um item (ou de uma
@@ -4225,83 +3017,37 @@ inspeção.
 máximo, aceita maior que rejeita) e mostra o plano de amostragem em português,
 como o inspetor lê.
 
-**Telas relacionadas.** VINS0300, VINS0110, VINS0600.
+**Roteiros cadastrados** (barra da tela): escolha na lista o roteiro (por item ou
+classificação, com a vigência) para conferir as etapas.
+
+**Aba Processo e final (planos).** Escolha o item e crie o plano de inspeção de
+processo, final ou recebimento: descrição, amostra e quantos defeitos aceita.
+Em **Características**, cadastre o que medir (nominal, tolerâncias, unidade e se
+é crítica). O lote de inspeção (VINS0300) copia essas características ao abrir.
+O plano de uma etapa do roteiro de fabricação é cadastrado na própria etapa
+(VENT0202). **Desativar** tira o plano dos lotes novos.
+
+**Telas relacionadas.** VINS0300, VINS0110, VINS0600, VENT0202.
 
 ---
 
-#### VINS0201 — Manutenção das Ordens de Inspeções
+#### VAVF0300 — Avaliação de Fornecedores
 
-**Para que serve.** Gerar uma ordem de inspeção de recebimento à mão (origem, item,
-máscara, almoxarifado, quantidade, fornecedor, lote) e registrar a análise
-(conforme, rejeitada, retrabalho, restrita, tratamento e almoxarifados de destino
-e de rejeição). A ordem é um lote de inspeção: a análise **distribui o lote
-inteiro e move o estoque**.
+**Para que serve.** A ficha de avaliação de cada fornecedor: o **IQF** (Índice de
+Qualificação de Fornecedores) e a **homologação**.
 
-**Dica.** Use a **VINS0300**, que mostra os resultados por unidade e a decisão de
-uso completa.
+**Como usar.** Escolha o fornecedor na barra e o período avaliado.
+- **Aba IQF:** informe as notas **comercial** e de **atendimento** (0 a 100) e
+  **Calcular (prévia)** ou **Calcular e gravar**. Qualidade (peças aprovadas na
+  inspeção) e entrega (recebimentos no prazo) vêm do histórico do período. Pesos:
+  qualidade 40%, entrega 30%, comercial 20%, atendimento 10%. Abaixo, o histórico dos
+  IQF gravados.
+- **Aba Homologação:** as faixas (homologa a partir de, condicional a partir de),
+  a situação (vazio = decidida pelo IQF do período), a categoria, a validade e a
+  observação. A lista mostra as decisões anteriores. **Gerar os vínculos item ×
+  fornecedor** cria na VSUP0130 o vínculo de todos os itens já comprados dele.
 
----
-
-#### VINS0206 — Tratamento das Ordens de Inspeção
-
-*Rotina de operações.*
-
-**Para que serve.** Analisar a ordem de inspeção (quantidades conforme, rejeitada,
-retrabalho, restrita e tratamento) e destinar o estoque. Funciona sobre o lote de
-inspeção; a análise não pode ser feita duas vezes. Em formulário: **VINS0300**.
-
----
-
-#### VAVF0101 — Cadastro de Parâmetros de Avaliação de Fornecedores
-
-**Para que serve.** Os parâmetros da avaliação de fornecedores (chave, valor, tipo e
-descrição) usados no cálculo do IQF.
-
----
-
-#### VAVF0204 — Envio de IQF aos Fornecedores
-
-**Para que serve.** Calcular o IQF (Índice de Qualificação de Fornecedores) do
-período e registrar o resultado.
-
-**Como usar.** Fornecedor e período; informe as notas manuais de **comercial** e
-**atendimento** (0 a 100). O sistema calcula **qualidade** e **entrega** pelo
-histórico real (lotes de inspeção e entregas) e o **IQF final** = qualidade 40% +
-entrega 30% + comercial 20% + atendimento 10%.
-
-**Telas relacionadas.** VAVF0300, VAVF0203.
-
----
-
-#### VSUP0600 — Inspeção de Recebimento
-
-*Rotina de operações.*
-
-**Para que serve.** O ciclo de inspeção de recebimento pelas rotas antigas:
-cadastrar e abrir roteiro, abrir ordem de inspeção, registrar resultados, analisar
-e destinar o estoque. Tudo isso agora grava lotes de inspeção — para o dia a dia,
-use **VINS0200** (roteiro) e **VINS0300** (lote).
-
----
-
-#### VAVF0300 — Scorecard e IQF do Fornecedor
-
-*Rotina de operações.*
-
-**Para que serve.** Consultar o histórico de avaliações do fornecedor, **calcular**
-uma avaliação do período (com as notas comercial e de atendimento, gravando ou
-não) e registrar uma avaliação manual.
-
----
-
-#### VAVF0203 — Homologação de Fornecedores
-
-*Rotina de operações.*
-
-**Para que serve.** Registrar a homologação do fornecedor (período, faixas mínimas
-para homologado e condicional, situação, categoria) e **gerar os itens do
-fornecedor** pelo histórico de compras.
-
+**Telas relacionadas.** VINS0300 (inspeção), VSUP0130, VSUP0500.
 ---
 
 # Administrativo & Financeiro
@@ -4325,18 +3071,39 @@ na VFIN0300.
 
 #### VFIN0110 — Condições de Pagamento
 
-**Para que serve.** Cadastro rápido de condição de pagamento por nome e dias das
-parcelas (ex.: "30/60/90" → 30, 60, 90).
+**Para que serve.** O cadastro **único** de condição de pagamento: é a condição que
+cliente, fornecedor, orçamento, pedido de venda e de compra e o faturamento usam.
 
-**Dica.** A condição completa — percentual por parcela, entrada, análise de
-crédito, se gera receita — é mantida na **VCLI0520**, aba Condição de Pagamento.
+**Como usar.**
+1. **Condição:** descrição, portador, tipo de análise de crédito, início das
+   parcelas, despesas, prazo médio, *Especial*, *Gera receita* e *À vista*.
+2. **Parcelas:** escolha a condição na lista e informe percentual do total, de
+   quando conta o prazo (emissão, entrada, entrega ou faturamento), dias para o
+   vencimento e documento. A tela mostra a soma dos percentuais — a condição só
+   fecha em 100%. Todos em branco = partes iguais. Entrada é pagamento no ato.
+3. **Conferir em dinheiro:** informe um valor e a data de entrega e veja os
+   vencimentos que a condição gera, sem gravar nada.
+
+**Tipo de análise de crédito.** *Sempre analisa*, *Bloqueia sempre* ou *Libera
+sem análise*. Condição sem *Gera receita* não cria conta a receber (amostra,
+operação interna).
+
+**Mudança.** Antes havia dois cadastros: esta tela gravava uma lista à parte, que
+nenhum pedido lia. As condições que existiam só nela foram copiadas para cá na
+atualização (mesmo nome e prazos; percentual em partes iguais).
+
+**Telas relacionadas.** VCLI0500 (condição do cliente), VSUP0500, VVND0200, VCST0202.
 
 ---
 
-#### VFIN0120 — Plano de Contas
+#### VFIN0120 — Plano de Contas Gerencial
 
-**Para que serve.** O plano de contas da empresa: código, descrição, conta pai, tipo
-(sintética ou analítica), natureza e situação.
+**Para que serve.** O plano **gerencial** da empresa — o que classifica títulos a
+pagar e receber, a DRE e o rateio: código, descrição, conta pai, tipo (sintética ou
+analítica), natureza e situação. Não confundir com o **plano contábil** (VCTB0200),
+que é o do SPED: cada conta gerencial aponta para uma conta contábil, e a coluna
+**Conta contábil** mostra esse vínculo (feito na VCTB0200, aba Contabilização
+automática).
 
 **Como usar.** **+ Nova Conta** ou clique numa conta para alterar. A lista vem em
 **ordem natural** do código (2.1.9 antes de 2.1.10) e mostra o nível.
@@ -4347,14 +3114,6 @@ não são aceitos sem centro de custo.
 
 **Telas relacionadas.** VFIN0200 (título por plano), VCTB0200, VFIN0500 (DRE),
 VCTB0102 (centros de custo).
-
----
-
-#### VFIN0130 — Centros de Custo
-
-**Agora na VCTB0102.** O cadastro de centro de custo é um só: o código antigo abre a
-VCTB0102. Os centros que estavam aqui foram levados para lá com o mesmo código
-(CC-FAB-CORTE…) e a hierarquia montada pelo prefixo.
 
 ---
 
@@ -4439,18 +3198,6 @@ a **composição por idade** resume a carteira.
 **Recortes.** Conta bancária, tipo de movimento e busca no histórico.
 
 **Telas relacionadas.** VFIN0100, VFIN0620, VFIN0200, VFIN0210.
-
----
-
-#### VFIN0400 — Apuração de Impostos
-
-**Para que serve.** Apurar os impostos de uma competência: débitos (saídas),
-créditos (entradas) e o saldo a recolher de cada imposto.
-
-**Como usar.** Informe a competência (AAAA-MM) e apure (ou carregue uma apuração já
-feita). Uma linha por imposto.
-
-**Telas relacionadas.** VFIS0540, VFIS0340 (Simples), VFIN0500.
 
 ---
 
@@ -4590,7 +3337,8 @@ alterada na **VEMP0100** (botão *Alterar na VEMP0100*).
 
 #### VFIS0110 — Tabelas Tributárias
 
-**Para que serve.** As três tabelas que alimentam o cálculo de toda nota.
+**Para que serve.** As tabelas que alimentam o cálculo de toda nota e a carga
+tributária aproximada do rodapé.
 
 **Abas.**
 - **Tributação por NCM:** NCM (8 dígitos), descrição, alíquotas de IPI, PIS e
@@ -4598,6 +3346,10 @@ alterada na **VEMP0100** (botão *Alterar na VEMP0100*).
 - **ICMS dentro do estado:** por UF, a alíquota interna de ICMS e a do FCP.
 - **ICMS entre estados:** por par origem → destino, a alíquota interestadual
   (origem e destino iguais é operação interna — use a aba anterior).
+- **IBPT (carga aproximada):** consulte, por NCM e UF, a carga federal (nacional e
+  importado), estadual e municipal que sai no rodapé da nota (Lei 12.741). O
+  administrador importa o CSV oficial do IBPT de cada UF; cada versão fica
+  guardada e vale a vigente.
 
 As alíquotas aparecem e são digitadas em **%**.
 
@@ -4610,8 +3362,7 @@ tabela (a alíquota interna do estado do emitente, a interestadual e a do NCM); 
 só se o estado não estiver aqui vale o ICMS interno da Configuração Fiscal
 (VFIS0100).
 
-**Desativar** (na linha do NCM) tira a tributação do NCM — o atalho antigo
-VFIS0120 abre esta tela.
+**Desativar** (na linha do NCM) tira a tributação do NCM.
 
 **Telas relacionadas.** VFIS0350, VFIS0320, VFIS0100.
 
@@ -4621,7 +3372,7 @@ VFIS0120 abre esta tela.
 
 **Número e série.** A nota recebe número e série na autorização, seguindo a sequência configurada para a empresa no painel da Focus NF-e. Até lá ela aparece sem número.
 
-**Tipo de nota.** Vem do cadastro em VCLI0530, aba Tipo de NF de Saída, e decide se a nota gera título, mexe no estoque, baixa o pedido e entra como receita. Bonificação e remessa, por exemplo, saem sem pagamento.
+**Tipo de nota.** Vem dos Cadastros de apoio da VCLI0500, aba Tipo de NF de saída, e decide se a nota gera título, mexe no estoque, baixa o pedido e entra como receita. Bonificação e remessa, por exemplo, saem sem pagamento.
 
 **Conferência antes de sair.** A prévia e a transmissão conferem emitente, destinatário, datas (emissão no futuro ou com mais de 30 dias impede), nota de origem, NCM, CFOP e as contas de linha e total. O que impede aparece em Pendências, com o que fazer.
 
@@ -4696,6 +3447,11 @@ sistema baixa o estoque, gera os títulos a receber e marca o pedido como fatura
 
 **Nota autorizada não se corrige** — só cancelamento ou carta de correção.
 
+**Inutilizar numeração** (barra, Visão): para números que não vão ser usados
+(pulados ou de nota rejeitada). Informe série, número inicial e final (vazio = só
+o inicial) e a justificativa de 15 a 255 caracteres. A SEFAZ registra e **não se
+desfaz** — a tela pede confirmação.
+
 **Telas relacionadas.** VVND0200, VFIS0320, VFIS0325, VFIN0210, VEXP0100.
 
 ---
@@ -4717,7 +3473,8 @@ contas a pagar, a entrada no estoque, a baixa do pedido e a contabilização.
 - **Importar pela chave** (44 dígitos) — busca na SEFAZ via Focus.
 - **Notas recebidas na SEFAZ:** as notas emitidas contra o CNPJ da empresa chegam
   antes da mercadoria. **Manifeste** (a confirmação encerra o prazo; o
-  desconhecimento protege contra nota fria) e importe.
+  desconhecimento protege contra nota fria) e importe. Nota que não apareceu na
+  lista: **Manifestar por chave** (44 dígitos).
 - **Lançamento manual** (nota sem XML, modelo 1/1A, serviço avulso). Escolha o
   **fornecedor cadastrado** e razão social, CNPJ, inscrição estadual e UF vêm do
   cadastro; **sem cadastro**, busque o CNPJ na Receita. Colar a chave preenche número,
@@ -4802,7 +3559,7 @@ finalidade, tomador, RNTRC, município e UF de início e de fim, produto
 predominante, valor da carga, remetente e destinatário. Sem o trajeto e as partes,
 o CT-e fica só como registro local (para apropriar o frete).
 
-**Telas relacionadas.** VFIS0210 (frete sobre compras), VIMP0102.
+**Telas relacionadas.** VFIS0210 (frete sobre compras).
 
 ---
 
@@ -4837,8 +3594,7 @@ apontam para eles, e o texto vai para as informações complementares da nota.
 
 **Para que serve.** As **regras de tributação por cenário**: para que produto, cliente
 e operação vale qual ICMS e IPI. É o que o motor fiscal usa em cada linha da nota.
-(Desde esta versão também concentra as regras que ficavam na antiga VFIS0330 —
-redução e substituição de ICMS —, marcadas com o selo "da VFIS0330".)
+Também concentra a redução e a substituição de ICMS.
 
 **Abas.**
 1. **Identificação** — *a quem a regra se aplica*: UF (destino na saída, origem na
@@ -4919,7 +3675,7 @@ perecimento ou outras saídas — o bem deixa de apropriar o restante. Nota canc
 tira o bem (ou o baixa, se já apropriou).
 
 **Aba Parâmetros.** O **código de ajuste** do crédito no E111 (outros créditos da
-tabela 5.1.1 da UF — confira na VFIS0510 ou com o contador), a conta do ativo padrão
+tabela 5.1.1 da UF — confira na aba Ajuste de apuração da VFIS0510 ou com o contador), a conta do ativo padrão
 e o número de parcelas (48).
 
 **Telas relacionadas.** VFIS0210 (nota de entrada), VFIS0360 (tipo de operação),
@@ -4981,38 +3737,34 @@ crédito...).
 
 ---
 
-#### VFIS0500 — Motivos de Transferência DAPI
+#### VFIS0510 — Tabelas da Apuração de ICMS
 
-**Para que serve.** Os motivos de transferência da DAPI: código, motivo, UF de
-destino e vigência.
+**Para que serve.** As tabelas de códigos oficiais que quem fecha a apuração do ICMS
+mantém, uma por aba:
 
----
-
-#### VFIS0510 — Códigos de Ajuste de Apuração ICMS (5.1.1)
-
-**Para que serve.** Os códigos de ajuste da apuração do ICMS (tabela 5.1.1 do SPED):
-código, UF, vigência e descrição.
-
----
-
-#### VFIS0520 — Códigos de Ajuste ICMS (5.2/5.3/5.6/5.7)
-
-**Para que serve.** Os códigos de ajuste de documento das tabelas 5.2, 5.3, 5.6 e
-5.7 do SPED: código, UF, tabela, vigência e descrição.
+- **Ajuste de apuração (5.1.1):** códigos de ajuste da apuração do ICMS do SPED —
+  código, UF, vigência e descrição.
+- **Ajuste de ICMS (5.2 a 5.7):** códigos de ajuste de documento das tabelas 5.2,
+  5.3, 5.6 e 5.7 — código, UF, tabela, vigência e descrição.
+- **Linhas de apuração:** código, descrição, tipo, se aceita lançamentos e natureza.
+- **Motivos de transferência DAPI:** código, motivo, UF de destino e vigência.
 
 ---
 
-#### VFIS0530 — Linhas de Apuração de ICMS
+#### VFIN0400 — Apuração de Impostos
 
-**Para que serve.** As linhas da apuração de ICMS: código, descrição, tipo, se aceita
-lançamentos e natureza.
+**Para que serve.** Apurar os impostos de uma competência e manter o resumo do ICMS
+que entra no SPED. Fica na pasta Fiscal.
 
----
+**Aba Apuração.** Informe a competência (AAAA-MM) e apure (ou carregue uma apuração
+já feita): débitos (saídas), créditos (entradas) e o saldo a recolher de cada
+imposto, uma linha por imposto.
 
-#### VFIS0540 — Lançamentos Resumo de ICMS
+**Aba Lançamentos resumo de ICMS.** Os lançamentos de resumo por período, UF e
+CFOP (base e valor), as notas de cada lançamento e os registros adicionais (C197 /
+processos).
 
-**Para que serve.** Os lançamentos de resumo de ICMS por período, UF e CFOP (base e
-valor), as notas de cada lançamento e os registros adicionais (C197 / processos).
+**Telas relacionadas.** VFIS0510 (tabelas da apuração), VFIS0340 (Simples), VFIN0500.
 
 ---
 
@@ -5050,56 +3802,6 @@ caracteres.
 
 ---
 
-#### VFIS0620 — Manifestação e Inutilização de NF-e
-
-*Rotina de operações.*
-
-**Para que serve.** **Manifestar** uma NF-e recebida e **inutilizar** uma faixa de
-numeração própria que não será usada.
-
-**Manifestar NF-e.** Informe a chave de acesso (44 dígitos) e escolha a
-manifestação: *Ciência da operação* libera o XML completo; *Confirmação da
-operação* encerra a nota como recebida; *Desconhecimento* e *Operação não
-realizada* pedem justificativa de pelo menos 15 caracteres.
-
-**Inutilizar numeração.** Série, número inicial e final (para um número só, repita o
-inicial) e justificativa de 15 a 255 caracteres. A inutilização **não pode ser
-desfeita**.
-
-**Dica.** A manifestação também é feita na VFIS0210, em *Notas recebidas na SEFAZ*.
-
----
-
-#### VFIS0630 — Tabela IBPT
-
-*Rotina de operações.*
-
-**Para que serve.** Importar o arquivo oficial do IBPT (CSV por UF, escolhida na
-lista — administrador) e consultar a carga tributária aproximada de um NCM (a que vai
-impressa na nota de consumidor).
-
----
-
-#### VFIS0640 — Faturamento de Carga e DANFE
-
-**Para que serve.** Criar a NF-e de saída de uma carga e abrir o DANFE de uma nota
-autorizada.
-
-**Passo a passo.**
-1. Escolha a **carga**. Itens, quantidades e preços vêm dos romaneios dela; descrição,
-   NCM, unidade e origem vêm do cadastro do item.
-2. Confira o **cliente**. Quando todos os romaneios são de um mesmo cliente, ele já vem
-   preenchido, com CNPJ, inscrição estadual e endereço do cadastro.
-3. Confira série, datas, **CFOP** (sugerido pelo destino) e natureza da operação.
-   Informe frete, seguro e desconto, se houver.
-4. **Criar NF-e da carga** gera a nota como rascunho. Confira e transmita em VFIS0200.
-
-**Quando a tela recusa.** Carga cancelada, expedida ou já faturada; romaneio sem itens;
-item sem preço (ligue o romaneio a um pedido de venda); item sem NCM (preencha em
-VENT0200, aba Fiscal).
-
----
-
 #### VFIS0670 — Reforma Tributária (IBS/CBS)
 
 **Para que serve.** Configurar o IBS e a CBS da reforma tributária, que convivem com
@@ -5115,24 +3817,6 @@ ICMS, IPI, PIS e COFINS na transição.
   tributa, redução de IBS/CBS, vigência), com filtro.
 
 **Telas relacionadas.** VFIS0350, VFIS0200 (prévia mostra IBS/CBS por linha).
-
----
-
-#### VFIS0120 — Exclusão de Tributação NCM
-
-**Unificada na VFIS0110.** O código abre as Tabelas Tributárias: use **Desativar** na
-linha do NCM (só administrador).
-
----
-
-#### VFIS0660 — Consultas de Parâmetros Fiscais
-
-*Rotina de consulta.*
-
-**Para que serve.** Localizar cadastros fiscais por chave sem alterar nada:
-dispositivo legal (por código ou tipo), CFOP (por código ou direção), regras de
-ICMS/IPI (por id, UF, item ou NCM), motivo DAPI, códigos de ajuste, linha e
-lançamento de apuração e apuração do Simples.
 
 ---
 
@@ -5153,22 +3837,13 @@ confira antes de transmitir. O arquivo sai na codificação que o PVA lê.
 
 ---
 
-#### VFIS0610 — Importação de NF-e por Chave
-
-**Unificada na VFIS0210.** O código abre a NF-e de Entrada: use **Pela chave**. A nota
-entra pendente de conferência, para conciliar os itens, o plano de contas, as
-parcelas e aprovar ali mesmo.
-
----
-
 ## Contabilidade
 
 *Plano contábil, lançamentos, balancete, contabilização automática e ECD.*
 
 #### VCTB0102 — Centros de Custo
 
-**Para que serve.** O cadastro único de centros de custo (antes havia também a
-VFIN0130): hierarquia, vigência, o responsável, o aprovador das requisições, a
+**Para que serve.** O cadastro único de centros de custo: hierarquia, vigência, o responsável, o aprovador das requisições, a
 conta contábil padrão, o orçamento mensal e o realizado.
 
 **Aba Cadastro.** **Código** da empresa (ex.: CC-FAB-CORTE), descrição,
@@ -5199,13 +3874,7 @@ reprovada, corrigida com item novo, volta para o aprovador.
 aprovador do centro de custo*.
 
 **Telas relacionadas.** VFIN0120 (conta que exige centro), VFIN0200, VCUS0100
-(rateio), VSUP0200/VPDC0200 (requisições).
-
----
-
-#### VUTL0555 — Cadastro de UFs e Países
-
-**Para que serve.** As UFs (sigla, nome, país, código IBGE) e os países.
+(rateio), VPDC0200 (requisições).
 
 ---
 
@@ -5228,28 +3897,13 @@ contabilização automática.
   Em *Pagamentos e recebimentos* ficam também as contas de **Adiantamentos a
   fornecedores** e **Adiantamentos de clientes**, usadas pelos adiantamentos da
   VFIN0600.
+- **SPED ECD:** gera e baixa o arquivo da ECD (Escrituração Contábil Digital) com o
+  plano, os lançamentos e os dados cadastrais do período. Escolha o plano e o
+  período, informe NIRE, e-mail e número do livro e clique em **Gerar arquivo da
+  ECD** (só o administrador). Os dados da empresa vêm da Configuração Fiscal
+  (VFIS0100). Valide o arquivo no programa da Receita antes de entregar.
 
-**Telas relacionadas.** VCTB0600, VFIN0120, VFIS0210, VFIN0600.
-
----
-
-#### VCTB0600 — SPED ECD
-
-**Para que serve.** Gerar e baixar o arquivo da ECD (Escrituração Contábil Digital)
-com o plano, os lançamentos e os dados cadastrais do período. Só o administrador gera
-o arquivo.
-
-**Passo a passo.** Escolha o **plano de contas** (cadastrado em VCTB0200) e o período,
-informe NIRE, e-mail e número do livro, e clique em **Gerar**. Os dados da empresa vêm
-da Configuração Fiscal. Valide o arquivo no programa da Receita antes de entregar.
-
----
-
-#### VUTL0560 — Consulta de UF e Região
-
-*Rotina de consulta.*
-
-**Para que serve.** Localizar uma UF pela sigla e uma região comercial pelo código.
+**Telas relacionadas.** VFIN0120, VFIS0210, VFIN0600.
 
 ---
 
@@ -5286,7 +3940,7 @@ mínimo ou negativo, lote perto do vencimento e exceções do MRP.
 - **Setores:** cadastre os setores da empresa (ex.: COMPRAS, PCP), com código e
   nome, e marque as pessoas de cada um. Um setor desativado continua nos
   registros antigos, mas não é oferecido de novo. Os setores dizem **quem
-  responde** por cada grupo de itens (VITE0114).
+  responde** por cada grupo de itens (VITE0116 — Grupos e modificadores).
 
 ---
 
@@ -5323,12 +3977,20 @@ produção, na assistência técnica e no sequenciamento.
 
 **Como usar.** **+ Novo**, preencha e salve; **Editar** ou **Desativar** na lista.
 
+**Contatos e funções** (ao editar): telefones e e-mails (com o principal), as
+funções do funcionário com centro de custo e se é supervisor ou gestor, e o
+limite de crédito. Só o administrador grava.
+
 ---
 
 #### VLOC0100 — Localização (Países e UFs)
 
 **Para que serve.** Os países (sigla, nome, DDI, código BACEN, SISCOMEX) e as UFs
-(sigla, nome, país, código IBGE).
+(sigla, nome, país, código IBGE) — a base dos endereços e das regras fiscais. É o
+único cadastro de países e UFs do sistema; mexe-se nele na implantação.
+
+**Como usar.** Aba **Países** ou **UFs**: preencha e **Adicionar**; **Editar** na
+lista. Na UF, o país é escolhido da lista e não muda depois de criada.
 
 ---
 
@@ -5349,19 +4011,11 @@ lista mostra o nível.
 para repartir e programar).
 
 **Como usar.** Gere o calendário do período (os dias já cadastrados são
-preservados) e ajuste dia a dia: *Dia útil?* e descrição (ex.: feriado municipal).
+preservados). Na grade do mês, **clique no dia** para alternar útil e não útil (em
+negrito, os dias já registrados; os demais seguem o padrão de segunda a sexta). Para
+registrar com descrição (ex.: feriado municipal), use *Registrar dia com descrição*.
 
-**Telas relacionadas.** VENT0108, VPRE0201.
-
----
-
-#### VPRI0100 — Prioridade de Ordens
-
-**Para que serve.** Faixas de prioridade das ordens no sequenciamento (APS) pela
-quantidade da ordem.
-
-**Como usar.** Prioridade, descrição e a faixa de quantidade (mínima e máxima). A
-máxima tem de ser maior que a mínima, e as faixas não podem se sobrepor.
+**Telas relacionadas.** VPME0102ITE, VPRE0201.
 
 ---
 
@@ -5433,14 +4087,5 @@ exceção é o desconto acima da alçada: sem quem aprove, a linha é recusada.
 - **Administrador nunca é restringido.**
 - Consultar os cadastros de apoio (itens, clientes, fornecedores, CFOP...) é livre
   para qualquer perfil.
-
----
-
-#### VADM0100 — Trilha de Auditoria
-
-*Rotina de consulta (administrador).*
-
-**Para que serve.** Consultar as alterações por usuário, rota e período (com limite e
-deslocamento para paginar). Para a consulta legível, use a **VAUD0100**.
 
 ---

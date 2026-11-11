@@ -514,7 +514,7 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
               {FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "A do cliente" : f.label}</option>)}
             </select></div>
           <div className="erp-field erp-c3"><label className="erp-label">Tipo de nota</label>
-            <LookupField value={tipoNota} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable vazio="Nenhum tipo de nota cadastrado. Cadastre em VCLI0530, aba Tipo de NF de Saída." onChange={(c) => { setTipoNota(c ? Number(c) : undefined); setTipoNotaManual(true); }} /></div>
+            <LookupField value={tipoNota} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable vazio="Nenhum tipo de nota cadastrado. Cadastre em VCLI0500, Cadastros de apoio, aba Tipo de NF de saída." onChange={(c) => { setTipoNota(c ? Number(c) : undefined); setTipoNotaManual(true); }} /></div>
           <div className="erp-field erp-c2"><label className="erp-label" htmlFor="nf-frete">Frete</label>
             <input id="nf-frete" className="erp-input num" type="number" min="0" step="0.01" placeholder="0,00" value={valores.frete} onChange={(e) => setValores((v) => ({ ...v, frete: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label" htmlFor="nf-seguro">Seguro</label>

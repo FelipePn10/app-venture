@@ -4,7 +4,7 @@ import { errMessage } from "@/services/fiscalShared";
 
 /**
  * Números de série das linhas da NF de saída (item que controla série,
- * VATC0110). A prévia impede a transmissão enquanto cada linha não tiver uma
+ * VENT0200 (aba Pós-venda)). A prévia impede a transmissão enquanto cada linha não tiver uma
  * série por unidade; autorizada a nota, as séries vão para o cliente na Base
  * Instalada (VATC0100) e saem no infAdProd do item.
  */

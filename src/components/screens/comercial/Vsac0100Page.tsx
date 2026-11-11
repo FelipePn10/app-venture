@@ -1,3 +1,4 @@
+import { AnexosChamadoSacPanel, RelatoriosSacPanel } from "./AnexosERelatoriosSac";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   type ConsumerDTO,
@@ -16,7 +17,7 @@ import { loadConsumers, loadEstablishments } from "@/services/lookups";
 import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type View = "consumers" | "calls" | "support";
+type View = "consumers" | "calls" | "support" | "relatorios";
 const today = () => hojeLocal();
 
 const POSITION_META: Record<string, { label: string; cls: string }> = {
@@ -151,6 +152,7 @@ export function Vsac0100Page(): JSX.Element {
           <button className={`erp-btn${view === "consumers" ? " erp-btn-dark" : ""}`} onClick={() => setView("consumers")} disabled={busy}>Consumidores</button>
           <button className={`erp-btn${view === "calls" ? " erp-btn-dark" : ""}`} onClick={() => setView("calls")} disabled={busy}>Chamados</button>
           <button className={`erp-btn${view === "support" ? " erp-btn-dark" : ""}`} onClick={() => setView("support")} disabled={busy}>Apoio</button>
+          <button className={`erp-btn${view === "relatorios" ? " erp-btn-dark" : ""}`} onClick={() => setView("relatorios")} disabled={busy}>Relatórios</button>
         </div>
         <div className="erp-tspacer" />
         {view === "consumers" && <div className="erp-tgroup">
@@ -171,7 +173,9 @@ export function Vsac0100Page(): JSX.Element {
       <div className="erp-content">
       {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
 
-      {view === "support" ? (
+      {view === "relatorios" ? (
+        <div className="erp-content"><section className="erp-detail-panel"><RelatoriosSacPanel /></section></div>
+      ) : view === "support" ? (
         <div className="erp-main">
           <aside className="erp-list-panel">
             <div className="erp-panel-head"><span className="erp-panel-title">Tipos de chamado</span><span className="erp-count">{callTypes.length}</span></div>
@@ -336,6 +340,7 @@ export function Vsac0100Page(): JSX.Element {
                       <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={registrarRetorno} disabled={busy}>Registrar contato</button></div>
                     </div>
                   </div>
+                  {selCall.code ? <AnexosChamadoSacPanel callCode={selCall.code} /> : null}
                   <div className="erp-fieldset"><div className="erp-fieldset-head">Histórico de retornos ({selCall.returns?.length ?? 0})</div><div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Próximo contato</th></tr></thead><tbody>{!selCall.returns?.length && <tr><td colSpan={4} className="erp-grid-empty">Nenhum retorno registrado.</td></tr>}{selCall.returns?.map((item) => <tr key={item.code}><td>{item.contacted_at ? new Date(item.contacted_at).toLocaleString("pt-BR") : "—"}</td><td>{item.contact_type === "PHONE" ? "Telefone" : item.contact_type === "EMAIL" ? "E-mail" : item.contact_type === "IN_PERSON" ? "Presencial" : item.contact_type ?? "—"}</td><td>{item.description || "—"}</td><td>{item.next_return_at ? new Date(item.next_return_at).toLocaleDateString("pt-BR") : "—"}</td></tr>)}</tbody></table></div></div>
                 </div>
               </>

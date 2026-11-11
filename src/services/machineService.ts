@@ -325,3 +325,51 @@ export async function upsertMachineConsumable(dto: {
 export async function deleteMachineConsumable(id: number): Promise<void> {
   await httpClient.delete(`/api/machine/consumables/${id}`);
 }
+
+// ── Perfil e APS da máquina (eram as rotinas genéricas VAPS0100 e VAPS0500) ──
+export interface ResourceGroup { id: number; code: string; description: string }
+export async function listResourceGroups(): Promise<ResourceGroup[]> {
+  const { data } = await httpClient.get<unknown>('/api/aps/resource-groups');
+  return unwrap(data).map((r) => { const o = r as Record<string, unknown>; return { id: Number(o.id) || 0, code: String(o.code ?? ''), description: String(o.description ?? '') }; });
+}
+export async function saveResourceGroup(code: string, description: string): Promise<void> {
+  await httpClient.post('/api/aps/resource-groups', { code: code.trim(), description: description.trim() });
+}
+export async function deleteResourceGroup(id: number): Promise<void> {
+  await httpClient.delete(`/api/aps/resource-groups/${id}`);
+}
+export interface SpecialValue { name: string; value_type: 'TEXT' | 'NUMBER'; text_value?: string; numeric_value?: string }
+export interface IndustrialProfile {
+  usage_description: string; acquired_on?: string; preparation_time: string; preparation_time_unit: 'MINUTE' | 'HOUR';
+  supplier_code?: number; brand: string; is_preferred: boolean; maintenance_responsible_employee_id?: number;
+  /** Serviços preventivos gravados: a tela não os edita (a manutenção preventiva é a VPRO0500), só os preserva. */
+  services: Record<string, unknown>[];
+  special_values: SpecialValue[];
+}
+export async function getIndustrialProfile(machineId: number): Promise<IndustrialProfile> {
+  const { data } = await httpClient.get<unknown>(`/api/aps/resources/${machineId}/industrial-profile`);
+  const o = (data ?? {}) as Record<string, unknown>;
+  const unit = String(o.preparation_time_unit ?? 'MINUTE').toUpperCase();
+  return {
+    usage_description: String(o.usage_description ?? ''), acquired_on: o.acquired_on ? String(o.acquired_on).slice(0, 10) : undefined,
+    preparation_time: String(o.preparation_time ?? '0'), preparation_time_unit: unit === 'HOUR' ? 'HOUR' : 'MINUTE',
+    supplier_code: Number(o.supplier_code) || undefined, brand: String(o.brand ?? ''), is_preferred: o.is_preferred === true,
+    maintenance_responsible_employee_id: Number(o.maintenance_responsible_employee_id) || undefined,
+    services: Array.isArray(o.services) ? (o.services as Record<string, unknown>[]) : [],
+    special_values: (Array.isArray(o.special_values) ? o.special_values : []).map((v) => {
+      const x = v as Record<string, unknown>;
+      return { name: String(x.name ?? ''), value_type: x.value_type === 'TEXT' ? 'TEXT' : 'NUMBER', text_value: x.text_value ? String(x.text_value) : undefined, numeric_value: x.numeric_value ? String(x.numeric_value) : undefined };
+    }),
+  };
+}
+/** O backend substitui serviços e campos especiais: os serviços voltam como vieram (sem os ids de leitura). */
+export async function saveIndustrialProfile(machineId: number, p: IndustrialProfile): Promise<void> {
+  const semId = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'id'));
+  const semIds = p.services.map((s) => ({ ...semId(s), items: Array.isArray(s.items) ? (s.items as Record<string, unknown>[]).map(semId) : [] }));
+  await httpClient.put(`/api/aps/resources/${machineId}/industrial-profile`, {
+    usage_description: p.usage_description.trim(), acquired_on: p.acquired_on ? `${p.acquired_on}T00:00:00Z` : null,
+    preparation_time: p.preparation_time || '0', preparation_time_unit: p.preparation_time_unit, supplier_code: p.supplier_code ?? null,
+    brand: p.brand.trim(), is_preferred: p.is_preferred, maintenance_responsible_employee_id: p.maintenance_responsible_employee_id ?? null,
+    services: semIds, special_values: p.special_values.map((v) => (v.value_type === 'TEXT' ? { name: v.name.trim(), value_type: 'TEXT', text_value: v.text_value ?? '' } : { name: v.name.trim(), value_type: 'NUMBER', numeric_value: v.numeric_value ?? '' })),
+  });
+}
