@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId } from '@/services/fiscalShared';
 
 const BASE = '/api/quality';
 
@@ -178,14 +178,6 @@ export async function getRecord(id: number): Promise<QualityRecordDTO> {
   const { data } = await httpClient.get(`${BASE}/records/${id}`);
   return parseRecord(data);
 }
-export async function listRecordsByOrder(orderId: number): Promise<QualityRecordDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/records/by-order/${orderId}`);
-  return unwrapArray(data).map(parseRecord);
-}
-export async function listRecordsByItem(itemCode: string): Promise<QualityRecordDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/records/by-item/${encodeURIComponent(itemCode)}`);
-  return unwrapArray(data).map(parseRecord);
-}
 export async function createRecord(dto: QualityRecordDTO): Promise<QualityRecordDTO> {
   const { data } = await httpClient.post(`${BASE}/records`, { ...dto, created_by: currentUserId() });
   return parseRecord(data);
@@ -193,10 +185,6 @@ export async function createRecord(dto: QualityRecordDTO): Promise<QualityRecord
 
 // ─── Não-conformidades ─────────────────────────────────────────────────────────
 
-export async function listOpenNCs(): Promise<NonConformanceDTO[]> {
-  const { data } = await httpClient.get(`${BASE}/non-conformances/open`);
-  return unwrapArray(data).map(parseNC);
-}
 export async function getNC(id: number): Promise<NonConformanceDTO> {
   const { data } = await httpClient.get(`${BASE}/non-conformances/${id}`);
   return parseNC(data);
@@ -204,12 +192,4 @@ export async function getNC(id: number): Promise<NonConformanceDTO> {
 export async function listNCsByItem(itemCode: string): Promise<NonConformanceDTO[]> {
   const { data } = await httpClient.get(`${BASE}/non-conformances/by-item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseNC);
-}
-export async function createNC(dto: NonConformanceDTO): Promise<NonConformanceDTO> {
-  const { data } = await httpClient.post(`${BASE}/non-conformances`, { ...dto, created_by: currentUserId() });
-  return parseNC(data);
-}
-export async function dispositionNC(id: number, disposition: NCDisposition): Promise<Obj> {
-  const { data } = await httpClient.post(`${BASE}/non-conformances/${id}/disposition`, { disposition, disposed_by: currentUserId() });
-  return unwrapObject(data);
 }

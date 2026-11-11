@@ -3,7 +3,7 @@
 // próprios testes; o que se prova aqui é que a TELA mostra o número certo.
 //
 // Cobre:
-//   1. VCLI0520 — condição "30% entrada, 20% entrega, restante 28/56 dias":
+//   1. VFIN0110 — condição "30% entrada, 20% entrega, restante 28/56 dias":
 //      percentual e evento base por parcela, o aviso de que não fecha 100% e a
 //      simulação em dinheiro;
 //   2. VVND0300 — produto, IPI e produto + IPI como leituras distintas do mesmo
@@ -144,12 +144,12 @@ await page.route('**/*', async (route) => {
 const texto = async (sel) => (await page.locator(sel).first().textContent() ?? '').replace(/\s+/g, ' ').trim();
 
 try {
-  // ── 1. VCLI0520 — condição de pagamento composta ─────────────────────────
-  await page.goto(`${APP}/#/screen/VCLI0520`);
-  await page.locator('.erp-crumb-code', { hasText: 'VCLI0520' }).waitFor();
+  // ── 1. VFIN0110 — condição de pagamento composta ─────────────────────────
+  await page.goto(`${APP}/#/screen/VFIN0110`);
+  await page.locator('.erp-crumb-code', { hasText: 'VFIN0110' }).waitFor();
   await page.locator('.erp-fieldset').first().waitFor();
-  // O código da condição é o primeiro campo do bloco de parcelas.
-  await page.locator('.erp-field', { hasText: 'Condição (cód.)' }).locator('input').fill('1');
+  // A condição é escolhida na lista do bloco de parcelas.
+  await page.locator('.erp-field', { hasText: 'Condição' }).locator('select').first().selectOption('1');
   // A primeira grade da tela é o CRUD da condição; a das parcelas é a que tem a
   // coluna "Prazo conta de".
   const gradeParcelas = page.locator('table.erp-grid').filter({ hasText: 'Prazo conta de' });
@@ -287,7 +287,7 @@ try {
 
   const semRuido = errors.filter((e) => !/favicon|ResizeObserver|Failed to load resource/i.test(e));
   assert.deepEqual(semRuido, [], `erros de console na simulação: ${semRuido.join(' | ')}`);
-  console.log('SIMULAÇÃO OK — VCLI0520, VVND0300 e VSUP0140 conferidos na tela.');
+  console.log('SIMULAÇÃO OK — VFIN0110, VVND0300 e VSUP0140 conferidos na tela.');
 } catch (e) {
   console.error('FALHOU:', e.message);
   if (errors.length) console.error('console:', errors.slice(0, 5).join(' | '));

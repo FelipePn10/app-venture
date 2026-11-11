@@ -718,6 +718,10 @@ export async function sincronizarRecebidas(): Promise<{ recebidas: number; novas
   return { recebidas: parseNum(o, 'recebidas'), novas: parseNum(o, 'novas'), versao: parseNum(o, 'versao') };
 }
 
+/** Manifesta uma NF-e pela chave, também a que não veio na distribuição da SEFAZ. */
+export async function manifestarPorChave(chave: string, tipo: TipoManifestacao, justificativa = ''): Promise<void> {
+  await httpClient.post('/api/fiscal/manifestacao', { chave_nfe: chave, tipo, justificativa });
+}
 export async function manifestarRecebida(chave: string, tipo: TipoManifestacao, justificativa = ''): Promise<void> {
   await httpClient.post(`${RECEBIDAS}/${chave}/manifestar`, { tipo, justificativa });
 }

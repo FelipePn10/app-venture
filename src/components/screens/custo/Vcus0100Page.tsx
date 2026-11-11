@@ -1,3 +1,4 @@
+import { CustosPadraoVigentes } from "./CustosPadraoVigentes";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { confirmar } from "@/components/ui/dialogos";
 import {
@@ -783,6 +784,7 @@ export function Vcus0100Page(): JSX.Element {
             {/* ── 4. Histórico ─────────────────────────────────────────────── */}
             {activeTab === 4 && (
               <>
+                <CustosPadraoVigentes />
                 <div className="erp-fieldset">
                   <div className="erp-fieldset-head">Apurações anteriores</div>
                   <div className="erp-fieldset-body">

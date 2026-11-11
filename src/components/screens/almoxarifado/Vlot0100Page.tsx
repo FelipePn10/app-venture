@@ -27,9 +27,7 @@ const parteDe = (p: LotMaskPart): Parte => ({
 
 /**
  * VLOT0100 — Máscaras de Lote/Série. Compõe o número por partes e gera o próximo
- * lote. Também abre pelo código antigo VEST0300, que era uma rotina genérica sobre
- * o mesmo cadastro: o que só ela fazia (alterar máscara e parte, desativar parte,
- * gerar pelo contexto do item) está aqui.
+ * lote, com alterar máscara e parte, desativar parte e gerar pelo contexto do item.
  */
 export function Vlot0100Page(): JSX.Element {
   const [masks, setMasks] = useState<LotMask[]>([]);

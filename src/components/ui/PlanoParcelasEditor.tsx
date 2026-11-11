@@ -80,7 +80,7 @@ export function PlanoParcelasEditor({
       <div className="erp-plano-topo">
         <div className="erp-plano-condicao"><span className="erp-label">Condição de pagamento</span>
           <LookupField value={condicao} loader={loadPaymentConditions} entityLabel="condição de pagamento" allowManualCode={false} placeholder="Buscar condição" disabled={desabilitado}
-            vazio="Nenhuma condição cadastrada. Cadastre em VCLI0520."
+            vazio="Nenhuma condição cadastrada. Cadastre em VFIN0110 — Condições de Pagamento."
             onChange={(c) => { const code = c ? Number(c) : undefined; condicaoAplicada.current = code; void escolherCondicao(code); }} /></div>
         <div className="erp-plano-atalhos"><span className="erp-label">Ou monte o parcelamento</span>
           <div>

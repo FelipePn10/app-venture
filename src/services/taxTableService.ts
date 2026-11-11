@@ -135,3 +135,14 @@ export const UF_NAMES: Record<UF, string> = {
   RS: 'Rio Grande do Sul', SC: 'Santa Catarina', SE: 'Sergipe',
   SP: 'São Paulo', TO: 'Tocantins',
 };
+
+// ── IBPT: carga tributária aproximada por NCM e UF (Lei 12.741) ──
+export interface IbptRate { ncm: string; ex: string; uf: string; descricao: string; nacional_federal: number; importado_federal: number; estadual: number; municipal: number; vigencia_inicio?: string; vigencia_fim?: string; versao: string }
+export async function importIbpt(uf: UF, csv: string): Promise<number> {
+  const { data } = await httpClient.post('/api/fiscal/ibpt/import', { uf, csv });
+  return parseNum((data ?? {}) as Obj, 'imported');
+}
+export async function lookupIbpt(ncm: string, uf: UF): Promise<IbptRate> {
+  const { data } = await httpClient.get('/api/fiscal/ibpt/lookup', { params: { ncm, uf } });
+  return data as IbptRate;
+}

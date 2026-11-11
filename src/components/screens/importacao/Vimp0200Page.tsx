@@ -32,6 +32,9 @@ export function Vimp0200Page(): JSX.Element {
   }, []);
 
   const carregar = () => run(async () => { setList(await listImportProcesses()); });
+  // Filtro por situação (era a VIMP0101, que só listava os processos por situação).
+  const [filtro, setFiltro] = useState<ImportStatus | "">("");
+  const visiveis = filtro ? list.filter((p) => parseStr(p, "status", "Status") === filtro) : list;
   const abrir = (id: number) => run(async () => { setDetalhe(await getImportProcess(id)); });
   const addItem = () => { const item_code = itemForm.item_code.trim(); if (!item_code) { setFeedback({ type: "error", message: "Item obrigatório." }); return; } setItems((a) => [...a, { item_code, mask: itemForm.mask.trim(), quantity: Number(itemForm.quantity) || 0, weight: Number(itemForm.weight) || 0, fob_unit_price: Number(itemForm.fob_unit_price) || 0 }]); setItemForm({ ...ITEM_INI }); };
   const addExp = () => { const amount = Number(expForm.amount); if (!amount) { setFeedback({ type: "error", message: "Valor da despesa obrigatório." }); return; } setExpenses((a) => [...a, { expense_type: expForm.expense_type.trim(), amount, in_item_cost: expForm.in_item_cost }]); setExpForm({ ...EXP_INI }); };
@@ -64,7 +67,8 @@ export function Vimp0200Page(): JSX.Element {
       </header>
 
       <div className="erp-toolbar">
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Processos</span><button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Listar</button></div>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Processos</span><button className="erp-btn erp-btn-dark" onClick={() => void carregar()} disabled={busy}>{busy && <span className="erp-spin" />}Listar</button>
+          <select className="erp-tselect" aria-label="Situação" value={filtro} onChange={(e) => setFiltro(e.target.value as ImportStatus | "")}><option value="">Todas as situações</option>{STATUSES.map((st) => <option key={st} value={st}>{enumLabel(st)}</option>)}</select></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Novo</span><button className="erp-btn erp-btn-primary" onClick={() => void criar()} disabled={busy}>Criar processo</button></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VIMP0200 — Console de Importação" filename="vimp0200" /></div>
@@ -74,10 +78,10 @@ export function Vimp0200Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
         <div className="erp-main">
           <aside className="erp-list-panel">
-            <div className="erp-panel-head"><span className="erp-panel-title">Processos</span><span className="erp-count">{list.length}</span></div>
+            <div className="erp-panel-head"><span className="erp-panel-title">Processos</span><span className="erp-count">{visiveis.length}</span></div>
             <div className="erp-list">
               {list.length === 0 && <div className="erp-list-empty">Clique em <strong>Listar</strong>.</div>}
-              {list.map((p, i) => { const id = parseNum(p, "id", "ID"); return (
+              {visiveis.map((p, i) => { const id = parseNum(p, "id", "ID"); return (
                 <div key={i} className={`erp-list-row${parseNum(detalhe ?? {}, "id", "ID") === id ? " erp-row-sel" : ""}`} onClick={() => void abrir(id)}>
                   <span className="erp-list-code">#{id}</span>
                   <span className="erp-list-sub">{parseStr(p, "currency", "Currency")} · {enumLabel(parseStr(p, "status", "Status"))}</span>

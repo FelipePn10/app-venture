@@ -393,7 +393,7 @@ export async function createDemonstrative(dto: { code: string; description: stri
   return unwrapObject(data);
 }
 
-/** Gera o arquivo da ECD (VCTB0600). */
+/** Gera o arquivo da ECD (aba SPED ECD da VCTB0200). */
 export async function gerarEcd(pedido: Obj): Promise<Blob> {
   const { data } = await httpClient.post<Blob>(`${BASE}/sped/ecd/`, pedido, { responseType: 'blob' });
   return data;

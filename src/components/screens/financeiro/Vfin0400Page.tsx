@@ -2,12 +2,16 @@ import { useState } from "react";
 import { type ApuracaoImposto, apurarImpostos, getApuracao } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { LancamentosResumoIcmsPanel } from "../fiscal/LancamentosResumoIcmsPanel";
+import { hojeLocal } from "@/utils/dataLocal";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentCompetencia = () => new Date().toISOString().slice(0, 7);
+// Mês LOCAL: toISOString() dá o mês em UTC, que já é o seguinte depois das 21h do último dia.
+const currentCompetencia = () => hojeLocal().slice(0, 7);
 
 export function Vfin0400Page(): JSX.Element {
+  const [aba, setAba] = useState<"apuracao" | "resumo">("apuracao");
   const [competencia, setCompetencia] = useState(currentCompetencia());
   const [result, setResult] = useState<ApuracaoImposto[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
@@ -43,10 +47,15 @@ export function Vfin0400Page(): JSX.Element {
     <div className="erp-screen">
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Apuração de Impostos</span><span className="erp-crumb-code">VFIN0400</span></nav>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Apuração de Impostos</span><span className="erp-crumb-code">VFIN0400</span></nav>
         <div className="erp-titlebar-spacer" />
       </header>
 
+      <div className="erp-tabs">
+        <button className={`erp-tab${aba === "apuracao" ? " active" : ""}`} onClick={() => setAba("apuracao")}>Apuração</button>
+        <button className={`erp-tab${aba === "resumo" ? " active" : ""}`} onClick={() => setAba("resumo")}>Lançamentos resumo de ICMS</button>
+      </div>
+      {aba === "resumo" ? <LancamentosResumoIcmsPanel /> : <div className="erp-aba-corpo">
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Competência</span>
@@ -64,8 +73,7 @@ export function Vfin0400Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Apuração de Impostos</button></div>
-          <div className="erp-detail-body">
+                    <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         {result.length === 0 ? (
@@ -90,6 +98,7 @@ export function Vfin0400Page(): JSX.Element {
           </>
         )}
       </div></section></div>
+      </div>}
 
       <footer className="erp-statusbar">
         <div style={{display:"contents"}}><div className="erp-status-item">Competência: <strong>{competencia}</strong></div></div>

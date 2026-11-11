@@ -9,7 +9,7 @@
  *
  * Cobre:
  *   VFUN0100  Funcionário     — código sequencial, `code <= 0` recusado
- *   VPRI0100  Prioridade APS  — intervalo é QUANTIDADE; faixas não se sobrepõem
+ *   VPRO0210  Prioridade (Parâmetros) — intervalo é QUANTIDADE; faixas não se sobrepõem
  *   VCTB0102  Centro de custo — CC Pai inexistente
  *   VENT0204  Grupo PDM       — pré-requisito do item
  *   VITE0115  Modificador PDM — pré-requisito do item
@@ -156,10 +156,10 @@ async function funcionarios() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// VPRI0100 — o que é "Intervalo 1–10"
+// Prioridade de ordens (VPRO0210, Parâmetros) — o que é "Intervalo 1–10"
 // ───────────────────────────────────────────────────────────────────────────
 async function prioridades() {
-  console.log('\n── VPRI0100 · Prioridade de Ordens (APS)');
+  console.log('\n── VPRO0210 · Prioridade de Ordens (Parâmetros)');
   const lista = await call('GET', '/api/order-priority/list', undefined, { label: 'GET /api/order-priority/list' });
   const faixas = arr(lista.json);
 
@@ -172,21 +172,21 @@ async function prioridades() {
     const fim = Number(f.interval_end ?? f.IntervalEnd ?? 0);
     const meio = Math.floor((inicio + fim) / 2);
     const achado = await call('GET', `/api/order-priority/find/${meio}`, undefined,
-      { label: `VPRI0100 — /find/${meio} resolve a faixa por QUANTIDADE` });
+      { label: `Prioridade (VPRO0210) — /find/${meio} resolve a faixa por QUANTIDADE` });
     const nome = achado.json?.priority ?? achado.json?.Priority ?? achado.json?.data?.priority;
-    record('VPRI0100 — quantidade cai na faixa esperada',
+    record('Prioridade (VPRO0210) — quantidade cai na faixa esperada',
       !!nome, nome ? 'OK' : 'DIFF',
       `qtd ${meio} (faixa ${inicio}–${fim}) → prioridade "${nome ?? '—'}"`);
 
-    record('VPRI0100 — faixas não se sobrepõem',
+    record('Prioridade (VPRO0210) — faixas não se sobrepõem',
       semSobreposicao(faixas), semSobreposicao(faixas) ? 'OK' : 'DIFF',
       faixas.map((x) => `${x.priority ?? x.Priority}:${x.interval_start ?? x.IntervalStart}-${x.interval_end ?? x.IntervalEnd}`).join(' | '));
   } else {
-    record('VPRI0100 — há faixas cadastradas', false, 'VAZIO',
+    record('Prioridade (VPRO0210) — há faixas cadastradas', false, 'VAZIO',
       'sem prioridades: o MRP não consegue priorizar ordem nenhuma');
   }
 
-  await expectRejection('VPRI0100 — recusa início >= fim',
+  await expectRejection('Prioridade (VPRO0210) — recusa início >= fim',
     'POST', '/api/order-priority/create',
     { priority: 'E2E_INVALIDA', description: 'início maior que fim', interval_start: 50, interval_end: 10 });
 
@@ -194,7 +194,7 @@ async function prioridades() {
     const f = faixas[0];
     const inicio = Number(f.interval_start ?? f.IntervalStart ?? 0);
     const fim = Number(f.interval_end ?? f.IntervalEnd ?? 0);
-    await expectRejection('VPRI0100 — recusa faixa sobreposta',
+    await expectRejection('Prioridade (VPRO0210) — recusa faixa sobreposta',
       'POST', '/api/order-priority/create',
       { priority: 'E2E_SOBREPOSTA', description: 'sobrepõe faixa existente', interval_start: inicio, interval_end: fim });
   }

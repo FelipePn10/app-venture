@@ -71,7 +71,7 @@ export function Vpro0900Page(): JSX.Element {
   const [app, setApp] = useState<AppointmentDTO>(APONTAMENTO_VAZIO);
   const [cons, setCons] = useState<ConsumptionDTO>(CONSUMO_VAZIO);
   const [conclusao, setConclusao] = useState<EntregaForm>({ lote: "", quantidade: "", final: true, series: "" });
-  // Item com número de série (VATC0110): a entrega leva as séries.
+  // Item com número de série (aba Pós-venda da VENT0200): a entrega leva as séries.
   const [serieDaOF, setSerieDaOF] = useState<SerieDaOF | undefined>();
   useEffect(() => {
     const item = of?.item_code;

@@ -394,3 +394,10 @@ export async function simulatePaymentCondition(
     aviso: parseStr(o, 'aviso', 'Aviso') || undefined,
   };
 }
+
+/** Condições de pagamento da empresa (código e descrição) — sem cache: a VFIN0110 cria e já escolhe. */
+export async function listPaymentConditionOptions(): Promise<{ code: number; description: string; is_active: boolean }[]> {
+  const { data } = await httpClient.get(`${SUPPORT}/payment-conditions`);
+  return unwrapArray(data).map((r) => unwrapObject(r)).map((o) => ({ code: parseNum(o, 'code', 'Code'), description: parseStr(o, 'description', 'Description'), is_active: o['is_active'] !== false }))
+    .filter((c) => c.code > 0).sort((a, b) => a.description.localeCompare(b.description, 'pt-BR'));
+}

@@ -1,3 +1,4 @@
+import { PrecosDasComprasPanel } from "./PrecosDasComprasPanel";
 import { EntityName } from "@/components/ui/EntityName";
 import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -218,13 +219,14 @@ export function Vsup0120Page(): JSX.Element {
                           <tr key={it.id}>
                             <td className="num" style={{ fontWeight: 600 }}><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td>
                             <td className="num">{money(it.price)}</td><td>{it.uom || "—"}</td>
-                            <td className="num">{it.min_qty ?? 0}</td><td>{it.supplier_code ?? "genérico"}</td>
+                            <td className="num">{it.min_qty ?? 0}</td><td>{it.supplier_code ? <EntityName code={it.supplier_code} loader={loadSuppliers} showCode={false} /> : "genérico"}</td>
                             <td><button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => it.id && void removeItem(it.id)} disabled={busy}>Excluir</button></td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                  <PrecosDasComprasPanel tableCode={codeOf(selected)} items={items} aoAtualizar={async () => setItems(await listPriceTableItems(codeOf(selected)))} />
                 </div>
               </>
             ) : (

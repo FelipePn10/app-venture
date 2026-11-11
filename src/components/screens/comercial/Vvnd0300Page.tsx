@@ -1,3 +1,4 @@
+import { Vvnd0310Page } from "./Vvnd0310Page";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import {
@@ -142,6 +143,8 @@ export function Vvnd0300Page(): JSX.Element {
   const [events, setEvents] = useState<QuotationEventDTO[]>([]);
   const [attachments, setAttachments] = useState<QuotationAttachmentDTO[]>([]);
   const [parameters, setParameters] = useState<SalesQuotationParametersDTO | null>(null);
+  // Parâmetros do orçamento (era a VVND0310): rótulos, consumidor final, padrões de comissão e motivos.
+  const [verParametros, setVerParametros] = useState(false);
   const [reasons, setReasons] = useState<CancellationReasonDTO[]>([]);
   const [report, setReport] = useState<SalesQuotationReportDTO | null>(null);
 
@@ -560,7 +563,12 @@ export function Vvnd0300Page(): JSX.Element {
         <span className="erp-titlebar-meta">Proposta → liberação → conversão em pedido</span>
       </header>
 
-      <div className="erp-toolbar">
+      {verParametros && (
+        <div className="erp-toolbar">
+          <div className="erp-tgroup"><button className="erp-btn erp-btn-primary" onClick={() => { void getSalesQuotationParameters().then(setParameters).catch(() => undefined); setVerParametros(false); }}>Voltar aos orçamentos</button></div>
+        </div>
+      )}
+      {!verParametros && <div className="erp-toolbar">
         <div className="erp-tgroup">
           <button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy}>
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -595,6 +603,9 @@ export function Vvnd0300Page(): JSX.Element {
                 title={cancelledWith && !canUncancel ? `O motivo "${cancelledWith.description}" não permite descancelamento` : undefined}>Descancelar</button>
             : <button className="erp-btn erp-btn-danger" onClick={() => abrirAcao({ kind: "cancel" })} disabled={busy || !selected || isAttended || isConverted}>Cancelar</button>}
         </div>
+        <div className="erp-tgroup">
+          <button className="erp-btn" disabled={busy} onClick={() => setVerParametros(true)} title="Rótulos, consumidor final, frete, comissão padrão e motivos de cancelamento">Parâmetros</button>
+        </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Filtrar</span>
@@ -622,8 +633,9 @@ export function Vvnd0300Page(): JSX.Element {
             subtitle: "Orçamentos filtrados",
           })} />
         </div>
-      </div>
+      </div>}
 
+      {verParametros ? <Vvnd0310Page /> : <>
       <div className="erp-content">
       {feedback && (
         <div className={`erp-feedback ${feedback.type}`}>
@@ -727,7 +739,7 @@ export function Vvnd0300Page(): JSX.Element {
                           )}
                           {reasonOptions.length === 0 && (
                             <span className="erp-field-hint">
-                              Nenhum motivo {pending.kind === "uncancel" ? "com permissão de descancelamento " : ""}cadastrado — cadastre em <strong>VVND0310</strong>.
+                              Nenhum motivo {pending.kind === "uncancel" ? "com permissão de descancelamento " : ""}cadastrado — cadastre no botão <strong>Parâmetros</strong> desta tela.
                             </span>
                           )}
                         </div>
@@ -1294,6 +1306,7 @@ export function Vvnd0300Page(): JSX.Element {
       </div>
 
       </div>
+      </>}
       <footer className="erp-statusbar">
         <div className="erp-status-item">Orçamentos na lista: <strong>{visible.length}</strong></div>
         {report && (

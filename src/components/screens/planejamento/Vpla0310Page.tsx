@@ -17,7 +17,7 @@ import { useBuscaDosItens } from "@/hooks/useBuscaDosItens";
  * VPLA0310 — Política de planejamento por item ou classificação: estratégia
  * (consumo pela venda ou sob encomenda), janela de consumo, horizonte firme e
  * tempo de segurança. Campo vazio herda: item → classificação mais profunda do
- * item → parâmetros da empresa (VPLA0300, 46 a 49).
+ * item → parâmetros da empresa (parâmetros 46 a 49 da VPLN0100).
  */
 
 type Form = {
@@ -191,7 +191,7 @@ export function Vpla0310Page(): JSX.Element {
                   { label: "Políticas por classificação", value: lista.filter((p) => p.escopo === "CLASSIFICACAO").length },
                   { label: "Sob encomenda", value: lista.filter((p) => p.estrategia === "SOB_ENCOMENDA").length, hint: "só o pedido gera necessidade" },
                 ]} />
-                <Vazio titulo="Escolha uma política na lista" texto={<>Sem política, o item segue os <strong>parâmetros da empresa</strong> (VPLA0300: janela de consumo 46/47, horizonte firme 48 e tempo de segurança 49). Uma política por classificação vale para todos os itens dela; a do item vale por cima.</>}
+                <Vazio titulo="Escolha uma política na lista" texto={<>Sem política, o item segue os <strong>parâmetros da empresa</strong> (VPLN0100, Parâmetros: janela de consumo 46/47, horizonte firme 48 e tempo de segurança 49). Uma política por classificação vale para todos os itens dela; a do item vale por cima.</>}
                   acao={<button className="erp-btn erp-btn-primary" onClick={novo}>+ Nova política</button>} />
               </>)}
 

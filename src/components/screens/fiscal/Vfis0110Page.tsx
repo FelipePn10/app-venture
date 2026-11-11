@@ -1,3 +1,4 @@
+import { IbptPanel } from "./IbptPanel";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { confirmar } from "@/components/ui/dialogos";
@@ -36,7 +37,7 @@ import { loadNcmTables } from "@/services/lookups";
  */
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Tab = "ncm" | "interno" | "interestadual";
+type Tab = "ncm" | "interno" | "interestadual" | "ibpt";
 
 const EMPTY_NCM: NcmTaxTable = {
   ncm: "", aliq_ipi: 0, aliq_pis: 0.0165, aliq_cofins: 0.076,
@@ -228,6 +229,7 @@ export function Vfis0110Page(): JSX.Element {
     ncm: "NCM — IPI, PIS e COFINS",
     interno: "ICMS Interno por UF",
     interestadual: "ICMS Interestadual",
+    ibpt: "IBPT (carga aproximada)",
   };
 
   return (
@@ -275,6 +277,8 @@ export function Vfis0110Page(): JSX.Element {
           <div className="erp-detail-body">
             {!podeEditar && <div className="erp-feedback info">{SO_ADMIN}. Você pode consultar; as exceções da sua empresa (redução, ST, benefício) ficam na VFIS0320 — Parâmetros ICMS/IPI.</div>}
             {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+
+            {tab === "ibpt" && <IbptPanel podeEditar={podeEditar} />}
 
             {tab === "ncm" && (
               <>

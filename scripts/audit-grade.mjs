@@ -31,12 +31,12 @@ import { chromium } from 'playwright-core';
 const BASE = process.env.FRONTEND_URL ?? 'http://localhost:5174';
 const API = process.env.API_URL ?? 'http://127.0.0.1:5097';
 const PADRAO = [
-  'VCTB0102', 'VCTB0200', 'VUTL0555', 'VCST0202', 'VCUS0100', 'VCUS0200',
-  'VFIN0100', 'VFIN0110', 'VFIN0120', 'VFIN0130', 'VFIN0200', 'VFIN0210',
+  'VCTB0102', 'VCTB0200', 'VCST0202', 'VCUS0100', 'VCUS0200',
+  'VFIN0100', 'VFIN0110', 'VFIN0120', 'VFIN0200', 'VFIN0210',
   'VFIN0300', 'VFIN0400', 'VFIN0500', 'VFIN0600', 'VFIN0620',
   'VFIS0100', 'VFIS0110', 'VFIS0200', 'VFIS0210', 'VFIS0220', 'VFIS0300',
-  'VFIS0310', 'VFIS0320', 'VFIS0330', 'VFIS0340', 'VFIS0350', 'VFIS0360',
-  'VFIS0500', 'VFIS0510', 'VFIS0520', 'VFIS0530', 'VFIS0540', 'VFIS0550',
+  'VFIS0310', 'VFIS0320', 'VFIS0340', 'VFIS0350', 'VFIS0360',
+  'VFIS0510', 'VFIS0550',
   'VFIS0560', 'VNFS0100',
 ];
 const telas = process.env.SCREENS ? process.env.SCREENS.split(',').map((s) => s.trim()).filter(Boolean) : PADRAO;

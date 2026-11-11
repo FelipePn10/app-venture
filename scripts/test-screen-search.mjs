@@ -37,7 +37,7 @@ function expectCatalogFirst(query, code) {
   if (result[0]?.code !== code) throw new Error(`Catálogo “${query}”: esperado ${code}, recebido ${result[0]?.code ?? 'nenhum'}`);
 }
 
-expectCatalogFirst('VITM0100', 'VITM0100');
+expectCatalogFirst('VENT0200', 'VENT0200');
 expectCatalogFirst('VFIS0200', 'VFIS0200');
 expectCatalogFirst('orçamento de venda', 'VVND0300');
 expectCatalogFirst('cadastro de cliente', 'VCLI0500');
@@ -48,19 +48,18 @@ const duplicateCodes = [...new Set(ERP_SCREENS
   .filter((code, index, all) => all.indexOf(code) !== index))];
 if (duplicateCodes.length > 0) throw new Error(`Catálogo contém códigos duplicados: ${duplicateCodes.join(', ')}`);
 
-const exactCatalogResult = searchErpScreens(ERP_SCREENS, 'VITM0100');
-if (exactCatalogResult.length !== 1 || exactCatalogResult[0].code !== 'VITM0100') {
-  throw new Error(`VITM0100 deveria ser o único resultado, mas retornou: ${exactCatalogResult.map((item) => item.code).join(', ')}`);
+const exactCatalogResult = searchErpScreens(ERP_SCREENS, 'VENT0200');
+if (exactCatalogResult.length !== 1 || exactCatalogResult[0].code !== 'VENT0200') {
+  throw new Error(`VENT0200 deveria ser o único resultado, mas retornou: ${exactCatalogResult.map((item) => item.code).join(', ')}`);
 }
 
-// Código antigo que virou apelido abre a tela verdadeira e não duplica na busca.
-expectCatalogFirst('VSUP0630', 'VPCT0100');
-expectCatalogFirst('VEST0300', 'VLOT0100');
-const tolerancias = searchErpScreens(ERP_SCREENS, 'tolerâncias de pedido de compra').map((s) => s.code);
-if (tolerancias.filter((c) => c === 'VPCT0100').length !== 1 || tolerancias.includes('VSUP0630')) {
-  throw new Error(`Tolerâncias apareceu duplicada ou pelo código antigo: ${tolerancias.join(', ')}`);
+// Tela desativada sai do sistema: nenhum código antigo no catálogo nem na busca.
+const removidas = ['VSUP0630', 'VEST0300', 'VENT0100', 'VEXR0100', 'VMAQ0300', 'VENG0400', 'VMAN0202', 'VAPS0600', 'VFIS0640', 'VPDC0210', 'VVND0600', 'VINS0201'];
+for (const code of removidas) {
+  if (ERP_SCREENS.some((s) => s.code === code)) throw new Error(`${code} foi desativada e não pode estar no catálogo`);
+  if (searchErpScreens(ERP_SCREENS, code).some((s) => s.code === code)) throw new Error(`${code} apareceu na busca`);
 }
-const semDestino = ERP_SCREENS.filter((s) => s.replacedBy && !ERP_SCREENS.some((t) => t.code === s.replacedBy && !t.replacedBy));
-if (semDestino.length > 0) throw new Error(`Apelido sem tela de destino: ${semDestino.map((s) => s.code).join(', ')}`);
+const tolerancias = searchErpScreens(ERP_SCREENS, 'tolerâncias de pedido de compra').map((s) => s.code);
+if (tolerancias.filter((c) => c === 'VPCT0100').length !== 1) throw new Error(`Tolerâncias apareceu duplicada: ${tolerancias.join(', ')}`);
 
 console.log('Ranking da busca de telas validado.');

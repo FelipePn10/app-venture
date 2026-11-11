@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   type EntradaDocumento, type NFeRecebida, type TipoManifestacao, type StatusRecebidas,
-  listarRecebidas, sincronizarRecebidas, manifestarRecebida, importarRecebida, statusRecebidas, definirSincronizacaoAutomatica,
+  listarRecebidas, sincronizarRecebidas, manifestarRecebida, manifestarPorChave, importarRecebida, statusRecebidas, definirSincronizacaoAutomatica,
   ROTULO_MANIFESTACAO,
 } from "@/services/nfeEntradaService";
 import { errMessage } from "@/services/fiscalShared";
@@ -34,7 +34,7 @@ export function NotasRecebidasPanel({ onAbrirEntrada, onImportada, onFeedback, o
   const [status, setStatus] = useState<StatusRecebidas | null>(null);
   const [busca, setBusca] = useState("");
   const [busy, setBusy] = useState(false);
-  const [manifestando, setManifestando] = useState<{ chave: string; tipo: TipoManifestacao; justificativa: string } | null>(null);
+  const [manifestando, setManifestando] = useState<{ chave: string; tipo: TipoManifestacao; justificativa: string; porChave?: boolean } | null>(null);
 
   const atualizarStatus = useCallback(async () => {
     try { const s = await statusRecebidas(); setStatus(s); onStatus?.(s); }
@@ -78,9 +78,12 @@ export function NotasRecebidasPanel({ onAbrirEntrada, onImportada, onFeedback, o
       onFeedback({ type: "error", message: "Informe a justificativa (pelo menos 15 caracteres, exigência da SEFAZ)." });
       return;
     }
+    const chave = manifestando.chave.replace(/\D/g, "");
+    if (manifestando.porChave && chave.length !== 44) { onFeedback({ type: "error", message: "A chave de acesso tem 44 dígitos (está no DANFE, abaixo do código de barras)." }); return; }
     setBusy(true); onFeedback(null);
     try {
-      await manifestarRecebida(manifestando.chave, manifestando.tipo, manifestando.justificativa.trim());
+      if (manifestando.porChave) await manifestarPorChave(chave, manifestando.tipo, manifestando.justificativa.trim());
+      else await manifestarRecebida(manifestando.chave, manifestando.tipo, manifestando.justificativa.trim());
       onFeedback({ type: "success", message: `${ROTULO_MANIFESTACAO[manifestando.tipo]} registrada.` });
       setManifestando(null);
       setLista(await listarRecebidas({ pendentes, prazo: soPrazo, q: busca }));
@@ -139,12 +142,15 @@ export function NotasRecebidasPanel({ onAbrirEntrada, onImportada, onFeedback, o
         <div className="erp-field erp-c4" style={{ alignSelf: "end", display: "flex", gap: 6 }}>
           <button className="erp-btn" onClick={() => void carregar()} disabled={busy}>Filtrar</button>
           <button className="erp-btn erp-btn-primary" onClick={() => void sincronizar()} disabled={busy}>{busy ? "Consultando…" : "Buscar na SEFAZ"}</button>
+          <button className="erp-btn" title="Para a nota que não apareceu na lista" onClick={() => setManifestando({ chave: "", tipo: "ciencia", justificativa: "", porChave: true })} disabled={busy}>Manifestar por chave</button>
         </div>
 
         {manifestando && (
           <div className="erp-field erp-c12">
             <div className="erp-feedback info" style={{ display: "grid", gap: 6 }}>
-              <div><strong>Manifestar</strong> a nota {manifestando.chave}</div>
+              {manifestando.porChave
+                ? <input className="erp-input" style={{ maxWidth: 520 }} inputMode="numeric" placeholder="Chave de acesso da NF-e recebida (44 dígitos)" value={manifestando.chave} onChange={(e) => setManifestando({ ...manifestando, chave: e.target.value })} />
+                : <div><strong>Manifestar</strong> a nota {manifestando.chave}</div>}
               <select className="erp-input" style={{ maxWidth: 320 }} value={manifestando.tipo}
                 onChange={(e) => setManifestando({ ...manifestando, tipo: e.target.value as TipoManifestacao })}>
                 {Object.entries(ROTULO_MANIFESTACAO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

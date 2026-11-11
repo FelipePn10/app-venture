@@ -746,7 +746,7 @@ async function journeyCompras() {
   await call('GET', '/api/purchase-requisitions?only_open=true', undefined, { journey: J, label: 'Solicitações de compra abertas' });
   await call('GET', '/api/purchase-quotations?only_open=true', undefined, { journey: J, label: 'Cotações abertas' });
   // Procurement — contratos de fornecedores (VCON0200/0400/0202) + camada operacional
-  await call('GET', '/api/procurement/supplier-contracts', undefined, { journey: J, label: 'Contratos de fornecedores (VCON0400)' });
+  await call('GET', '/api/procurement/supplier-contracts', undefined, { journey: J, label: 'Contratos de fornecedores (VCON0200)' });
   await call('GET', '/api/procurement/receiving-notices', undefined, { journey: J, label: 'Avisos de recebimento (VAVR0200)', expect: [200, 400] });
   await call('GET', '/api/procurement/records', undefined, { journey: J, label: 'Registros operacionais de suprimento', expect: [200, 400] });
   await call('GET', '/api/procurement/purchase-movements', undefined, { journey: J, label: 'Histórico consolidado de movimentações', expect: [200, 400] });
@@ -796,7 +796,7 @@ async function journeyCompras() {
   const ct = await call('POST', '/api/procurement/supplier-contracts', { enterprise_code: 1, supplier_code: 1, contract_number: `CT-E2E-${RUN}`, status: 'ACTIVE', currency: 'BRL', valid_from: '2026-01-01', items: [{ item_code: 10050, mask: '', contracted_qty: 100, unit_price: 9.9, min_order_qty: 0 }], created_by: UID }, { journey: J, label: 'Criar contrato de fornecedor (VCON0200)', expect: [200, 201, 409, 422] });
   const ctid = codeOf(ct.json);
   if (ctid) {
-    await call('POST', `/api/procurement/supplier-contracts/${ctid}/consume`, { item_code: 10050, mask: '', quantity: 10 }, { journey: J, label: 'Baixar saldo do contrato (VCON0202)', expect: [200, 201, 409, 422] });
+    await call('POST', `/api/procurement/supplier-contracts/${ctid}/consume`, { item_code: 10050, mask: '', quantity: 10 }, { journey: J, label: 'Baixar saldo do contrato (VCON0200)', expect: [200, 201, 409, 422] });
     await call('PATCH', `/api/procurement/supplier-contracts/${ctid}/status`, { status: 'CLOSED' }, { journey: J, label: 'Encerrar contrato (status)', expect: [200, 201, 422] });
   }
   // FAVR: aviso de recebimento (VAVR0200) → avançar status → divergência → resolver
@@ -811,7 +811,7 @@ async function journeyCompras() {
   // Inspeção estruturada (VINS0200): roteiro por item com 1 etapa
   await call('POST', '/api/procurement/receiving-inspection-routes', { enterprise_code: 1, basis: 'ITEM', item_code: 10050, mask: '', inspection_warehouse_id: 1, valid_from: '2026-01-01', steps: [{ sequence: 10, inspection_name: 'Dimensional', kind: 'VALUE', appointment_mode: 'ALL_MEASUREMENTS', is_required: true, sample_qty: 5, acceptance_qty: 0, rejection_qty: 1, nominal_value: 10, min_value: 9.8, max_value: 10.2, attributes: [] }], created_by: UID }, { journey: J, label: 'Criar roteiro de inspeção (VINS0200)', expect: [200, 201, 409, 422] });
   // IQF: computar scorecard a partir de dados reais + registro operacional + alçada + parâmetro + importação
-  await call('POST', '/api/procurement/supplier-scorecards/compute', { supplier_code: 1, period_start: '2026-01-01', period_end: '2026-06-30', commercial_score: 100, service_score: 100, persist: false, created_by: UID }, { journey: J, label: 'Computar IQF do fornecedor (VAVF0204)', expect: [200, 201, 400, 422] });
+  await call('POST', '/api/procurement/supplier-scorecards/compute', { supplier_code: 1, period_start: '2026-01-01', period_end: '2026-06-30', commercial_score: 100, service_score: 100, persist: false, created_by: UID }, { journey: J, label: 'Computar IQF do fornecedor (VAVF0300)', expect: [200, 201, 400, 422] });
   await call('POST', '/api/procurement/records', { record_type: 'RECEIVING_CHECKLIST', status: 'OPEN', supplier_code: 1, mask: '', quantity: 0, payload: {} }, { journey: J, label: 'Criar registro operacional', expect: [200, 201, 422] });
   await call('POST', '/api/procurement/approval-limits', { enterprise_code: 1, scope: 'GLOBAL', currency: 'BRL', auto_approve_max: 10000, valid_from: '2026-01-01', created_by: UID }, { journey: J, label: 'Criar regra de alçada (FALC)', expect: [200, 201, 409, 422] });
   await call('PUT', '/api/procurement/parameters', { enterprise_code: 1, domain: 'RECEIVING_NOTICE', param_key: 'auto_block', param_value: 'true', value_type: 'BOOL' }, { journey: J, label: 'Upsert parâmetro de suprimentos', expect: [200, 201, 422] });

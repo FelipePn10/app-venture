@@ -6,8 +6,9 @@ import { errMessage, parseStr, parseNum, parseBool, type Obj } from "@/services/
 /**
  * CRUD genérico para os cadastros de apoio de cliente
  * (`/api/customers/support/{resource}`), dirigido por especificação de campos.
- * Renderiza um formulário (criar/editar) + tabela de registros. É embutido nas
- * abas das telas VCLI0510/0520/0530.
+ * Renderiza um formulário (criar/editar) + tabela de registros. É embutido nos
+ * cadastros de apoio do cliente (VCLI0500), da condição de pagamento (VFIN0110) e do
+ * cabeçalho das tabelas de venda (VCST0202).
  */
 
 export interface FieldSpec {

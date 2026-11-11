@@ -27,7 +27,8 @@ check('item específico da política envia item_code como texto', /item_code:\s*
 check('política criada pode ser atualizada', /updateCommercialPolicy\(form\.code/.test(policyPage) && /Salvar alterações/.test(policyPage));
 check('item específico usa pesquisa no cadastro', /loader=\{loadItems\}/.test(policyPage));
 check('situação e ação vazias são recusadas', /validateStructuredChoices/.test(routines) && /key === "status"/.test(routines) && /key === "action"/.test(routines));
-check('workflow permite listar pedidos por situação', /VVND0600[\s\S]*?\/api\/sales-order\/status\/\{status\}/.test(routineCatalog));
+// O workflow (VVND0600) virou a aba Andamento e o filtro da VVND0200.
+check('workflow permite listar pedidos por situação', /\/search/.test(read('src/services/salesOrderService.ts')) && /filterStatus/.test(read('src/components/screens/comercial/Vvnd0200Page.tsx')));
 check('cancelamento recorrente envia data efetiva e política futura', /effective_date/.test(recurring) && /future_orders_policy/.test(recurringPage));
 check('geração recorrente envia chave de idempotência', /generate-order[\s\S]*?Idempotency-Key/.test(recurring));
 check('razão de comissões permite conciliar e pagar com idempotência', /ledger\/\$\{code\}\/\$\{action\}/.test(commissions) && /Idempotency-Key/.test(commissions));

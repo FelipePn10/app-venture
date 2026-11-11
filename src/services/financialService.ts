@@ -27,8 +27,6 @@ export interface ContaBancaria extends ContaBancariaDTO {
   accounting_account_id?: number;
 }
 
-export interface CondicaoPagamentoDTO { nome: string; parcelas: string; }
-export interface CondicaoPagamento extends CondicaoPagamentoDTO { id: number; }
 
 export type PlanoTipo = 'RECEITA' | 'DESPESA' | 'ATIVO' | 'PASSIVO' | 'PATRIMONIO';
 export type PlanoNatureza = 'DEBITO' | 'CREDITO';
@@ -383,20 +381,7 @@ function parseContaBancaria(raw: unknown): ContaBancaria {
   };
 }
 
-/** Backend stores `parcelas` as `[{ dias, percentual }]`; flatten to "30,60,90". */
-function parcelasToStr(v: unknown): string {
-  if (Array.isArray(v)) {
-    return v
-      .map((p) => (p && typeof p === 'object' ? parseNum(p as Obj, 'dias', 'Dias', 'days') : Number(p) || 0))
-      .join(',');
-  }
-  return v != null ? String(v) : '';
-}
 
-function parseCondicao(raw: unknown): CondicaoPagamento {
-  const o = unwrapObject(raw);
-  return { id: parseNum(o, 'id', 'ID'), nome: parseStr(o, 'nome', 'Nome'), parcelas: parcelasToStr(o['parcelas'] ?? o['Parcelas']) };
-}
 
 function parsePlano(raw: unknown): PlanoConta {
   const o = unwrapObject(raw);
@@ -566,20 +551,6 @@ export async function createContaBancaria(dto: ContaBancariaDTO): Promise<ContaB
 }
 
 // ─── Condições de pagamento ─────────────────────────────────────────────────
-
-export async function listCondicoesPagamento(): Promise<CondicaoPagamento[]> {
-  const { data } = await httpClient.get(`${BASE}/condicoes-pagamento/list`);
-  return unwrapArray(data).map(parseCondicao);
-}
-export async function createCondicaoPagamento(dto: CondicaoPagamentoDTO): Promise<CondicaoPagamento> {
-  // Backend expects `parcelas` as a JSON array of day counts (sent as a JSON
-  // string), not the raw comma-separated text the screen collects.
-  const days = dto.parcelas.split(',').map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n));
-  const { data } = await httpClient.post(`${BASE}/condicoes-pagamento/create`, { nome: dto.nome, parcelas: JSON.stringify(days) });
-  return parseCondicao(data);
-}
-
-// ─── Plano de contas ────────────────────────────────────────────────────────
 
 export async function listPlanoContas(): Promise<PlanoConta[]> {
   const { data } = await httpClient.get(`${BASE}/plano-contas/list`);

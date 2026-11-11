@@ -22,19 +22,20 @@ check('VEST0500 item/almoxarifado/máscara usam modal', /loader=\{loadItems\}/.t
 check('VEST0500 esclarece campo Endereço', /WMS/.test(vest0500));
 check('VENT0800 removeu header Nav/Ferramentas', !/className="al-nav-btn"/.test(vent0800) && !/>Ajuda</.test(vent0800) && !/>Atalhos</.test(vent0800));
 check('VENT0800 mantém carregar almoxarifado pelo código', /handleLoadWarehouseByCode/.test(vent0800));
-// VEST0300 era uma rotina genérica sobre o mesmo cadastro da VLOT0100. Agora o
-// código antigo abre a tela própria, que absorveu o que só a rotina fazia.
+// VEST0300 era uma rotina genérica sobre o mesmo cadastro da VLOT0100, que
+// absorveu o que só a rotina fazia. Tela desativada sai de vez.
 const vlot0100 = read('src/components/screens/almoxarifado/Vlot0100Page.tsx');
 const lotMaskSvc = read('src/services/lotMaskService.ts');
 const screenHost = read('src/components/screens/ScreenHostPage.tsx');
 const catalogo = read('src/types/erpScreen.ts');
 check('VEST0300 não é mais rotina genérica duplicada', !/VEST0300: routine\(/.test(routineCatalog));
-check('VEST0300 abre a VLOT0100 e sai do menu', /VEST0300: <Vlot0100Page \/>/.test(screenHost) && /code: "VEST0300"[^}]*replacedBy: "VLOT0100"/.test(catalogo));
+check('VEST0300 removida (só a VLOT0100 existe)', !/VEST0300/.test(screenHost) && !/"VEST0300"/.test(catalogo));
 check('VLOT0100 aplicação é lista das aceitas pelo backend (SUPRIMENTOS…GERAL)', /APPLICATIONS = \['SUPRIMENTOS', 'PRODUCAO', 'VENDAS', 'EXPEDICAO', 'GERAL'\]/.test(lotMaskSvc) && /APPLICATIONS\.map/.test(vlot0100));
 check('VLOT0100 altera máscara e parte e desativa parte', /updateLotMask\(/.test(vlot0100) && /updateLotMaskPart\(/.test(vlot0100) && /deleteLotMaskPart\(/.test(vlot0100)
   && /httpClient\.put\(`\$\{BASE\}\/parts\/\$\{partId\}`/.test(lotMaskSvc) && /httpClient\.delete\(`\$\{BASE\}\/parts\/\$\{partId\}`/.test(lotMaskSvc));
 check('VLOT0100 gera pelo contexto e mostra o código (não JSON cru)', /generateLotByContext\(/.test(vlot0100) && /Gerar código de lote/.test(vlot0100) && !/JSON\.stringify/.test(vlot0100));
-check('VEXP0120 operações têm nomes distintos (instrução × caixa)', /Consultar instruções de entrega/.test(routineCatalog) && /Consultar caixas de despacho/.test(routineCatalog));
+// VEXP0120 virou parte da aba Cargas da VEXP0100.
+check('Cargas: orientações de entrega e caixas de despacho na VEXP0100', /Orientações de entrega/.test(read('src/components/screens/almoxarifado/CargasPanel.tsx')) && /Caixas de despacho/.test(read('src/components/screens/almoxarifado/CargasPanel.tsx')));
 check('rotina traduz rótulos de lote/expedição (date_format, lot_mask_id, etc.)', /date_format: "Formato de data"/.test(routinePage) && /lot_mask_id: "Máscara de lote"/.test(routinePage) && /planned_ship_date/.test(routinePage));
 check('rotina oferece enum application em PT-BR', /application: \["SUPRIMENTOS"/.test(routinePage));
 check('enumLabel traduz SUPRIMENTOS/PRODUCAO/EXPEDICAO e tipos de parte', /SUPRIMENTOS: 'Suprimentos'/.test(enumLabels) && /SEQ_NUMERICA: 'Sequência numérica'/.test(enumLabels));

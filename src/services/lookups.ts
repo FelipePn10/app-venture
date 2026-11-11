@@ -319,7 +319,7 @@ export async function textoDeBuscaDosItens(): Promise<Map<string, string>> {
   return new Map([...(await buscaCompletaDosItens())].map(([k, v]) => [k, v.texto]));
 }
 
-/** Tanques / linhas de capacidade da promessa de entrega (cadastro em VPME0102). */
+/** Tanques / linhas de capacidade da promessa de entrega (cadastro em VPME0102ITE (Parâmetros)). */
 export const loadCapacityLines = cached(async () => {
   const { data } = await httpClient.get('/api/delivery-promise/lines');
   return (Array.isArray(data) ? data : []).map((l: Record<string, unknown>) => ({
@@ -412,6 +412,18 @@ export const loadMachines = cached(async () =>
  * apontamento gravam o id; o `loadMachines` devolve o código da máquina, e
  * escolher "Bancada 8301" mandava 8301 onde o banco espera o id 3.
  */
+/**
+ * Máquinas para o terminal de parada (VPRO1200): id, código, nome e situação.
+ * O perfil OPERATOR não lê o cadastro de máquinas (403) — usa a lista do posto.
+ */
+export interface MaquinaDoPosto { id: number; code: string; name: string; is_active: boolean }
+export async function listMaquinasDoPosto(): Promise<MaquinaDoPosto[]> {
+  return ouDoPosto(
+    async () => (await listMachines()).map((m) => ({ id: m.id, code: String(m.code), name: m.name, is_active: m.is_active })),
+    async () => (await doPosto()).machines,
+  );
+}
+
 export const loadMachinesById = cached(async () => ouDoPosto(async () =>
   (await listMachines()).filter((m) => m.id).map((m) => ({
     code: m.id,
@@ -682,7 +694,7 @@ export const loadLegalDevices = cached(() =>
   loadEndpoint('/api/fiscal/support/dispositivos-legais/', ['description', 'Description'], ['type', 'Type']),
 );
 
-/** Tipos de nota fiscal de saída, do apoio de cliente (VCLI0530). */
+/** Tipos de nota fiscal de saída, dos cadastros de apoio do cliente (VCLI0500). */
 export const loadInvoiceTypes = cached(() =>
   loadEndpoint('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']),
 );
@@ -743,9 +755,25 @@ export const loadSupplierContracts = cached(() =>
   loadEndpoint('/api/procurement/supplier-contracts', ['contract_number', 'ContractNumber', 'description', 'Description'], ['status', 'Status']),
 );
 
-export const loadProductionOrders = cached(() =>
-  loadEndpoint('/api/production-order/list', ['item_code', 'ItemCode'], ['status', 'Status']),
-);
+/**
+ * Ordens de fabricação. O valor é o id interno (o que as rotas da OF esperam);
+ * o rótulo é o NÚMERO da OF e o item — antes mostrava só o código do item e
+ * duas OFs do mesmo item eram indistinguíveis na lista.
+ */
+export const loadProductionOrders = cached(async () => {
+  const { data } = await httpClient.get<unknown>('/api/production-order/list');
+  const out: LookupOption[] = [];
+  for (const raw of unwrapArray(data)) {
+    const o = unwrapObject(raw);
+    const id = parseNum(o, 'id', 'ID');
+    if (!id) continue;
+    const numero = parseStr(o, 'order_number', 'OrderNumber') || String(id);
+    const item = parseStr(o, 'item_code', 'ItemCode');
+    const situacao = parseStr(o, 'status', 'Status');
+    out.push({ code: id, label: `OF ${numero}${item ? ` — item ${item}` : ''}`, sub: situacao || undefined });
+  }
+  return out;
+});
 
 /** Pedidos de compra, para amarrar o título financeiro à compra que o originou. */
 /** Cargas de expedição, para ligar a nota avulsa à carga que ela acompanha. */

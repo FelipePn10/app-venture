@@ -206,51 +206,24 @@ export async function createInspectionRoute(dto: Obj): Promise<Obj> {
   const { data } = await httpClient.post(`${P}/receiving-inspection-routes`, { ...dto, created_by: currentUserId() });
   return one(data);
 }
-export async function getInspectionRoute(id: number): Promise<Obj> {
-  const { data } = await httpClient.get(`${P}/receiving-inspection-routes/${id}`);
-  return one(data);
-}
-export async function listInspectionOrders(params?: Obj): Promise<Obj[]> {
-  const { data } = await httpClient.get(`${P}/receiving-inspection-orders`, { params });
+/** Roteiros de inspeção de recebimento da empresa (só o cabeçalho). */
+export async function listInspectionRoutes(): Promise<Obj[]> {
+  const { data } = await httpClient.get(`${P}/receiving-inspection-routes`);
   return rows(data);
 }
-/** Gera uma ordem de inspeção (source PURCHASE_RECEIPT/RECEIVING_NOTICE/FISCAL_ENTRY/MANUAL). */
-export async function createInspectionOrder(dto: Obj): Promise<Obj> {
-  const { data } = await httpClient.post(`${P}/receiving-inspection-orders`, { ...dto, created_by: currentUserId() });
-  return one(data);
-}
-/** Aponta medições/status por sequência e amostra. */
-export async function recordInspectionResults(orderId: number, results: Obj[]): Promise<Obj> {
-  const { data } = await httpClient.post(`${P}/receiving-inspection-orders/${orderId}/results`, { results, created_by: currentUserId() });
-  return one(data);
-}
-/** Análise de NC (conforme/rejeitada/retrabalho/restrita); com move_stock fecha o ciclo no estoque. */
-export async function analyzeInspectionOrder(orderId: number, dto: Obj): Promise<Obj> {
-  const { data } = await httpClient.post(`${P}/receiving-inspection-orders/${orderId}/analysis`, { ...dto, created_by: currentUserId() });
-  return one(data);
-}
-/** Disposição da inspeção (registro operacional): aprovado/rejeitado, quarentena→destino. */
-export async function disposeReceivingInspection(recordId: number, dto: Obj): Promise<Obj> {
-  const { data } = await httpClient.post(`${P}/receiving-inspections/${recordId}/disposition`, { ...dto, created_by: currentUserId() });
+export async function getInspectionRoute(id: number): Promise<Obj> {
+  const { data } = await httpClient.get(`${P}/receiving-inspection-routes/${id}`);
   return one(data);
 }
 
 // ── Registros operacionais genéricos (procurement_records) ──
 export const RECORD_TYPES = ['RECEIVING_INSPECTION', 'RECEIVING_NOTICE', 'SUPPLIER_EVALUATION', 'APPROVAL_LIMIT', 'SUPPLIER_CONTRACT', 'RECEIVING_CHECKLIST', 'RECEIVING_LABEL', 'SUPPLIER_EDI', 'IMPORT_PROCESS'] as const;
-export async function listRecords(params?: Obj): Promise<Obj[]> {
-  const { data } = await httpClient.get(`${P}/records`, { params });
-  return rows(data);
-}
 export async function getRecord(id: number): Promise<Obj> {
   const { data } = await httpClient.get(`${P}/records/${id}`);
   return one(data);
 }
 export async function createRecord(dto: Obj): Promise<Obj> {
   const { data } = await httpClient.post(`${P}/records`, { ...dto, created_by: currentUserId() });
-  return one(data);
-}
-export async function updateRecordStatus(id: number, status: string): Promise<Obj> {
-  const { data } = await httpClient.patch(`${P}/records/${id}/status`, { status });
   return one(data);
 }
 
@@ -331,14 +304,6 @@ export async function updateImportProcessStatus(id: number, status: ImportStatus
 }
 
 // ── Parâmetros, movimentações e geração de itens ──
-export async function getProcurementParameters(params?: Obj): Promise<Obj[]> {
-  const { data } = await httpClient.get(`${P}/parameters`, { params });
-  return rows(data);
-}
-export async function upsertProcurementParameter(dto: Obj): Promise<Obj> {
-  const { data } = await httpClient.put(`${P}/parameters`, dto);
-  return one(data);
-}
 export async function listPurchaseMovements(params?: Obj): Promise<Obj[]> {
   const { data } = await httpClient.get(`${P}/purchase-movements`, { params });
   return rows(data);

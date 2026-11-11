@@ -9,6 +9,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { FaturarPedidoPanel } from "./FaturarPedidoPanel";
 import { NovaNotaForm } from "./NovaNotaForm";
 import { SeriesDaNotaPanel } from "./SeriesDaNotaPanel";
+import { InutilizacaoPanel } from "./InutilizacaoPanel";
 import { definirClassTribDaLinha } from "@/services/reformaTributariaService";
 import { confirmar, pedirTexto } from "@/components/ui/dialogos";
 import { abrirDocumento } from "@/utils/abrirDocumento";
@@ -16,7 +17,7 @@ import { chaveEmGrupos, documentoComMascara } from "@/utils/documentoFiscal";
 import { DanfePrevia } from "./DanfePrevia";
 
 type FeedbackState = { type: "success" | "error" | "info" | "warn"; message: string } | null;
-type Mode = "list" | "create" | "pedido";
+type Mode = "list" | "create" | "pedido" | "inutilizar";
 const ORIGEM_CLASSTRIB: Record<string, string> = {
   ITEM_DA_NOTA: "da linha", CFOP: "do CFOP", CLASSIFICACAO_FISCAL: "da classificação", PADRAO: "padrão",
 };
@@ -290,6 +291,7 @@ export function Vfis0200Page(): JSX.Element {
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Visão</span>
           <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
+          <button className="erp-btn" onClick={() => { setMode("inutilizar"); setFeedback(null); }} disabled={busy}>Inutilizar numeração</button>
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Relatório</span>
@@ -302,6 +304,8 @@ export function Vfis0200Page(): JSX.Element {
           <div className="erp-tabs"><button className="erp-tab active">NF-e de Saída</button></div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
+
+        {mode === "inutilizar" && <InutilizacaoPanel onFeedback={setFeedback} onFeito={() => setMode("list")} />}
 
         {mode === "pedido" && (
           <FaturarPedidoPanel

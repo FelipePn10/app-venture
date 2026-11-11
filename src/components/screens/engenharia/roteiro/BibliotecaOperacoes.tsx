@@ -256,10 +256,10 @@ export function BibliotecaOperacoes({ ops, recarregar, setFeedback, pedirConfirm
                 <div className="erp-field erp-c2"><label className="erp-label">Refugo (%)</label>
                   <input className="erp-input num" type="number" min={0} max={99.9} step="0.1" value={form.scrap_pct ?? 0}
                     onChange={(e) => set("scrap_pct", Number(e.target.value))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Custo por peça (se faltar na VTER0100)</label>
+                <div className="erp-field erp-c3"><label className="erp-label">Custo por peça (se faltar na VTPS0100)</label>
                   <input className="erp-input num" type="number" min={0} step="0.0001" value={form.cost_per_unit ?? ""}
                     onChange={(e) => set("cost_per_unit", e.target.value ? Number(e.target.value) : undefined)} />
-                  <span className="erp-field-hint">O preço vigente da VTER0100 tem prioridade no custo.</span></div>
+                  <span className="erp-field-hint">O preço vigente da VTPS0100 tem prioridade no custo.</span></div>
                 <div className="erp-field erp-c3"><label className="erp-label">O que remeter</label>
                   <select className="erp-input" value={form.third_party_remittance ?? "DEMAND_ITEMS"} onChange={(e) => set("third_party_remittance", e.target.value)}>
                     {THIRD_PARTY_REMITTANCES.map((t) => <option key={t} value={t}>{enumLabel(t)}</option>)}

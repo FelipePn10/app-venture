@@ -1,3 +1,4 @@
+import { AlcadasCompraPanel } from "./AlcadasCompraPanel";
 import { useState, useCallback } from "react";
 import { type PurchaseTolerance, TOLERANCE_TYPES, APPLIES_TO, VALUE_TYPES, ACTIONS, listTolerances, upsertTolerance, deleteTolerance, evaluateTolerance } from "@/services/purchaseTolerancesService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
@@ -10,6 +11,7 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const EMPTY: PurchaseTolerance = { tolerance_type: "QUANTITY", applies_to: "ALL", interval_min: "0", interval_max: "", tolerance_value: "0", value_type: "PERCENT", action: "WARN", is_active: true };
 
 export function Vpct0100Page(): JSX.Element {
+  const [aba, setAba] = useState<"tolerancias" | "alcadas">("tolerancias");
   const [list, setList] = useState<PurchaseTolerance[]>([]);
   const [form, setForm] = useState<PurchaseTolerance>({ ...EMPTY });
   const [ev, setEv] = useState({ expected: "", actual: "" });
@@ -30,10 +32,15 @@ export function Vpct0100Page(): JSX.Element {
     <div className="erp-screen">
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Suprimento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Tolerâncias de Pedido de Compra</span><span className="erp-crumb-code">VPCT0100</span></nav>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Suprimento</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Parâmetros de Compras</span><span className="erp-crumb-code">VPCT0100</span></nav>
         <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">{list.length} regra(s)</span>
       </header>
 
+      <div className="erp-tabs">
+        <button className={`erp-tab${aba === "tolerancias" ? " active" : ""}`} onClick={() => setAba("tolerancias")}>Tolerâncias de quantidade e preço</button>
+        <button className={`erp-tab${aba === "alcadas" ? " active" : ""}`} onClick={() => setAba("alcadas")}>Alçadas de aprovação</button>
+      </div>
+      {aba === "alcadas" ? <div className="erp-aba-corpo"><div className="erp-content"><section className="erp-detail-panel"><AlcadasCompraPanel /></section></div></div> : <div className="erp-aba-corpo">
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Tolerâncias</span><button className="erp-btn erp-btn-dark" onClick={carregar} disabled={busy}>{busy && <span className="erp-spin" />}Carregar</button><button className="erp-btn" onClick={novo} disabled={busy}>Nova</button></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VPCT0100 — Tolerâncias de Compra" filename="vpct0100" /></div>
@@ -48,7 +55,7 @@ export function Vpct0100Page(): JSX.Element {
               {list.length === 0 && <div className="erp-list-empty">Clique em <strong>Carregar</strong>.</div>}
               {list.map((t) => (
                 <div key={t.id} className="erp-list-row" onClick={() => setForm({ ...t })}>
-                  <span className="erp-list-code">{t.tolerance_type}</span><span className="erp-list-sub">{t.applies_to} · {t.tolerance_value}{t.value_type === "PERCENT" ? "%" : ""} · {t.action}</span>
+                  <span className="erp-list-code">{enumLabel(t.tolerance_type)}</span><span className="erp-list-sub">{enumLabel(t.applies_to)} · {t.tolerance_value}{t.value_type === "PERCENT" ? "%" : ""} · {enumLabel(t.action)}</span>
                   <div className="erp-list-meta"><button className="erp-btn erp-btn-danger erp-btn-sm" style={{ marginLeft: "auto" }} onClick={(e) => { e.stopPropagation(); remover(t.id); }}>×</button></div>
                 </div>
               ))}
@@ -97,6 +104,7 @@ export function Vpct0100Page(): JSX.Element {
         </div>
       </div>
 
+      </div>}
       <footer className="erp-statusbar"><div className="erp-status-item">Regras: <strong>{list.length}</strong></div><div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span></footer>
     </div>
   );

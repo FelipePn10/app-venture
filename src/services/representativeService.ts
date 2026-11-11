@@ -232,3 +232,9 @@ export async function addRepresentativeFolder(folder: RepresentativeFolder, payl
   const { data } = await httpClient.post(`${BASE}/${folder}`, payload);
   return unwrapObject(data);
 }
+
+/** Classificações de item que podem ser "interesse" do representante. */
+export async function listInterestClassifications(): Promise<{ code: number; description: string }[]> {
+  const { data } = await httpClient.get(`${BASE}/interest-classifications`);
+  return unwrapArray(data).map((raw) => { const o = unwrapObject(raw); return { code: parseNum(o, 'code', 'Code', 'classification_code'), description: parseStr(o, 'description', 'Description', 'name') }; }).filter((c) => c.code > 0);
+}

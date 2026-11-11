@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## Novidades
+- **Menos telas, nenhuma função a menos:** o catálogo passa de 211 para 117 telas. Rotinas que eram telas soltas viraram abas ou botões da tela onde o trabalho acontece (ex.: reprogramação de entrega na aba Entrega do pedido, parâmetros do orçamento no botão Parâmetros, prontidão do item na aba Prontidão da VENT0200, tipos de máquina na aba Centros de trabalho da VMAQ0200, cadastros de apoio do cliente na VCLI0500).
+- **Condição de pagamento única (VFIN0110):** a mesma condição vale para cliente, fornecedor, orçamento, pedido e nota, com parcelas em percentual, "prazo conta de" e simulação em dinheiro. As condições antigas são migradas automaticamente.
+- **Centro de custo único (VCTB0102):** um cadastro só para o financeiro e a fábrica, com responsável, aprovador e conta contábil padrão.
+- **Versões da estrutura (VENT0210 › Versões):** aprovar a versão de fabricação guarda uma foto da estrutura; "O que mudou" mostra o que entrou, saiu ou mudou desde a aprovação. Para o item que controla versão, a OF só é criada com a versão aprovada.
+- **Plano de Contas Gerencial (VFIN0120)** com a conta contábil ligada; apuração de impostos no módulo Fiscal.
+
+## Correções
+- Ordens de serviço de terceiros (VTPS0100): a ordem concluída não aparece mais como vencida; histórico com nomes legíveis.
+- Mensagens do sistema passam a apontar para as telas que existem.
+
 ## [v1.15.0] — 2026-11-10
 
 ## Novidades

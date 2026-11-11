@@ -1,5 +1,6 @@
+import { PosVendaDoItemPanel } from "./PosVendaDoItemPanel";
 import { useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
-import { createItem, updateItem, getItemTemplate } from "@/services/itemService";
+import { createItem, updateItem, getItemTemplate, getActivationReadiness, type ActivationReadiness } from "@/services/itemService";
 import { listFiscalClassifications, type FiscalClassification } from "@/services/fiscalAdvancedService";
 import { errMessage, parseBool, parseNum, parseStr, unwrapObject, type Obj } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
@@ -64,7 +65,8 @@ type AbaAtiva =
   | "planejamento"
   | "comercial"
   | "contabil"
-  | "prontidao";
+  | "prontidao"
+  | "posvenda";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -337,6 +339,7 @@ const ABAS: { id: AbaAtiva; label: string }[] = [
   { id: "contabil", label: "Contábil" },
 ];
 const ABA_PRONTIDAO: { id: AbaAtiva; label: string } = { id: "prontidao", label: "Prontidão" };
+const ABA_POSVENDA: { id: AbaAtiva; label: string } = { id: "posvenda", label: "Pós-venda" };
 
 /** Dígito verificador GS1: o mesmo cálculo do backend, para avisar ao digitar. */
 function gtinValido(gtin: string): boolean {
@@ -549,6 +552,8 @@ export function Vent0200Page(): JSX.Element {
   const [modeloPDM, setModeloPDM] = useState<ModeloPDM | null>(null);
   const [previaPDM, setPreviaPDM] = useState<PreviaPDM | null>(null);
   const [prontidao, setProntidao] = useState<Prontidao[]>([]);
+  // Conferência de ativação para o MRP (era a VITM0100). Quem não pode ativar item recebe 403: a seção some.
+  const [prontoMrp, setProntoMrp] = useState<ActivationReadiness | null>(null);
   const [previaFiscal, setPreviaFiscal] = useState<PreviaFiscal | null>(null);
   // Responsáveis vêm do grupo do PDM (setor de planejamento e de compras).
   const [responsaveis, setResponsaveis] = useState<Responsaveis | null>(null);
@@ -607,7 +612,7 @@ export function Vent0200Page(): JSX.Element {
     } catch (err) { setFeedback({ type: "error", message: errMessage(err, "Não foi possível gravar a revisão.") }); }
   };
 
-  const abas = itemEmEdicao ? [...ABAS, ABA_PRONTIDAO] : ABAS;
+  const abas = itemEmEdicao ? [...ABAS, ABA_POSVENDA, ABA_PRONTIDAO] : ABAS;
   const modeloAtivo = useMemo(() => (modeloPDM?.attributes ?? []).filter((a) => a.is_active), [modeloPDM]);
   const temPadraoPDM = modeloAtivo.length > 0;
 
@@ -645,6 +650,8 @@ export function Vent0200Page(): JSX.Element {
   useEffect(() => {
     if (aba !== "prontidao" || !itemEmEdicao) return;
     let vivo = true;
+    setProntoMrp(null);
+    getActivationReadiness(itemEmEdicao).then((r) => { if (vivo) setProntoMrp(r); }).catch(() => { /* sem permissão de ativar: não mostra */ });
     void Promise.all([prontidaoDoItem(itemEmEdicao), previaFiscalDoItem(itemEmEdicao)])
       .then(([p, f]) => { if (vivo) { setProntidao(p); setPreviaFiscal(f); } })
       .catch((err) => { if (vivo) setFeedback({ type: "error", message: errMessage(err, "Não foi possível conferir a prontidão do item.") }); });
@@ -770,8 +777,8 @@ export function Vent0200Page(): JSX.Element {
     else if (itemCode && !/^[A-Za-z0-9._/-]+$/.test(itemCode))
       e.code = "Use apenas letras, números, hífen, ponto, barra ou sublinhado.";
     if (!form.name.trim()) e.name = "Nome obrigatório.";
-    if (!form.groupID.trim()) e.groupID = "Grupo PDM obrigatório — cadastre em VITE0114 se ainda não existir.";
-    if (!form.modifierID.trim()) e.modifierID = "Modificador PDM obrigatório — cadastre em VITE0115 se ainda não existir.";
+    if (!form.groupID.trim()) e.groupID = "Grupo PDM obrigatório — cadastre em VITE0116 (Grupos e modificadores) se ainda não existir.";
+    if (!form.modifierID.trim()) e.modifierID = "Modificador PDM obrigatório — cadastre em VITE0116 (Grupos e modificadores) se ainda não existir.";
     // Weight.IsValid(): bruto não pode ser menor que líquido.
     const bruto = Number(form.grossWeight || 0);
     const liquido = Number(form.netWeight || 0);
@@ -1420,7 +1427,7 @@ export function Vent0200Page(): JSX.Element {
           </Secao>
 
           <Secao titulo="Padrão descritivo (PDM)">
-            <Campo c={6} rotulo="Grupo" req erro={erroDe("groupID")} dica="Cadastre em VITE0114 antes do item.">
+            <Campo c={6} rotulo="Grupo" req erro={erroDe("groupID")} dica="Cadastre em VITE0116 antes do item.">
               <LookupField<number> value={form.groupID ? Number(form.groupID) : undefined} loader={loadPdmGroups} entityLabel="grupo" placeholder="Selecionar grupo…" onChange={(c) => { setField("groupID", c ? String(c) : ""); setField("modifierID", ""); }} />
             </Campo>
             <Campo c={6} rotulo="Modificador" req erro={erroDe("modifierID")} dica="Só os modificadores do grupo. Vincule em VITE0116.">
@@ -1635,10 +1642,10 @@ export function Vent0200Page(): JSX.Element {
             <div className="erp-field erp-c12" id="item-responsaveis"><small className="erp-hint">
               <strong>Responsáveis (do grupo do PDM):</strong>{" "}
               {responsaveis && (responsaveis.planning_department || responsaveis.purchasing_department)
-                ? <>planejamento {responsaveis.planning_department_name || "sem setor"}{responsaveis.planning_people?.length ? ` (${responsaveis.planning_people.join(", ")})` : ""} · compras {responsaveis.purchasing_department_name || "sem setor"}{responsaveis.purchasing_people?.length ? ` (${responsaveis.purchasing_people.join(", ")})` : ""}. Altere no grupo (VITE0114).</>
-                : "o grupo ainda não tem setor de planejamento nem de compras: defina em VITE0114."}
+                ? <>planejamento {responsaveis.planning_department_name || "sem setor"}{responsaveis.planning_people?.length ? ` (${responsaveis.planning_people.join(", ")})` : ""} · compras {responsaveis.purchasing_department_name || "sem setor"}{responsaveis.purchasing_people?.length ? ` (${responsaveis.purchasing_people.join(", ")})` : ""}. Altere no grupo (VITE0116).</>
+                : "o grupo ainda não tem setor de planejamento nem de compras: defina na VITE0116."}
             </small></div>
-            <Campo c={3} rotulo="Tanque / linha de capacidade" dica="Só para quem usa a promessa de entrega por capacidade: a linha em que o item ocupa capacidade. Cadastre as linhas em VPME0102."><LookupField<number> value={form.tanque ? Number(form.tanque) : undefined} loader={loadCapacityLines} entityLabel="tanque / linha" placeholder="Nenhuma" clearable onChange={(c) => setField("tanque", c ? String(c) : "")} /></Campo>
+            <Campo c={3} rotulo="Tanque / linha de capacidade" dica="Só para quem usa a promessa de entrega por capacidade: a linha em que o item ocupa capacidade. Cadastre as linhas em VPME0102ITE (Parâmetros)."><LookupField<number> value={form.tanque ? Number(form.tanque) : undefined} loader={loadCapacityLines} entityLabel="tanque / linha" placeholder="Nenhuma" clearable onChange={(c) => setField("tanque", c ? String(c) : "")} /></Campo>
           </Secao>
           <Secao titulo="Tamanho do lote">
             <div className="erp-field erp-c12"><small className="erp-hint">Como o MRP arredonda a quantidade das ordens de compra e de fabricação. Ex.: precisa de 37, lote mínimo 50 e múltiplo 25 → ordem de 50.</small></div>
@@ -1763,6 +1770,7 @@ export function Vent0200Page(): JSX.Element {
         </>)}
 
 
+        {aba === "posvenda" && itemEmEdicao && <PosVendaDoItemPanel itemCode={itemEmEdicao} />}
         {aba === "prontidao" && itemEmEdicao && (<>
           <div className="erp-metrics" id="item-prontidao">
             {prontidao.filter((p) => p.aplica).map((p) => (
@@ -1772,6 +1780,17 @@ export function Vent0200Page(): JSX.Element {
               </div>
             ))}
           </div>
+          {prontoMrp && (
+            <Secao titulo="Pronto para o MRP">
+              <div className="erp-field erp-c12">
+                <div className={`erp-feedback ${prontoMrp.ready ? "success" : "error"}`} style={{ margin: 0 }}>
+                  {prontoMrp.ready ? "O item está pronto para o MRP" : "O item NÃO está pronto para o MRP"}{prontoMrp.item_type ? ` · tipo: ${prontoMrp.item_type}` : ""}
+                </div>
+                {prontoMrp.issues.length > 0 && <><strong style={{ fontSize: 12 }}>Impede:</strong><ul style={{ margin: "4px 0 0 18px", fontSize: 12 }}>{prontoMrp.issues.map((x) => <li key={x}>{x}</li>)}</ul></>}
+                {prontoMrp.warnings.length > 0 && <><strong style={{ fontSize: 12 }}>Atenção:</strong><ul style={{ margin: "4px 0 0 18px", fontSize: 12 }}>{prontoMrp.warnings.map((x) => <li key={x}>{x}</li>)}</ul></>}
+              </div>
+            </Secao>
+          )}
           <Secao titulo="O que falta">
             <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
               <table className="erp-grid">

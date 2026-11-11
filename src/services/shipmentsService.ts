@@ -266,3 +266,106 @@ async function downloadExport(code: number, fmt: 'pdf' | 'xlsx'): Promise<void> 
 }
 export const exportShipmentPdf = (code: number) => downloadExport(code, 'pdf');
 export const exportShipmentXlsx = (code: number) => downloadExport(code, 'xlsx');
+
+// ── Cargas (agrupam romaneios para veículo, rota e caixa de despacho) ──
+// Eram as rotinas genéricas VEXP0110/VPLC0200 e VEXP0120/VPLC0211; agora são a
+// aba Cargas da VEXP0100.
+export type LoadStatus = 'PLANNED' | 'RELEASED' | 'LOADING' | 'LOADED' | 'SHIPPED' | 'CANCELLED';
+export const LOAD_STATUS_LABEL: Record<LoadStatus, string> = {
+  PLANNED: 'Planejada', RELEASED: 'Liberada', LOADING: 'Carregando', LOADED: 'Carregada', SHIPPED: 'Despachada', CANCELLED: 'Cancelada',
+};
+export interface LoadDTO {
+  code: number; status: LoadStatus; description?: string; carrier_code?: number; vehicle_plate?: string; driver_name?: string;
+  driver_document?: string; route_code?: string; origin?: string; destination?: string; dispatch_box_code?: string;
+  planned_ship_date?: string; estimated_delivery?: string; notes?: string;
+  total_shipments: number; total_fiscal_notes: number; total_volumes: number; total_gross_weight: number;
+  shipments: { shipment_code: number; sequence: number }[];
+  fiscal_notes: { fiscal_exit_id: number; nfe_number?: number; shipment_code?: number }[];
+  instructions: DeliveryInstructionDTO[];
+}
+export interface DeliveryInstructionDTO { id?: number; load_code?: number; customer_id?: number; title: string; instruction: string; priority: number; active?: boolean }
+export interface DispatchBoxDTO { code: string; description?: string; zone?: string; active: boolean; current_load?: number }
+
+function parseLoad(raw: unknown): LoadDTO {
+  const o = unwrapObject(raw);
+  const s = (k: string) => parseStr(o, k) || undefined;
+  return {
+    code: parseNum(o, 'code'), status: (parseStr(o, 'status') || 'PLANNED') as LoadStatus, description: s('description'),
+    carrier_code: parseNum(o, 'carrier_code') || undefined, vehicle_plate: s('vehicle_plate'), driver_name: s('driver_name'),
+    driver_document: s('driver_document'), route_code: s('route_code'), origin: s('origin'), destination: s('destination'),
+    dispatch_box_code: s('dispatch_box_code'), planned_ship_date: s('planned_ship_date')?.slice(0, 10),
+    estimated_delivery: s('estimated_delivery')?.slice(0, 10), notes: s('notes'),
+    total_shipments: parseNum(o, 'total_shipments'), total_fiscal_notes: parseNum(o, 'total_fiscal_notes'),
+    total_volumes: parseNum(o, 'total_volumes'), total_gross_weight: parseNum(o, 'total_gross_weight'),
+    shipments: unwrapArray(o['shipments']).map(unwrapObject).map((x) => ({ shipment_code: parseNum(x, 'shipment_code'), sequence: parseNum(x, 'sequence') })),
+    fiscal_notes: unwrapArray(o['fiscal_notes']).map(unwrapObject).map((x) => ({ fiscal_exit_id: parseNum(x, 'fiscal_exit_id'), nfe_number: parseNum(x, 'nfe_number') || undefined, shipment_code: parseNum(x, 'shipment_code') || undefined })),
+    instructions: unwrapArray(o['instructions']).map(parseInstruction),
+  };
+}
+function parseInstruction(raw: unknown): DeliveryInstructionDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: parseNum(o, 'id') || undefined, load_code: parseNum(o, 'load_code') || undefined, customer_id: parseNum(o, 'customer_id') || undefined,
+    title: parseStr(o, 'title'), instruction: parseStr(o, 'instruction'), priority: parseNum(o, 'priority'), active: o['active'] !== false,
+  };
+}
+export async function listLoads(status?: string): Promise<LoadDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/loads`, { params: status ? { status } : undefined });
+  return unwrapArray(data).map(parseLoad);
+}
+export async function getLoad(code: number): Promise<LoadDTO> {
+  const { data } = await httpClient.get(`${BASE}/loads/${code}`);
+  return parseLoad(data);
+}
+export async function createLoad(dto: Partial<LoadDTO>): Promise<LoadDTO> {
+  const vazio = (v?: string) => (v && v.trim() ? v.trim() : undefined);
+  const { data } = await httpClient.post(`${BASE}/loads`, {
+    description: vazio(dto.description), carrier_code: dto.carrier_code || undefined, vehicle_plate: vazio(dto.vehicle_plate),
+    driver_name: vazio(dto.driver_name), driver_document: vazio(dto.driver_document), route_code: vazio(dto.route_code),
+    origin: vazio(dto.origin), destination: vazio(dto.destination), dispatch_box_code: vazio(dto.dispatch_box_code),
+    planned_ship_date: vazio(dto.planned_ship_date), estimated_delivery: vazio(dto.estimated_delivery), notes: vazio(dto.notes),
+  });
+  return parseLoad(data);
+}
+export async function addShipmentToLoad(loadCode: number, shipmentCode: number, sequence: number): Promise<void> {
+  await httpClient.post(`${BASE}/loads/${loadCode}/shipments`, { shipment_code: shipmentCode, sequence });
+}
+export async function removeShipmentFromLoad(loadCode: number, shipmentCode: number): Promise<void> {
+  await httpClient.delete(`${BASE}/loads/${loadCode}/shipments/${shipmentCode}`);
+}
+export async function addFiscalNoteToLoad(loadCode: number, fiscalExitId: number, sequence: number, shipmentCode?: number): Promise<void> {
+  await httpClient.post(`${BASE}/loads/${loadCode}/fiscal-notes`, { fiscal_exit_id: fiscalExitId, sequence, shipment_code: shipmentCode });
+}
+export type LoadAction = 'release' | 'start-loading' | 'finish-loading' | 'ship' | 'cancel';
+export async function advanceLoad(loadCode: number, action: LoadAction): Promise<void> {
+  await httpClient.post(`${BASE}/loads/${loadCode}/${action}`, {});
+}
+export async function assignBoxToLoad(loadCode: number, boxCode: string): Promise<void> {
+  await httpClient.post(`${BASE}/loads/${loadCode}/box`, { box_code: boxCode });
+}
+/** Romaneio → carga em que está (o romaneio não traz a carga; o monitor de separação traz). */
+export async function shipmentsInLoads(): Promise<Map<number, number>> {
+  const { data } = await httpClient.get(`${BASE}/loads/separation-monitor`);
+  const out = new Map<number, number>();
+  for (const r of unwrapArray(data).map(unwrapObject)) {
+    if (parseStr(r, 'load_status') !== 'CANCELLED') out.set(parseNum(r, 'shipment_code'), parseNum(r, 'load_code'));
+  }
+  return out;
+}
+export async function listDeliveryInstructions(loadCode: number): Promise<DeliveryInstructionDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/delivery-instructions`, { params: { load_code: loadCode, active_only: true } });
+  return unwrapArray(data).map(parseInstruction);
+}
+export async function createDeliveryInstruction(dto: DeliveryInstructionDTO): Promise<void> {
+  await httpClient.post(`${BASE}/delivery-instructions`, { load_code: dto.load_code, customer_id: dto.customer_id || undefined, title: dto.title.trim(), instruction: dto.instruction.trim(), priority: dto.priority || 0 });
+}
+export async function listDispatchBoxes(): Promise<DispatchBoxDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/dispatch-boxes`, { params: { active_only: true } });
+  return unwrapArray(data).map(unwrapObject).map((o) => ({
+    code: parseStr(o, 'code'), description: parseStr(o, 'description') || undefined, zone: parseStr(o, 'zone') || undefined,
+    active: o['active'] !== false, current_load: parseNum(o, 'current_load') || undefined,
+  }));
+}
+export async function createDispatchBox(dto: { code: string; description?: string; zone?: string }): Promise<void> {
+  await httpClient.post(`${BASE}/dispatch-boxes`, { code: dto.code.trim(), description: dto.description?.trim() || undefined, zone: dto.zone?.trim() || undefined });
+}

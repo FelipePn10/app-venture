@@ -1,3 +1,6 @@
+import { MotivosDapiPanel } from "./MotivosDapiPanel";
+import { AjustesIcmsPanel } from "./AjustesIcmsPanel";
+import { LinhasApuracaoPanel } from "./LinhasApuracaoPanel";
 import { useState, useCallback, useEffect } from "react";
 import {
   type CodigoAjusteApuracaoDTO,
@@ -11,7 +14,7 @@ type FeedbackState = { type: "success" | "error" | "info"; message: string } | n
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const EMPTY: CodigoAjusteApuracaoDTO = { code: "", uf: "", description: "", valid_from: today() };
 
-export function Vfis0510Page(): JSX.Element {
+export function AjustesApuracaoPanel(): JSX.Element {
   const [form, setForm] = useState<CodigoAjusteApuracaoDTO>(EMPTY);
   const [editId, setEditId] = useState<number | null>(null);
   const [list, setList] = useState<CodigoAjusteApuracaoDTO[]>([]);
@@ -41,12 +44,7 @@ export function Vfis0510Page(): JSX.Element {
   }
 
   return (
-    <div className="erp-screen">
-      <header className="erp-titlebar">
-        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Códigos de Ajuste de Apuração ICMS (5.1.1)</span><span className="erp-crumb-code">VFIS0510</span></nav>
-        <div className="erp-titlebar-spacer" />
-      </header>
+    <div className="erp-aba-corpo">
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
@@ -65,7 +63,6 @@ export function Vfis0510Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Códigos de Ajuste de Apura</button></div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         <div className="erp-fieldset"><div className="erp-fieldset-head">Dados  — <span style={{fontWeight:400,opacity:0.65}}>Par (código, UF) é único</span></div><div className="erp-fieldset-body">
@@ -99,10 +96,36 @@ export function Vfis0510Page(): JSX.Element {
         </div></div></div>
       </div></section></div>
 
-      <footer className="erp-statusbar">
-        <div style={{display:"contents"}}><div className="erp-status-item">Códigos: <strong>{list.length}</strong></div></div>
-        <div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
-      </footer>
+    </div>
+  );
+}
+
+/*
+ * VFIS0510 — Tabelas da apuração de ICMS: as quatro tabelas de códigos oficiais
+ * que quem fecha a apuração mantém (eram VFIS0500, VFIS0510, VFIS0520 e VFIS0530).
+ */
+const ABAS = [
+  { id: "ajuste-apuracao", label: "Ajuste de apuração (5.1.1)", Painel: AjustesApuracaoPanel },
+  { id: "ajuste-icms", label: "Ajuste de ICMS (5.2 a 5.7)", Painel: AjustesIcmsPanel },
+  { id: "linhas", label: "Linhas de apuração", Painel: LinhasApuracaoPanel },
+  { id: "dapi", label: "Motivos de transferência DAPI", Painel: MotivosDapiPanel },
+] as const;
+
+export function Vfis0510Page(): JSX.Element {
+  const [aba, setAba] = useState<(typeof ABAS)[number]["id"]>("ajuste-apuracao");
+  const atual = ABAS.find((a) => a.id === aba) ?? ABAS[0];
+  return (
+    <div className="erp-screen">
+      <header className="erp-titlebar">
+        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Tabelas da Apuração de ICMS</span><span className="erp-crumb-code">VFIS0510</span></nav>
+        <div className="erp-titlebar-spacer" />
+      </header>
+      <div className="erp-tabs">
+        {ABAS.map((a) => <button key={a.id} className={`erp-tab${aba === a.id ? " active" : ""}`} onClick={() => setAba(a.id)}>{a.label}</button>)}
+      </div>
+      <atual.Painel key={atual.id} />
+      <footer className="erp-statusbar"><div className="erp-status-spacer" /><span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span></footer>
     </div>
   );
 }

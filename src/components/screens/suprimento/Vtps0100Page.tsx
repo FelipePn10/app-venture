@@ -4,15 +4,16 @@ import {
   FREIGHT_TYPES, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS, orderStatusLabel, MOVEMENT_TYPES,
   listServicePrices, createServicePrice, updateServicePrice, deleteServicePrice, servicePriceHistory,
   readjustServicePrices, copyMoveServicePrices, resolveServiceCost,
-  listServiceOrders, updateServiceOrderStatus, getServiceOrderMovements, addServiceOrderMovement,
+  listServiceOrders, updateServiceOrderStatus, generateOrdersFromProduction, serviceOrderHistory, getServiceOrderMovements, addServiceOrderMovement,
   listGlobalConversions, upsertGlobalConversion, deleteGlobalConversion,
 } from "@/services/thirdPartyServicesService";
-import { errMessage } from "@/services/fiscalShared";
+import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadSuppliers, loadOperations } from "@/services/lookups";
+import { loadItems, loadSuppliers, loadOperations, loadProductionOrders } from "@/services/lookups";
+import { useAuthStore } from "@/store/authStore";
 import { hojeLocal } from "@/utils/dataLocal";
 import { useCatalogoDeUnidades, useUnidades, useRotulosDeUnidades } from "@/hooks/useUnidades";
 import { OpcoesDeUnidade } from "@/components/screens/suprimento/Vsup0110Catalogo";
@@ -41,6 +42,11 @@ const PRECO_VAZIO: ServicePrice = {
 const hoje = () => hojeLocal();
 const brl = (v: string | number) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 4 });
+// Eventos do histórico da ordem em português; as situações usam o rótulo da própria ordem.
+const HIST: Record<string, string> = {
+  CREATE: "Ordem criada", STATUS_CHANGE: "Mudança de situação", REMITTANCE: "Remessa", RETURN: "Retorno", RECEIPT: "Recebimento", ADJUSTMENT: "Ajuste",
+};
+const rotuloHist = (v: unknown) => HIST[String(v ?? "")] ?? orderStatusLabel(String(v ?? ""));
 const num = (v: string | number, casas = 4) =>
   Number(v || 0).toLocaleString("pt-BR", { maximumFractionDigits: casas });
 const dia = (v?: string) => (v ? v.slice(0, 10).split("-").reverse().join("/") : "—");
@@ -48,7 +54,7 @@ const dia = (v?: string) => (v ? v.slice(0, 10).split("-").reverse().join("/") :
 /** Vencida = ainda tem peça no terceiro e a data prometida já passou. */
 function atrasada(o: ServiceOrder): boolean {
   if (Number(o.pending_quantity) <= 0) return false;
-  if (o.status === "DONE" || o.status === "CANCELLED") return false;
+  if (o.status === "COMPLETED" || o.status === "CANCELLED") return false;
   return !!o.due_date && o.due_date.slice(0, 10) < hoje();
 }
 
@@ -75,10 +81,17 @@ export function Vtps0100Page(): JSX.Element {
   // Ordens
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [filtroStatus, setFiltroStatus] = useState("");
+  // Regerar as ordens de uma OF é do administrador (a rota exige ADMIN): a OS
+  // nasce sozinha quando a OF é criada; aqui é para a OF criada antes de o
+  // roteiro ganhar a etapa externa.
+  const isAdmin = useAuthStore((s) => s.user?.role?.toUpperCase() === "ADMIN");
+  const [ofGerar, setOfGerar] = useState<number | undefined>();
   const [ordemSel, setOrdemSel] = useState<ServiceOrder | null>(null);
 
   // Movimentos
   const [movs, setMovs] = useState<ServiceMovement[]>([]);
+  // Histórico da ordem (situações e movimentos com quem e quando) — era a VTER0300.
+  const [historicoOrdem, setHistoricoOrdem] = useState<Obj[]>([]);
   const [movForm, setMovForm] = useState({ movement_type: "REMITTANCE", quantity: "", reference_code: "", lot: "", notes: "" });
 
   // Conversões globais
@@ -177,7 +190,7 @@ export function Vtps0100Page(): JSX.Element {
 
   const abrirMovimentos = (o: ServiceOrder) => {
     setOrdemSel(o); setAba("movimentos"); setMovForm({ movement_type: "REMITTANCE", quantity: "", reference_code: "", lot: "", notes: "" });
-    void run(async () => { setMovs(await getServiceOrderMovements(o.id)); });
+    void run(async () => { const [m, h] = await Promise.all([getServiceOrderMovements(o.id), serviceOrderHistory(o.id)]); setMovs(m); setHistoricoOrdem(h); });
   };
 
   const lancarMovimento = () => run(async () => {
@@ -188,7 +201,7 @@ export function Vtps0100Page(): JSX.Element {
     }
     await addServiceOrderMovement(ordemSel.id, { ...movForm, quantity: String(movForm.quantity) });
     setMovForm((m) => ({ ...m, quantity: "", reference_code: "", lot: "", notes: "" }));
-    setMovs(await getServiceOrderMovements(ordemSel.id));
+    setMovs(await getServiceOrderMovements(ordemSel.id)); setHistoricoOrdem(await serviceOrderHistory(ordemSel.id));
     setOrders(await listServiceOrders(filtroStatus ? { status: filtroStatus } : undefined));
     setFeedback({ type: "success", message: "Movimento registrado." });
   });
@@ -452,6 +465,23 @@ export function Vtps0100Page(): JSX.Element {
                   <span style={{ flex: 1 }} />
                   <span className="erp-field-hint">As ordens nascem das operações externas do roteiro quando a OF é criada.</span>
                 </div>
+                {isAdmin && (
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Gerar ordens de serviço de uma OF</div>
+                    <div className="erp-fieldset-body">
+                      <div className="erp-field erp-c5"><label className="erp-label">Ordem de fabricação</label>
+                        <LookupField value={ofGerar} loader={loadProductionOrders} entityLabel="ordem de fabricação" clearable onChange={(c) => setOfGerar(c ? Number(c) : undefined)} /></div>
+                      <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
+                        <button className="erp-btn erp-btn-primary" disabled={busy || !ofGerar} onClick={() => void run(async () => {
+                          const geradas = await generateOrdersFromProduction(ofGerar!);
+                          setOrders(await listServiceOrders(filtroStatus ? { status: filtroStatus } : undefined));
+                          setOfGerar(undefined);
+                          setFeedback({ type: "success", message: geradas > 0 ? `A OF tem ${geradas} etapa(s) em terceiro com ordem de serviço (as que já existiam não foram duplicadas).` : "Nenhuma ordem gerada: a OF está encerrada ou cancelada, ou o roteiro dela não tem etapa em terceiro." });
+                        })}>Gerar ordens</button></div>
+                      <div className="erp-field erp-c5"><span className="erp-field-hint">Para a OF criada antes de o roteiro ter a etapa em terceiro. Etapa que já tem ordem não é duplicada.</span></div>
+                    </div>
+                  </div>
+                )}
                 <div className="erp-fieldset">
                   <div className="erp-fieldset-head">Ordens de serviço</div>
                   <div className="erp-fieldset-body"><div className="erp-field erp-c12">
@@ -538,7 +568,7 @@ export function Vtps0100Page(): JSX.Element {
                         <input id="tps-mov-obs" className="erp-input" value={movForm.notes}
                           onChange={(e) => setMovForm((m) => ({ ...m, notes: e.target.value }))} /></div>
                       <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
-                        <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void lancarMovimento()} disabled={busy}>+</button></div>
+                        <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void lancarMovimento()} disabled={busy}>Lançar</button></div>
                       <div className="erp-field erp-c12"><span className="erp-field-hint">
                         Cada lançamento carrega uma chave própria: clicar duas vezes não registra a mesma remessa duas vezes.
                       </span></div>
@@ -565,6 +595,26 @@ export function Vtps0100Page(): JSX.Element {
                               </tr>
                             );
                           })}
+                        </tbody>
+                      </table>
+                    </div></div>
+                  </div>
+                  <div className="erp-fieldset">
+                    <div className="erp-fieldset-head">Histórico da ordem — <span style={{ fontWeight: 400, opacity: .65 }}>{historicoOrdem.length}</span></div>
+                    <div className="erp-fieldset-body"><div className="erp-field erp-c12">
+                      <table className="erp-grid">
+                        <thead><tr><th>Quando</th><th>Evento</th><th>Situação</th><th className="num">Quantidade</th><th>Documento</th></tr></thead>
+                        <tbody>
+                          {historicoOrdem.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Sem eventos.</td></tr>}
+                          {historicoOrdem.map((h, i) => (
+                            <tr key={String(h.id ?? i)}>
+                              <td>{h.occurred_at ? new Date(String(h.occurred_at)).toLocaleString("pt-BR") : "—"}</td>
+                              <td>{rotuloHist(h.event_type)}</td>
+                              <td>{!h.new_status ? "—" : h.previous_status && h.previous_status !== h.new_status ? `${rotuloHist(h.previous_status)} → ${rotuloHist(h.new_status)}` : h.previous_status ? "—" : rotuloHist(h.new_status)}</td>
+                              <td className="num">{h.quantity ? num(Number(h.quantity), 2) : "—"}</td>
+                              <td>{[h.reference_type ? enumLabel(String(h.reference_type)) : "", h.reference_code ? String(h.reference_code) : ""].filter(Boolean).join(" ") || "—"}</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div></div>

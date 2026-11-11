@@ -214,7 +214,7 @@ export function Vatc0100Page(): JSX.Element {
                 <textarea className="erp-input" rows={4} value={cad.series} onChange={(e) => setCad((x) => ({ ...x, series: e.target.value }))} placeholder={"BAL-2019-0001\nBAL-2019-0002"} /></div>
               <div className="erp-field erp-c12" style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button className="erp-btn erp-btn-primary" onClick={() => void cadastrar()} disabled={busy || !cad.item || qtdSeries === 0}>Cadastrar {qtdSeries || ""} série(s)</button>
-                <small>O item precisa controlar número de série (VATC0110). Série nova de produção nasce sozinha na entrega da OF.</small>
+                <small>O item precisa controlar número de série (aba Pós-venda da VENT0200). Série nova de produção nasce sozinha na entrega da OF.</small>
               </div>
             </div></div>
           </div>

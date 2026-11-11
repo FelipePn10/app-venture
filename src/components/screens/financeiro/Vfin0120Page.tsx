@@ -1,3 +1,4 @@
+import { getParametrosContabilizacao, listAccounts } from "@/services/accountingService";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type PlanoConta, type PlanoContaDTO, type PlanoTipo, type PlanoNatureza, type UsoCadastroResumo,
@@ -28,6 +29,16 @@ export function Vfin0120Page(): JSX.Element {
   // Conta em edição (null = nova) e o uso dela: em uso, só descrição e situação mudam.
   const [editId, setEditId] = useState<number | null>(null);
   const [ativa, setAtiva] = useState(true);
+  // Conta contábil ligada a cada conta gerencial (o plano contábil é a VCTB0200; o vínculo é feito lá).
+  const [contasContabeis, setContasContabeis] = useState<Map<number, string>>(new Map());
+  useEffect(() => {
+    void (async () => {
+      const p = await getParametrosContabilizacao().catch(() => null);
+      if (!p?.plan_id) return;
+      const contas = await listAccounts(p.plan_id).catch(() => []);
+      setContasContabeis(new Map(contas.filter((a) => a.id).map((a) => [a.id!, `${a.account_number} — ${a.description}`])));
+    })();
+  }, []);
   const [exigeCentro, setExigeCentro] = useState(false);
   const [uso, setUso] = useState<UsoCadastroResumo | null>(null);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
@@ -87,7 +98,7 @@ export function Vfin0120Page(): JSX.Element {
     <div className="erp-screen">
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Plano de Contas</span><span className="erp-crumb-code">VFIN0120</span></nav>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Plano de Contas Gerencial</span><span className="erp-crumb-code">VFIN0120</span></nav>
         <div className="erp-titlebar-spacer" />
       </header>
 
@@ -108,13 +119,13 @@ export function Vfin0120Page(): JSX.Element {
         </div>
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Relatório</span>
-          <ExportButton title="VFIN0120 — Plano de Contas" filename="plano-de-contas" disabled={busy} />
+          <ExportButton title="VFIN0120 — Plano de Contas Gerencial" filename="plano-de-contas-gerencial" disabled={busy} />
         </div>
       </div>
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Plano de Contas</button></div>
+          <div className="erp-tabs"><button className="erp-tab active">Plano gerencial</button></div>
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
         {editId != null && uso?.em_uso && (
@@ -149,17 +160,18 @@ export function Vfin0120Page(): JSX.Element {
           
         </div></div>
 
-        <div className="erp-fieldset"><div className="erp-fieldset-head">Plano de contas — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
+        <div className="erp-fieldset"><div className="erp-fieldset-head">Contas gerenciais — <span style={{fontWeight:400,opacity:0.65}}>{list.length}</span></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
           <table className="erp-grid">
-            <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Natureza</th><th>Nível</th><th>Situação</th></tr></thead>
+            <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Natureza</th><th>Nível</th><th>Conta contábil</th><th>Situação</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma conta cadastrada.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma conta cadastrada.</td></tr>}
               {list.map((c) => (
                 <tr key={c.id} onClick={() => void editar(c)} className={editId === c.id ? "erp-row-sel" : undefined}
                   style={{ cursor: "pointer", opacity: c.is_active === false ? 0.55 : 1 }} title="Clique para alterar ou excluir">
                   <td style={{ fontWeight: 600, paddingLeft: 12 + (c.nivel ?? 1) * 8 }}>{c.codigo}</td>
                   <td>{c.descricao}</td><td><span className="erp-badge erp-badge-gray">{c.tipo}</span></td>
                   <td>{c.natureza}</td><td>{c.nivel ?? "—"}</td>
+                  <td title="O vínculo é feito na VCTB0200, aba Contabilização automática">{c.accounting_account_id ? (contasContabeis.get(c.accounting_account_id) ?? `conta ${c.accounting_account_id}`) : "—"}</td>
                   <td>{c.is_active === false ? <span className="erp-badge erp-badge-gray">Inativa</span> : "Ativa"}</td>
                 </tr>
               ))}

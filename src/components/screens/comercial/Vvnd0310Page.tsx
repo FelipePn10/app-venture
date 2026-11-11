@@ -37,13 +37,14 @@ const EMPTY_REASON: CancellationReasonDTO = { code: 0, description: "", allow_un
 const pct = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
- * VVND0310 — Parâmetros de Orçamento.
+ * Parâmetros de Orçamento (botão Parâmetros da VVND0300).
  *
  * Cadastros de apoio do orçamento de venda (VVND0300), por empresa:
  * rótulos dos campos comerciais, cliente consumidor final, padrão NFC-e, regras
  * de frete CIF/redespacho, padrões de comissão e motivos de cancelamento.
  * Consulta é liberada a ADMIN/USER; gravação é restrita a ADMIN no backend.
  */
+/** Parâmetros do orçamento: abre pelo botão Parâmetros da VVND0300. */
 export function Vvnd0310Page(): JSX.Element {
   const isAdmin = useAuthStore((state) => state.user?.role?.toUpperCase() === "ADMIN");
 
@@ -127,18 +128,7 @@ export function Vvnd0310Page(): JSX.Element {
   const adminHint = isAdmin ? undefined : "Somente administradores podem gravar os parâmetros do orçamento";
 
   return (
-    <div className="erp-screen">
-      <header className="erp-titlebar">
-        <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs">
-          <span className="erp-crumb-mut">Comercial &amp; Vendas</span>
-          <span className="erp-crumb-sep">›</span>
-          <span className="erp-crumb-cur">Parâmetros de Orçamento</span>
-          <span className="erp-crumb-code">VVND0310</span>
-        </nav>
-        <div className="erp-titlebar-spacer" />
-        <span className="erp-titlebar-meta">Cadastros de apoio do VVND0300</span>
-      </header>
+    <div>
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
@@ -151,7 +141,7 @@ export function Vvnd0310Page(): JSX.Element {
           {tab === "motivos" && <button className="erp-btn erp-btn-primary" onClick={salvarMotivo} disabled={busy || !isAdmin} title={adminHint}>Gravar motivo</button>}
         </div>
         <div className="erp-tspacer" />
-        <div className="erp-tgroup"><ExportButton title="VVND0310 — Parâmetros de Orçamento" filename="vvnd0310" /></div>
+        <div className="erp-tgroup"><ExportButton title="Parâmetros de Orçamento" filename="parametros-orcamento" /></div>
       </div>
 
       <div className="erp-content">
@@ -321,13 +311,6 @@ export function Vvnd0310Page(): JSX.Element {
         </div>
       </div>
 
-      <footer className="erp-statusbar">
-        <div className="erp-status-item">Padrões de comissão: <strong>{patterns.length}</strong></div>
-        <div className="erp-status-item">Motivos de cancelamento: <strong>{reasons.length}</strong></div>
-        {params.enterprise_code ? <div className="erp-status-item">Empresa: <strong>{params.enterprise_code}</strong></div> : null}
-        <div className="erp-status-spacer" />
-        <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
-      </footer>
     </div>
   );
 }

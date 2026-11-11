@@ -1,3 +1,5 @@
+import { GruposPdmPanel } from "./GruposPdmPanel";
+import { ModificadoresPdmPanel } from "./ModificadoresPdmPanel";
 import { useCallback, useEffect, useState } from "react";
 import {
   type AtributoPDM, type GrupoPDM, type ModeloPDM, type ModificadorPDM, type PreviaPDM, type TipoAtributoPDM,
@@ -38,13 +40,16 @@ export function Vite0116Page(): JSX.Element {
   const [previa, setPrevia] = useState<PreviaPDM | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  // Cadastros de apoio (eram VITE0114 e VITE0115): grupos e modificadores.
+  const [apoio, setApoio] = useState<"grupos" | "modificadores" | null>(null);
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true); setFeedback(null);
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
-  useEffect(() => { void run(async () => { const [g, m] = await Promise.all([listarGrupos(), listarModificadores()]); setGrupos(g); setMods(m); }); }, [run]);
+  const recarregarCadastros = useCallback(() => run(async () => { const [g, m] = await Promise.all([listarGrupos(), listarModificadores()]); setGrupos(g); setMods(m); }), [run]);
+  useEffect(() => { void recarregarCadastros(); }, [recarregarCadastros]);
   useEffect(() => {
     setVinculados([]); setModificador("");
     if (grupo) void run(async () => setVinculados(await modificadoresDoGrupo(Number(grupo))));
@@ -86,14 +91,31 @@ export function Vite0116Page(): JSX.Element {
   const inativar = (a: AtributoPDM) => run(async () => { await inativarAtributoPDM(a.id ?? 0); await recarregarModelo(); setFeedback({ type: "success", message: `Atributo ${a.name} inativado.` }); });
   const ativos = modelo?.attributes.filter((a) => a.is_active) ?? [];
 
-  return (
-    <div className="erp-screen">
+  const cabecalho = (
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
         <nav className="erp-crumbs"><span className="erp-crumb-mut">Engenharia</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Padrão Descritivo (PDM)</span><span className="erp-crumb-code">VITE0116</span></nav>
         <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">{ativos.length} atributo(s)</span>
       </header>
+  );
+  if (apoio) return (
+    <div className="erp-screen">
+      {cabecalho}
+      <div className="erp-tabs">
+        <button className={`erp-tab${apoio === "grupos" ? " active" : ""}`} onClick={() => setApoio("grupos")}>Grupos</button>
+        <button className={`erp-tab${apoio === "modificadores" ? " active" : ""}`} onClick={() => setApoio("modificadores")}>Modificadores</button>
+        <button className="erp-tab" onClick={() => setApoio(null)}>← Voltar ao padrão descritivo</button>
+      </div>
+      {apoio === "grupos" ? <GruposPdmPanel aoMudar={() => void recarregarCadastros()} /> : <ModificadoresPdmPanel aoMudar={() => void recarregarCadastros()} />}
+      <footer className="erp-statusbar"><div className="erp-status-spacer" /><span className="erp-status-brand">VentureERP</span></footer>
+    </div>
+  );
+
+  return (
+    <div className="erp-screen">
+      {cabecalho}
       <div className="erp-toolbar">
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Cadastros</span><button className="erp-btn" onClick={() => setApoio("grupos")}>Grupos e modificadores</button></div>
         <div className="erp-tspacer" /><div className="erp-tgroup"><ExportButton title="VITE0116 — Padrão descritivo" filename="vite0116" /></div>
       </div>
       <div className="erp-content">

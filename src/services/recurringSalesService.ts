@@ -220,3 +220,8 @@ export async function getFutureCommissions(filters: { from: string; to: string; 
   const { data } = await httpClient.get(`${BASE}/future-commissions`, { params });
   return unwrapArray(data).map(unwrapObject);
 }
+
+/** Reajusta o valor do contrato recorrente pelo percentual, com o motivo. */
+export async function recalculateRecurringAdjustment(code: number, adjustmentPercent: string, reason: string): Promise<void> {
+  await httpClient.post(`${BASE}/${code}/recalculate-adjustment`, { adjustment_percent: adjustmentPercent, reason });
+}

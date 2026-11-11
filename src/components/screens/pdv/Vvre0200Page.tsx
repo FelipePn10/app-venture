@@ -1,7 +1,8 @@
+import { ComissoesFuturasPanel } from "./ComissoesFuturasPanel";
 import { useState, useCallback, useMemo } from "react";
 import {
   type RecurringSaleDTO,
-  listRecurringSales, getRecurringSale, createRecurringSale,
+  listRecurringSales, getRecurringSale, createRecurringSale, recalculateRecurringAdjustment,
   generateRecurringOrder, cancelRecurringSale, getMonthlyRevenue,
 } from "@/services/recurringSalesService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
@@ -65,6 +66,18 @@ export function Vvre0200Page(): JSX.Element {
   }, []);
 
   const refreshSelected = useCallback(async (code: number) => { setSelected(await getRecurringSale(code)); }, []);
+  const [visao, setVisao] = useState<"recorrencias" | "comissoes">("recorrencias");
+  // Reajuste do contrato (era a VVND0610).
+  const [reajuste, setReajuste] = useState({ pct: "", motivo: "" });
+  const reajustar = () => run(async () => {
+    if (!selected?.code) return;
+    const pct = Number(reajuste.pct.replace(",", "."));
+    if (!reajuste.pct.trim() || Number.isNaN(pct) || pct === 0) { setFeedback({ type: "error", message: "Informe o percentual de reajuste (negativo só para redução autorizada)." }); return; }
+    if (!reajuste.motivo.trim()) { setFeedback({ type: "error", message: "Informe o motivo do reajuste." }); return; }
+    await recalculateRecurringAdjustment(selected.code, reajuste.pct.replace(",", "."), reajuste.motivo.trim());
+    await refreshSelected(selected.code); setReajuste({ pct: "", motivo: "" });
+    setFeedback({ type: "success", message: "Reajuste aplicado." });
+  });
   const listar = () => run(async () => { setRows(await listRecurringSales({ movement_type: filterMov || undefined, active: filterActive })); });
 
   const novo = () => { setCreating(true); setSelected(null); setForm(EMPTY); setRepresentativeCode(0); setFeedback(null); };
@@ -125,6 +138,11 @@ export function Vvre0200Page(): JSX.Element {
         <span className="erp-titlebar-meta">Cobrança mensal · reajuste · geração de pedido</span>
       </header>
 
+      <div className="erp-tabs">
+        <button className={`erp-tab${visao === "recorrencias" ? " active" : ""}`} onClick={() => setVisao("recorrencias")}>Recorrências</button>
+        <button className={`erp-tab${visao === "comissoes" ? " active" : ""}`} onClick={() => setVisao("comissoes")}>Comissões futuras</button>
+      </div>
+      {visao === "comissoes" ? <ComissoesFuturasPanel /> : <div className="erp-aba-corpo">
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <button className="erp-btn erp-btn-primary" onClick={novo} disabled={busy}>
@@ -266,6 +284,14 @@ export function Vvre0200Page(): JSX.Element {
                     <div className="erp-field erp-c6"><label className="erp-label">Ações permitidas</label><input className="erp-input" value={selected.allowed_actions?.join(" · ") || "Nenhuma"} readOnly /></div>
                   </div>
                 </div>
+                {selected.is_active !== false && (
+                  <div className="erp-fieldset"><div className="erp-fieldset-head">Reajuste</div><div className="erp-fieldset-body">
+                    <div className="erp-field erp-c2"><label className="erp-label erp-req">Percentual</label><input className="erp-input num" inputMode="decimal" placeholder="Ex.: 4,5" value={reajuste.pct} onChange={(e) => setReajuste((r) => ({ ...r, pct: e.target.value }))} /></div>
+                    <div className="erp-field erp-c8"><label className="erp-label erp-req">Motivo</label><input className="erp-input" placeholder="Índice e base contratual do reajuste" value={reajuste.motivo} onChange={(e) => setReajuste((r) => ({ ...r, motivo: e.target.value }))} /></div>
+                    <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={() => void reajustar()} disabled={busy}>Aplicar reajuste</button></div>
+                    <div className="erp-field erp-c12"><span className="erp-field-hint">Use o percentual do contrato (índice e teto do cadastro). Negativo só para redução autorizada.</span></div>
+                  </div></div>
+                )}
               </div>
             </>
           ) : (
@@ -292,6 +318,8 @@ export function Vvre0200Page(): JSX.Element {
           aviso={(tipo, msg) => setFeedback({ type: tipo, message: msg })}
         />
       )}
+
+      </div>}
 
       <footer className="erp-statusbar">
         <div className="erp-status-item">Recorrências: <strong>{rows.length}</strong></div>

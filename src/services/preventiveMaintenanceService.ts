@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, currentUserId, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/maintenance';
 
@@ -50,6 +50,9 @@ function parsePlan(raw: unknown): MaintPlanDTO {
     frequency_days: parseNum(o, 'frequency_days', 'FrequencyDays'),
     estimated_hours: parseNum(o, 'estimated_hours', 'EstimatedHours'),
     next_scheduled_at: parseStr(o, 'next_scheduled_at', 'NextScheduledAt') || undefined,
+    // Plano desativado continua na lista (as ordens dele ficam): a tela
+    // precisa saber para não oferecer "Desativar" de novo.
+    is_active: o['is_active'] === undefined && o['IsActive'] === undefined ? true : parseBool(o, 'is_active', 'IsActive'),
   };
 }
 function parseOrder(raw: unknown): MaintOrderDTO {

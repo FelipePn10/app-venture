@@ -1,3 +1,5 @@
+import { EntityName } from "@/components/ui/EntityName";
+import { LaudosVinculoPanel } from "./LaudosVinculoPanel";
 import { useState } from "react";
 import { type ItemSupplierDTO, listItemSuppliers, upsertItemSupplier, deleteItemSupplier } from "@/services/purchasingMasterService";
 import { errMessage } from "@/services/fiscalShared";
@@ -69,13 +71,13 @@ export function Vsup0130Page(): JSX.Element {
             <div className="erp-list">
               {list.length === 0 && <div className="erp-list-empty">Selecione um item e clique em <strong>Carregar</strong>.</div>}
               {[...list].sort((a, b) => a.ranking - b.ranking).map((s) => (
-                <div key={s.id} className="erp-list-row" style={{ cursor: "default" }}>
-                  <span className="erp-list-code">#{s.supplier_code}</span>
+                <div key={s.id} className={`erp-list-row${form.id === s.id ? " sel" : ""}`} onClick={() => { setForm({ ...s }); setFeedback(null); }}>
+                  <span className="erp-list-code"><EntityName code={s.supplier_code} loader={loadSuppliers} /></span>
                   <span className="erp-list-sub">{s.supplier_item_desc || s.supplier_item_code || "—"}</span>
                   <div className="erp-list-meta">
                     <span className="erp-badge ok">Ranking {s.ranking}</span>
                     {s.lead_time_days != null && <span className="erp-badge draft">{s.lead_time_days}d lead</span>}
-                    <button className="erp-btn erp-btn-danger erp-btn-sm" style={{ marginLeft: "auto" }} onClick={() => s.id && void remover(s.id)} disabled={busy}>Excluir</button>
+                    <button className="erp-btn erp-btn-danger erp-btn-sm" style={{ marginLeft: "auto" }} onClick={(e) => { e.stopPropagation(); if (s.id) void remover(s.id); }} disabled={busy}>Excluir</button>
                   </div>
                 </div>
               ))}
@@ -83,7 +85,7 @@ export function Vsup0130Page(): JSX.Element {
           </aside>
 
           <section className="erp-detail-panel">
-            <div className="erp-tabs"><button className="erp-tab active">Vincular fornecedor</button></div>
+            <div className="erp-tabs"><button className="erp-tab active">{form.id ? "Vínculo do fornecedor" : "Vincular fornecedor"}</button>{form.id ? <button className="erp-tab" onClick={() => setForm(EMPTY)}>+ Novo vínculo</button> : null}</div>
             <div className="erp-detail-body">
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Vínculo item × fornecedor</div>
@@ -97,6 +99,7 @@ export function Vsup0130Page(): JSX.Element {
                   <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy && <span className="erp-spin" />}Salvar vínculo</button></div>
                 </div>
               </div>
+              {form.id ? <LaudosVinculoPanel vinculoId={form.id} /> : null}
             </div>
           </section>
         </div>

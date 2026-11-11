@@ -15,6 +15,7 @@ export interface ParsedCalendarDay {
   month: number;
   day: number;
   is_workday: boolean;
+  description?: string;
 }
 
 export interface GenerateCalendarDTO {
@@ -102,7 +103,8 @@ export async function getCalendarMonth(year: number, month: number): Promise<Par
       console.debug('[industrialCalendar] Could not parse date from item:', item);
       continue;
     }
-    result.push({ ...date, is_workday: parseIsWorkday(obj) });
+    const description = pick<unknown>(obj, 'description', 'Description');
+    result.push({ ...date, is_workday: parseIsWorkday(obj), description: typeof description === 'string' && description ? description : undefined });
   }
 
   console.debug('[industrialCalendar] parsed days:', result);

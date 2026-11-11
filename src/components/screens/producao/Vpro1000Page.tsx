@@ -1,3 +1,4 @@
+import { confirmar } from "@/components/ui/dialogos";
 import { loadItems } from "@/services/lookups";
 import { LookupField } from "@/components/ui/LookupField";
 import { useState, useCallback, useEffect } from "react";
@@ -5,12 +6,13 @@ import {
   type ToolDTO, type ToolSerialDTO, type ToolSheetDTO, type ToolSheetOperationDTO, type ToolLifeType, type ToolStatus,
   TOOL_LIFE_TYPES, TOOL_STATUSES,
   listTools, listToolsNeedingReplacement, createTool, deactivateTool, resetToolLife,
-  listSerials, createSerial, updateSerial,
+  listSerials, createSerial, updateSerial, deactivateSerial,
   listSheetOrders, getSheet, assignSerial, substituteSerial, listSubstitutions,
 } from "@/services/toolingService";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { useAuthStore } from "@/store/authStore";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "sheet" | "tools";
@@ -53,8 +55,12 @@ export function Vpro1000Page(): JSX.Element {
     try { await fn(); } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }, []);
 
+  // O posto (perfil OPERATOR) confere a ficha da ordem: vê ferramenta, série e
+  // histórico. Cadastrar, vincular e substituir são do PCP/ferramentaria — o
+  // backend recusa, e oferecer os botões era levar o operador a um 403.
+  const posto = useAuthStore((s) => (s.user?.role ?? "").toUpperCase() === "OPERATOR");
   const carregarTools = useCallback(() => run(async () => { setTools(await listTools()); }), [run]);
-  useEffect(() => { void carregarTools(); }, [carregarTools]);
+  useEffect(() => { if (!posto) void carregarTools(); }, [carregarTools, posto]);
 
   // ── ficha handlers ──
   const buscarOrdens = () => run(async () => {
@@ -121,6 +127,11 @@ export function Vpro1000Page(): JSX.Element {
     setFeedback({ type: "success", message: "Série cadastrada." });
     setSerials(await listSerials(selTool.id));
   });
+  // Desativar série (era a VENG0610): some da lista e deixa de ser oferecida na operação.
+  const desativarSerial = async (s: ToolSerialDTO) => {
+    if (!s.id || !selTool?.id || !(await confirmar({ titulo: "Desativar série", mensagem: "A série deixa de ser oferecida nas operações. O histórico de uso fica.", assunto: s.serial_number, rotulo: "Desativar", tom: "perigo" }))) return;
+    void run(async () => { await deactivateSerial(s.id!); setSerials(await listSerials(selTool.id!)); setFeedback({ type: "success", message: `Série ${s.serial_number} desativada.` }); });
+  };
   const trocarStatusSerial = (s: ToolSerialDTO, status: ToolStatus) => { if (!s.id || !selTool?.id) return; void run(async () => {
     await updateSerial(s.id!, { ...s, status });
     setSerials(await listSerials(selTool.id!));
@@ -143,7 +154,7 @@ export function Vpro1000Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <button className={`erp-btn${view === "sheet" ? " erp-btn-dark" : ""}`} onClick={() => setView("sheet")} disabled={busy}>Ficha de Produção</button>
-          <button className={`erp-btn${view === "tools" ? " erp-btn-dark" : ""}`} onClick={() => setView("tools")} disabled={busy}>Cadastro de Ferramentas</button>
+          {!posto && <button className={`erp-btn${view === "tools" ? " erp-btn-dark" : ""}`} onClick={() => setView("tools")} disabled={busy}>Cadastro de Ferramentas</button>}
         </div>
         {view === "sheet" && sheet?.order?.order_id && <><span style={{ color: "var(--v-text-3)" }}>|</span><div className="erp-tgroup"><button className="erp-btn" onClick={() => abrirFicha(sheet.order!.order_id)} disabled={busy}>Atualiza</button></div></>}
         <div className="erp-tspacer" />
@@ -191,7 +202,7 @@ export function Vpro1000Page(): JSX.Element {
             {sheet?.operations && sheet.operations.length > 0 && (
               <div className="erp-grid-wrap">
                 <table className="erp-grid">
-                  <thead><tr><th className="num">Seq</th><th>Operação</th><th>Recurso</th><th>Ferramenta / Série atual</th><th>Trocar para</th><th style={{ width: 210 }}>Ações</th></tr></thead>
+                  <thead><tr><th className="num">Seq</th><th>Operação</th><th>Recurso</th><th>Ferramenta / Série atual</th>{!posto && <th>Trocar para</th>}<th style={{ width: posto ? 100 : 210 }}>Ações</th></tr></thead>
                   <tbody>
                     {sheet.operations.map((op) => {
                       const ed = opEdit[op.operation_id!] ?? {};
@@ -203,7 +214,7 @@ export function Vpro1000Page(): JSX.Element {
                           <td>{op.description || "—"}</td>
                           <td>{op.resource_name || op.resource_code || "—"}</td>
                           <td>{op.tool_name || (op.tool_id ? `Ferr. ${op.tool_id}` : "—")}{op.serial_number ? ` · ${op.serial_number}` : ""}</td>
-                          <td>
+                          {!posto && <td>
                             <div style={{ display: "flex", gap: 4, flexDirection: "column" }}>
                               <select className="erp-tselect" value={toolId ?? ""} onChange={(e) => { const t = Number(e.target.value); setOp(op.operation_id!, { toolId: t, serialId: undefined }); if (t) carregarSeriais(t); }}>
                                 <option value="">— ferramenta —</option>{tools.map((t) => <option key={t.id} value={t.id}>{t.code ?? t.id} · {t.name}</option>)}
@@ -213,11 +224,11 @@ export function Vpro1000Page(): JSX.Element {
                               </select>
                               <input className="erp-input" placeholder="Motivo (substituição)" value={ed.reason ?? ""} onChange={(e) => setOp(op.operation_id!, { reason: e.target.value })} />
                             </div>
-                          </td>
+                          </td>}
                           <td>
                             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                              <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={() => vincular(op)} disabled={busy}>Vincular</button>
-                              <button className="erp-btn erp-btn-sm" onClick={() => substituir(op)} disabled={busy || !op.serial_id}>Substituir</button>
+                              {!posto && <button className="erp-btn erp-btn-primary erp-btn-sm" onClick={() => vincular(op)} disabled={busy}>Vincular</button>}
+                              {!posto && <button className="erp-btn erp-btn-sm" onClick={() => substituir(op)} disabled={busy || !op.serial_id}>Substituir</button>}
                               <button className="erp-btn erp-btn-sm" onClick={() => verHistorico(op)} disabled={busy}>Histórico</button>
                             </div>
                           </td>
@@ -234,8 +245,18 @@ export function Vpro1000Page(): JSX.Element {
                 <div className="erp-fieldset-head">Histórico de substituições de série</div>
                 <div className="erp-fieldset-body">
                   <div className="erp-field erp-c12"><div className="erp-grid-wrap"><table className="erp-grid">
-                    <thead><tr>{Object.keys(subs[0]).map((k) => <th key={k}>{k}</th>)}</tr></thead>
-                    <tbody>{subs.map((r, i) => <tr key={i}>{Object.values(r).map((v, j) => <td key={j}>{v == null ? "—" : String(v)}</td>)}</tr>)}</tbody>
+                    {/* Colunas nomeadas: antes o cabeçalho era a chave do JSON
+                        (old_serial_id, substituted_at…) e os ids internos apareciam ao lado dos números de série. */}
+                    <thead><tr><th>Quando</th><th>Ferramenta</th><th>Série anterior</th><th>Nova série</th><th>Motivo</th></tr></thead>
+                    <tbody>{subs.map((r, i) => (
+                      <tr key={String(r.id ?? i)}>
+                        <td>{r.substituted_at ? new Date(String(r.substituted_at)).toLocaleString("pt-BR") : "—"}</td>
+                        <td>{[r.tool_code, r.tool_name].filter((v) => v != null && v !== "").join(" · ") || "—"}</td>
+                        <td>{String(r.old_serial_number || "—")}</td>
+                        <td>{String(r.new_serial_number || "—")}</td>
+                        <td>{String(r.reason || "—")}</td>
+                      </tr>
+                    ))}</tbody>
                   </table></div></div>
                 </div>
               </div>
@@ -331,7 +352,8 @@ export function Vpro1000Page(): JSX.Element {
                         {serials.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhuma série.</td></tr>}
                         {serials.map((s) => (
                           <tr key={s.id}><td>{s.serial_number}</td><td>{statusBadge(s.status)}</td><td>{s.location || "—"}</td><td className="num">{s.life_used ?? 0}</td>
-                            <td><select className="erp-tselect" value={s.status} onChange={(e) => trocarStatusSerial(s, e.target.value as ToolStatus)}>{TOOL_STATUSES.map((st) => <option key={st} value={st}>{enumLabel(st)}</option>)}</select></td>
+                            <td style={{ display: "flex", gap: 4 }}><select className="erp-tselect" value={s.status} onChange={(e) => trocarStatusSerial(s, e.target.value as ToolStatus)}>{TOOL_STATUSES.map((st) => <option key={st} value={st}>{enumLabel(st)}</option>)}</select>
+                              <button className="erp-btn erp-btn-sm erp-btn-danger" title="Tira a série da lista (sucateada, extraviada)" onClick={() => void desativarSerial(s)} disabled={busy}>Desativar</button></td>
                           </tr>
                         ))}
                       </tbody>

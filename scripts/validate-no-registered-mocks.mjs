@@ -80,7 +80,7 @@ for (const match of routines.matchAll(/alias\(["']([A-Z][A-Z0-9]+)["'],\s*["'][^
   if (!operationalCodes.has(match[2])) failures.push(`${match[1]}: alias aponta para rotina operacional inexistente ${match[2]}`);
 }
 for (const code of catalogCodes) {
-  if (!explicitCodes.has(code) && !operationalCodes.has(code)) failures.push(`${code}: tela consta no catálogo, mas cai em "Tela ainda não implementada"`);
+  if (!explicitCodes.has(code) && !operationalCodes.has(code)) failures.push(`${code}: tela consta no catálogo, mas cai em "Esta tela não existe"`);
   if (!new RegExp(`\\b${code}\\b`).test(help)) failures.push(`${code}: tela consta no catálogo, mas não aparece no HELP_TELAS_ERP.md`);
 }
 

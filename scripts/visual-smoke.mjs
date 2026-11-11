@@ -46,7 +46,8 @@ async function seedSession(page, email) {
 
 async function openScreen(page, code) {
   await page.evaluate((screenCode) => { window.location.hash = `/screen/${screenCode}`; }, code);
-  await page.waitForTimeout(120);
+  // Tela pesada (lazy + dados) passa de 120 ms: espera o código aparecer, com limite.
+  await page.waitForFunction((c) => (document.body?.innerText ?? '').includes(c), code, { timeout: 5_000 }).catch(() => {});
 }
 
 const anonymous = await browser.newPage();
@@ -67,7 +68,7 @@ for (const code of codes) {
     currentCode = code;
     await openScreen(admin, code);
     const body = await admin.evaluate(() => document.body?.innerText ?? '');
-    if (body.includes('Tela ainda não implementada')) failures.push(`${code}: fallback não implementado`);
+    if (body.includes('Esta tela não existe no sistema')) failures.push(`${code}: fallback não implementado`);
     if (!body.includes(code)) failures.push(`${code}: código da rotina ausente após renderização`);
     await admin.screenshot({ path: `${output}/${code.toLowerCase()}-desktop.png`, fullPage: true });
   } catch (error) {
@@ -103,11 +104,10 @@ await mobile.close();
 const user = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await user.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/, (route) => route.abort());
 await seedSession(user, USER_EMAIL);
-await openScreen(user, 'VAPS0100');
-await user.locator('select').first().selectOption({ label: 'Cadastrar' });
-const disabled = await user.locator('button:disabled').count();
-if (disabled === 0) failures.push('perfil USER não teve operações administrativas desabilitadas em VAPS0100');
-await user.screenshot({ path: `${output}/vaps0100-user.png`, fullPage: true });
+await openScreen(user, 'VPCT0100');
+await user.getByRole('button', { name: 'Alçadas de aprovação' }).click();
+if (!(await user.getByRole('button', { name: 'Gravar alçada' }).isDisabled())) failures.push('perfil USER pode gravar alçada de compra em VPCT0100');
+await user.screenshot({ path: `${output}/vpct0100-user.png`, fullPage: true });
 await user.close();
 
 await browser.close();

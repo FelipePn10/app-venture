@@ -1,3 +1,4 @@
+import { PerfilFuncionarioPanel } from "./PerfilFuncionarioPanel";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   type EmployeeDTO, type EmployeeSituation,
@@ -114,6 +115,8 @@ export function Vfun0100Page(): JSX.Element {
           <div className="erp-field erp-c3"><label className="erp-label">Assistente técnico</label>
             <div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={!!form.technical_assistant} onChange={(e) => setF("technical_assistant", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.technical_assistant ? "Sim" : "Não"}</span></div></div>
         </div></div>
+
+        {editing && form.id ? <PerfilFuncionarioPanel employeeId={form.id} /> : null}
 
         <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
           <table className="erp-grid">

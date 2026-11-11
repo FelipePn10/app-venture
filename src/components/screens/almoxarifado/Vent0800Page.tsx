@@ -1,3 +1,4 @@
+import { ManufaturaEstoquePanel } from "./ManufaturaEstoquePanel";
 import { useState, useCallback } from "react";
 import { humanizeApiError } from '@/services/apiError';
 import {
@@ -24,7 +25,7 @@ type Localizacao =
 
 type TipoAlmoxarifado = "Normal" | "Linha de Produção";
 
-type AbaAtiva = "dados" | "clientes" | "fornecedores";
+type AbaAtiva = "dados" | "clientes" | "fornecedores" | "manufatura";
 
 type FeedbackState = {
   type: "success" | "error" | "info";
@@ -388,6 +389,7 @@ export function Vent0800Page(): JSX.Element {
       id: "fornecedores",
       label: `Fornecedores${fornecedores.length > 0 ? ` (${fornecedores.length})` : ""}`,
     },
+    { id: "manufatura", label: "Manufatura" },
   ];
 
   return (
@@ -1475,6 +1477,8 @@ export function Vent0800Page(): JSX.Element {
             )}
 
             {/* ── ABA: FORNECEDORES ── */}
+            {abaAtiva === "manufatura" && <ManufaturaEstoquePanel />}
+
             {abaAtiva === "fornecedores" && (
               <div className="al-tab-body">
                 <div className="al-vinculos-head">
