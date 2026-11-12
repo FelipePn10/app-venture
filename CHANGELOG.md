@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.17.0] — 2026-11-12
+
 ## Novidades
 - **Documentos impressos com cara própria:** cada rotina imprime o documento dela, completo e sem texto cortado — pedido de venda para o cliente (VVND0200), proposta comercial (VVND0300), espelho da nota de entrada com a conferência do pedido de compra (VFIS0210), demonstrativo de títulos a receber (VFIN0210) e programação de pagamentos com alçada (VFIN0200).
 - **Planejamento e produção no papel:** plano de materiais com a árvore da estrutura (VMRP0100), mapa de carga dos centros (VPRO0200), programação da produção com Gantt por máquina (VPRO0210), custo da OF e da produção do período (VPRO0900 e VCUS0100) e kardex do item ou de todos os itens (VEST0100).
