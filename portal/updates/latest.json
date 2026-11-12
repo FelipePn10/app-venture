@@ -1,19 +1,19 @@
 {
-  "version": "1.17.0",
+  "version": "1.18.0",
   "notes": "Consulte as novidades no aplicativo.",
-  "pub_date": "2026-11-12T14:31:04.285Z",
+  "pub_date": "2026-11-12T19:36:43.081Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScHVVbWkzRDBnUTk3clpsdC9oaGJNdE5Rc3dFVWRVbXlWREJBWWVRL2VUV01kWUMzWDJpQ0hNUThFMncrT0FoRDlrNjFiNzd6WDRDVU5reCtuNUh4MkRNZWVPcUhsbnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NDkzODU4CWZpbGU6RVJQIFZlbnR1cmVfMS4xNy4wX3g2NF9lbi1VUy5tc2kKNkdlU2tDSlNobS9sc3FVbVppN2NuUGlFY0QwemtUdUFNZERxVWU5cUN1cnFnNU5OZkRpanJNaTYreXhuVWdmTGtGaUJ4eXYvRzMxc3RZcXN2azdnREE9PQo=",
-      "url": "https://github.com/FelipePn10/app-venture/releases/download/v1.17.0/ERP.Venture_1.17.0_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScHVVbWkzRDBnUXdPVXUvWXZyZEtsOEVUZ1lCOG9KemlHN2lOSW8wRHJSckxrZnRyMHZDVGhObEVpZDdkeHc5TWJYRThmTkswRUpoMXcvRGpRWjRvK3Mwbmx5eWkxdkFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTEyMTk5CWZpbGU6RVJQIFZlbnR1cmVfMS4xOC4wX3g2NF9lbi1VUy5tc2kKUlc0eTQ2MjdjY1N6SDNSc2NyNUNEdk4xWDJPelFLeENmcUlvSG9uczk4Z2lSR3FUZ3dPVW92WDV4UWw0YUd5NXNsYzNhL3gzZTI3dGlxa3BmU1B0QVE9PQo=",
+      "url": "https://github.com/FelipePn10/app-venture/releases/download/v1.18.0/ERP.Venture_1.18.0_x64_en-US.msi"
     },
     "windows-x86_64-msi": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScHVVbWkzRDBnUTk3clpsdC9oaGJNdE5Rc3dFVWRVbXlWREJBWWVRL2VUV01kWUMzWDJpQ0hNUThFMncrT0FoRDlrNjFiNzd6WDRDVU5reCtuNUh4MkRNZWVPcUhsbnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NDkzODU4CWZpbGU6RVJQIFZlbnR1cmVfMS4xNy4wX3g2NF9lbi1VUy5tc2kKNkdlU2tDSlNobS9sc3FVbVppN2NuUGlFY0QwemtUdUFNZERxVWU5cUN1cnFnNU5OZkRpanJNaTYreXhuVWdmTGtGaUJ4eXYvRzMxc3RZcXN2azdnREE9PQo=",
-      "url": "https://github.com/FelipePn10/app-venture/releases/download/v1.17.0/ERP.Venture_1.17.0_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScHVVbWkzRDBnUXdPVXUvWXZyZEtsOEVUZ1lCOG9KemlHN2lOSW8wRHJSckxrZnRyMHZDVGhObEVpZDdkeHc5TWJYRThmTkswRUpoMXcvRGpRWjRvK3Mwbmx5eWkxdkFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTEyMTk5CWZpbGU6RVJQIFZlbnR1cmVfMS4xOC4wX3g2NF9lbi1VUy5tc2kKUlc0eTQ2MjdjY1N6SDNSc2NyNUNEdk4xWDJPelFLeENmcUlvSG9uczk4Z2lSR3FUZ3dPVW92WDV4UWw0YUd5NXNsYzNhL3gzZTI3dGlxa3BmU1B0QVE9PQo=",
+      "url": "https://github.com/FelipePn10/app-venture/releases/download/v1.18.0/ERP.Venture_1.18.0_x64_en-US.msi"
     },
     "windows-x86_64-nsis": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScHVVbWkzRDBnUXlxc1ZVbnJvL0JJYzhRN2lOYkd0Y2lBWHJPQ0RwcUhuem5BaWprbWh2Yk1qdDE4QjBWZmZJMEM1UFlIWFR5cWNlcElzTDRSeW44UG5kdWdoZzU0UGdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NDkzODU4CWZpbGU6RVJQIFZlbnR1cmVfMS4xNy4wX3g2NC1zZXR1cC5leGUKZTd1Mk5FSm52QUxkbUZ0R0N6MnhTTUtxNXJaTis0MThiSC9ORTZEWlREZy9TcHMwRy94RlpuaWlCMnR6YjQxbmFTbWdzODVub3VwdVdOK2NPVzROQnc9PQo=",
-      "url": "https://github.com/FelipePn10/app-venture/releases/download/v1.17.0/ERP.Venture_1.17.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScHVVbWkzRDBnUTFuTXAzMEN0MjV6dWhobzRkTFMxcGRIaFh4bHVTVXJTMVB3TkdWbjgwb2dlbWpqN3dLeExZdzdpcU5qek5vY0pSSER2Q1RFUDd0YWVYZHM5b244T0FBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTEyMTk5CWZpbGU6RVJQIFZlbnR1cmVfMS4xOC4wX3g2NC1zZXR1cC5leGUKSzFCWWIzZGtWVkJvY3FSejhMRXpJQW5RcFlGdzNXSWtldmlvMHU3bFVuSUxvRFRUVS8wVks4bkhhVDNWVVBGVXJScEtlZzJjeTFSY2krOGZMNmtlQ0E9PQo=",
+      "url": "https://github.com/FelipePn10/app-venture/releases/download/v1.18.0/ERP.Venture_1.18.0_x64-setup.exe"
     }
   }
 }
