@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirPedidoVenda } from "@/services/impressaoService";
 import { FINALIDADES_COMPRA } from "@/services/customerService";
 import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import { useState, useCallback, useMemo } from "react";
@@ -259,6 +261,8 @@ export function Vvnd0200Page(): JSX.Element {
             ? <button className="erp-btn" onClick={() => desbloquear(selected?.code)} disabled={busy}>Desbloquear</button>
             : <button className="erp-btn" onClick={() => bloquear(selected?.code)} disabled={busy || !selected}>Bloquear</button>}
           <button className="erp-btn erp-btn-danger" onClick={() => { setCancelReason(""); setCancelComplement(""); setCancelDialog(true); }} disabled={busy || !selected || selected?.status === "CANCELLED"}>Cancelar</button>
+          <PrintButton label="Imprimir pedido" onPrint={() => imprimirPedidoVenda(selected!.code!)} disabled={busy || !selected?.code}
+            title="PDF do pedido para o cliente: entrega, condições, itens com impostos, parcelas, totais e aceite" />
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup">

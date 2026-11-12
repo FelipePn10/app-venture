@@ -179,7 +179,7 @@ export function Vexp0100Page(): JSX.Element {
                 <label className="erp-tgroup-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><input type="checkbox" checked={acceptDiv} onChange={(e) => setAcceptDiv(e.target.checked)} /> aceitar divergência</label>
                 <button className="erp-btn erp-btn-primary" onClick={() => step((c) => shipShipment(c, acceptDiv), "Romaneio despachado (SHIPPED).")} disabled={busy || st !== "CONFERRED"}>Despachar</button>
                 <button className="erp-btn erp-btn-danger" onClick={() => step((c) => cancelShipment(c, "Cancelado na tela"), "Romaneio cancelado (reservas liberadas).")} disabled={busy || st === "SHIPPED" || st === "CANCELLED"}>Cancelar</button>
-                <button className="erp-btn" onClick={() => void run(async () => { await exportShipmentPdf(selected.code!); })} disabled={busy}>PDF</button>
+                <button className="erp-btn" onClick={() => void run(async () => { await exportShipmentPdf(selected.code!); })} disabled={busy} title="Romaneio de carga: remetente, destinatário, transporte, NF-e, conferência dos itens e canhoto de recebimento">Imprimir romaneio</button>
                 <button className="erp-btn" onClick={() => void run(async () => { await exportShipmentXlsx(selected.code!); })} disabled={busy}>Excel</button>
               </div>
             </div></div>

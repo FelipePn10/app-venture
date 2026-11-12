@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirProposta } from "@/services/impressaoService";
 import { Vvnd0310Page } from "./Vvnd0310Page";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { SelectUnidade } from "@/components/ui/SelectUnidade";
@@ -598,6 +600,8 @@ export function Vvnd0300Page(): JSX.Element {
           <button className="erp-btn" onClick={() => abrirAcao({ kind: "attend" })} disabled={busy || !selected || locked}>Atender</button>
           <button className="erp-btn" onClick={gerarDAV} disabled={busy || !selected || locked || hasDAV}
             title={hasDAV ? "DAV já gerado neste orçamento" : "Registra a geração do DAV/Pré-Venda"}>Gerar DAV</button>
+          <PrintButton label="Proposta (PDF)" onPrint={() => imprimirProposta(selected!.code!)} disabled={busy || creating || !selected?.code || dirty}
+            title={dirty ? "Salve o orçamento antes de imprimir a proposta" : "Proposta comercial para o cliente: itens, investimento, condições, validade e aceite"} />
           {isCancelled
             ? <button className="erp-btn" onClick={() => abrirAcao({ kind: "uncancel" })} disabled={busy || (!!cancelledWith && !canUncancel)}
                 title={cancelledWith && !canUncancel ? `O motivo "${cancelledWith.description}" não permite descancelamento` : undefined}>Descancelar</button>

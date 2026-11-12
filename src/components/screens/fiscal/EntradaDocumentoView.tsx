@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirEspelhoEntrada } from "@/services/impressaoService";
 import { confirmar } from "@/components/ui/dialogos";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
@@ -482,6 +484,9 @@ export function EntradaDocumentoView({ doc, onChange, onFeedback, onFechar }: Pr
           {status === "APPROVED" && !devolvendo && <button className="erp-btn" onClick={() => { setDevolvendo(true); setCancelando(null); }} disabled={busy}
             title="NF-e de devolução (CFOP 5201/5202, 6201/6202...), total ou parcial">Devolver ao fornecedor</button>}
           {cancelavel && !cancelando && <button className="erp-btn erp-btn-danger" onClick={() => setCancelando({ motivo: "" })} disabled={busy}>Cancelar nota</button>}
+          <PrintButton label="Espelho (PDF)" onPrint={() => imprimirEspelhoEntrada(doc.id)} disabled={busy || dirty}
+            title={dirty ? "Grave a conferência antes de imprimir o espelho" : "Espelho de conferência: imposto, conferência com o pedido de compra, créditos, estoque e parcelas"}
+            onError={(message) => onFeedback({ type: "error", message })} />
           <button className="erp-btn" onClick={onFechar}>Voltar à lista</button>
         </div>
       </div>

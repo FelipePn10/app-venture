@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirCotacao } from "@/services/impressaoService";
 import { EntityName } from "@/components/ui/EntityName";
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -137,6 +139,8 @@ export function Vsup0400Page(): JSX.Element {
             title={selCode ? "Comparar os fornecedores lado a lado" : "Abra uma cotação para ver o mapa"}>
             Mapa da cotação
           </button>
+          <PrintButton label="Mapa (PDF)" onPrint={() => imprimirCotacao(selCode!)} disabled={!selCode}
+            title="Mapa comparativo para aprovação: itens × fornecedores, menor preço destacado e total de cada fornecedor" />
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VSUP0400 — Cotação de Compra" filename="vsup0400" /></div>
@@ -201,6 +205,23 @@ export function Vsup0400Page(): JSX.Element {
                       <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={() => void addSuppliers()} disabled={busy}>+ Fornecedores</button></div>
                     </div>
                   </div>
+                  {suppliers.length > 0 && (
+                    <div className="erp-fieldset">
+                      <div className="erp-fieldset-head">Solicitação de cotação ao fornecedor</div>
+                      <div className="erp-fieldset-body" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {suppliers.map((s) => {
+                          const code = parseNum(s, "supplier_code", "SupplierCode");
+                          return code ? (
+                            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <EntityName code={code} loader={loadSuppliers} prefix="Fornecedor" />
+                              <PrintButton small label="Solicitação (PDF)" onPrint={() => imprimirCotacao(selCode, code)}
+                                title="PDF para enviar ao fornecedor: itens, quantidades, entrega e os campos que ele devolve preenchidos" />
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">Registrar preço</div>
                     <div className="erp-fieldset-body">

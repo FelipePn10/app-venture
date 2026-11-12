@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirCustoProducao } from "@/services/impressaoService";
 import { errMessage } from "@/services/fiscalShared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ehNaoEncontrado } from "@/utils/erroHttp";
@@ -359,6 +361,8 @@ export function Vpro0900Page(): JSX.Element {
                     {gestor && operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>}
                     <button className="erp-btn" onClick={imprimir} disabled={busy} title="PDF da ordem para a fábrica: etapas na sequência, quem executa cada uma, material por etapa, ferramentas e serviços em terceiro">Imprimir OP</button>
                     {gestor && <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>}
+                    {(st === "COMPLETED" || st === "CLOSED") && of?.id && <PrintButton label="Custo da OF (PDF)" onPrint={() => imprimirCustoProducao({ ordens: [of.id!] })} disabled={busy}
+                      title="Composição do custo real × padrão, materiais consumidos e horas de cada etapa (depois de apurar o custo)" />}
                     {gestor && st === "COMPLETED" && <button className="erp-btn erp-btn-primary" onClick={encerrar} disabled={busy}>Encerrar</button>}
                     {gestor && st !== "CLOSED" && st !== "CANCELLED" && <button className="erp-btn erp-btn-danger" onClick={() => setConfirmarCancelamento(true)} disabled={busy}>Cancelar OF</button>}
                   </div>

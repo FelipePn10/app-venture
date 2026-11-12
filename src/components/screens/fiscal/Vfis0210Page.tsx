@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirEspelhoEntrada } from "@/services/impressaoService";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { type FiscalEntry, listEntries } from "@/services/nfeService";
 import {
@@ -269,6 +271,7 @@ export function Vfis0210Page(): JSX.Element {
                                 <td>
                                   <button className="erp-btn erp-btn-sm" onClick={() => void abrir(nf.id)}>{st === "PENDING" || st === "CONFERRED" ? "Conferir" : "Abrir"}</button>
                                   {st === "CONFERRED" && <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={() => void aprovarDaLista(nf)} disabled={busy}>Aprovar</button>}
+                                  <PrintButton small label="Espelho" onPrint={() => imprimirEspelhoEntrada(nf.id)} title="Espelho de conferência da nota (PDF)" />
                                 </td>
                               </tr>
                             );
