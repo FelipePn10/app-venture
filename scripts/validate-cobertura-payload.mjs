@@ -22,7 +22,7 @@ check('vencimento do fornecedor usa payment_condition_id',
   /payment_condition_id: dueForm\.payment_condition_code/.test(read('src/components/screens/suprimento/Vsup0500Page.tsx')));
 
 // ── Tipo de nota fiscal (apoio do cliente, VCLI0500) ─────────────────────────────────────────
-const nf = read('src/components/screens/cliente/Vcli0530Page.tsx');
+const nf = read('src/components/screens/cliente/ApoioClientePanel.tsx');
 for (const campo of ['lista_valor_contabil', 'sintegra_sped_fiscal', 'calc_fomentar', 'ciap',
                      'dispositivo_legal_icms_id', 'hierarchy_icms', 'cod_beneficio_fiscal', 'impostos_nfe']) {
   check(`tipo de NF coleta ${campo}`, nf.includes(campo));
@@ -95,5 +95,19 @@ check('reserva coleta vigência e documento de origem',
 const nfse = read('src/components/screens/fiscal/Vnfs0100Page.tsx');
 check('NFS-e coleta o endereço do tomador',
   ['tomador_logradouro', 'tomador_numero', 'tomador_bairro', 'tomador_cep'].every((c) => nfse.includes(c)));
+
+check('NFS-e manda o cliente do título e o vencimento',
+  /customer_code: tomadorCode/.test(nfse) && /data_vencimento/.test(nfse));
+check('NFS-e só oferece autorizar o rascunho/rejeitada e cancelar a autorizada',
+  /podeAutorizar\(n\.status\)/.test(nfse) && /=== "AUTORIZADA" && <button/.test(nfse));
+
+// ── Empresa (VEMP0100) ─────────────────────────────────────────────────────
+check('empresa coleta a inscrição municipal (prestador da NFS-e)',
+  /campo\("inscricao_municipal"/.test(read('src/components/screens/cadastros/Vemp0100Page.tsx'))
+  && /inscricao_municipal: str\('inscricao_municipal'\)/.test(read('src/services/enterpriseService.ts')));
+
+// ── Exceções do MRP ────────────────────────────────────────────────────────
+const excecoes = read('src/components/screens/planejamento/mrp/excecoes.ts');
+check('exceções novas do MRP têm rótulo', ['ITEM_NAO_PLANEJADO', 'INICIO_NO_PASSADO'].every((t) => excecoes.includes(`${t}: {`)));
 
 console.log(`\n${checks.length}/${checks.length} validações de cobertura aprovadas.`);
