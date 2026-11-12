@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## Novidades
+- **Linha do pedido confirmado (VVND0200):** cancele o saldo de uma linha ou altere a quantidade dela sem mexer no resto do pedido. A reserva de estoque acompanha: diminui, cresce ou é solta junto.
+- **NFS-e gera o título a receber (VNFS0100):** com o cliente do cadastro, a nota autorizada lança o título pelo valor líquido, com o vencimento escolhido (vazio = emissão + 30 dias). A nota rejeitada pode ser autorizada de novo.
+- **Inscrição municipal da empresa (VEMP0100)**, usada como prestador na NFS-e.
+- **Exceções do MRP:** "Falta sem sugestão" para item que o cadastro deixa fora da geração de ordens e "Início já vencido" para a sugestão que já devia ter começado.
+
+## Correções
+- Pedido faturado não pode mais ser cancelado. A NF-e cancelada devolve a reserva ao pedido.
+- Romaneio (VEXP0100): avisa quando a linha já foi baixada pela NF-e.
+- Documentos impressos: o item cadastrado pelo PDM sai com a descrição, o kardex impresso fecha com o da tela, o CEP de entrega sai formatado e "Pagamento à vista" não sobrepõe mais o texto.
+- O demonstrativo de títulos a receber (VFIN0210) e a programação de pagamentos (VFIN0200) seguem todos os filtros da carteira: situação, período por emissão, somente vencidos, nº do documento, faixa de valor, conta do plano e centro de custo.
+
 ## [v1.17.0] — 2026-11-12
 
 ## Novidades
