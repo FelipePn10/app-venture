@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirContasPagar } from "@/services/impressaoService";
 import { PrevisaoPagamentosPanel } from "@/components/screens/suprimento/pedido/PrevisaoPagamentosPanel";
 import { confirmar, pedirTexto } from "@/components/ui/dialogos";
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -289,6 +291,14 @@ export function Vfin0200Page(): JSX.Element {
                   : "sem período",
                 somente_vencidos: filtros.somente_vencidos ? "sim" : "não",
               }} />
+            <PrintButton label="Programação (PDF)" disabled={busy} title="Programação e autorização de pagamentos com os filtros atuais: agrupada por vencimento, resumos e alçada"
+              onPrint={() => imprimirContasPagar({
+                parte: filtros.fornecedor_id ? Number(filtros.fornecedor_id) : undefined,
+                nota: undefined,
+                de: filtros.date_field === "EMISSAO" ? undefined : filtros.start_date,
+                ate: filtros.date_field === "EMISSAO" ? undefined : filtros.end_date,
+                abertos: filtros.somente_vencidos === true || filtros.somente_vencidos === "true" || filtros.status === "PENDENTE",
+              })} />
           </div>
         )}
         {mode === "create" && (

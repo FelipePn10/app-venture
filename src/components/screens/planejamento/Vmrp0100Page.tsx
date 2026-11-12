@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirPlanoMateriais, imprimirCapacidade } from "@/services/impressaoService";
 import { NotificarExcecoesPanel } from "./mrp/NotificarExcecoesPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -185,6 +187,12 @@ export function Vmrp0100Page(): JSX.Element {
           <button className="erp-btn" onClick={() => void run(async () => { await Promise.all([carregarPlanos(), carregarResultado(plano)]); })} disabled={busy || !plano}>Atualizar</button>
         </div>
         <div className="erp-tspacer" />
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Documentos</span>
+          <PrintButton label="Plano de materiais (PDF)" onPrint={() => imprimirPlanoMateriais(plano!)} disabled={!plano}
+            title="Demanda, árvore de explosão, linha do tempo, compras e fabricação sugeridas e exceções do último cálculo" />
+          <PrintButton label="Capacidade (PDF)" onPrint={() => imprimirCapacidade(plano!)} disabled={!plano}
+            title="Mapa de carga por centro e dia do plano (CRP)" />
+        </div>
         <div className="erp-tgroup"><ExportButton title="VMRP0100 — MRP" filename="vmrp0100" /></div>
       </div>
 

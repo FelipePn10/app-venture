@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirContasReceber } from "@/services/impressaoService";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { confirmar } from "@/components/ui/dialogos";
 import {
@@ -226,6 +228,14 @@ export function Vfin0210Page(): JSX.Element {
                   : "sem período",
                 somente_vencidos: filtros.somente_vencidos ? "sim" : "não",
               }} />
+            <PrintButton label="Demonstrativo (PDF)" disabled={busy} title="Demonstrativo de títulos a receber com os filtros atuais (cliente, NF, período de vencimento): calendário, situação e como pagar"
+              onPrint={() => imprimirContasReceber({
+                parte: filtros.cliente_id ? Number(filtros.cliente_id) : undefined,
+                nota: filtros.fiscal_exit_id ? Number(filtros.fiscal_exit_id) : undefined,
+                de: filtros.date_field === "EMISSAO" ? undefined : filtros.start_date,
+                ate: filtros.date_field === "EMISSAO" ? undefined : filtros.end_date,
+                abertos: filtros.somente_vencidos === true || filtros.somente_vencidos === "true" || filtros.status === "PENDENTE",
+              })} />
           </div>
         )}
         {mode === "create" && (

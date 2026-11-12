@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirProgramacao } from "@/services/impressaoService";
 import { PrioridadesOrdemPanel } from "./PrioridadesOrdemPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -187,6 +189,8 @@ export function Vpro0210Page(): JSX.Element {
         <div className="erp-tgroup">
           <button className="erp-btn" onClick={() => void abrirParametros()} disabled={busy}>Parâmetros</button>
           <button className="erp-btn" onClick={() => void exportarEventos()} disabled={busy} title="Início e fim de cada operação programada, em planilha">Exportar eventos (CSV)</button>
+          <PrintButton label="Programação (PDF)" onPrint={() => imprimirProgramacao({ de, ate })} disabled={busy || !de || !ate}
+            title="Gantt por máquina e a sequência de cada máquina para o chão de fábrica, no período De/Até da aba de centros" />
           <ExportButton title="VPRO0210 — APS (Sequenciamento e Gantt)" filename="vpro0210" />
         </div>
       </div>

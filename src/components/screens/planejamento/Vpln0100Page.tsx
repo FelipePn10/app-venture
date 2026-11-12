@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirPlanoMateriais, imprimirCapacidade } from "@/services/impressaoService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type AutoRunSettings, type PipelineResult, type PlanningParam, type PlanningRun,
@@ -149,6 +151,12 @@ export function Vpln0100Page(): JSX.Element {
           <button className="erp-btn erp-btn-primary" onClick={() => void rodar()} disabled={busy || !plano}>{busy && <span className="erp-spin" />}Rodar pipeline</button>
         </div>
         <div className="erp-tspacer" />
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Documentos</span>
+          <PrintButton label="Plano de materiais (PDF)" onPrint={() => imprimirPlanoMateriais(plano!)} disabled={!plano}
+            title="Resultado do MRP do plano: demanda, árvore de explosão, compras e fabricação" />
+          <PrintButton label="Capacidade (PDF)" onPrint={() => imprimirCapacidade(plano!)} disabled={!plano}
+            title="Mapa de carga por centro e dia do plano (CRP)" />
+        </div>
         <div className="erp-tgroup"><ExportButton title="VPLN0100 — Pipeline de Planejamento" filename="vpln0100" /></div>
       </div>
 

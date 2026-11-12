@@ -503,6 +503,8 @@ VEXP0100 (romaneio), VMRP0100.
 
 ---
 
+**Documento impresso.** **Imprimir pedido** gera o PDF para o cliente: dados do cliente e da entrega, condições comerciais, itens com IPI e ICMS, parcelas previstas com datas e valores, totais, notas fiscais já emitidas e o campo de aceite.
+
 #### VVND0300 — Orçamento de Venda
 
 **Para que serve.** Montar a proposta comercial, negociar e, quando aceita,
@@ -562,6 +564,8 @@ padrão* e *Gravar motivo*. **Voltar aos orçamentos** retorna à lista.
 **Telas relacionadas.** VVND0200, VCST0202.
 
 ---
+
+**Documento impresso.** **Proposta (PDF)** gera a proposta comercial para o cliente: carta de apresentação, itens com prazo, investimento total, condições (pagamento, frete, entrega, validade) e o campo de aceite com o número do pedido do cliente. Grave o orçamento antes de imprimir.
 
 #### VVND0400 — Representantes
 
@@ -1158,6 +1162,8 @@ pedido. O motivo fica no histórico.
 
 ---
 
+**Documento impresso.** A **ficha cadastral** (PDF) mostra o cadastro em formulário (identificação, classificação, condições comerciais com os nomes e não códigos), a posição comercial do cliente na data (em aberto, vencido, pedidos em carteira, faturamento de 12 meses, última compra e uso do limite de crédito), endereços, contatos e filiais.
+
 ## Custos / Precificação
 
 *Custo-padrão do produto e margem de contribuição.*
@@ -1231,6 +1237,8 @@ custos indiretos (energia, depreciação, supervisão, aluguel).
 **Telas relacionadas.** VENT0210, VENT0202, VCUS0200.
 
 ---
+
+**Documento impresso.** Em **Apuração das OFs**, escolha o período e clique em **Custo de produção (PDF)**: sai o resumo das ordens com custo apurado no período e o detalhe de cada uma.
 
 # Industrial & Produção
 
@@ -1740,6 +1748,8 @@ tempo distorcem a carga.
 
 ---
 
+**Documento impresso.** **Mapa de carga (PDF)** imprime a carga do plano por centro e dia (verde até 50%, amarelo até 85%, laranja até 100%, vermelho em sobrecarga), a ocupação de cada centro no período e as ordens que formam a carga.
+
 #### VPRO0210 — APS — Sequenciamento / Gantt
 
 **Para que serve.** Sequenciar as operações das ordens de produção nos centros, ver
@@ -1776,6 +1786,8 @@ máquina).
 
 ---
 
+**Documento impresso.** **Programação (PDF)** imprime o Gantt por máquina e a sequência de cada máquina, com folga até a data de necessidade e a caixa de "feito" para o chão de fábrica. Usa o período De/Até da aba **Por centro**. A exportação do quadro do mês em PDF usa o mesmo desenho: só os dias com programação, barras com a OF e a etapa, e a sequência de cada centro ou ordem.
+
 #### VCUT0100 — Plano de Corte
 
 **Para que serve.** Otimizar o corte de chapas, barras e perfis: encaixar as peças
@@ -1801,6 +1813,8 @@ e baixar o estoque com os retalhos.
 **Telas relacionadas.** VEST0100 (retalhos em estoque), VPRO0900.
 
 ---
+
+**Documento impresso.** O mapa de corte em PDF traz o resumo do plano (material consumido, peças, aproveitamento e parâmetros de corte) e uma página por padrão, com o desenho em escala, cotas, cor por peça, a lista do que sai de cada chapa ou barra e o controle do operador. SVG e DXF continuam saindo para as máquinas.
 
 #### VPRO0900 — Ordem de Produção
 
@@ -1882,6 +1896,8 @@ concluir com quantidade zero se houver ordem de serviço de terceiro pendente.
 VTPS0100 (serviço de terceiro).
 
 ---
+
+**Documento impresso.** Depois de apurar o custo, **Custo da OF (PDF)** imprime a composição do custo real contra o padrão, os materiais consumidos e as horas de cada etapa.
 
 #### VPRO1000 — Ficha de Produção da Ferramenta
 
@@ -1998,6 +2014,8 @@ simultânea é recusada.
 
 ---
 
+**Documento impresso.** **Plano de materiais (PDF)** e **Capacidade (PDF)** imprimem o resultado do plano escolhido, os mesmos documentos da VMRP0100 e da VPRO0200.
+
 #### VPLA0102 — Demanda Independente
 
 **Para que serve.** Dizer ao MRP o que produzir ou comprar **sem pedido de
@@ -2098,6 +2116,8 @@ fornecedor preferencial dos comprados.
 de compra), VVND0200 (aba Atendimento).
 
 ---
+
+**Documento impresso.** **Plano de materiais (PDF)** imprime o resultado do último cálculo do plano: demanda que originou, árvore de explosão com o que cada sugestão gerou (OF ou pedido de compra), linha do tempo, compras com fornecedor e valor estimado, fabricação com roteiro e horas, e as exceções. **Capacidade (PDF)** imprime o mapa de carga do plano.
 
 #### VPRE0201 — Previsão de Vendas
 
@@ -2463,6 +2483,8 @@ material; o comprador atende gerando pedidos.
 
 ---
 
+**Documento impresso.** **Mapa (PDF)** gera o mapa comparativo para aprovação (itens × fornecedores, menor preço destacado, total de cada fornecedor). Em **Solicitação de cotação ao fornecedor**, o botão de cada fornecedor gera o PDF que vai para ele, com os campos de preço, IPI, prazo e condições para devolver preenchidos.
+
 #### VCON0200 — Contratos de Fornecedores
 
 **Para que serve.** Registrar o contrato de fornecimento (quantidades e preços
@@ -2594,6 +2616,8 @@ VENT0800.
 
 ---
 
+**Documento impresso.** Na aba **Extrato**, **Kardex (PDF)** imprime a ficha de estoque do item no período (saldo anterior, movimentos, saldo corrente em quantidade e valor). Sem item na barra, o botão vira **Kardex de todos (PDF)** e imprime todos os itens movimentados no período.
+
 #### VEST0150 — Coletor de Estoque
 
 Também recebe pedido de compra (informe o pedido, leia o item e digite o que chegou) e faz a contagem cíclica programada em VEST0500.
@@ -2677,6 +2701,8 @@ qual carga está nela.
 **Telas relacionadas.** VVND0200, VFIS0200, VENT0200.
 
 ---
+
+**Documento impresso.** **Imprimir romaneio** gera o romaneio de carga: remetente, destinatário e local de entrega, transporte (motorista, placa, lacres), a NF-e com o código de barras da chave, conferência dos itens, etapas do romaneio, assinaturas e o canhoto de recebimento destacável.
 
 #### VBEN0100 — Beneficiamento — Remessas e Retorno Fiscal
 
@@ -2829,6 +2855,8 @@ certificado 3.1 da EN 10204): o que foi inspecionado no material vendido.
 **Telas relacionadas.** VINS0300, VFIS0200, VEST0100 (lote e corrida).
 
 ---
+
+**Documento impresso.** O PDF do certificado sai com moldura, o material e o cliente, cada lote de inspeção com a decisão em destaque e o resultado de cada característica (conforme ou não conforme), a declaração com o selo da qualidade e a assinatura. Certificado cancelado sai marcado como sem validade.
 
 #### VINS0800 — Documentos da Qualidade
 
@@ -3157,6 +3185,8 @@ de cada plano (o rateio entra proporcional).
 
 ---
 
+**Documento impresso.** **Programação (PDF)** gera a programação de pagamentos com os filtros da tela, agrupada por vencimento, com resumo por fornecedor e por plano de contas e os campos de assinatura da alçada.
+
 #### VFIN0210 — Contas a Receber
 
 **Para que serve.** A carteira de contas a receber: lançar, baixar, acompanhar e
@@ -3183,6 +3213,8 @@ a **composição por idade** resume a carteira.
 **Telas relacionadas.** VFIS0200, VVND0200, VFIN0600, VFIN0620.
 
 ---
+
+**Documento impresso.** **Demonstrativo (PDF)** gera o demonstrativo para o cliente com os filtros da tela (cliente, nota, período de vencimento, só em aberto): totais a vencer, vencido e recebido, calendário de vencimentos, situação de cada título e os dados para pagamento.
 
 #### VFIN0300 — Fluxo de Caixa e Saldos
 
@@ -3544,6 +3576,8 @@ consumido vai para despesa, e nasce o título da transportadora.
 **Telas relacionadas.** VPDC0200, VFIS0360, VFIN0200, VINS0300, VSUP0130.
 
 ---
+
+**Documento impresso.** **Espelho** (na lista) e **Espelho (PDF)** (na nota aberta) geram o espelho de conferência: cálculo do imposto, itens com classificação fiscal, conferência com o pedido de compra (confere ou divergente), créditos, custo que entra no estoque, parcelas do contas a pagar e o carimbo de aprovação.
 
 #### VFIS0220 — CT-e (Conhecimento de Transporte)
 

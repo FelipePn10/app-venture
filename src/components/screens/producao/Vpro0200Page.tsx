@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirCapacidade } from "@/services/impressaoService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { type CrpEntry, type CrpPlanOption, calculateCrp, listCrpPlan, listCrpPlans } from "@/services/crpService";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -108,6 +110,8 @@ export function Vpro0200Page(): JSX.Element {
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup">
+          <PrintButton label="Mapa de carga (PDF)" onPrint={() => imprimirCapacidade(plano!)} disabled={!plano || busy}
+            title="Mapa de calor da carga por centro e dia, ocupação no período e as ordens que formam a carga" />
           <ExportButton title="VPRO0200 — CRP (Planejamento de Capacidade)" filename="vpro0200" build={() => ({
             columns: ["Centro", "Data", "Necessário (h)", "Disponível (h)", "Carga %", "Sobrecarga"],
             rows: filtradas.map((r) => [nomeCentro(r.work_center_id), data(r.req_date), num(r.required_hours), num(r.available_hours), num(r.load_pct), r.is_overloaded ? "Sim" : "Não"]),

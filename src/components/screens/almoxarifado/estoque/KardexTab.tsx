@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirKardex } from "@/services/impressaoService";
 import { Fragment, useState } from "react";
 import { estornarMovimento, getKardex, type KardexDTO } from "@/services/stockService";
 import { LookupField } from "@/components/ui/LookupField";
@@ -41,6 +43,11 @@ export function KardexTab({ itemCode }: { itemCode: string }) {
       <div className="erp-field erp-c2"><label className="erp-label">De</label><input className="erp-input" type="date" value={de} onChange={(e) => setDe(e.target.value)} /></div>
       <div className="erp-field erp-c2"><label className="erp-label">Até</label><input className="erp-input" type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
       <div className="erp-field erp-c2" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={consultar} disabled={busy || !itemCode}>Consultar extrato</button></div>
+      <div className="erp-field erp-c2" style={{ alignSelf: "end" }}>
+        <PrintButton label={itemCode ? "Kardex (PDF)" : "Kardex de todos (PDF)"} disabled={busy || !de || !ate}
+          onPrint={() => imprimirKardex({ item: itemCode || undefined, deposito: almox, de, ate })}
+          title={itemCode ? "Ficha de estoque do item no período: saldo anterior, movimentos, saldo corrente e valor" : "Ficha de estoque de todos os itens movimentados no período"} />
+      </div>
       {!itemCode && <div className="erp-field erp-c12"><span className="erp-hint">Selecione o item na barra superior.</span></div>}
     </div></div>
 

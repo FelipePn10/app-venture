@@ -1,3 +1,5 @@
+import { PrintButton } from "@/components/ui/PrintButton";
+import { imprimirCustoProducao } from "@/services/impressaoService";
 import { CustosPadraoVigentes } from "./CustosPadraoVigentes";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { confirmar } from "@/components/ui/dialogos";
@@ -78,6 +80,9 @@ type LinhaDeComponente = { rotulo: string; valor: number; explicacao: string };
 
 export function Vcus0100Page(): JSX.Element {
   const [activeTab, setActiveTab] = useState(0);
+  // Período da apuração impressa (OFs encerradas): mês corrente por padrão.
+  const [apuracaoDe, setApuracaoDe] = useState(() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}-01`; });
+  const [apuracaoAte, setApuracaoAte] = useState(() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}-${String(h.getDate()).padStart(2, "0")}`; });
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
 
@@ -333,6 +338,14 @@ export function Vcus0100Page(): JSX.Element {
           <button className="erp-btn" onClick={loadAll} disabled={busy}>
             {busy ? <><span className="erp-spin" />Carregando…</> : "Recarregar"}
           </button>
+        </div>
+        <div className="erp-tgroup">
+          <span className="erp-tgroup-label">Apuração das OFs</span>
+          <input className="erp-tinput" type="date" aria-label="Encerradas de" value={apuracaoDe} onChange={(e) => setApuracaoDe(e.target.value)} />
+          <input className="erp-tinput" type="date" aria-label="Encerradas até" value={apuracaoAte} onChange={(e) => setApuracaoAte(e.target.value)} />
+          <PrintButton label="Custo de produção (PDF)" disabled={busy || !apuracaoDe || !apuracaoAte}
+            onPrint={() => imprimirCustoProducao({ de: apuracaoDe, ate: apuracaoAte })}
+            title="Custo real × padrão das OFs com custo apurado no período: composição, materiais e horas de cada ordem" />
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup">
