@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.18.0] — 2026-11-12
+
 ## Novidades
 - **Linha do pedido confirmado (VVND0200):** cancele o saldo de uma linha ou altere a quantidade dela sem mexer no resto do pedido. A reserva de estoque acompanha: diminui, cresce ou é solta junto.
 - **NFS-e gera o título a receber (VNFS0100):** com o cliente do cadastro, a nota autorizada lança o título pelo valor líquido, com o vencimento escolhido (vazio = emissão + 30 dias). A nota rejeitada pode ser autorizada de novo.
