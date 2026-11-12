@@ -22,10 +22,15 @@ const EMPTY: NfseDTO = {
   valor_servicos: 0, valor_deducoes: 0, aliquota_iss: 0.05, iss_retido: false,
 };
 
+const dataBR = (iso: string) => { const [a, m, d] = iso.slice(0, 10).split("-"); return d && m && a ? `${d}/${m}/${a}` : iso; };
+/** Só rascunho e rejeitada vão para a prefeitura; a autorizada só se cancela. */
+const podeAutorizar = (s?: string) => { const v = (s || "RASCUNHO").toUpperCase(); return v === "RASCUNHO" || v === "REJEITADA"; };
+
 function statusPill(s?: string) {
   const v = (s || "").toUpperCase();
   if (v.includes("AUTORIZ")) return <span className="erp-badge ok">Autorizada</span>;
   if (v.includes("CANCEL")) return <span className="erp-badge err">Cancelada</span>;
+  if (v.includes("REJEIT")) return <span className="erp-badge erp-badge-amber">Rejeitada</span>;
   return <span className="erp-badge erp-badge-gray">{s || "Rascunho"}</span>;
 }
 
@@ -44,6 +49,9 @@ export function Vnfs0100Page(): JSX.Element {
     finally { setBusy(false); }
   }, []);
   useEffect(() => { void reload(); }, [reload]);
+
+  /** Formulário limpo: o cliente da nota anterior não pode ir junto. */
+  function novaNota() { setForm(EMPTY); setTomadorCode(undefined); }
 
   function setF<K extends keyof NfseDTO>(k: K, v: NfseDTO[K]) { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); }
 
@@ -69,12 +77,22 @@ export function Vnfs0100Page(): JSX.Element {
     if (!form.numero_rps || !form.tomador_razao_social.trim() || !form.valor_servicos) { setFeedback({ type: "error", message: "RPS, tomador e valor dos serviços são obrigatórios." }); return; }
     if (form.tomador_cnpj_cpf.trim() && !validateCNPJOrCPF(form.tomador_cnpj_cpf)) { setFeedback({ type: "error", message: "CNPJ/CPF do tomador inválido." }); return; }
     setBusy(true); setFeedback(null);
-    try { const r = await createNfse(form); setFeedback({ type: "success", message: `NFS-e (RPS ${form.numero_rps}) criada. ISS: ${money(r.valor_iss)} · Líquido: ${money(r.valor_liquido)}` }); setForm(EMPTY); setMode("list"); await reload(); }
+    if (form.data_vencimento && form.data_vencimento < form.data_emissao) { setFeedback({ type: "error", message: "O vencimento não pode ser antes da emissão." }); return; }
+    try {
+      const r = await createNfse({ ...form, customer_code: tomadorCode, data_vencimento: form.data_vencimento || undefined });
+      const titulo = tomadorCode ? " Ao autorizar, o título a receber é gerado pelo valor líquido." : " Sem cliente do cadastro, a nota não gera título a receber.";
+      setFeedback({ type: "success", message: `NFS-e (RPS ${form.numero_rps}) criada. ISS: ${money(r.valor_iss)} · Líquido: ${money(r.valor_liquido)}.${titulo}` });
+      novaNota(); setMode("list"); await reload();
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function autorizar(id: number) {
     setBusy(true); setFeedback(null);
-    try { await authorizeNfse(id); setFeedback({ type: "success", message: `NFS-e ${id} enviada para autorização.` }); await reload(); }
+    try {
+      const r = await authorizeNfse(id);
+      setFeedback({ type: "success", message: r.numero_nfse ? `NFS-e nº ${r.numero_nfse} autorizada pela prefeitura.${r.customer_code ? " Título a receber gerado." : ""}` : `NFS-e ${id} enviada para autorização.` });
+      await reload();
+    }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function cancelar(id: number) {
@@ -99,7 +117,7 @@ export function Vnfs0100Page(): JSX.Element {
 
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">NFS-e</span>
-          <button className="erp-btn erp-btn-new" onClick={() => { setMode("create"); setForm(EMPTY); }} disabled={busy}>+ Nova</button>
+          <button className="erp-btn erp-btn-new" onClick={() => { setMode("create"); novaNota(); }} disabled={busy}>+ Nova</button>
           <button className="erp-btn" onClick={() => { setMode("list"); void reload(); }} disabled={busy}>Listagem</button>
           {mode === "create" && <button className="erp-btn erp-btn-primary" onClick={() => void salvar()} disabled={busy}>{busy ? "..." : "Emitir (rascunho)"}</button>}</div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
@@ -115,15 +133,17 @@ export function Vnfs0100Page(): JSX.Element {
         {mode === "list" && (
           <div className="erp-fieldset"><div className="erp-fieldset-head"></div><div className="erp-fieldset-body"><div className="erp-field erp-c12">
             <table className="erp-grid">
-              <thead><tr><th>RPS</th><th>Tomador</th><th>Serviços</th><th>ISS</th><th>Status</th><th style={{ width: 160 }}>Ações</th></tr></thead>
+              <thead><tr><th>RPS</th><th>Nº NFS-e</th><th>Tomador</th><th>Serviços</th><th>ISS</th><th>Líquido</th><th>Vencimento</th><th>Status</th><th style={{ width: 160 }}>Ações</th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma NFS-e.</td></tr>}
+                {list.length === 0 && <tr><td colSpan={9} className="erp-grid-empty">Nenhuma NFS-e.</td></tr>}
                 {list.map((n) => (
-                  <tr key={n.id}><td style={{ fontWeight: 600 }}>{n.numero_rps}</td><td>{n.tomador_razao_social}</td>
-                    <td>{money(n.valor_servicos)}</td><td>{money(n.valor_iss)}</td><td>{statusPill(n.status)}</td>
+                  <tr key={n.id}><td style={{ fontWeight: 600 }}>{n.numero_rps}</td><td>{n.numero_nfse || "—"}</td><td>{n.tomador_razao_social}</td>
+                    <td>{money(n.valor_servicos)}</td><td>{money(n.valor_iss)}</td><td>{money(n.valor_liquido)}</td>
+                    <td title={n.customer_code ? "Vencimento do título a receber" : "Sem cliente do cadastro: não gera título"}>{n.customer_code && n.data_vencimento ? dataBR(n.data_vencimento) : "—"}</td>
+                    <td>{statusPill(n.status)}</td>
                     <td>{n.id && <>
-                      <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void autorizar(n.id!)}>Autorizar</button>
-                      <button className="erp-btn erp-btn-sm erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelar(n.id!)}>Cancelar</button></>}</td></tr>
+                      {podeAutorizar(n.status) && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void autorizar(n.id!)}>Autorizar</button>}
+                      {(n.status || "").toUpperCase() === "AUTORIZADA" && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => void cancelar(n.id!)}>Cancelar</button>}</>}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -165,6 +185,9 @@ export function Vnfs0100Page(): JSX.Element {
               <div className="erp-field erp-c3"><label className="erp-label erp-req">Valor serviços</label><input className="erp-input num" type="number" step="0.01" value={form.valor_servicos || ""} onChange={(e) => setF("valor_servicos", Number(e.target.value))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Deduções</label><input className="erp-input num" type="number" step="0.01" value={form.valor_deducoes || ""} onChange={(e) => setF("valor_deducoes", Number(e.target.value))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Alíquota ISS (%)</label><input className="erp-input num" type="number" step="0.01" value={Number(((form.aliquota_iss || 0) * 100).toFixed(4))} onChange={(e) => setF("aliquota_iss", Number((Number(e.target.value) / 100).toFixed(6)))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Vencimento do título</label><input className="erp-input" type="date" value={form.data_vencimento ?? ""} min={form.data_emissao} disabled={!tomadorCode}
+                title={tomadorCode ? "Vazio = emissão + 30 dias" : "Escolha o cliente do cadastro para a nota gerar o título a receber"} onChange={(e) => setF("data_vencimento", e.target.value)} />
+                <span className="erp-field-hint">{tomadorCode ? "Ao autorizar, gera o título a receber pelo valor líquido (vazio = emissão + 30 dias)." : "Sem cliente do cadastro, a nota não gera título a receber."}</span></div>
               <div className="erp-field erp-c3"><label className="erp-label">ISS retido</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.iss_retido} onChange={(e) => setF("iss_retido", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.iss_retido ? "Sim" : "Não"}</span></div></div>
             </div></div>
           </>

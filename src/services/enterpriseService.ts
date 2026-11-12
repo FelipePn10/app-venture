@@ -12,6 +12,8 @@ export interface EnterpriseDTO {
   razao_social: string;
   nome_fantasia?: string;
   inscricao_estadual?: string;
+  /** Inscrição municipal: sai como a do prestador na NFS-e. */
+  inscricao_municipal?: string;
   regime_tributario: string; // "1" Simples, "2" Lucro Presumido, "3" Lucro Real
   uf: string;
   municipio?: string;
@@ -39,6 +41,7 @@ export async function getIdentificacao(): Promise<EnterpriseDTO | null> {
     const str = (k: string) => (o[k] == null ? '' : String(o[k]));
     return {
       cnpj: str('cnpj'), razao_social: str('razao_social'), nome_fantasia: str('nome_fantasia'), inscricao_estadual: str('inscricao_estadual'),
+      inscricao_municipal: str('inscricao_municipal'),
       regime_tributario: str('regime_tributario') || '3', uf: str('uf'), municipio: str('municipio'), codigo_municipio: str('codigo_municipio'),
       cep: str('cep'), logradouro: str('logradouro'), numero: str('numero'), complemento: str('complemento'), bairro: str('bairro'),
       telefone: str('telefone'), email: str('email'),

@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "atual" | "nova";
 const EMPTY: EnterpriseDTO = {
-  cnpj: "", razao_social: "", nome_fantasia: "", inscricao_estadual: "",
+  cnpj: "", razao_social: "", nome_fantasia: "", inscricao_estadual: "", inscricao_municipal: "",
   regime_tributario: "3", uf: "", municipio: "", codigo_municipio: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "", telefone: "", email: "",
 };
 const REGIMES = [{ v: "1", l: "1 — Simples Nacional" }, { v: "2", l: "2 — Lucro Presumido" }, { v: "3", l: "3 — Lucro Real" }];
@@ -82,9 +82,9 @@ export function Vemp0100Page(): JSX.Element {
 
   const erroIBGE = erroDoCodigoIBGE(form.codigo_municipio ?? "", form.uf);
   const ibgeVazio = !(form.codigo_municipio ?? "").trim() || /^0+$/.test((form.codigo_municipio ?? "").trim());
-  const campo = (k: keyof EnterpriseDTO, rotulo: string, cls: string, extra?: { req?: boolean; placeholder?: string; maxLength?: number; upper?: boolean }) => (
+  const campo = (k: keyof EnterpriseDTO, rotulo: string, cls: string, extra?: { req?: boolean; placeholder?: string; maxLength?: number; upper?: boolean; title?: string }) => (
     <div className={`erp-field ${cls}`}><label className={`erp-label${extra?.req ? " erp-req" : ""}`}>{rotulo}</label>
-      <input className="erp-input" value={(form[k] as string | undefined) ?? ""} placeholder={extra?.placeholder} maxLength={extra?.maxLength} disabled={!isAdmin}
+      <input className="erp-input" value={(form[k] as string | undefined) ?? ""} placeholder={extra?.placeholder} maxLength={extra?.maxLength} title={extra?.title} disabled={!isAdmin}
         onChange={(e) => setF(k, (extra?.upper ? e.target.value.toUpperCase() : e.target.value) as EnterpriseDTO[typeof k])} /></div>
   );
 
@@ -126,6 +126,7 @@ export function Vemp0100Page(): JSX.Element {
           {campo("razao_social", "Razão Social", "erp-c6", { req: true })}
           {campo("nome_fantasia", "Nome Fantasia", "erp-c3")}
           {campo("inscricao_estadual", "Inscrição Estadual", "erp-c3")}
+          {campo("inscricao_municipal", "Inscrição Municipal", "erp-c3", { maxLength: 20, title: "Sai como a inscrição do prestador na NFS-e; a maioria das prefeituras recusa a nota sem ela." })}
           <div className="erp-field erp-c4"><label className="erp-label erp-req">Regime Tributário</label><select className="erp-input" value={form.regime_tributario} disabled={!isAdmin} onChange={(e) => setF("regime_tributario", e.target.value)}>{REGIMES.map((r) => <option key={r.v} value={r.v}>{r.l}</option>)}</select></div>
           {campo("telefone", "Telefone", "erp-c2", { placeholder: "41999990000" })}
           {campo("email", "E-mail", "erp-c3")}

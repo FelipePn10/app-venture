@@ -75,11 +75,39 @@ export interface FiltroTitulosPdf {
   de?: string | Date | null;
   ate?: string | Date | null;
   abertos?: boolean;
+  /** Período pela emissão; o padrão é o vencimento. */
+  porEmissao?: boolean;
+  /** Situação exata do título (PENDENTE, VENCIDO, PAGO…). */
+  situacao?: string;
+  /** Em aberto com vencimento anterior a hoje. */
+  vencidos?: boolean;
+  /** Os demais filtros da carteira, com os mesmos nomes da listagem. */
+  documento?: string;
+  tipoDocumento?: string;
+  aprovacao?: string;
+  planoContas?: number | string;
+  centroCusto?: number | string;
+  pedido?: number | string;
+  valorMinimo?: number | string;
+  valorMaximo?: number | string;
 }
+const vazioComoAusente = (v?: number | string) => (v === undefined || v === null || String(v).trim() === '' ? undefined : String(v).trim());
+const filtroTitulos = (f: FiltroTitulosPdf) => ({
+  nota: f.nota, de: dia(f.de), ate: dia(f.ate), abertos: f.abertos,
+  data: f.porEmissao ? 'emissao' : undefined, situacao: f.situacao, vencidos: f.vencidos,
+  documento: f.documento?.trim() || undefined,
+  tipo_documento: f.tipoDocumento || undefined,
+  status_aprovacao: f.aprovacao || undefined,
+  plano_contas_id: vazioComoAusente(f.planoContas),
+  centro_custo_id: vazioComoAusente(f.centroCusto),
+  sales_order_id: vazioComoAusente(f.pedido),
+  valor_minimo: vazioComoAusente(f.valorMinimo),
+  valor_maximo: vazioComoAusente(f.valorMaximo),
+});
 export const imprimirContasReceber = (f: FiltroTitulosPdf = {}) =>
-  baixarPdf(`${BASE}/contas-receber`, 'contas-a-receber.pdf', { cliente: f.parte, nota: f.nota, de: dia(f.de), ate: dia(f.ate), abertos: f.abertos });
+  baixarPdf(`${BASE}/contas-receber`, 'contas-a-receber.pdf', { cliente: f.parte, ...filtroTitulos(f) });
 export const imprimirContasPagar = (f: FiltroTitulosPdf = {}) =>
-  baixarPdf(`${BASE}/contas-pagar`, 'contas-a-pagar.pdf', { fornecedor: f.parte, nota: f.nota, de: dia(f.de), ate: dia(f.ate), abertos: f.abertos });
+  baixarPdf(`${BASE}/contas-pagar`, 'contas-a-pagar.pdf', { fornecedor: f.parte, ...filtroTitulos(f) });
 
 // ── Planejamento e produção ─────────────────────────────────────────────────
 export const imprimirPlanoMateriais = (plano: number) => baixarPdf(`${BASE}/plano-materiais/${plano}`, `plano-materiais-${plano}.pdf`);

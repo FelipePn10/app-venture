@@ -291,13 +291,23 @@ export function Vfin0200Page(): JSX.Element {
                   : "sem período",
                 somente_vencidos: filtros.somente_vencidos ? "sim" : "não",
               }} />
-            <PrintButton label="Programação (PDF)" disabled={busy} title="Programação e autorização de pagamentos com os filtros atuais: agrupada por vencimento, resumos e alçada"
+            <PrintButton label="Programação (PDF)" disabled={busy} title="Programação e autorização de pagamentos com os filtros atuais (fornecedor, situação, período, documento, faixa de valor, conta do plano, centro de custo e somente vencidos): agrupada por vencimento, resumos e alçada"
               onPrint={() => imprimirContasPagar({
                 parte: filtros.fornecedor_id ? Number(filtros.fornecedor_id) : undefined,
                 nota: undefined,
-                de: filtros.date_field === "EMISSAO" ? undefined : filtros.start_date,
-                ate: filtros.date_field === "EMISSAO" ? undefined : filtros.end_date,
-                abertos: filtros.somente_vencidos === true || filtros.somente_vencidos === "true" || filtros.status === "PENDENTE",
+                de: filtros.start_date,
+                ate: filtros.end_date,
+                porEmissao: filtros.date_field === "EMISSAO",
+                situacao: filtros.status || undefined,
+                vencidos: filtros.somente_vencidos === true || filtros.somente_vencidos === "true",
+                documento: filtros.documento,
+                tipoDocumento: filtros.tipo_documento,
+                aprovacao: filtros.status_aprovacao,
+                planoContas: filtros.plano_contas_id,
+                centroCusto: filtros.centro_custo_id,
+                pedido: filtros.sales_order_id,
+                valorMinimo: filtros.valor_minimo,
+                valorMaximo: filtros.valor_maximo,
               })} />
           </div>
         )}

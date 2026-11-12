@@ -9,13 +9,19 @@
  * quê. Aqui cada campo declarado é conferido contra a resposta real.
  *
  * Uso:
- *   API_URL=http://127.0.0.1:5097 TOKEN=<jwt> node scripts/test-beneficiamento-contrato.mjs
+ *   API_URL=http://127.0.0.1:5097 TOKEN=<jwt> [CLIENTE=50 PEDIDO=1500] node scripts/test-beneficiamento-contrato.mjs
+ *
+ * CLIENTE é um cliente com dados fiscais completos na empresa do token (no demo,
+ * o 50 do cenário de beneficiamento). PEDIDO é um pedido de venda desse cliente
+ * (no demo, o 1500). Padrões: 100 e 5001.
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const API = (process.env.API_URL ?? 'http://127.0.0.1:5097').replace(/\/+$/, '');
 const TOKEN = process.env.TOKEN ?? '';
+const CLIENTE = Number(process.env.CLIENTE ?? 100);
+const PEDIDO = Number(process.env.PEDIDO ?? 5001);
 if (!TOKEN) {
   console.error('TOKEN é obrigatório (JWT de um ADMIN).');
   process.exit(2);
@@ -77,12 +83,12 @@ let itemId;
 
 await it('POST / recebe a remessa e devolve todos os campos de RemittanceDTO', async () => {
   const { status, dados } = await api('POST', '/api/customer-material', {
-    customer_code: 100,
+    customer_code: CLIENTE,
     nfe_number: 700000 + sufixo,
     nfe_series: '1',
     issue_date: '2026-09-10',
     total_value: '696.56',
-    sales_order_code: 5001,
+    sales_order_code: PEDIDO,
     itens: [
       { customer_item_code: '10014485', description: 'ALUMINIO TUBO', ncm: '76081000', cst: '050', uom: 'KG', qty_invoiced: '16', unit_value: '36.93' },
       { customer_item_code: '10014670', description: 'ALUMINIO BARRA CHATA', ncm: '76041029', cst: '050', uom: 'KG', qty_invoiced: '3.4', unit_value: '31.05' },
@@ -268,6 +274,14 @@ await it('estornar a baixa devolve o saldo ao cliente e é idempotente', async (
   assert.equal(Number(depois.dados.itens[0].balance_qty).toFixed(6), esperado,
     `saldo = ${depois.dados.itens[0].balance_qty}, esperado ${esperado} — o estorno tocou o que não devia`);
 });
+
+// A remessa de teste fica no banco (não há exclusão): encerrá-la tira a remessa
+// da carteira aberta, para o teste no demo não deixar material de cliente
+// fictício "no pátio" de quem apresenta.
+if (remessa?.id) {
+  const fim = await api('POST', `/api/customer-material/${remessa.id}/close`, { reason: 'remessa do teste de contrato encerrada' });
+  if (fim.status >= 300) console.log(`  (a remessa de teste ${remessa.id} não foi encerrada: ${fim.status} ${JSON.stringify(fim.dados)})`);
+}
 
 let falhas = 0;
 for (const c of checks) {

@@ -76,6 +76,16 @@ export function Vexp0100Page(): JSX.Element {
   const code = () => selected?.code;
   const step = (fn: (c: number) => Promise<unknown>, msg: string) => { const c = code(); if (!c) return; void run(async () => { await fn(c); await reload(c); setList(await listShipments()); setFeedback({ type: "success", message: msg }); }); };
 
+  // Linha já faturada pela NF-e saiu do estoque com a nota: a separação não a
+  // reserva de novo, e a trilha de auditoria diz quantas foram.
+  const separar = () => { const c = code(); if (!c) return; void run(async () => {
+    await separateShipment(c); await reload(c); setList(await listShipments());
+    let nota = "";
+    try { nota = (await listEvents(c)).filter((e) => e.event === "SEPARATED").sort((x, y) => (y.created_at ?? "").localeCompare(x.created_at ?? ""))[0]?.note ?? ""; } catch { /* trilha indisponível: segue a mensagem padrão */ }
+    const jaFaturado = nota.includes("NF-e");
+    setFeedback({ type: "success", message: jaFaturado ? `Romaneio separado. ${nota.replace(/^separação — /, "").replace(/^./, (l) => l.toUpperCase())}.` : "Romaneio separado (estoque reservado)." });
+  }); };
+
   const adicionarItem = () => { const c = code(); if (!c) return; void run(async () => {
     if (!itemForm.item_code || !itemForm.quantity) { setFeedback({ type: "error", message: "Item e quantidade são obrigatórios." }); return; }
     await addShipmentItem(c, itemForm); await reload(c); setFeedback({ type: "success", message: "Item adicionado." });
@@ -116,7 +126,7 @@ export function Vexp0100Page(): JSX.Element {
             <option value="">Todos</option>{Object.keys(STATUS_LABEL).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
           </select>
           <button className="erp-btn" onClick={listar} disabled={busy}>Listar</button></div>
-        <div className="erp-tgroup"><span className="erp-tgroup-label">Auto-fill (pedido venda)</span>
+        <div className="erp-tgroup"><span className="erp-tgroup-label">Gerar do pedido de venda</span>
           <div style={{ width: 220 }}><LookupField value={autoFillCode} loader={loadSalesOrders} entityLabel="pedido de venda" placeholder="Pedido de venda" onChange={(c) => setAutoFillCode(c ? Number(c) : undefined)} /></div>
           <button className="erp-btn" onClick={autoFill} disabled={busy}>Gerar</button></div>
         <div className="erp-tgroup"><span className="erp-tgroup-label">Relatório</span>
@@ -156,7 +166,7 @@ export function Vexp0100Page(): JSX.Element {
           <table className="erp-grid">
             <thead><tr><th>Código</th><th>Tipo</th><th>Pedido</th><th>Status</th><th>Volumes</th><th></th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum romaneio. Use Listar ou Auto-fill.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhum romaneio. Use Listar ou gere um a partir do pedido de venda.</td></tr>}
               {list.map((s) => (
                 <tr key={s.code} className={selected?.code === s.code ? "erp-row-sel" : ""}>
                   <td>{s.code}</td><td>{REFERENCE_LABEL[s.reference_type ?? ""] ?? "Documento"}</td>
@@ -174,10 +184,10 @@ export function Vexp0100Page(): JSX.Element {
           <>
             <div className="erp-fieldset"><div className="erp-fieldset-head">Romaneio {selected.code} — {statusLabel(st)}{hasDivergence ? " · ⚠️ divergência" : ""}</div><div className="erp-fieldset-body">
               <div className="erp-tgroup" style={{ flexWrap: "wrap", gap: 8 }}>
-                <button className="erp-btn erp-btn-primary" onClick={() => step(separateShipment, "Romaneio separado (estoque reservado).")} disabled={busy || st !== "OPEN"}>Separar (reserva)</button>
+                <button className="erp-btn erp-btn-primary" onClick={separar} disabled={busy || st !== "OPEN"}>Separar (reserva)</button>
                 <button className="erp-btn erp-btn-primary" onClick={() => step(conferShipment, "Romaneio conferido.")} disabled={busy || st !== "SEPARATED"}>Conferir</button>
                 <label className="erp-tgroup-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><input type="checkbox" checked={acceptDiv} onChange={(e) => setAcceptDiv(e.target.checked)} /> aceitar divergência</label>
-                <button className="erp-btn erp-btn-primary" onClick={() => step((c) => shipShipment(c, acceptDiv), "Romaneio despachado (SHIPPED).")} disabled={busy || st !== "CONFERRED"}>Despachar</button>
+                <button className="erp-btn erp-btn-primary" onClick={() => step((c) => shipShipment(c, acceptDiv), "Romaneio despachado.")} disabled={busy || st !== "CONFERRED"}>Despachar</button>
                 <button className="erp-btn erp-btn-danger" onClick={() => step((c) => cancelShipment(c, "Cancelado na tela"), "Romaneio cancelado (reservas liberadas).")} disabled={busy || st === "SHIPPED" || st === "CANCELLED"}>Cancelar</button>
                 <button className="erp-btn" onClick={() => void run(async () => { await exportShipmentPdf(selected.code!); })} disabled={busy} title="Romaneio de carga: remetente, destinatário, transporte, NF-e, conferência dos itens e canhoto de recebimento">Imprimir romaneio</button>
                 <button className="erp-btn" onClick={() => void run(async () => { await exportShipmentXlsx(selected.code!); })} disabled={busy}>Excel</button>
@@ -228,7 +238,7 @@ export function Vexp0100Page(): JSX.Element {
                 <thead><tr><th>Nº</th><th>Espécie</th><th>Peso bruto</th><th>Cubagem m³</th><th>Marca</th><th></th></tr></thead>
                 <tbody>
                   {volumes.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Sem volumes.</td></tr>}
-                  {volumes.map((v) => <tr key={v.id ?? v.volume_number}><td>{v.volume_number}</td><td>{v.package_type}</td><td>{v.gross_weight ?? "—"}</td><td>{v.cubage_m3 ?? "—"}</td><td>{v.marking ?? "—"}</td><td><button className="erp-btn" onClick={() => removerVolume(v.id)} disabled={busy}>Remover</button></td></tr>)}
+                  {volumes.map((v) => <tr key={v.id ?? v.volume_number}><td>{v.volume_number}</td><td>{v.package_type ? enumLabel(v.package_type) : "—"}</td><td>{v.gross_weight ?? "—"}</td><td>{v.cubage_m3 ?? "—"}</td><td>{v.marking ?? "—"}</td><td><button className="erp-btn" onClick={() => removerVolume(v.id)} disabled={busy}>Remover</button></td></tr>)}
                 </tbody>
               </table>
             </div></div>

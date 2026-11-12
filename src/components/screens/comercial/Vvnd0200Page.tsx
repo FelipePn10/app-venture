@@ -15,6 +15,7 @@ import {
   changeSalesOrderStatus,
   createSalesOrderItem,
   cancelSalesOrderItem,
+  updateSalesOrderItem,
   PRESENCE_INDICATORS,
 } from "@/services/salesOrderService";
 import { errMessage, parseNum } from "@/services/fiscalShared";
@@ -34,6 +35,7 @@ import {
   type RateioComissaoLinhaDTO,
 } from "@/services/salesCommissionService";
 import { hojeLocal } from "@/utils/dataLocal";
+import { confirmar as confirmarDialogo, pedirTexto } from "@/components/ui/dialogos";
 import { ReprogramacaoEntregaPanel } from "./ReprogramacaoEntregaPanel";
 import { AndamentoPedidoPanel } from "./AndamentoPedidoPanel";
 import { AtendimentoMrpPanel } from "./AtendimentoMrpPanel";
@@ -51,6 +53,9 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
   CANCELLED: { label: "Cancelado", cls: "err" },
 };
 const statusMeta = (s?: string) => (s && STATUS_META[s]) || { label: s ?? "—", cls: "draft" };
+/** Situação da linha do pedido (o atendido vem das NF-e autorizadas). */
+const ITEM_STATUS: Record<string, string> = { OPEN: "Em aberto", PARTIAL: "Parcial", DELIVERED: "Atendido", CANCELLED: "Cancelado" };
+const itemStatusLabel = (s?: string) => (s && ITEM_STATUS[s]) || s || "—";
 
 const EMPTY_ORDER: SalesOrderDTO = {
   enterprise_code: 1, customer_code: 0, currency_code: "BRL", payment_term_code: 0,
@@ -214,10 +219,49 @@ export function Vvnd0200Page(): JSX.Element {
     setNewItem(EMPTY_ITEM); setItemTableOptions([]); setItemTablePrices({}); await refreshSelected(code);
     setFeedback({ type: "success", message: "Item adicionado ao pedido." });
   }); };
-  const cancelarItem = (itemCode?: number) => { const code = selected?.code; if (!code || !itemCode) return; void run(async () => {
-    await cancelSalesOrderItem(itemCode); await refreshSelected(code);
-    setFeedback({ type: "success", message: `Item ${itemCode} cancelado.` });
-  }); };
+  const cancelarItem = async (it: SalesOrderItemDTO) => {
+    const code = selected?.code; if (!code || !it.code) return;
+    const atendido = it.attended_qty ?? 0;
+    const ok = await confirmarDialogo({
+      titulo: "Cancelar item do pedido?",
+      mensagem: atendido > 0
+        ? `Já foram faturados ${atendido} de ${it.requested_qty}. Só o saldo em aberto será cancelado e a reserva de estoque dele, liberada.`
+        : "O item sai da carteira e a reserva de estoque dele é liberada.",
+      assunto: `Pedido ${code} · seq. ${it.sequence ?? "—"} · item ${it.item_code ?? "—"}`,
+      rotulo: "Cancelar item", rotuloVoltar: "Manter item", tom: "perigo",
+    });
+    if (!ok) return;
+    void run(async () => {
+      await cancelSalesOrderItem(it.code!); await refreshSelected(code);
+      setFeedback({ type: "success", message: atendido > 0 ? `Saldo do item seq. ${it.sequence} cancelado.` : `Item seq. ${it.sequence} cancelado.` });
+    });
+  };
+  const alterarQtd = async (it: SalesOrderItemDTO) => {
+    const code = selected?.code; if (!code || !it.code) return;
+    const minimo = (it.attended_qty ?? 0) + (it.cancelled_qty ?? 0);
+    const resposta = await pedirTexto({
+      titulo: "Alterar quantidade do item",
+      mensagem: minimo > 0
+        ? `Já foram atendidos ${it.attended_qty ?? 0} e cancelados ${it.cancelled_qty ?? 0}: a nova quantidade não pode ficar abaixo de ${minimo}. O preço é conferido na tabela pela nova quantidade e a reserva de estoque acompanha o saldo.`
+        : "O preço é conferido na tabela pela nova quantidade e a reserva de estoque acompanha o saldo.",
+      assunto: `Pedido ${code} · seq. ${it.sequence ?? "—"} · item ${it.item_code ?? "—"}`,
+      rotulo: "Nova quantidade", tipo: "number", valorInicial: String(it.requested_qty ?? ""), rotuloConfirmar: "Alterar",
+    });
+    if (resposta === null) return;
+    const nova = Number(resposta.replace(",", "."));
+    if (!Number.isFinite(nova) || nova <= 0) { setFeedback({ type: "error", message: "Informe uma quantidade maior que zero." }); return; }
+    if (nova < minimo) { setFeedback({ type: "error", message: `A quantidade não pode ficar abaixo de ${minimo} (já atendido + cancelado).` }); return; }
+    if (nova === it.requested_qty) return;
+    void run(async () => {
+      // A linha vai inteira: o atendido e o cancelado o servidor mantém pelos dele.
+      await updateSalesOrderItem(String(it.code), { ...it, requested_qty: nova, delivery_date: it.delivery_date?.slice(0, 10) });
+      await refreshSelected(code);
+      setFeedback({ type: "success", message: `Quantidade do item seq. ${it.sequence} alterada para ${nova}.` });
+    });
+  };
+  /** Linha com saldo em aberto num pedido que ainda não foi faturado nem cancelado. */
+  const podeCancelarLinha = (it: SalesOrderItemDTO) =>
+    selected?.status !== "F" && selected?.status !== "CANCELLED" && (it.status === "OPEN" || it.status === "PARTIAL" || !it.status);
 
   const items = useMemo(() => selected?.items ?? [], [selected?.items]);
   const itemsTotal = useMemo(() => items.reduce((s, it) => s + (it.total_net ?? 0), 0), [items]);
@@ -260,7 +304,8 @@ export function Vvnd0200Page(): JSX.Element {
           {selected?.is_blocked
             ? <button className="erp-btn" onClick={() => desbloquear(selected?.code)} disabled={busy}>Desbloquear</button>
             : <button className="erp-btn" onClick={() => bloquear(selected?.code)} disabled={busy || !selected}>Bloquear</button>}
-          <button className="erp-btn erp-btn-danger" onClick={() => { setCancelReason(""); setCancelComplement(""); setCancelDialog(true); }} disabled={busy || !selected || selected?.status === "CANCELLED"}>Cancelar</button>
+          <button className="erp-btn erp-btn-danger" onClick={() => { setCancelReason(""); setCancelComplement(""); setCancelDialog(true); }} disabled={busy || !selected || selected?.status === "CANCELLED" || selected?.status === "F"}
+            title={selected?.status === "F" ? "Pedido faturado: cancele a NF-e antes — ela devolve o pedido à carteira" : undefined}>Cancelar</button>
           <PrintButton label="Imprimir pedido" onPrint={() => imprimirPedidoVenda(selected!.code!)} disabled={busy || !selected?.code}
             title="PDF do pedido para o cliente: entrega, condições, itens com impostos, parcelas, totais e aceite" />
         </div>
@@ -499,7 +544,7 @@ export function Vvnd0200Page(): JSX.Element {
                           <tr>
                             <th className="num">Seq</th><th className="num">Item</th><th className="num">Almoxarifado</th>
                             <th className="num">Qtd</th><th>UM</th><th className="num">Preço unit.</th><th className="num">Desc. %</th>
-                            <th className="num">Total líq.</th><th className="num" title="Calculado pela regra de ICMS/IPI quando não informado">IPI %</th><th className="num">ICMS %</th><th>Status</th><th style={{ width: 90 }}></th>
+                            <th className="num">Total líq.</th><th className="num" title="Calculado pela regra de ICMS/IPI quando não informado">IPI %</th><th className="num">ICMS %</th><th>Status</th><th style={{ width: 170 }}></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -518,8 +563,11 @@ export function Vvnd0200Page(): JSX.Element {
                               <td className="num">{money(it.total_net)}</td>
                               <td className="num">{it.ipi_pct ?? 0}</td>
                               <td className="num">{it.icms_pct ?? 0}</td>
-                              <td>{statusMeta(it.status).label}</td>
-                              <td>{isDraft && <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => cancelarItem(it.code)} disabled={busy}>Cancelar</button>}</td>
+                              <td title={(it.attended_qty ?? 0) > 0 || (it.cancelled_qty ?? 0) > 0 ? `Atendido ${it.attended_qty ?? 0} · cancelado ${it.cancelled_qty ?? 0}` : undefined}>{itemStatusLabel(it.status)}</td>
+                              <td style={{ whiteSpace: "nowrap" }}>{podeCancelarLinha(it) && <>
+                                <button className="erp-btn erp-btn-sm" onClick={() => void alterarQtd(it)} disabled={busy}>Alterar qtd</button>{" "}
+                                <button className="erp-btn erp-btn-danger erp-btn-sm" onClick={() => void cancelarItem(it)} disabled={busy}>Cancelar</button>
+                              </>}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -530,7 +578,7 @@ export function Vvnd0200Page(): JSX.Element {
                         )}
                       </table>
                     </div>
-                    {!isDraft && <p style={{ fontSize: 12, color: "var(--v-text-3)" }}>Itens só podem ser adicionados/cancelados enquanto o pedido está em <strong>Rascunho</strong>.</p>}
+                    {!isDraft && <p style={{ fontSize: 12, color: "var(--v-text-3)" }}>Itens só podem ser adicionados enquanto o pedido está em <strong>Rascunho</strong>. Depois de confirmado, a quantidade de um item ainda pode ser alterada e o saldo em aberto, cancelado.</p>}
                   </>
                 )}
 
@@ -659,7 +707,7 @@ export function Vvnd0200Page(): JSX.Element {
         <div className="erp-status-spacer" />
         <span className="erp-status-brand">GRUPO VENTURE LTDA — VentureERP</span>
       </footer>
-      {cancelDialog && selected?.code && <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setCancelDialog(false); }}><div className="erp-modal" style={{ width: "min(560px, 94vw)" }}><div className="erp-modal-head"><div><strong id="cancel-order-title">Cancelar pedido {selected.code}?</strong><div className="erp-field-hint">O pedido ficará cancelado e não seguirá para faturamento.</div></div><button className="erp-btn erp-btn-sm" onClick={() => setCancelDialog(false)} disabled={busy}>Fechar</button></div><div className="erp-modal-body"><div className="erp-fieldset"><div className="erp-fieldset-body"><div className="erp-field erp-c12"><label className="erp-label erp-req">Motivo do cancelamento</label><textarea className="erp-input" style={{ height: 76, paddingTop: 8 }} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} autoFocus /></div><div className="erp-field erp-c12"><label className="erp-label">Complemento</label><textarea className="erp-input" style={{ height: 64, paddingTop: 8 }} value={cancelComplement} onChange={(e) => setCancelComplement(e.target.value)} /></div></div></div><div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}><button className="erp-btn" onClick={() => setCancelDialog(false)} disabled={busy}>Manter pedido</button><button className="erp-btn erp-btn-danger" onClick={() => cancelar(selected.code)} disabled={busy || !cancelReason.trim()}>{busy && <span className="erp-spin" />}Confirmar cancelamento</button></div></div></div></div>}
+      {cancelDialog && selected?.code && <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setCancelDialog(false); }}><div className="erp-modal" style={{ width: "min(560px, 94vw)" }}><div className="erp-modal-head"><div><strong id="cancel-order-title">Cancelar pedido {selected.code}?</strong><div className="erp-field-hint">O pedido ficará cancelado e não seguirá para faturamento. Os itens em aberto saem da carteira e as reservas de estoque são liberadas.</div></div><button className="erp-btn erp-btn-sm" onClick={() => setCancelDialog(false)} disabled={busy}>Fechar</button></div><div className="erp-modal-body"><div className="erp-fieldset"><div className="erp-fieldset-body"><div className="erp-field erp-c12"><label className="erp-label erp-req">Motivo do cancelamento</label><textarea className="erp-input" style={{ height: 76, paddingTop: 8 }} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} autoFocus /></div><div className="erp-field erp-c12"><label className="erp-label">Complemento</label><textarea className="erp-input" style={{ height: 64, paddingTop: 8 }} value={cancelComplement} onChange={(e) => setCancelComplement(e.target.value)} /></div></div></div><div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}><button className="erp-btn" onClick={() => setCancelDialog(false)} disabled={busy}>Manter pedido</button><button className="erp-btn erp-btn-danger" onClick={() => cancelar(selected.code)} disabled={busy || !cancelReason.trim()}>{busy && <span className="erp-spin" />}Confirmar cancelamento</button></div></div></div></div>}
     </div>
   );
 }

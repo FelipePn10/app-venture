@@ -34,6 +34,10 @@ export interface NfseDTO {
   valor_deducoes: number;
   aliquota_iss: number;
   iss_retido: boolean;
+  /** Cliente do título a receber: com ele, a autorização gera o título pelo valor líquido. */
+  customer_code?: number;
+  /** Vencimento do título (AAAA-MM-DD); vazio = emissão + 30 dias. */
+  data_vencimento?: string;
   status?: string;
   valor_iss?: number;
   valor_liquido?: number;
@@ -70,6 +74,8 @@ function parseNfse(raw: unknown): NfseDTO {
     valor_deducoes: parseNum(o, 'valor_deducoes', 'ValorDeducoes'),
     aliquota_iss: parseNum(o, 'aliquota_iss', 'AliquotaIss'),
     iss_retido: parseBool(o, 'iss_retido', 'IssRetido'),
+    customer_code: parseNum(o, 'customer_code', 'CustomerCode') || undefined,
+    data_vencimento: parseStr(o, 'data_vencimento', 'DataVencimento').slice(0, 10) || undefined,
     status: parseStr(o, 'status', 'Status'),
     valor_iss: parseNum(o, 'valor_iss', 'ValorIss'),
     valor_liquido: parseNum(o, 'valor_liquido', 'ValorLiquido'),
