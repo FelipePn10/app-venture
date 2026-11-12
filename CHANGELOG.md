@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## Novidades
+- **Documentos impressos com cara própria:** cada rotina imprime o documento dela, completo e sem texto cortado — pedido de venda para o cliente (VVND0200), proposta comercial (VVND0300), espelho da nota de entrada com a conferência do pedido de compra (VFIS0210), demonstrativo de títulos a receber (VFIN0210) e programação de pagamentos com alçada (VFIN0200).
+- **Planejamento e produção no papel:** plano de materiais com a árvore da estrutura (VMRP0100), mapa de carga dos centros (VPRO0200), programação da produção com Gantt por máquina (VPRO0210), custo da OF e da produção do período (VPRO0900 e VCUS0100) e kardex do item ou de todos os itens (VEST0100).
+- **Compras:** solicitação de cotação para enviar a cada fornecedor e mapa comparativo para aprovação (VSUP0400); o pedido de compra (VPDC0200) ganhou novo layout.
+- **Novos layouts também para** romaneio com canhoto de recebimento (VEXP0100), ficha cadastral do cliente com a posição comercial (VCLI0500), certificado de qualidade (VINS0700) e mapa de corte com uma página por chapa ou barra (VCUT0100).
+
+## Melhorias
+- A exportação de listas em PDF quebra o texto em vez de cortar e vira a página sozinha quando a tabela é larga.
+- O botão de impressão mostra "Gerando PDF…" e explica o motivo quando o documento não pode ser gerado.
+
 ## [v1.16.0] — 2026-11-11
 
 ## Novidades
