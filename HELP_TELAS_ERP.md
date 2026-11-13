@@ -3311,15 +3311,38 @@ outra etapa. Antes do primeiro uso, valide o arquivo com o banco.
 **Para que serve.** Importar o extrato da conta (OFX) e casar cada lançamento com o
 pagamento ou recebimento já registrado no sistema.
 
-**Passo a passo.**
+**Aba Importar extrato.**
 1. Escolha a **conta bancária** do extrato.
 2. Escolha o **arquivo OFX** (até 8 MB). A tela confere o arquivo na hora — pela
    estrutura, não pela extensão — e avisa se a conta do arquivo não é a conta
    escolhida.
-3. **Importar e conciliar.** O resultado mostra o que conciliou e **o que a
-   importação deixou de fora**, com o motivo.
+3. **Importar extrato.** O resultado mostra quantos lançamentos entraram, quantos
+   conciliaram sozinhos, quantos **aguardam conciliação**, quantos já existiam e o
+   que ficou de fora, com o motivo. Quando o banco informa o saldo no arquivo, a
+   tela o compara com o saldo da conta no sistema.
 
-**Telas relacionadas.** VFIN0300, VFIN0100.
+A conciliação automática casa o lançamento com o pagamento ou recebimento
+**baixado nesta conta** de mesmo valor e até 3 dias de diferença na data.
+Reimportar o mesmo arquivo não duplica nada.
+
+**Aba Extrato e conciliação.** Lista o que foi importado (filtre por *Pendentes*,
+*Conciliados* ou *Todos* e pelo período), com os totais pendentes e o saldo da
+conta no sistema. Para cada lançamento pendente:
+- **Conciliar…** mostra os movimentos do caixa desta conta com o mesmo valor e
+  sentido ainda não conciliados, do mais próximo da data ao mais distante. Escolha
+  o correspondente e clique **Conciliar**.
+- **Lançar no caixa** cria o movimento com a data e o valor do extrato, atualiza o
+  saldo da conta e já concilia. Use para o que **não tem título**: tarifa, IOF,
+  juros, aplicação, resgate, transferência entre contas.
+- Se é pagamento de fornecedor ou recebimento de cliente, **baixe o título** nesta
+  conta (VFIN0200 ou VFIN0210) com a data e o valor do extrato e volte: o
+  movimento aparece em *Conciliar…*, ou clique **Conciliar automaticamente**.
+
+**Desfazer** devolve o lançamento a pendente. Se o movimento foi criado por
+*Lançar no caixa*, ele é apagado e o saldo da conta volta; se veio da baixa de um
+título, a baixa continua valendo.
+
+**Telas relacionadas.** VFIN0300, VFIN0100, VFIN0200, VFIN0210.
 
 ---
 
