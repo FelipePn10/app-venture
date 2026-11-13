@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## [v1.18.1] — 2026-11-13
+
+## Correções
+- **Conciliação bancária por OFX (VFIN0620):** o extrato importado agora aparece na nova aba *Extrato e conciliação*, com os lançamentos pendentes e conciliados, os totais e o saldo da conta. Em cada lançamento pendente: **Conciliar…** com o pagamento ou recebimento de mesmo valor baixado na conta, **Lançar no caixa** o que não tem título (tarifa, IOF, aplicação, resgate) e **Desfazer**. O botão *Conciliar automaticamente* casa de novo depois de baixar os títulos.
+- Extratos que repetem o código do lançamento (Caixa) não perdem mais lançamentos iguais do mesmo dia. Reimportar o mesmo arquivo recupera o que tinha faltado, sem duplicar o resto.
+- A importação mostra quantos lançamentos aguardam conciliação e compara o saldo informado pelo banco com o do sistema.
+- A conta do arquivo com o dígito junto (Caixa) não dá mais aviso falso de "conta diferente".
+- O saldo da conta não é mais somado duas vezes quando o movimento é conciliado.
+
 ## [v1.18.0] — 2026-11-12
 
 ## Novidades
