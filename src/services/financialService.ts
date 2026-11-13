@@ -768,6 +768,11 @@ export interface ImportacaoOFX {
   conta_do_arquivo?: string;
   periodo_inicio?: string;
   periodo_fim?: string;
+  /** Linhas da conta que continuam sem par e esperam conciliação manual. */
+  pendentes: number;
+  /** Saldo que o banco informa no arquivo, para conferir com o do sistema. */
+  saldo_do_arquivo?: number;
+  data_saldo_do_arquivo?: string;
 }
 
 /**
@@ -793,7 +798,136 @@ export async function importarOFX(contaBancariaID: number, conteudo: string): Pr
     conta_do_arquivo: parseStr(o, 'conta_do_arquivo', 'ContaDoArquivo') || undefined,
     periodo_inicio: parseStr(o, 'periodo_inicio', 'PeriodoInicio') || undefined,
     periodo_fim: parseStr(o, 'periodo_fim', 'PeriodoFim') || undefined,
+    pendentes: parseNum(o, 'pendentes', 'Pendentes'),
+    saldo_do_arquivo: o['saldo_do_arquivo'] != null ? parseNum(o, 'saldo_do_arquivo') : undefined,
+    data_saldo_do_arquivo: parseStr(o, 'data_saldo_do_arquivo') || undefined,
   };
+}
+
+/** Uma linha do extrato importado e o movimento do caixa a que está casada. */
+export interface LinhaExtrato {
+  id: number;
+  data: string;
+  valor: number;
+  /** Sentido como o banco informa: crédito entra, débito sai. */
+  tipo: 'CREDIT' | 'DEBIT';
+  descricao: string;
+  fitid: string;
+  conciliado: boolean;
+  fluxo_caixa_id?: number;
+  movimento_data?: string;
+  movimento_descricao?: string;
+  movimento_valor?: number;
+  contas_pagar_id?: number;
+  contas_receber_id?: number;
+  /** O movimento nasceu desta linha ("Lançar no caixa"): desfazer o apaga. */
+  lancado_pelo_extrato: boolean;
+}
+
+export interface ExtratoDaConta {
+  saldo_sistema: number;
+  resumo: {
+    total: number; pendentes: number; conciliados: number;
+    creditos_pendentes: number; debitos_pendentes: number;
+  };
+  linhas: LinhaExtrato[];
+}
+
+export type SituacaoExtrato = '' | 'pendente' | 'conciliado';
+
+function parseLinhaExtrato(o: Obj): LinhaExtrato {
+  return {
+    id: parseNum(o, 'id'),
+    data: parseStr(o, 'data').slice(0, 10),
+    valor: parseNum(o, 'valor'),
+    tipo: parseStr(o, 'tipo') === 'DEBIT' ? 'DEBIT' : 'CREDIT',
+    descricao: parseStr(o, 'descricao'),
+    fitid: parseStr(o, 'fitid'),
+    conciliado: parseBool(o, 'conciliado'),
+    fluxo_caixa_id: parseNum(o, 'fluxo_caixa_id') || undefined,
+    movimento_data: parseStr(o, 'movimento_data').slice(0, 10) || undefined,
+    movimento_descricao: parseStr(o, 'movimento_descricao') || undefined,
+    movimento_valor: o['movimento_valor'] != null ? parseNum(o, 'movimento_valor') : undefined,
+    contas_pagar_id: parseNum(o, 'contas_pagar_id') || undefined,
+    contas_receber_id: parseNum(o, 'contas_receber_id') || undefined,
+    lancado_pelo_extrato: parseBool(o, 'lancado_pelo_extrato'),
+  };
+}
+
+/** O extrato importado da conta, com o resumo e o saldo do sistema. */
+export async function getExtratoDaConta(
+  contaBancariaID: number,
+  filtro: { situacao?: SituacaoExtrato; data_inicio?: string; data_fim?: string } = {},
+): Promise<ExtratoDaConta> {
+  const params: Record<string, string> = {};
+  if (filtro.situacao) params.situacao = filtro.situacao;
+  if (filtro.data_inicio) params.data_inicio = filtro.data_inicio;
+  if (filtro.data_fim) params.data_fim = filtro.data_fim;
+  const { data } = await httpClient.get(`${BASE}/conciliacao/${contaBancariaID}/extrato`, { params });
+  const o = unwrapObject(data);
+  const r = unwrapObject(o['resumo']);
+  return {
+    saldo_sistema: parseNum(o, 'saldo_sistema'),
+    resumo: {
+      total: parseNum(r, 'total'),
+      pendentes: parseNum(r, 'pendentes'),
+      conciliados: parseNum(r, 'conciliados'),
+      creditos_pendentes: parseNum(r, 'creditos_pendentes'),
+      debitos_pendentes: parseNum(r, 'debitos_pendentes'),
+    },
+    linhas: unwrapArray(o['linhas']).map((l) => parseLinhaExtrato(l as Obj)),
+  };
+}
+
+/** Movimento do caixa que pode casar com a linha do extrato. */
+export interface CandidatoConciliacao {
+  fluxo_caixa_id: number;
+  data: string;
+  valor: number;
+  tipo: string;
+  descricao: string;
+  /** Documento do título baixado, quando o movimento veio de uma baixa. */
+  documento?: string;
+  contas_pagar_id?: number;
+  contas_receber_id?: number;
+  diferenca_dias: number;
+}
+
+export async function getCandidatosConciliacao(extratoID: number): Promise<CandidatoConciliacao[]> {
+  const { data } = await httpClient.get(`${BASE}/conciliacao/extrato/${extratoID}/candidatos`);
+  return unwrapArray(data).map((raw) => raw as Obj).map((o) => ({
+    fluxo_caixa_id: parseNum(o, 'fluxo_caixa_id'),
+    data: parseStr(o, 'data').slice(0, 10),
+    valor: parseNum(o, 'valor'),
+    tipo: parseStr(o, 'tipo'),
+    descricao: parseStr(o, 'descricao'),
+    documento: parseStr(o, 'documento') || undefined,
+    contas_pagar_id: parseNum(o, 'contas_pagar_id') || undefined,
+    contas_receber_id: parseNum(o, 'contas_receber_id') || undefined,
+    diferenca_dias: parseNum(o, 'diferenca_dias'),
+  }));
+}
+
+/** Casa a linha do extrato com o movimento escolhido. */
+export async function conciliarLinhaExtrato(extratoID: number, fluxoCaixaID: number): Promise<void> {
+  await httpClient.post(`${BASE}/conciliacao/extrato/${extratoID}/conciliar`, { fluxo_caixa_id: fluxoCaixaID });
+}
+
+/** Cria no caixa o movimento da linha (tarifa, IOF, aplicação…) e já o concilia. */
+export async function lancarLinhaExtrato(extratoID: number, descricao?: string): Promise<void> {
+  await httpClient.post(`${BASE}/conciliacao/extrato/${extratoID}/lancar`, { descricao: descricao ?? '' });
+}
+
+/** Solta a linha do movimento; o lançado pelo extrato é apagado. */
+export async function desfazerConciliacao(extratoID: number): Promise<void> {
+  await httpClient.post(`${BASE}/conciliacao/extrato/${extratoID}/desfazer`, {});
+}
+
+/** Roda a conciliação automática de novo (depois de baixar títulos, por exemplo). */
+export async function autoConciliar(contaBancariaID: number): Promise<{ conciliados: number; pendentes: number }> {
+  const { data } = await httpClient.post(`${BASE}/conciliacao/${contaBancariaID}/auto`, {});
+  const o = unwrapObject(data);
+  return { conciliados: parseNum(o, 'conciliados'), pendentes: parseNum(o, 'pendentes') };
 }
 
 /** O que a conferência do arquivo encontrou antes de enviar. */
