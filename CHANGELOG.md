@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.18.2] — 2026-11-16
+
 ## Novidades
 - **Cadastro de cliente (VCLI0500) refeito:** abas *Visão 360* (faturamento, títulos, pedidos e crédito num só lugar), *Crédito* e cadastros de apoio com inativar/reativar. Condição de pagamento, tabela de venda e tipo de NF saíram do cliente: pertencem ao pedido e ao item.
 - **Limite de crédito calculado:** o sistema sugere o limite com nota de 0 a 1000 e classe de risco A–E, explicando cada fator (inclusive o grupo econômico pela raiz do CNPJ). Um valor diferente do sugerido exige justificativa e fica na trilha de auditoria com quem aprovou; acima da tolerância, só ADMIN. Limites manuais antigos vencem em 30 dias para revisão.
