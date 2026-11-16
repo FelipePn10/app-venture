@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## Novidades
+- **Cadastro de cliente (VCLI0500) refeito:** abas *Visão 360* (faturamento, títulos, pedidos e crédito num só lugar), *Crédito* e cadastros de apoio com inativar/reativar. Condição de pagamento, tabela de venda e tipo de NF saíram do cliente: pertencem ao pedido e ao item.
+- **Limite de crédito calculado:** o sistema sugere o limite com nota de 0 a 1000 e classe de risco A–E, explicando cada fator (inclusive o grupo econômico pela raiz do CNPJ). Um valor diferente do sugerido exige justificativa e fica na trilha de auditoria com quem aprovou; acima da tolerância, só ADMIN. Limites manuais antigos vencem em 30 dias para revisão.
+- **Pedido de compra do cliente:** cliente que exige nº do pedido de compra não tem o pedido confirmado sem ele, e o número vai na NF-e.
+- **Preferência de nome do cliente:** escolha, na engrenagem do painel, se as listas mostram razão social ou nome fantasia.
+- **Tipo de NF (VFIS0305)** ganhou tela própria no módulo Fiscal, só com os campos que o cálculo usa.
+- **NF-e com transportadora e entrega:** a nota leva a transportadora (a preferencial do cliente por padrão), a modalidade de frete correta e o local de entrega quando ele difere do endereço do cliente. A prévia avisa IE com dígito errado e transportadora ou entrega incompletas.
+- **Transportadora de verdade** em romaneio, carga, pedido de compra (com redespacho) e aviso de recebimento: os campos buscam no cadastro de transportadoras. Em branco, o romaneio herda a do cliente (ou do pedido de compra) e o aviso, a do pedido de compra.
+
+## Correções
+- Os campos de *Portador (cobrança)* das telas de venda deixaram de se chamar "Transportadora".
+- Frete comercial do orçamento (FOB CONTRAT., RETIRA, CORTESIA…) não trava mais o faturamento do pedido convertido.
+- Faturamento parcial e certificado de qualidade exigidos pelo cliente são conferidos ao faturar.
+- O valor de cada linha no faturamento do pedido é arredondado ao centavo, e as buscas mostram no máximo 2 casas.
+- Cliente inativo não recebe pedido novo, conversão de orçamento nem contrato de venda.
+
 ## [v1.18.1] — 2026-11-13
 
 ## Correções

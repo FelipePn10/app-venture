@@ -47,7 +47,10 @@ export interface PurchaseOrderDTO {
   freight_value_mode?: string;
   freight_value?: number;
   carrier_code?: number;
+  /** Transportadora (cadastro de transportadoras); carrier_code é o portador legado. */
+  shipping_carrier_id?: number;
   redispatch_carrier_code?: number;
+  redispatch_shipping_carrier_id?: number;
   redispatch_freight_type?: string;
   redispatch_freight_value?: number;
   talao_number?: string;
@@ -241,6 +244,8 @@ function parseOrder(raw: unknown): PurchaseOrderDTO {
     freight_value_mode: parseStr(o, 'freight_value_mode', 'FreightValueMode') || undefined,
     freight_value: parseNum(o, 'freight_value', 'FreightValue'),
     carrier_code: parseNum(o, 'carrier_code', 'CarrierCode') || undefined,
+    shipping_carrier_id: parseNum(o, 'shipping_carrier_id') || undefined,
+    redispatch_shipping_carrier_id: parseNum(o, 'redispatch_shipping_carrier_id') || undefined,
     redispatch_carrier_code: parseNum(o, 'redispatch_carrier_code', 'RedispatchCarrierCode') || undefined,
     redispatch_freight_type: parseStr(o, 'redispatch_freight_type', 'RedispatchFreightType') || undefined,
     redispatch_freight_value: parseNum(o, 'redispatch_freight_value', 'RedispatchFreightValue'),

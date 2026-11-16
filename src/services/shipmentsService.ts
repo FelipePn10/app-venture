@@ -33,6 +33,8 @@ export interface ShipmentDTO {
   purchase_order_code?: number;
   production_order_code?: number;
   carrier_code?: number;
+  /** Transportadora (cadastro de transportadoras); carrier_code é o portador legado. */
+  shipping_carrier_id?: number;
   status?: string;
   total_volumes?: number;
   total_net_weight?: number;
@@ -87,6 +89,7 @@ export interface ShipmentEventDTO {
 }
 
 export interface TransportDTO {
+  shipping_carrier_id?: number;
   freight_modality?: FreightModality;
   freight_value?: number;
   insurance_value?: number;
@@ -117,6 +120,7 @@ function parseShipment(raw: unknown): ShipmentDTO {
     purchase_order_code: parseNum(o, 'purchase_order_code', 'PurchaseOrderCode') || undefined,
     production_order_code: parseNum(o, 'production_order_code', 'ProductionOrderCode') || undefined,
     carrier_code: parseNum(o, 'carrier_code', 'CarrierCode') || undefined,
+    shipping_carrier_id: parseNum(o, 'shipping_carrier_id') || undefined,
     status: parseStr(o, 'status', 'Status'),
     total_volumes: parseNum(o, 'total_volumes', 'TotalVolumes'),
     total_net_weight: parseNum(o, 'total_net_weight', 'total_weight', 'TotalNetWeight'),
@@ -275,7 +279,7 @@ export const LOAD_STATUS_LABEL: Record<LoadStatus, string> = {
   PLANNED: 'Planejada', RELEASED: 'Liberada', LOADING: 'Carregando', LOADED: 'Carregada', SHIPPED: 'Despachada', CANCELLED: 'Cancelada',
 };
 export interface LoadDTO {
-  code: number; status: LoadStatus; description?: string; carrier_code?: number; vehicle_plate?: string; driver_name?: string;
+  code: number; status: LoadStatus; description?: string; carrier_code?: number; shipping_carrier_id?: number; vehicle_plate?: string; driver_name?: string;
   driver_document?: string; route_code?: string; origin?: string; destination?: string; dispatch_box_code?: string;
   planned_ship_date?: string; estimated_delivery?: string; notes?: string;
   total_shipments: number; total_fiscal_notes: number; total_volumes: number; total_gross_weight: number;
@@ -291,7 +295,7 @@ function parseLoad(raw: unknown): LoadDTO {
   const s = (k: string) => parseStr(o, k) || undefined;
   return {
     code: parseNum(o, 'code'), status: (parseStr(o, 'status') || 'PLANNED') as LoadStatus, description: s('description'),
-    carrier_code: parseNum(o, 'carrier_code') || undefined, vehicle_plate: s('vehicle_plate'), driver_name: s('driver_name'),
+    carrier_code: parseNum(o, 'carrier_code') || undefined, shipping_carrier_id: parseNum(o, 'shipping_carrier_id') || undefined, vehicle_plate: s('vehicle_plate'), driver_name: s('driver_name'),
     driver_document: s('driver_document'), route_code: s('route_code'), origin: s('origin'), destination: s('destination'),
     dispatch_box_code: s('dispatch_box_code'), planned_ship_date: s('planned_ship_date')?.slice(0, 10),
     estimated_delivery: s('estimated_delivery')?.slice(0, 10), notes: s('notes'),
@@ -320,7 +324,7 @@ export async function getLoad(code: number): Promise<LoadDTO> {
 export async function createLoad(dto: Partial<LoadDTO>): Promise<LoadDTO> {
   const vazio = (v?: string) => (v && v.trim() ? v.trim() : undefined);
   const { data } = await httpClient.post(`${BASE}/loads`, {
-    description: vazio(dto.description), carrier_code: dto.carrier_code || undefined, vehicle_plate: vazio(dto.vehicle_plate),
+    description: vazio(dto.description), carrier_code: dto.carrier_code || undefined, shipping_carrier_id: dto.shipping_carrier_id || undefined, vehicle_plate: vazio(dto.vehicle_plate),
     driver_name: vazio(dto.driver_name), driver_document: vazio(dto.driver_document), route_code: vazio(dto.route_code),
     origin: vazio(dto.origin), destination: vazio(dto.destination), dispatch_box_code: vazio(dto.dispatch_box_code),
     planned_ship_date: vazio(dto.planned_ship_date), estimated_delivery: vazio(dto.estimated_delivery), notes: vazio(dto.notes),

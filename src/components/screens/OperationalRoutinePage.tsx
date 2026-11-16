@@ -6,7 +6,7 @@ import { downloadBlob } from "@/services/fileDownload";
 import { fieldLabel } from "@/utils/fieldLabels";
 import { useAuthStore } from "@/store/authStore";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadConsumerServiceCalls, loadCustomers, loadFiscalExits, loadShipmentLoads, loadEmployees, loadItems, loadMachines, loadMarketSegments, loadRecurringAdjustments, loadRecurringSales, loadRepresentativeInterestClassifications, loadRepresentatives, loadSalesOrders, loadSalesPlans, loadSalesPricePolicies, loadSalesTables, loadSuppliers, loadTechnicalAssistanceCalls, loadWarehouses, loadPdmGroups, loadCharacteristics, loadOperations, loadCarriers, loadCostCenters, loadCostCentersById, loadMachinesById, loadMarketSegmentsById, type LookupLoader } from "@/services/lookups";
+import { loadConsumerServiceCalls, loadCustomers, loadFiscalExits, loadShipmentLoads, loadEmployees, loadItems, loadMachines, loadMarketSegments, loadRecurringAdjustments, loadRecurringSales, loadRepresentativeInterestClassifications, loadRepresentatives, loadSalesOrders, loadSalesPlans, loadSalesPricePolicies, loadSalesTables, loadSuppliers, loadTechnicalAssistanceCalls, loadWarehouses, loadPdmGroups, loadCharacteristics, loadOperations, loadCarriers, loadShippingCarriers, loadCostCenters, loadCostCentersById, loadMachinesById, loadMarketSegmentsById, type LookupLoader } from "@/services/lookups";
 import { listNotificationUsers } from "@/services/notificationService";
 
 export type RoutineField = {
@@ -170,7 +170,9 @@ function lookupFor(name: string, label = ""): LookupLoader | undefined {
   if (/representative|representante/.test(key)) return loadRepresentatives;
   if (/customer|cliente/.test(key)) return loadCustomers;
   if (/warehouse|almoxarifado|depósito/.test(key)) return loadWarehouses;
-  if (/carrier|transportadora/.test(key)) return loadCarriers;
+  // shipping_carrier_id é o cadastro de transportadoras; carrier_code, o portador.
+  if (/shipping.?carrier|transportadora/.test(key)) return loadShippingCarriers;
+  if (/carrier|portador/.test(key)) return loadCarriers;
   return undefined;
 }
 

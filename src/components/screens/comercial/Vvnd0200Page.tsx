@@ -16,11 +16,12 @@ import {
   createSalesOrderItem,
   cancelSalesOrderItem,
   updateSalesOrderItem,
+  setSalesOrderCustomerPO,
   PRESENCE_INDICATORS,
 } from "@/services/salesOrderService";
-import { errMessage, parseNum } from "@/services/fiscalShared";
+import { errMessage, parseNum, parseStr } from "@/services/fiscalShared";
 import { findSalesTablesForItem } from "@/services/salesPricingService";
-import { getCustomer } from "@/services/customerService";
+import { getCustomer, avisosDoCliente } from "@/services/customerService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
@@ -69,6 +70,8 @@ export function Vvnd0200Page(): JSX.Element {
   const [orders, setOrders] = useState<SalesOrderDTO[]>([]);
   const [selected, setSelected] = useState<SalesOrderDTO | null>(null);
   const [newOrder, setNewOrder] = useState<SalesOrderDTO>(EMPTY_ORDER);
+  /** O cliente escolhido exige o número do pedido de compra (VCLI0500). */
+  const [exigePC, setExigePC] = useState(false);
   const [newItem, setNewItem] = useState<SalesOrderItemDTO>(EMPTY_ITEM);
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -162,16 +165,33 @@ export function Vvnd0200Page(): JSX.Element {
     setOrders(await searchSalesOrders({ status: filterStatus || undefined, customer_code: filterCustomer ? Number(filterCustomer) : undefined, ...(campo ? { [campo]: valor } : {}) }));
   });
 
-  const novoPedido = () => { setCreating(true); setSelected(null); setNewOrder(EMPTY_ORDER); setTab("dados"); setFeedback(null); };
+  const novoPedido = () => { setCreating(true); setSelected(null); setNewOrder(EMPTY_ORDER); setExigePC(false); setTab("dados"); setFeedback(null); };
   const selecionarCliente = (code: string | number | undefined) => {
     const customerCode = Number(code ?? 0); setO("customer_code", customerCode);
     if (customerCode) void run(async () => {
+      // Do cadastro vêm portador e frete; preço é da tabela do item e a
+      // condição de pagamento se negocia no pedido.
       const customer = await getCustomer(customerCode);
-      const tableCode = parseNum(customer, "sales_table_code", "SalesTableCode", "sales_table_id", "SalesTableID");
-      setO("price_table_code", tableCode || undefined);
-      if (!tableCode) setFeedback({ type: "info", message: "O cliente não possui tabela de venda padrão. Selecione uma tabela nas condições comerciais." });
+      const carrier = parseNum(customer, "carrier_code");
+      const freight = parseStr(customer, "freight_type");
+      setNewOrder((p) => ({
+        ...p,
+        carrier_code: p.carrier_code || carrier || undefined,
+        freight_type: p.freight_type || freight || undefined,
+      }));
+      setExigePC(customer["requires_customer_po"] === true);
+      const avisos = avisosDoCliente(customer);
+      if (avisos.length) setFeedback({ type: "info", message: avisos.join(" · ") });
     });
   };
+  const alterarPedidoDeCompra = () => run(async () => {
+    if (!selected?.code) return;
+    const po = await pedirTexto({ titulo: "Pedido de compra do cliente", rotulo: "Número (até 15 caracteres)", valorInicial: selected.customer_po_number ?? "", maximo: 15, opcional: true, rotuloConfirmar: "Gravar" });
+    if (po === null) return;
+    await setSalesOrderCustomerPO(selected.code, po.trim());
+    await refreshSelected(selected.code);
+    setFeedback({ type: "success", message: po.trim() ? "Pedido de compra do cliente gravado." : "Pedido de compra do cliente removido." });
+  });
   const abrir = (code?: number) => { if (!code) return; setCreating(false); setTab("dados"); void run(async () => { await refreshSelected(code); }); };
 
   const criarPedido = () => run(async () => {
@@ -409,6 +429,7 @@ export function Vvnd0200Page(): JSX.Element {
                   <div className="erp-fieldset-body">
                     <div className="erp-field erp-c3"><label className="erp-label">Condição de pagamento</label><LookupField value={newOrder.payment_term_code} loader={loadPaymentConditions} entityLabel="condição de pagamento" placeholder="Usar padrão do cliente" onChange={(code) => setO("payment_term_code", code ?? undefined)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" type="number" value={newOrder.commission_pct || ""} onChange={(e) => setO("commission_pct", Number(e.target.value))} /></div>
+                    <div className="erp-field erp-c3"><label className={`erp-label${exigePC ? " erp-req" : ""}`}>Pedido de compra do cliente</label><input className="erp-input" maxLength={15} value={newOrder.customer_po_number ?? ""} onChange={(e) => setO("customer_po_number", e.target.value || undefined)} /><span className="erp-field-hint">{exigePC ? "Este cliente exige: sem ele o pedido não é confirmado." : "Vai para a NF-e (xPed)."}</span></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label><select className="erp-input" value={newOrder.finalidade_compra ?? ""} onChange={(e) => setO("finalidade_compra", e.target.value || undefined)}>{FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "Do cadastro do cliente" : f.label}</option>)}</select><span className="erp-field-hint">Define a tributação: uso, consumo ou ativo é consumidor final.</span></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Emissão</label><input className="erp-input" type="date" value={newOrder.emission_date ?? ""} onChange={(e) => setO("emission_date", e.target.value)} /></div>
                     <div className="erp-field erp-c3"><label className="erp-label">Entrega</label><input className="erp-input" type="date" value={newOrder.delivery_date ?? ""} onChange={(e) => setO("delivery_date", e.target.value)} /></div>
@@ -437,7 +458,7 @@ export function Vvnd0200Page(): JSX.Element {
                 <div className="erp-fieldset">
                   <div className="erp-fieldset-head">Transporte e expedição</div>
                   <div className="erp-fieldset-body">
-                    <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField value={newOrder.carrier_code} loader={loadCarriers} entityLabel="transportadora" placeholder="Opcional" clearable onChange={(code) => setO("carrier_code", code ? Number(code) : undefined)} /></div>
+                    <div className="erp-field erp-c3"><label className="erp-label">Portador (cobrança)</label><LookupField value={newOrder.carrier_code} loader={loadCarriers} entityLabel="portador" placeholder="Opcional" clearable onChange={(code) => setO("carrier_code", code ? Number(code) : undefined)} /></div>
                     <div className="erp-field erp-c2">
                       <label className="erp-label">Frete</label>
                       <select className="erp-input" value={newOrder.freight_type ?? ""} onChange={(e) => setO("freight_type", e.target.value || undefined)}>
@@ -501,6 +522,9 @@ export function Vvnd0200Page(): JSX.Element {
                         <div className="erp-field erp-c3"><label className="erp-label">Comissão %</label><input className="erp-input num" value={selected.commission_pct ?? 0} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Finalidade da compra</label><input className="erp-input" value={FINALIDADES_COMPRA.find((f) => f.value === (selected.finalidade_compra ?? ""))?.label.replace("Deduzir pela inscrição estadual", "Do cadastro do cliente") ?? "—"} readOnly /></div>
                         <div className="erp-field erp-c3"><label className="erp-label">Moeda</label><input className="erp-input" value={selected.currency_code ?? "—"} readOnly /></div>
+                        <div className="erp-field erp-c3"><label className="erp-label">Pedido de compra do cliente</label>
+                          <div style={{ display: "flex", gap: 6 }}><input className="erp-input" value={selected.customer_po_number ?? "—"} readOnly />
+                            {selected.status !== "F" && selected.status !== "CANCELLED" && <button className="erp-btn erp-btn-sm" onClick={() => void alterarPedidoDeCompra()} disabled={busy}>Alterar</button>}</div></div>
                       </div>
                     </div>
                     <div className="erp-fieldset">

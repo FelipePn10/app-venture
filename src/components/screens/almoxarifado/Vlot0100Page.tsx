@@ -7,6 +7,8 @@ import {
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
+import { loadCustomers } from "@/services/lookups";
+import { LookupField } from "@/components/ui/LookupField";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type Capa = { application: string; description: string; item_code: string; customer_code: string; zero_on_year_change: boolean };
@@ -149,7 +151,7 @@ export function Vlot0100Page(): JSX.Element {
                   </select></div>
                 <div className="erp-field erp-c5"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={capa.description} onChange={(e) => setCapa((c) => ({ ...c, description: e.target.value }))} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Item</label><input className="erp-input num" value={capa.item_code} onChange={(e) => setCapa((c) => ({ ...c, item_code: e.target.value }))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Cliente</label><input className="erp-input num" value={capa.customer_code} onChange={(e) => setCapa((c) => ({ ...c, customer_code: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><LookupField value={Number(capa.customer_code) || undefined} onChange={(v) => setCapa((c) => ({ ...c, customer_code: v ? String(v) : "" }))} loader={loadCustomers} entityLabel="cliente" placeholder="Qualquer cliente" clearable /></div>
                 <div className="erp-field erp-c6"><label className="erp-label"><input type="checkbox" checked={capa.zero_on_year_change} onChange={(e) => setCapa((c) => ({ ...c, zero_on_year_change: e.target.checked }))} /> Reiniciar a sequência na virada do ano</label></div>
                 <div className="erp-field erp-c6" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarCapa} disabled={busy}>{sel?.id ? "Salvar alterações" : "Criar"}</button></div>
               </div></div>
@@ -192,7 +194,7 @@ export function Vlot0100Page(): JSX.Element {
                     {APPLICATIONS.map((a) => <option key={a} value={a}>{enumLabel(a)}</option>)}
                   </select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Item</label><input className="erp-input num" value={contexto.item_code} onChange={(e) => setContexto((c) => ({ ...c, item_code: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><input className="erp-input num" value={contexto.customer_code} onChange={(e) => setContexto((c) => ({ ...c, customer_code: e.target.value }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><LookupField value={Number(contexto.customer_code) || undefined} onChange={(v) => setContexto((c) => ({ ...c, customer_code: v ? String(v) : "" }))} loader={loadCustomers} entityLabel="cliente" placeholder="Qualquer cliente" clearable /></div>
                 <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn" onClick={gerarPeloContexto} disabled={busy}>Gerar código de lote</button></div>
                 {gerado && <div className="erp-field erp-c12"><label className="erp-label">Último lote gerado</label><input className="erp-input" value={gerado} readOnly /></div>}
               </div></div>

@@ -12,7 +12,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { enumLabel } from "@/utils/enumLabels";
 import {
-  loadItems, loadSuppliers, loadWarehouses, loadCarriers,
+  loadItems, loadSuppliers, loadWarehouses, loadShippingCarriers,
   loadPaymentConditions, loadCostCenters, loadItemClassifications,
   loadInvoiceTypes, loadEmployees, loadSalesOrders,
   loadPurchaseRequisitions, loadPurchaseQuotations, loadSupplierContracts,
@@ -588,13 +588,13 @@ export function Vpdc0200Page(): JSX.Element {
                     </div>
                     <div className="erp-field erp-c3">
                       <label className="erp-label">Transportadora</label>
-                      <LookupField value={capa.carrier_code} onChange={(c) => setC("carrier_code", c ? Number(c) : undefined)}
-                        loader={loadCarriers} entityLabel="transportadora" placeholder="Opcional" clearable />
+                      <LookupField value={capa.shipping_carrier_id} onChange={(c) => setC("shipping_carrier_id", c ? Number(c) : undefined)}
+                        loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Opcional" clearable />
                     </div>
                     <div className="erp-field erp-c3">
                       <label className="erp-label">Redespacho — transportadora</label>
-                      <LookupField value={capa.redispatch_carrier_code} onChange={(c) => setC("redispatch_carrier_code", c ? Number(c) : undefined)}
-                        loader={loadCarriers} entityLabel="transportadora" placeholder="Quando há segundo trecho" clearable />
+                      <LookupField value={capa.redispatch_shipping_carrier_id} onChange={(c) => setC("redispatch_shipping_carrier_id", c ? Number(c) : undefined)}
+                        loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Quando há segundo trecho" clearable />
                     </div>
                     <div className="erp-field erp-c2">
                       <label className="erp-label">Redespacho — frete</label>

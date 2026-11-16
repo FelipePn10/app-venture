@@ -26,7 +26,7 @@ check('VPDC0200 tem tela própria', /VPDC0200: <Vpdc0200Page \/>/.test(host));
 check('VPDC0200 não pede mais JSON cru', !/VPDC0200: routine/.test(rotinas));
 check('pedido tem capa, itens e transporte', /"capa"/.test(pedido) && /"itens"/.test(pedido) && /"transporte"/.test(pedido));
 check('pedido usa lookup de fornecedor, item, almoxarifado e transportadora',
-  /loadSuppliers/.test(pedido) && /loadItems/.test(pedido) && /loadWarehouses/.test(pedido) && /loadCarriers/.test(pedido));
+  /loadSuppliers/.test(pedido) && /loadItems/.test(pedido) && /loadWarehouses/.test(pedido) && /loadShippingCarriers/.test(pedido));
 check('pedido mostra o saldo por item', /cancelled_qty/.test(pedido) && /Saldo/.test(pedido));
 // Os totais vêm do backend (a mesma conta que a alçada avalia); somar na tela
 // escondia que a capa gravava 0 e a alçada aprovava tudo.

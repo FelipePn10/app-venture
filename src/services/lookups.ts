@@ -7,6 +7,8 @@ import { listItems } from '@/services/itemService';
 import { listSalesOrders } from '@/services/salesOrderService';
 import { listSuppliers, listSupplierTypes } from '@/services/supplierService';
 import { listRepresentatives, listRepresentativeSalesPlans } from '@/services/representativeService';
+import { listShippingCarriers } from '@/services/shippingCarrierService';
+import { nomeDoCliente } from '@/services/preferenciasService';
 import { listarGrupos, listarModificadores } from '@/services/pdmService';
 import { listMachines } from '@/services/machineService';
 import { listConsumers, listCalls as listConsumerCalls } from '@/services/consumerServiceService';
@@ -180,10 +182,28 @@ export const loadInvoiceTypesById = cached(async () =>
   (await loadEndpointById('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']))
     .map((o) => ({ ...o, sub: o.sub ? enumLabel(o.sub) : o.sub })));
 export const loadMarketSegmentsById = cached(() => loadEndpointById('/api/customers/support/market-segments', ['description', 'Description', 'name', 'Name']));
+/** Tipos de imposto pelo id (o filtro das regras da VFIS0320 grava o id). */
+/** Portadores pelo id (a política comercial referencia carriers.id). */
+export const loadCarriersById = cached(() => loadEndpointById('/api/customers/support/carriers', ['description', 'Description'], ['billing_type', 'BillingType']));
+export const loadTaxTypesById = cached(() => loadEndpointById('/api/customers/support/tax-types', ['description', 'Description']));
 export const loadIcmsApuracaoLinesById = cached(() => loadEndpointById('/api/fiscal/support/linhas-apuracao-icms/', ['description', 'Description'], ['line_type']));
 export const loadIcmsAdjustmentCodesById = cached(() => loadEndpointById('/api/fiscal/support/codigos-ajuste-apuracao-icms/', ['description', 'Description'], ['uf']));
 export const loadCostCentersById = cached(() => loadEndpointById('/api/cost-center/list', ['description', 'Description', 'name', 'Name']));
-export const loadCustomersById = cached(() => loadEndpointById('/api/customers/', ['name', 'Name', 'trade_name'], ['document_number']));
+/** Clientes pela chave interna; o nome segue a preferência do usuário (razão social ou fantasia). */
+export const loadCustomersById = cached(async () => {
+  const { data } = await httpClient.get<unknown>('/api/customers/');
+  const out: LookupOption[] = [];
+  for (const raw of unwrapArray(data)) {
+    const o = unwrapObject(raw);
+    const id = o ? parseNum(o, 'id', 'ID') : 0;
+    if (!o || !id) continue;
+    const code = parseStr(o, 'code', 'Code');
+    const { nome, outro } = nomeDoCliente({ name: parseStr(o, 'name', 'Name'), trade_name: parseStr(o, 'trade_name', 'TradeName') }, `#${code || id}`);
+    const doc = parseStr(o, 'document_number');
+    out.push({ code: id, label: code ? `${code} — ${nome}` : nome, sub: [outro, doc].filter(Boolean).join(' · ') || undefined, search: `${outro} ${doc}`, inactive: o['is_active'] === false });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+});
 export const loadItemsById = cached(async () =>
   (await listItems()).filter((i) => i.id).map((i) => ({
     code: i.id!,
@@ -208,12 +228,17 @@ export const loadSuppliersById = cached(async () =>
  * identificando os pedidos que já existem.
  */
 export const loadCustomers = cached(async () =>
-  (await listCustomers()).map((c) => ({
-    code: c.code ?? 0,
-    label: c.name || c.trade_name || `Cliente ${c.code}`,
-    sub: c.document_number || c.trade_name || undefined,
-    inactive: c.blocked === true,
-  })).filter((o) => o.code),
+  (await listCustomers()).map((c) => {
+    // O nome mostrado segue a preferência do usuário; a busca acha pelos dois.
+    const { nome, outro } = nomeDoCliente(c, `Cliente ${c.code}`);
+    return {
+      code: c.code ?? 0,
+      label: nome,
+      sub: [outro, c.document_number].filter(Boolean).join(' · ') || undefined,
+      search: `${outro} ${c.document_number ?? ''}`,
+      inactive: c.blocked === true,
+    };
+  }).filter((o) => o.code),
 );
 
 export const loadConsumers = cached(async () =>
@@ -685,6 +710,16 @@ export const loadCostCenters = cached(() =>
   loadEndpoint('/api/cost-center/list', ['description', 'Description', 'name', 'Name'], ['code', 'Code']),
 );
 
+/** Transportadoras (VEXP): a chave é o id do cadastro; o código mostrado é o do fornecedor. */
+export const loadShippingCarriers = cached(async () =>
+  (await listShippingCarriers({ onlyActive: true })).filter((c) => c.id).map((c) => ({
+    code: c.id ?? 0,
+    displayCode: c.supplier_code,
+    label: c.supplier_name || `Transportadora ${c.supplier_code}`,
+    sub: c.supplier_document || undefined,
+  })),
+);
+
 export const loadCarriers = cached(() =>
   loadEndpoint('/api/customers/support/carriers', ['Description', 'description'], ['BillingType', 'billing_type']),
 );
@@ -726,7 +761,7 @@ export const loadSalesOrders = cached(async () =>
     sub: [
       o.customer_code ? `Cliente ${o.customer_code}` : '',
       o.status ? STATUS_PEDIDO[o.status] ?? o.status : '',
-      o.total_net ? `R$ ${o.total_net.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '',
+      o.total_net ? `R$ ${o.total_net.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '',
     ].filter(Boolean).join(' · ') || undefined,
     inactive: o.status === 'CANCELLED',
   })).filter((o) => o.code),
@@ -879,7 +914,7 @@ export const loadFiscalExits = cached(async () => {
       code: e.id,
       label: `NF ${e.numero_nf}${e.serie ? `/${e.serie}` : ''}`,
       sub: [e.razao_social_destinatario, e.data_emissao?.slice(0, 10),
-        e.valor_total ? `R$ ${e.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '']
+        e.valor_total ? `R$ ${e.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '']
         .filter(Boolean).join(' · ') || undefined,
       inactive: /cancel/i.test(e.status || ''),
     }))
@@ -895,7 +930,7 @@ export const loadFiscalEntries = cached(async () => {
       code: e.id,
       label: `NF ${e.numero_nf}${e.serie ? `/${e.serie}` : ''}`,
       sub: [e.razao_social_emitente, e.data_entrada?.slice(0, 10),
-        e.valor_total ? `R$ ${e.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '']
+        e.valor_total ? `R$ ${e.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '']
         .filter(Boolean).join(' · ') || undefined,
       inactive: /cancel/i.test(e.status || ''),
     }))

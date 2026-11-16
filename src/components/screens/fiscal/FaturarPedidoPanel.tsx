@@ -3,7 +3,7 @@ import { type PedidoParaFaturar, previaFaturamentoPedido, faturarPedido } from "
 import { type FiscalExit } from "@/services/nfeService";
 import { errMessage } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadInvoiceTypesById, loadSalesOrders } from "@/services/lookups";
+import { loadInvoiceTypesById, loadSalesOrders, loadShippingCarriers } from "@/services/lookups";
 import { FINALIDADES_COMPRA } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -47,6 +47,8 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
   const [desconto, setDesconto] = useState<string>("");
   const [finalidade, setFinalidade] = useState("");
   const [tipoNota, setTipoNota] = useState<number | undefined>();
+  const [tipoFrete, setTipoFrete] = useState("");
+  const [transportadora, setTransportadora] = useState<number | undefined>();
   const [busy, setBusy] = useState(false);
 
   async function carregar(code?: number) {
@@ -59,11 +61,13 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
       setQtds(Object.fromEntries(p.itens.map((i) => [i.sales_order_item_code, i.quantidade_pendente])));
       setCfop(p.cfop_sugerido); setNatureza(p.natureza_sugerida);
       setFrete(""); setSeguro(""); setDesconto(""); setFinalidade(""); setTipoNota(undefined);
+      setTipoFrete(p.tipo_frete_padrao ?? ""); setTransportadora(p.shipping_carrier_id);
     } catch (e) { onFeedback({ type: "error", message: errMessage(e) }); }
     finally { setBusy(false); }
   }
 
-  const produtos = previa ? round2(previa.itens.reduce((s, i) => s + (qtds[i.sales_order_item_code] ?? 0) * i.preco_unitario, 0)) : 0;
+  // Linha a linha, como a nota: a soma arredondada no fim diverge em centavos.
+  const produtos = previa ? round2(previa.itens.reduce((s, i) => s + round2((qtds[i.sales_order_item_code] ?? 0) * i.preco_unitario), 0)) : 0;
   const totalPedidoPendente = previa?.valor_pendente ?? 0;
   const parcial = previa ? previa.itens.some((i) => (qtds[i.sales_order_item_code] ?? 0) < i.quantidade_pendente) : false;
   const totalPedido = previa ? previa.itens.reduce((s, i) => s + i.quantidade_pedida * i.preco_unitario, 0) : 0;
@@ -89,6 +93,8 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
         valor_desconto: desconto === "" ? undefined : Number(desconto),
         finalidade_compra: finalidade || undefined,
         invoice_type_id: tipoNota,
+        tipo_frete: tipoFrete || undefined,
+        shipping_carrier_id: tipoFrete === "SEM_FRETE" ? undefined : transportadora,
         itens: parcial ? itens : undefined,
       });
       onCriada(nf);
@@ -198,6 +204,18 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
                 </select></div>
               <div className="erp-field erp-c3"><label className="erp-label">Tipo de nota</label>
                 <LookupField value={tipoNota} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable onChange={(c) => setTipoNota(c ? Number(c) : undefined)} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Responsável pelo frete</label>
+                <select className="erp-input" value={tipoFrete} onChange={(e) => setTipoFrete(e.target.value)}>
+                  <option value="">Pelo valor do frete</option>
+                  <option value="CIF">CIF — remetente paga</option>
+                  <option value="FOB">FOB — destinatário paga</option>
+                  <option value="TERCEIROS">Terceiros</option>
+                  <option value="SEM_FRETE">Sem frete (retira)</option>
+                </select></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label>
+                <LookupField value={transportadora} loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Nenhuma" clearable disabled={tipoFrete === "SEM_FRETE"}
+                  onChange={(c) => setTransportadora(c ? Number(c) : undefined)} /></div>
+              {previa.local_entrega && <div className="erp-field erp-c6"><span className="erp-field-hint">Entrega em outro endereço do cliente: <strong>{previa.local_entrega}</strong> (vai no grupo de local de entrega da NF-e).</span></div>}
               <div className="erp-field erp-c6"><span className="erp-field-hint">Em branco, frete, seguro e desconto do pedido entram na proporção do que está sendo faturado. Os impostos são calculados na criação da nota e conferidos na prévia antes da transmissão.</span></div>
               <div className="erp-field erp-c12" style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button className="erp-btn erp-btn-primary" onClick={() => void gerar()} disabled={busy || !previa.pode_faturar || produtos <= 0}>

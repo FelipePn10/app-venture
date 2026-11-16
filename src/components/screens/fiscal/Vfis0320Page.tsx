@@ -8,7 +8,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCustomers, loadInvoiceTypesById, loadItems, loadLegalDevicesById, loadNcmTables, loadSuppliers } from "@/services/lookups";
+import { loadCustomers, loadInvoiceTypesById, loadItems, loadLegalDevicesById, loadNcmTables, loadSuppliers, loadTaxTypesById } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const OPS: OperationType[] = ["AMBAS", "ENTRADA", "SAIDA", "CUSTOS"];
@@ -135,7 +135,9 @@ export function Vfis0320Page(): JSX.Element {
                 onChange={(c) => setF("supplier_code", c ? Number(c) : undefined)} />
               <span className="erp-hint">Só para regra de entrada: regra com fornecedor não vale na nota de saída.</span></div>
             <div className="erp-field erp-c3"><label className="erp-label">Estabelecimento do cliente</label>
-              <input className="erp-input num" type="number" value={form.customer_establishment_code ?? ""} onChange={(e) => setF("customer_establishment_code", e.target.value ? Number(e.target.value) : undefined)} /></div>
+              <LookupField value={form.customer_establishment_code} loader={loadCustomers} entityLabel="estabelecimento do cliente" placeholder="Todos" clearable onChange={(c) => setF("customer_establishment_code", c ? Number(c) : undefined)} /></div>
+            <div className="erp-field erp-c3"><label className="erp-label">Tipo de imposto do cliente</label>
+              <LookupField value={form.tax_type_id} loader={loadTaxTypesById} entityLabel="tipo de imposto" placeholder="Todos" clearable onChange={(c) => setF("tax_type_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo de NF — saída</label>
               <LookupField value={form.invoice_type_exit_id} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Todos" clearable onChange={(c) => setF("invoice_type_exit_id", c ? Number(c) : undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">Tipo de NF — entrada</label>

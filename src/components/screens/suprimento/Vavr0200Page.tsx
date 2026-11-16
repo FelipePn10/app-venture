@@ -11,11 +11,11 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCarriers, loadEstablishments, loadItems, loadSuppliers } from "@/services/lookups";
+import { loadShippingCarriers, loadItems, loadSuppliers } from "@/services/lookups";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 const dt = (s?: string) => (s ? s.replace("T", " ").slice(0, 16) : "—");
-const CAPA_INI = { enterprise_code: "1", supplier_code: "", purchase_order_code: "", carrier_code: "", dock: "", scheduled_at: "", invoice_number: "", notes: "" };
+const CAPA_INI = { supplier_code: "", purchase_order_code: "", shipping_carrier_id: "", dock: "", scheduled_at: "", invoice_number: "", notes: "" };
 const ITEM_INI = { item_code: "", mask: "", expected_qty: "", unit: "" };
 const DIV_INI = { item_code: "", divergence_type: "SHORTAGE" as DivergenceType, expected_qty: "", actual_qty: "", affects_supplier_score: true };
 
@@ -49,10 +49,9 @@ export function Vavr0200Page(): JSX.Element {
     if (!capa.supplier_code && !capa.purchase_order_code) { setFeedback({ type: "error", message: "Informe fornecedor ou pedido de compra." }); return; }
     if (items.length === 0) { setFeedback({ type: "error", message: "Inclua ao menos um item esperado." }); return; }
     const n = await createReceivingNotice({
-      enterprise_code: Number(capa.enterprise_code) || 1,
       supplier_code: Number(capa.supplier_code) || undefined,
       purchase_order_code: Number(capa.purchase_order_code) || undefined,
-      carrier_code: Number(capa.carrier_code) || undefined,
+      shipping_carrier_id: Number(capa.shipping_carrier_id) || undefined,
       dock: capa.dock.trim() || undefined,
       scheduled_at: capa.scheduled_at ? new Date(capa.scheduled_at).toISOString() : undefined,
       invoice_number: capa.invoice_number.trim() || undefined,
@@ -103,9 +102,8 @@ export function Vavr0200Page(): JSX.Element {
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
         <div className="erp-fieldset"><div className="erp-fieldset-head">Novo aviso — <span style={{fontWeight:400,opacity:0.65}}>agenda de doca e conferência antes da NF</span></div><div className="erp-fieldset-body">
-          <div className="erp-field erp-c3"><label className="erp-label">Empresa</label><LookupField<string> value={capa.enterprise_code || undefined} loader={loadEstablishments} entityLabel="empresa" placeholder="Selecionar empresa" onChange={(c) => setC("enterprise_code", c ? String(c) : "")} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label><LookupField<string> value={capa.supplier_code || undefined} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Buscar fornecedor" onChange={(c) => setC("supplier_code", c ? String(c) : "")} /></div>
-          <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField<string> value={capa.carrier_code || undefined} loader={loadCarriers} entityLabel="transportadora" placeholder="Buscar transportadora" onChange={(c) => setC("carrier_code", c ? String(c) : "")} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField value={Number(capa.shipping_carrier_id) || undefined} loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Vazio: a do pedido de compra" clearable onChange={(c) => setC("shipping_carrier_id", c ? String(c) : "")} /></div>
           <div className="erp-field erp-c3"><label className="erp-label">Pedido de compra</label><input className="erp-input num" type="number" value={capa.purchase_order_code} onChange={(e) => setC("purchase_order_code", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Doca</label><input className="erp-input" value={capa.dock} onChange={(e) => setC("dock", e.target.value)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label">Nº NF</label><input className="erp-input" value={capa.invoice_number} onChange={(e) => setC("invoice_number", e.target.value)} /></div>

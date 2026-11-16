@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { nomeDoCliente } from "@/services/preferenciasService";
 import { listItems } from "@/services/itemService";
 import { listMachines } from "@/services/machineService";
 import { listSuppliers } from "@/services/supplierService";
@@ -28,7 +29,10 @@ async function optionsFor(entity: Entity, useId: boolean): Promise<Option[]> {
   }
   if (entity === "machine") return (await listMachines()).map((x) => ({ value: useId ? x.id : x.code, code: x.code, label: x.name, sub: x.is_active ? "Ativa" : "Inativa" }));
   if (entity === "supplier") return (await listSuppliers()).filter((x) => x.code).map((x) => ({ value: useId ? (x.id || x.code!) : x.code!, code: x.code!, label: x.name, sub: x.document_number }));
-  if (entity === "customer") return (await listCustomers()).filter((x) => x.code).map((x) => ({ value: x.code!, code: x.code!, label: x.name, sub: x.document_number }));
+  if (entity === "customer") return (await listCustomers()).filter((x) => x.code).map((x) => {
+    const { nome, outro } = nomeDoCliente(x, `Cliente ${x.code}`);
+    return { value: x.code!, code: x.code!, label: nome, sub: [outro, x.document_number].filter(Boolean).join(" · "), search: `${outro} ${x.document_number}` };
+  });
   return (await loadWarehouses()).map((x) => ({ value: x.code, code: x.code, label: x.label, sub: x.sub }));
 }
 

@@ -12,6 +12,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { loadItems, loadCustomers, loadEstablishments, loadPaymentConditions, loadSalesDivisions, loadSalesTables, loadWarehouses } from "@/services/lookups";
 import { hojeLocal } from "@/utils/dataLocal";
+import { EntityName } from "@/components/ui/EntityName";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 type View = "calls" | "aux" | "relatorio";
@@ -320,7 +321,7 @@ export function Vatc0280Page(): JSX.Element {
                     <div className="erp-fieldset-head">Chamado {selected.call_number ?? selected.code} — {badge(selected.status)}</div>
                     <div className="erp-fieldset-body">
                       <div className="erp-field erp-c3"><label className="erp-label">Empresa</label><input className="erp-input" readOnly value={selected.enterprise_code} /></div>
-                      <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><input className="erp-input" readOnly value={selected.customer_code} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Cliente</label><div className="erp-input" style={{ display: "flex", alignItems: "center", background: "var(--v-surface-2)" }}><EntityName code={selected.customer_code} loader={loadCustomers} /></div></div>
                       <div className="erp-field erp-c6"><label className="erp-label">Assunto</label><input className="erp-input" readOnly value={selected.subject} /></div>
                       <div className="erp-field erp-c6"><label className="erp-label">Consumidor</label><input className="erp-input" readOnly value={selected.consumer_name ?? "—"} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Prioridade</label><input className="erp-input" readOnly value={selected.priority ?? "—"} /></div>

@@ -32,11 +32,12 @@ export interface NoticeItem {
 }
 export interface ReceivingNotice {
   id?: number;
-  enterprise_code: number;
+  enterprise_code?: number; // a API usa a empresa do login
   notice_number?: number;
   supplier_code?: number;
   purchase_order_code?: number;
   carrier_code?: number;
+  shipping_carrier_id?: number;
   status?: NoticeStatus;
   dock?: string;
   scheduled_at?: string;
@@ -87,6 +88,7 @@ function parseNotice(raw: unknown): ReceivingNotice {
     supplier_code: parseNum(o, 'supplier_code', 'SupplierCode') || undefined,
     purchase_order_code: parseNum(o, 'purchase_order_code', 'PurchaseOrderCode') || undefined,
     carrier_code: parseNum(o, 'carrier_code', 'CarrierCode') || undefined,
+    shipping_carrier_id: parseNum(o, 'shipping_carrier_id') || undefined,
     status: (parseStr(o, 'status', 'Status') || 'SCHEDULED') as NoticeStatus,
     dock: parseStr(o, 'dock', 'Dock') || undefined,
     scheduled_at: parseStr(o, 'scheduled_at', 'ScheduledAt') || undefined,
@@ -129,10 +131,10 @@ export async function getReceivingNotice(id: number): Promise<ReceivingNotice> {
 }
 export async function createReceivingNotice(dto: ReceivingNotice): Promise<ReceivingNotice> {
   const body = {
-    enterprise_code: dto.enterprise_code,
     supplier_code: dto.supplier_code ?? null,
     purchase_order_code: dto.purchase_order_code ?? null,
     carrier_code: dto.carrier_code ?? null,
+    shipping_carrier_id: dto.shipping_carrier_id ?? null,
     dock: dto.dock ?? null,
     scheduled_at: dto.scheduled_at ?? null,
     invoice_number: dto.invoice_number ?? null,

@@ -9,7 +9,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { FINALIDADES_COMPRA, lookupCnpj } from "@/services/customerService";
 import { getItem } from "@/services/itemService";
 import { findSalesTablesForItem } from "@/services/salesPricingService";
-import { loadCfops, loadCustomers, loadInvoiceTypesById, loadItems, loadShipmentLoads } from "@/services/lookups";
+import { loadCfops, loadCustomers, loadInvoiceTypesById, loadItems, loadShipmentLoads, loadShippingCarriers } from "@/services/lookups";
 import { UFS, UF_NAMES } from "@/services/taxTableService";
 import { LookupField } from "@/components/ui/LookupField";
 import { documentoComMascara } from "@/utils/documentoFiscal";
@@ -117,7 +117,8 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
 
   const [capa, setCapa] = useState({ emissao: hojeLocal(), saida: hojeLocal(), finalidade: "", complementares: "" });
   const [tipoNota, setTipoNota] = useState<number | undefined>();
-  const [tipoNotaManual, setTipoNotaManual] = useState(false);
+  const [tipoFrete, setTipoFrete] = useState("");
+  const [transportadora, setTransportadora] = useState<number | undefined>();
   const [valores, setValores] = useState({ frete: "", seguro: "", desconto: "" });
   const [carga, setCarga] = useState<number | undefined>();
   const [temCupom, setTemCupom] = useState(false);
@@ -174,7 +175,6 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
       setCliente(d);
       const sugerido = d.enderecos.findIndex((e) => e.sugerido);
       usarEnderecoDoCadastro(d, Math.max(sugerido, 0));
-      if (!tipoNotaManual) setTipoNota(d.invoice_type_id);
       // O preço depende do cliente (tabela dele): refaz o que não foi digitado.
       linhas.forEach((l) => { if (l.item_code && !l.precoManual) void buscarPreco(l.uid, l.item_code, numero(l.quantidade), l.unidade, code); });
     } catch (e) {
@@ -334,6 +334,7 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
       dest_bairro: endereco.bairro.trim(), dest_municipio: endereco.municipio.trim(), dest_cep: digitos(endereco.cep),
       dest_email: textoOuNada(endereco.email), dest_telefone: textoOuNada(endereco.telefone),
       cfop, natureza_operacao: natureza.trim(), finalidade_compra: capa.finalidade || undefined, invoice_type_id: tipoNota,
+      tipo_frete: tipoFrete || undefined, shipping_carrier_id: tipoFrete === "SEM_FRETE" ? undefined : transportadora,
       informacoes_complementares: textoOuNada(capa.complementares), shipment_load_code: carga,
       valor_produtos: produtos, valor_frete: numero(valores.frete), valor_seguro: numero(valores.seguro), valor_desconto: numero(valores.desconto),
       fiscal_coupon_number: temCupom ? textoOuNada(cupom.numero) : undefined,
@@ -514,7 +515,18 @@ export function NovaNotaForm({ onCriada, onCancelar }: Props): JSX.Element {
               {FINALIDADES_COMPRA.map((f) => <option key={f.value} value={f.value}>{f.value === "" ? "A do cliente" : f.label}</option>)}
             </select></div>
           <div className="erp-field erp-c3"><label className="erp-label">Tipo de nota</label>
-            <LookupField value={tipoNota} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable vazio="Nenhum tipo de nota cadastrado. Cadastre em VCLI0500, Cadastros de apoio, aba Tipo de NF de saída." onChange={(c) => { setTipoNota(c ? Number(c) : undefined); setTipoNotaManual(true); }} /></div>
+            <LookupField value={tipoNota} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Nenhum" clearable vazio="Nenhum tipo de nota cadastrado. Cadastre em VFIS0305 — Tipos de Nota Fiscal." onChange={(c) => setTipoNota(c ? Number(c) : undefined)} /></div>
+          <div className="erp-field erp-c3"><label className="erp-label" htmlFor="nf-tipo-frete">Responsável pelo frete</label>
+            <select id="nf-tipo-frete" className="erp-input" value={tipoFrete} onChange={(e) => setTipoFrete(e.target.value)}>
+              <option value="">Do pedido ou do cliente</option>
+              <option value="CIF">CIF — remetente paga</option>
+              <option value="FOB">FOB — destinatário paga</option>
+              <option value="TERCEIROS">Terceiros</option>
+              <option value="SEM_FRETE">Sem frete (retira)</option>
+            </select></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label>
+            <LookupField value={transportadora} loader={loadShippingCarriers} entityLabel="transportadora" placeholder="A preferencial do cliente" clearable disabled={tipoFrete === "SEM_FRETE"}
+              onChange={(c) => setTransportadora(c ? Number(c) : undefined)} /></div>
           <div className="erp-field erp-c2"><label className="erp-label" htmlFor="nf-frete">Frete</label>
             <input id="nf-frete" className="erp-input num" type="number" min="0" step="0.01" placeholder="0,00" value={valores.frete} onChange={(e) => setValores((v) => ({ ...v, frete: e.target.value }))} /></div>
           <div className="erp-field erp-c2"><label className="erp-label" htmlFor="nf-seguro">Seguro</label>

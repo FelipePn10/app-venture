@@ -12,7 +12,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadCarriers, loadItems, loadProductionOrders, loadPurchaseOrders, loadSalesOrders, loadWarehouses } from "@/services/lookups";
+import { loadShippingCarriers, loadItems, loadProductionOrders, loadPurchaseOrders, loadSalesOrders, loadWarehouses } from "@/services/lookups";
 import { CargasPanel } from "./CargasPanel";
 import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
@@ -36,7 +36,7 @@ export function Vexp0100Page(): JSX.Element {
   const [aba, setAba] = useState<"romaneios" | "cargas">("romaneios");
   const [itemForm, setItemForm] = useState<ShipmentItemDTO>({ ...EMPTY_ITEM });
   const [volForm, setVolForm] = useState<ShipmentVolumeDTO>({ ...EMPTY_VOL });
-  const [transport, setTransport] = useState({ freight_modality: "CIF", freight_value: 0, insurance_value: 0, vehicle_plate: "", driver_name: "", antt_code: "", seals: "", estimated_delivery: "" });
+  const [transport, setTransport] = useState<{ shipping_carrier_id?: number; freight_modality: string; freight_value: number; insurance_value: number; vehicle_plate: string; driver_name: string; antt_code: string; seals: string; estimated_delivery: string }>({ freight_modality: "CIF", freight_value: 0, insurance_value: 0, vehicle_plate: "", driver_name: "", antt_code: "", seals: "", estimated_delivery: "" });
   const [nfe, setNfe] = useState({ nfe_number: "", nfe_key: "", fiscal_exit_id: 0 });
   const [acceptDiv, setAcceptDiv] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -158,7 +158,7 @@ export function Vexp0100Page(): JSX.Element {
               loader={newForm.reference_type === "PURCHASE_ORDER" ? loadPurchaseOrders : newForm.reference_type === "PRODUCTION_ORDER" ? loadProductionOrders : loadSalesOrders}
               entityLabel="pedido"
               onChange={(c) => { const v = c ? Number(c) : undefined; setNewForm((p) => ({ ...p, sales_order_code: p.reference_type === "SALES_ORDER" ? v : undefined, purchase_order_code: p.reference_type === "PURCHASE_ORDER" ? v : undefined, production_order_code: p.reference_type === "PRODUCTION_ORDER" ? v : undefined })); }} /></div>
-          <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><LookupField value={newForm.carrier_code || undefined} loader={loadCarriers} entityLabel="transportadora" onChange={(code) => setNewForm((p) => ({ ...p, carrier_code: code ? Number(code) : undefined }))} /></div>
+          <div className="erp-field erp-c2"><label className="erp-label">Transportadora</label><LookupField value={newForm.shipping_carrier_id || undefined} loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Vazio: a do cliente" clearable onChange={(code) => setNewForm((p) => ({ ...p, shipping_carrier_id: code ? Number(code) : undefined }))} /></div>
           <div className="erp-field erp-c4" style={{ alignSelf: "end" }}><button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar romaneio</button></div>
         </div></div>
 
@@ -248,6 +248,7 @@ export function Vexp0100Page(): JSX.Element {
               <div className="erp-field erp-c2"><label className="erp-label">Modalidade frete</label>
                 <select className="erp-input" value={transport.freight_modality} onChange={(e) => setTransport((p) => ({ ...p, freight_modality: e.target.value }))}>{FREIGHT_MODALITIES.map((m) => <option key={m} value={m}>{enumLabel(m)}</option>)}</select></div>
               <div className="erp-field erp-c2"><label className="erp-label">Valor frete</label><input className="erp-input num" type="number" step="0.01" value={transport.freight_value || ""} onChange={(e) => setTransport((p) => ({ ...p, freight_value: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField value={transport.shipping_carrier_id} loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Manter a atual" clearable onChange={(c) => setTransport((p) => ({ ...p, shipping_carrier_id: c ? Number(c) : undefined }))} /></div>
               <div className="erp-field erp-c2"><label className="erp-label">Placa</label><input className="erp-input" value={transport.vehicle_plate} onChange={(e) => setTransport((p) => ({ ...p, vehicle_plate: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Motorista</label><input className="erp-input" value={transport.driver_name} onChange={(e) => setTransport((p) => ({ ...p, driver_name: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">ANTT / Lacres</label><input className="erp-input" placeholder="ANTT / lacres" value={transport.seals} onChange={(e) => setTransport((p) => ({ ...p, seals: e.target.value }))} /></div>
