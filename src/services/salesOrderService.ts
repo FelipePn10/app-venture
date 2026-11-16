@@ -76,6 +76,8 @@ export interface SalesOrderDTO {
   currency_code?: string;
   /** Finalidade da compra nesta venda ("" = a do cadastro do cliente). */
   finalidade_compra?: string;
+  /** Pedido de compra do cliente (até 15 caracteres): vai no xPed da NF-e. */
+  customer_po_number?: string;
   payment_term_code?: number;
   price_table_code?: number;
   commission_pct?: number;
@@ -184,6 +186,7 @@ function parseOrder(raw: unknown): SalesOrderDTO {
     customer_code: parseNum(o, 'customer_code', 'CustomerCode'),
     currency_code: parseStr(o, 'currency_code', 'CurrencyCode'),
     finalidade_compra: parseStr(o, 'finalidade_compra', 'FinalidadeCompra') || undefined,
+    customer_po_number: parseStr(o, 'customer_po_number') || undefined,
     payment_term_code: parseNum(o, 'payment_term_code', 'PaymentTermCode'),
     price_table_code: parseNum(o, 'price_table_code', 'PriceTableCode'),
     commission_pct: parseNum(o, 'commission_pct', 'CommissionPct'),
@@ -248,6 +251,10 @@ export async function createSalesOrder(dto: SalesOrderDTO): Promise<SalesOrderDT
 export async function updateSalesOrder(code: number, dto: SalesOrderDTO): Promise<SalesOrderDTO> {
   const { data } = await httpClient.put(`${BASE}/${code}`, dto);
   return parseOrder(data);
+}
+/** Informa ou corrige só o pedido de compra do cliente (pedido não faturado). */
+export async function setSalesOrderCustomerPO(code: number, customer_po_number: string): Promise<void> {
+  await httpClient.patch(`${BASE}/${code}/customer-po`, { customer_po_number });
 }
 export async function cancelSalesOrder(code: number, reason: string, complement?: string): Promise<void> {
   await httpClient.delete(`${BASE}/${code}/cancel`, { data: { reason, complement: complement || undefined } });

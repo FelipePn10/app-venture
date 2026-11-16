@@ -653,6 +653,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "fiscal",
   },
   {
+    code: "VFIS0305",
+    title: "Tipos de Nota Fiscal",
+    description: "Tipos de nota de saída: título, estoque, baixa do pedido, receita e o que entra no cálculo (ST, diferimento, PIS/COFINS, DIFAL).",
+    module: "fiscal",
+  },
+  {
     code: "VFIS0320",
     title: "Parâmetros ICMS/IPI",
     description: "Parâmetros básicos de ICMS/IPI por NCM/Item, UF e operação.",

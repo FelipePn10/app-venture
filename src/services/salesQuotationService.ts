@@ -100,6 +100,10 @@ export const FREIGHT_TYPES: { value: string; label: string }[] = [
   { value: 'SEM FRETE', label: 'Sem frete' },
   { value: 'TERCEIROS', label: 'Terceiros' },
 ];
+/** O cadastro do cliente usa CIF/FOB/TERCEIROS/SEM_FRETE; o orçamento, a lista comercial acima. */
+export function freteDoClienteNoOrcamento(tipo?: string): string | undefined {
+  return ({ CIF: 'CIF CONTRAT.', FOB: 'FOB CONTRAT.', TERCEIROS: 'TERCEIROS', SEM_FRETE: 'SEM FRETE' } as Record<string, string>)[tipo ?? ''];
+}
 /** Tipos que zeram frete e seguro no backend. */
 export const FREIGHT_TYPES_WITHOUT_CHARGE = ['FOB CONTRAT.', 'FOB PROPRIO', 'CORTESIA', 'RETIRA', 'SEM FRETE', 'TERCEIROS'];
 

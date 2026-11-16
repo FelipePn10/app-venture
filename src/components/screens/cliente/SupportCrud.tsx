@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { enumLabel } from "@/utils/enumLabels";
-import { listSupport, createSupport, updateSupport } from "@/services/customerService";
+import { listSupport, createSupport, updateSupport, deleteSupport, setSupportActive } from "@/services/customerService";
+import { confirmar } from "@/components/ui/dialogos";
 import { errMessage, parseStr, parseNum, parseBool, type Obj } from "@/services/fiscalShared";
 
 /**
@@ -36,6 +37,15 @@ interface Props {
   columns: ColumnSpec[];
   title?: string;
   editable?: boolean;
+  /** Mostra "Excluir" (o backend recusa o registro em uso e diz onde). */
+  deletable?: boolean;
+  /** O cadastro tem situação: mostra inativos e o botão Inativar/Reativar. */
+  inativavel?: boolean;
+  /**
+   * Campos que a tela não mostra, mas o servidor regrava por inteiro na
+   * alteração: vão com o valor que o registro já tinha, para não serem zerados.
+   */
+  preservar?: string[];
 }
 
 type FormState = Record<string, unknown>;
@@ -46,26 +56,28 @@ function initForm(fields: FieldSpec[]): FormState {
   return f;
 }
 
-export function SupportCrud({ resource, fields, columns, title, editable = false }: Props): JSX.Element {
+export function SupportCrud({ resource, fields, columns, title, editable = false, deletable = false, inativavel = false, preservar = [] }: Props): JSX.Element {
   const [list, setList] = useState<Obj[]>([]);
   const [form, setForm] = useState<FormState>(() => initForm(fields));
   const [editingCode, setEditingCode] = useState<number | null>(null);
+  const [original, setOriginal] = useState<Obj | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
     setBusy(true);
-    try { setList(await listSupport(resource)); }
+    try { setList(await listSupport(resource, inativavel)); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e, "Falha ao listar registros.") }); }
     finally { setBusy(false); }
-  }, [resource]);
+  }, [resource, inativavel]);
   useEffect(() => { void reload(); }, [reload]);
 
   function set(key: string, value: unknown) { setForm((p) => ({ ...p, [key]: value })); setFeedback(null); }
-  function novo() { setForm(initForm(fields)); setEditingCode(null); setFeedback(null); }
+  function novo() { setForm(initForm(fields)); setEditingCode(null); setOriginal(null); setFeedback(null); }
 
   function buildPayload(): FormState {
     const out: FormState = {};
+    if (original) for (const k of preservar) if (original[k] !== undefined && original[k] !== null) out[k] = original[k];
     for (const fs of fields) {
       const v = form[fs.key];
       if (fs.kind === "number") out[fs.key] = v === "" || v === undefined ? undefined : Number(v);
@@ -95,6 +107,30 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
     finally { setBusy(false); }
   }
 
+  async function excluir(rec: Obj) {
+    const code = parseNum(rec, "code", "Code");
+    if (!code) return;
+    const ok = await confirmar({ titulo: "Excluir registro", mensagem: inativavel ? "Só é possível excluir o que nunca foi usado; em uso, inative." : "Só é possível excluir o que nunca foi usado.", assunto: `${code} — ${parseStr(rec, "description", "Description")}`, rotulo: "Excluir", tom: "perigo" });
+    if (!ok) return;
+    setBusy(true); setFeedback(null);
+    try { await deleteSupport(resource, code); if (editingCode === code) novo(); setFeedback({ type: "success", message: "Registro excluído." }); await reload(); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); }
+  }
+
+  async function alternarSituacao(rec: Obj) {
+    const code = parseNum(rec, "code", "Code");
+    if (!code) return;
+    const ativo = rec["is_active"] !== false;
+    setBusy(true); setFeedback(null);
+    try {
+      await setSupportActive(resource, code, !ativo);
+      setFeedback({ type: "success", message: ativo ? "Registro inativado: não aparece mais para escolha, o histórico continua." : "Registro reativado." });
+      await reload();
+    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); }
+  }
+
   function edit(rec: Obj) {
     const f: FormState = {};
     for (const fs of fields) {
@@ -105,6 +141,7 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
         : parseStr(rec, fs.key, pascal);
     }
     setForm(f);
+    setOriginal(rec);
     setEditingCode(parseNum(rec, "code", "Code", "id", "ID") || null);
     setFeedback(null);
   }
@@ -156,19 +193,25 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
             <thead>
               <tr>
                 {columns.map((c) => <th key={c.key}>{c.label}</th>)}
-                {editable && <th style={{ width: 70 }}>Ações</th>}
+                {inativavel && <th>Situação</th>}
+                {(editable || deletable) && <th style={{ width: inativavel ? 220 : 140 }}>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={columns.length + (editable ? 1 : 0)} className="erp-grid-empty">Nenhum registro cadastrado.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={columns.length + (editable || deletable ? 1 : 0) + (inativavel ? 1 : 0)} className="erp-grid-empty">Nenhum registro cadastrado.</td></tr>}
               {list.map((rec, i) => (
-                <tr key={i}>
+                <tr key={i} style={rec["is_active"] === false ? { opacity: 0.6 } : undefined}>
                   {columns.map((c) => (
                     <td key={c.key}>
                       {c.kind === "bool" ? (parseBool(rec, c.key) ? "Sim" : "Não") : c.kind === "number" ? parseNum(rec, c.key) : c.kind === "enum" ? enumLabel(parseStr(rec, c.key)) : parseStr(rec, c.key)}
                     </td>
                   ))}
-                  {editable && <td><button className="erp-btn erp-btn-sm" onClick={() => edit(rec)}>Editar</button></td>}
+                  {inativavel && <td>{rec["is_active"] === false ? <span className="erp-badge gray">Inativo</span> : <span className="erp-badge ok">Ativo</span>}</td>}
+                  {(editable || deletable) && <td><div style={{ display: "flex", gap: 6 }}>
+                    {editable && <button className="erp-btn erp-btn-sm" onClick={() => edit(rec)}>Editar</button>}
+                    {inativavel && <button className="erp-btn erp-btn-sm" onClick={() => void alternarSituacao(rec)} disabled={busy}>{rec["is_active"] === false ? "Reativar" : "Inativar"}</button>}
+                    {deletable && <button className="erp-btn erp-btn-sm" onClick={() => void excluir(rec)} disabled={busy}>Excluir</button>}
+                  </div></td>}
                 </tr>
               ))}
             </tbody>

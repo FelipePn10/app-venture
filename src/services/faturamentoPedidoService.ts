@@ -40,6 +40,11 @@ export interface PedidoParaFaturar {
   customer_uf?: string;
   customer_city?: string;
   endereco_completo: boolean;
+  /** O que a nota usa se o faturamento não disser outro: pedido, depois cliente. */
+  tipo_frete_padrao?: string;
+  shipping_carrier_id?: number;
+  /** Endereço de entrega quando é outro que o do destinatário (vai no grupo de entrega da NF-e). */
+  local_entrega?: string;
   representative_code?: number;
   representative_name?: string;
   commission_pct: number;
@@ -74,6 +79,9 @@ export async function previaFaturamentoPedido(code: number): Promise<PedidoParaF
     customer_uf: parseStr(o, 'customer_uf') || undefined,
     customer_city: parseStr(o, 'customer_city') || undefined,
     endereco_completo: Boolean(o['endereco_completo']),
+    tipo_frete_padrao: parseStr(o, 'tipo_frete_padrao') || undefined,
+    shipping_carrier_id: parseNum(o, 'shipping_carrier_id') || undefined,
+    local_entrega: parseStr(o, 'local_entrega') || undefined,
     representative_code: parseNum(o, 'representative_code') || undefined,
     representative_name: parseStr(o, 'representative_name') || undefined,
     commission_pct: parseNum(o, 'commission_pct'),
@@ -132,6 +140,10 @@ export interface FaturarPedidoPayload {
   finalidade_compra?: string;
   /** Tipo de nota cujos indicadores tributam a saída. */
   invoice_type_id?: number;
+  /** CIF, FOB, TERCEIROS ou SEM_FRETE; vazio = o do pedido (ou do cliente). */
+  tipo_frete?: string;
+  /** Transportadora; vazia = a preferencial do cliente. */
+  shipping_carrier_id?: number;
   itens?: Array<{ sales_order_item_code: number; quantidade: number }>;
 }
 

@@ -16,6 +16,8 @@ import { openErpScreenWindow } from "@/utils/windowManager";
 import { useAuthStore } from "@/store/authStore";
 import { useAcessoStore } from "@/store/acessoStore";
 import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
+import { PreferenciasDialog } from "@/components/system/PreferenciasDialog";
+import { sincronizarPreferencias } from "@/services/preferenciasService";
 import { searchErpScreens } from "@/utils/screenSearch";
 
 const MAX_RECENTS   = 5;
@@ -66,6 +68,7 @@ export function DashboardPage(): JSX.Element {
   const [recents,         setRecents]         = useState<string[]>([]);
   const [favorites,       setFavorites]       = useState<string[]>(loadFavorites);
   const [showNotes,       setShowNotes]       = useState(false);
+  const [showPrefs,       setShowPrefs]       = useState(false);
 
   // Parent areas start EXPANDED so the navigation reads as a populated workstation
   // (an empty tree looked "prototype"). Modules stay collapsed to keep it scannable.
@@ -84,6 +87,8 @@ export function DashboardPage(): JSX.Element {
   const acesso = useAcessoStore((s) => s.acesso);
   const carregarAcesso = useAcessoStore((s) => s.carregar);
   useEffect(() => { void carregarAcesso(); }, [carregarAcesso, user?.id]);
+  // Preferências do usuário vêm do servidor a cada login (outro computador pode ter mudado).
+  useEffect(() => { if (user?.id) void sincronizarPreferencias().catch(() => undefined); }, [user?.id]);
   const visibleScreens = useMemo(() => screensForRole(ERP_SCREENS, user?.role, acesso), [user?.role, acesso]);
   const menuVisibleScreens = visibleScreens;
   /** Áreas e módulos que sobram depois do recorte do perfil. */
@@ -294,6 +299,7 @@ export function DashboardPage(): JSX.Element {
           <div className="ui"><span className="un">{welcomeName}</span><span className="ur">{userRoleLabel}</span></div>
           <div className="av">{initials}</div>
           <button type="button" className="lo" onClick={handleLogout}><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>Sair</button>
+          <button type="button" className="hl" onClick={() => setShowPrefs(true)} title="Preferências" aria-label="Preferências"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4"/><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7L3.4 3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></button>
           <button type="button" className="hl" onClick={() => setShowNotes(true)} title="Novidades"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L8 9.9 4.8 11.1l.6-3.6L2.8 5.4l3.6-.5L8 1.6z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg></button>
           <button type="button" className="hl" onClick={() => { import("@tauri-apps/plugin-opener").then(m => m.openUrl("https://help.venturerp.com")); }} title="Ajuda"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/><path d="M6.2 6a2 2 0 012.6-1.8 1.9 1.9 0 011 2.5c-.4.9-1.2 1.3-1.8 1.8M8 11.4h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
           <WindowControls />
@@ -301,6 +307,7 @@ export function DashboardPage(): JSX.Element {
       </header>
 
       {showNotes && <ReleaseNotesDialog onClose={() => setShowNotes(false)} />}
+      {showPrefs && <PreferenciasDialog onClose={() => setShowPrefs(false)} />}
 
       <aside className="s">
         <div className="stp">

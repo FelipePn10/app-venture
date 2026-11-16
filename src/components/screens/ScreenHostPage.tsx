@@ -74,6 +74,7 @@ const Vfis0220Page = lazy(() => import("./fiscal/Vfis0220Page").then((m) => ({ d
 const Vfis0300Page = lazy(() => import("./fiscal/Vfis0300Page").then((m) => ({ default: m.Vfis0300Page })));
 const Vfis0310Page = lazy(() => import("./fiscal/Vfis0310Page").then((m) => ({ default: m.Vfis0310Page })));
 const Vfis0320Page = lazy(() => import("./fiscal/Vfis0320Page").then((m) => ({ default: m.Vfis0320Page })));
+const Vfis0305Page = lazy(() => import("./fiscal/Vfis0305Page").then((m) => ({ default: m.Vfis0305Page })));
 const Vfis0325Page = lazy(() => import("./fiscal/Vfis0325Page").then((m) => ({ default: m.Vfis0325Page })));
 const Vfis0340Page = lazy(() => import("./fiscal/Vfis0340Page").then((m) => ({ default: m.Vfis0340Page })));
 const Vfis0345Page = lazy(() => import("./fiscal/Vfis0345Page").then((m) => ({ default: m.Vfis0345Page })));
@@ -249,6 +250,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VFIS0220: <Vfis0220Page />,
   VFIS0300: <Vfis0300Page />,
   VFIS0310: <Vfis0310Page />,
+  VFIS0305: <Vfis0305Page />,
   VFIS0320: <Vfis0320Page />,
   VFIS0325: <Vfis0325Page />,
   VFIS0340: <Vfis0340Page />,

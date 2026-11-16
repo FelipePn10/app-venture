@@ -196,7 +196,7 @@ regra de cada linha.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VCLI0500](#vcli0500--cadastro-de-cliente) | Cadastro de Cliente | Cadastrar clientes (matriz/filiais), dados fiscais, apoios vinculados, endereços, contatos e bloqueio/desbloqueio. |
+| [VCLI0500](#vcli0500--cadastro-de-cliente) | Cadastro de Cliente | Cadastrar, inativar e excluir clientes (matriz/filiais), dados fiscais e logísticos, limite de crédito calculado com trilha, Visão 360 e todos os cadastros de apoio. |
 
 **[Custos / Precificação](#custos--precificação)** — Custo-padrão do produto e margem de contribuição.
 
@@ -327,6 +327,7 @@ regra de cada linha.
 | [VFIS0220](#vfis0220--ct-e-conhecimento-de-transporte) | CT-e (Conhecimento de Transporte) | Registrar CT-e e ratear frete vinculado à NF-e de entrada. |
 | [VFIS0300](#vfis0300--cfops-e-naturezas-de-operação) | CFOPs e Naturezas de Operação | Manter CFOPs e suas classificações de utilização. |
 | [VFIS0310](#vfis0310--dispositivos-legais) | Dispositivos Legais | Cadastrar dispositivos legais (ICMS/IPI/PIS/COFINS/laudo). |
+| [VFIS0305](#vfis0305--tipos-de-nota-fiscal) | Tipos de Nota Fiscal | O que cada tipo de nota faz: título, estoque, baixa do pedido, receita, ST, diferimento, PIS/COFINS e DIFAL. |
 | [VFIS0320](#vfis0320--parâmetros-icmsipi) | Parâmetros ICMS/IPI | Parâmetros básicos de ICMS/IPI por NCM/Item, UF e operação. |
 | [VFIS0325](#vfis0325--simulador-de-tributação) | Simulador de Tributação | Calcular ICMS, IPI, PIS/COFINS, ST e DIFAL de uma venda como a NF-e vai calcular, por cliente, UF, finalidade e tipo de nota — sem gravar nada. |
 | [VFIS0340](#vfis0340--apuração-do-simples-nacional) | Apuração do Simples Nacional | Apuração mensal do Simples Nacional por anexo. |
@@ -407,8 +408,8 @@ item sem preço ativo em nenhuma tabela não entra no pedido.
 - O preço precisa ser maior que zero.
 - Dados fiscais do produto (NCM, tributação) não ficam aqui: ficam no cadastro
   do item e nas regras fiscais, porque valem para qualquer tabela.
-- O cliente pode ter uma **tabela padrão** (VCLI0500). Quando o item
-  existe em mais de uma tabela, o pedido pede para escolher a tabela.
+- A tabela é do item, não do cliente. Quando o item existe em mais de uma
+  tabela, o pedido pede para escolher a tabela.
 
 **Telas relacionadas.** VPDV0108
 (política de descontos), VVND0200, VVND0300.
@@ -439,8 +440,8 @@ Revenda, Exportação) e os parâmetros que cada uma exige no pedido e no orçam
 crédito, reserva de estoque, demanda para o MRP, expedição e faturamento.
 
 **Antes de começar.**
-- Cliente cadastrado (VCLI0500), com tabela de venda padrão ou com a tabela
-  escolhida no pedido.
+- Cliente cadastrado (VCLI0500). A tabela de venda e a condição de pagamento
+  são escolhidas no pedido (o cliente não tem mais tabela ou condição padrão).
 - Itens com preço ativo em uma tabela de venda (VCST0202).
 - Condição de pagamento (VFIN0110) e, se houver, representante (VVND0400).
 
@@ -1123,46 +1124,89 @@ contato).
 
 #### VCLI0500 — Cadastro de Cliente
 
-**Para que serve.** Cadastrar os clientes da empresa, com endereços e contatos.
+**Para que serve.** Cadastrar, alterar, inativar e excluir os clientes da
+empresa, com endereços, contatos, crédito e a visão completa do relacionamento.
 Cada empresa tem o seu cadastro: um cliente da empresa A não aparece nem é
 alterado na empresa B.
 
-**Antes de começar.** Os **Cadastros de apoio** (botão da própria tela), nesta
-ordem: região, segmento, tipo de contato, tipo de cliente, portador e grupo de
-portadores, tipo de NF de saída e tipo de imposto. No grupo de portadores, o
-vínculo portador ↔ grupo é escolhido nas listas. Condição de pagamento: VFIN0110;
-tabela de venda: VCST0202.
+**Antes de começar.** Os **Cadastros de apoio** (botão da própria tela): região,
+segmento, tipo de contato, tipo de cliente, portador e grupo de portadores, tipo
+de imposto e a **política de crédito** (o tipo de nota fiscal fica na VFIS0305).
+O **tipo de imposto** classifica o cliente para as regras da VFIS0320; marcado
+como *consumidor final*, a nota sai com finalidade de uso e consumo. Todos incluem,
+alteram e excluem ali mesmo; o que já está em uso não pode ser excluído —
+**inative** (região, segmento, tipo de cliente, portador e tipo de
+imposto): some das listas de escolha e volta com **Reativar**.
 
 **Passo a passo.**
-1. Clique em **+ Novo**. Em **Dados** informe razão social/nome, fantasia, tipo
-   de documento e CNPJ/CPF.
-   - Com CNPJ, use o botão de **buscar na Receita**: o sistema preenche nome e
-     endereço. Confira antes de salvar.
-2. Complete inscrição estadual, inscrição municipal e SUFRAMA, a matriz (quando o
-   cliente é filial) ou *É matriz*, a **finalidade da compra** (revenda,
-   industrialização ou uso e consumo), a visibilidade da condição de pagamento,
-   o **limite de crédito** e o site.
-3. Preencha o **endereço principal** e salve.
-4. Aba **Endereços:** cadastre outros endereços (entrega, cobrança) e marque o
-   padrão de cada tipo.
-5. Aba **Contatos:** nome, tipo de contato, cargo, e-mail, telefone e celular;
-   marque o principal.
+1. Clique em **+ Novo**. Em **Dados gerais** informe código, tipo de documento e
+   CNPJ/CPF.
+   - Com CNPJ, use **Consultar CNPJ**: o sistema preenche razão social, IE,
+     regime, CNAE, e-mail e endereço e **calcula o limite de crédito**. Confira
+     antes de salvar.
+2. **Fiscal:** indicador de IE (contribuinte, isento, não contribuinte),
+   inscrições, regime tributário, finalidade da compra, CNAE, SUFRAMA com
+   validade e o e-mail que recebe o XML/DANFE.
+3. **Comercial e logística:** representante, portador de cobrança, e-mail de
+   cobrança, transportadora preferencial, tipo de frete, se exige número do
+   pedido de compra (aí o pedido de venda só é confirmado com o número, que vai
+   para a NF-e no xPed) ou certificado de qualidade, se aceita faturamento parcial e
+   as observações (a comercial aparece ao escolher o cliente no orçamento e no
+   pedido).
+4. **Crédito:** clique em **Fazer nova análise**. O sistema mostra o limite
+   recomendado, a classe de risco (A a E) na escala do score, a conta do valor
+   e os fatores separados em *bloqueios*, *pesou contra* e *pesou a favor*.
+   Em **Sua decisão**, escolha **Seguir a recomendação** (sem justificativa)
+   ou **Definir outro valor**: a tela mostra a diferença para o recomendado,
+   até quanto você pode aprovar e pede a justificativa (mínimo 15
+   caracteres). Acima da tolerância ou do teto de crédito da política, só o
+   administrador aprova. O quadro **Ao gravar** resume o que vai para a trilha.
+5. Salve. Depois use as abas **Endereços** e **Contatos** (incluir, editar e
+   excluir) e a **Visão 360**.
 
-**Por que cada campo importa.**
-- **Inscrição estadual:** com IE o cliente é contribuinte do ICMS; sem IE (ou
-  ISENTO) é não contribuinte — isso muda o ICMS, o DIFAL e o IPI na base.
-- **Finalidade da compra:** escolhe a regra de ICMS/IPI da nota (VFIS0320) quando
-  o pedido não informa outra.
-- **Limite de crédito:** conferido na confirmação do pedido de venda.
+**Como o limite é calculado.** Com histórico de pagamento nesta empresa (3 ou
+mais títulos pagos, somando o grupo econômico — mesma raiz de CNPJ): média
+mensal faturada × (prazo médio ÷ 30 + 1), ajustada pela classe. Pontuam:
+valor pago em dia, atraso médio e maior atraso, tempo de relacionamento,
+renegociações, devoluções; piora recente nos pagamentos tira pontos. Sem
+histórico: um percentual do capital social com teto (política), e a classe
+nunca passa de C. **Zeram o limite:** CNPJ que não está ATIVO na Receita,
+título vencido além da tolerância (no cliente ou no grupo), título em protesto
+ou baixado como perda. Cada limite gravado fica na **trilha de crédito**, com o
+sugerido, o aprovado, quem aprovou e o motivo.
 
-**Bloquear / Desbloquear.** O cliente bloqueado não passa na confirmação de
-pedido. O motivo fica no histórico.
+**Na confirmação do pedido.** Vai para análise de crédito quando: o limite
+venceu (a validade depende da classe), a classe é D ou E, a última análise
+aprovou limite zero, há título vencido além da tolerância no grupo econômico ou
+a exposição passa do limite. Na lista de clientes, o limite vencido ou que
+vence em até 30 dias aparece marcado, e **Só crédito a revisar** mostra só
+esses — revise-os antes que os pedidos comecem a cair na análise.
 
-**Telas relacionadas.** VFIN0110, VCST0202, VVND0200, VFIS0320.
+**Situação na Receita.** O sistema reconsulta os CNPJs periodicamente (prazo da
+política) e bloqueia quem deixou de estar ATIVO. **Reconsultar Receita** faz
+isso na hora.
+
+**Inativar e excluir.** **Inativar** tira o cliente dos orçamentos e pedidos
+novos e mantém o histórico; não é possível com pedido aberto, OP em fabricação,
+título a receber, nota em emissão, remessa de material, contrato ou OS em
+andamento — a tela diz exatamente o que falta. **Excluir** (administrador) só
+vale para cliente sem nenhum movimento.
+
+**Razão social ou nome fantasia nas buscas.** No painel principal, botão
+**Preferências** (engrenagem, ao lado de "Sair"): escolha se os campos de busca
+de cliente de todas as telas mostram a razão social ou o nome fantasia. A
+escolha é do seu usuário e vale em qualquer computador; a busca continua
+achando o cliente pelos dois nomes e pelo CNPJ/CPF. Cliente sem fantasia
+aparece pela razão social.
+
+**O que não fica no cliente.** Condição de pagamento (negociada no
+orçamento/pedido, VFIN0110) e tabela de venda (é do item, VCST0202).
+
+**Telas relacionadas.** VFIN0110, VCST0202, VVND0200, VVND0300, VFIS0320.
 
 ---
 
-**Documento impresso.** A **ficha cadastral** (PDF) mostra o cadastro em formulário (identificação, classificação, condições comerciais com os nomes e não códigos), a posição comercial do cliente na data (em aberto, vencido, pedidos em carteira, faturamento de 12 meses, última compra e uso do limite de crédito), endereços, contatos e filiais.
+**Documento impresso.** A **ficha cadastral** (PDF) mostra o cadastro em formulário (identificação, classificação, crédito — classe, validade e situação na Receita), a posição comercial do cliente na data (em aberto, vencido, pedidos em carteira, faturamento de 12 meses, última compra e uso do limite de crédito), endereços, contatos e filiais.
 
 ## Custos / Precificação
 
@@ -2512,9 +2556,10 @@ acordados por um período) e acompanhar o saldo de cada linha.
 doca e registrar as divergências na chegada.
 
 **Como usar.**
-1. **Novo aviso:** empresa, fornecedor (ou pedido de compra), transportadora,
-   pedido, doca, número da NF, data agendada e observações; **itens esperados**
-   (item, máscara, quantidade, unidade).
+1. **Novo aviso:** fornecedor (ou pedido de compra), transportadora, doca,
+   número da NF, data agendada e observações; **itens esperados** (item,
+   máscara, quantidade, unidade). O aviso fica na empresa em que você está
+   logado. Transportadora em branco = a do pedido de compra, se ativa.
 2. Acompanhe o aviso pela situação na lista.
 3. **Divergências:** tipo, quantidade esperada e real; depois registre a
    **resolução** de cada uma.
@@ -2663,12 +2708,14 @@ que peso e em que transporte.
 **Passo a passo.**
 1. **Novo romaneio:** escolha o tipo (pedido de venda, pedido de compra ou ordem
    de fabricação) e busque o documento pelo nome; ou **Gerar** a partir de um
-   pedido de venda escolhido na lista.
+   pedido de venda escolhido na lista. **Transportadora** em branco: o
+   romaneio de pedido de venda herda a preferencial do cliente (se ativa e o
+   pedido não for SEM FRETE); o de pedido de compra, a do pedido.
 2. **Itens:** item, quantidade, depósito e pesos unitários. Confira cada item
    (planejado × conferido; a divergência fica marcada).
 3. **Volumes / packing:** espécie, peso bruto, dimensões (a cubagem é calculada) e
    marca.
-4. **Transporte & NF-e:** modalidade e valor do frete, placa, motorista,
+4. **Transporte & NF-e:** transportadora (em branco mantém a atual), modalidade e valor do frete, placa, motorista,
    ANTT/lacres e previsão de entrega. **Vincular NF-e** (número e chave).
 5. A **trilha de auditoria** registra cada evento do romaneio.
 
@@ -3120,7 +3167,7 @@ operação interna).
 nenhum pedido lia. As condições que existiam só nela foram copiadas para cá na
 atualização (mesmo nome e prazos; percentual em partes iguais).
 
-**Telas relacionadas.** VCLI0500 (condição do cliente), VSUP0500, VVND0200, VCST0202.
+**Telas relacionadas.** VSUP0500, VVND0200 (a condição é escolhida no pedido), VCST0202.
 
 ---
 
@@ -3427,7 +3474,7 @@ só se o estado não estiver aqui vale o ICMS interno da Configuração Fiscal
 
 **Número e série.** A nota recebe número e série na autorização, seguindo a sequência configurada para a empresa no painel da Focus NF-e. Até lá ela aparece sem número.
 
-**Tipo de nota.** Vem dos Cadastros de apoio da VCLI0500, aba Tipo de NF de saída, e decide se a nota gera título, mexe no estoque, baixa o pedido e entra como receita. Bonificação e remessa, por exemplo, saem sem pagamento.
+**Tipo de nota.** Vem da VFIS0305 — Tipos de Nota Fiscal e decide se a nota gera título, mexe no estoque, baixa o pedido e entra como receita. Bonificação e remessa, por exemplo, saem sem pagamento.
 
 **Conferência antes de sair.** A prévia e a transmissão conferem emitente, destinatário, datas (emissão no futuro ou com mais de 30 dias impede), nota de origem, NCM, CFOP e as contas de linha e total. O que impede aparece em Pendências, com o que fazer.
 
@@ -3647,6 +3694,19 @@ apontam para eles, e o texto vai para as informações complementares da nota.
 
 ---
 
+#### VFIS0305 — Tipos de Nota Fiscal
+
+**Para que serve.** Cada tipo de nota diz o que a saída faz: se **gera título a
+receber**, **movimenta estoque**, **baixa o pedido** de venda, **entra como
+receita** e se só pode sair **com pedido**. No cálculo, liga ou desliga
+**ICMS-ST**, **diferimento**, **PIS/COFINS** e **DIFAL**, e define o ICMS
+(tributado, isento, outros) e a redução da base. Bonificação e remessa, por
+exemplo, saem sem título e sem receita.
+
+**O que não fica aqui.** Alíquotas, CST, CSOSN e benefício fiscal vêm das regras
+da **VFIS0320**, que podem ser filtradas pelo tipo de nota. Tipo em uso não sai:
+**inative** — some da escolha no faturamento e continua nas notas antigas.
+
 #### VFIS0320 — Parâmetros ICMS/IPI
 
 **Para que serve.** As **regras de tributação por cenário**: para que produto, cliente
@@ -3657,8 +3717,8 @@ Também concentra a redução e a substituição de ICMS.
 1. **Identificação** — *a quem a regra se aplica*: UF (destino na saída, origem na
    entrada), **NCM** ou **item** (nunca os dois), máscara do item, tipo de
    operação (saída, entrada, ambas), cliente, **fornecedor**, estabelecimento do
-   cliente, tipo de NF de saída e de entrada, **finalidade da compra** e
-   descrição.
+   cliente (busca pelo nome), **tipo de imposto do cliente**, tipo de NF de saída
+   e de entrada, **finalidade da compra** e descrição.
 2. **ICMS** — % contribuinte e não contribuinte, CST de cada um (e de devolução),
    CSOSN, situação B, dispositivos legais, **% de redução** (e sobre o que incide),
    **% de diferimento**, **código do benefício** (cBenef/RBC) e acréscimos.

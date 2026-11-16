@@ -18,6 +18,7 @@ import {
   RELEASE_STATUS,
   FREIGHT_TYPES,
   FREIGHT_TYPES_WITHOUT_CHARGE,
+  freteDoClienteNoOrcamento,
   ITEM_STATUS_LABEL,
   EVENT_TYPE_LABEL,
   MAX_ATTACHMENT_BYTES,
@@ -57,9 +58,9 @@ import {
   type RateioComissaoDTO,
   type RateioComissaoLinhaDTO,
 } from "@/services/salesCommissionService";
-import { errMessage, parseNum } from "@/services/fiscalShared";
+import { errMessage, parseNum, parseStr } from "@/services/fiscalShared";
 import { findSalesTablesForItem } from "@/services/salesPricingService";
-import { getCustomer } from "@/services/customerService";
+import { getCustomer, avisosDoCliente } from "@/services/customerService";
 import { getRepresentative } from "@/services/representativeService";
 import { downloadBlob } from "@/services/fileDownload";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -219,10 +220,21 @@ export function Vvnd0300Page(): JSX.Element {
     });
     if (customerCode) void run(async () => {
       try {
+        // Do cadastro vêm portador, frete e representante; o preço é da tabela
+        // do item e a condição de pagamento se negocia no orçamento.
         const customer = await getCustomer(customerCode);
-        const tableCode = parseNum(customer, "sales_table_code", "SalesTableCode", "sales_table_id", "SalesTableID");
-        if (tableCode) setForm((current) => ({ ...current, price_table_code: tableCode }));
-      } catch { /* tabela padrão é opcional */ }
+        const carrier = parseNum(customer, "carrier_code");
+        const freight = freteDoClienteNoOrcamento(parseStr(customer, "freight_type"));
+        const rep = parseNum(customer, "representative_code");
+        setForm((current) => ({
+          ...current,
+          carrier_code: current.carrier_code || carrier || undefined,
+          freight_type: current.freight_type || freight || undefined,
+        }));
+        if (rep && !form.representative_code) selecionarRepresentante(rep);
+        const avisos = avisosDoCliente(customer);
+        if (avisos.length) setFeedback({ type: "info", message: avisos.join(" · ") });
+      } catch { /* os padrões do cliente são opcionais */ }
     });
   };
 
@@ -851,6 +863,11 @@ export function Vvnd0300Page(): JSX.Element {
                           <LookupField value={form.representative_code} loader={loadRepresentatives} entityLabel="representante" placeholder="Selecionar representante" disabled={!editable} onChange={selecionarRepresentante} />
                         </div>
                         <div className="erp-field erp-c3">
+                          <label className="erp-label">Pedido de compra do cliente</label>
+                          <input className="erp-input" maxLength={15} value={form.purchase_order_number ?? ""} disabled={!editable} onChange={(e) => setQ("purchase_order_number", e.target.value || undefined)} />
+                          <span className="erp-field-hint">Segue para o pedido e para a NF-e (xPed).</span>
+                        </div>
+                        <div className="erp-field erp-c3">
                           <label className="erp-label">Divisão de vendas</label>
                           <LookupField value={form.sales_division_code} loader={loadSalesDivisions} entityLabel="divisão" placeholder="Selecionar divisão" disabled={!editable} onChange={(code) => setQ("sales_division_code", code ?? undefined)} />
                           <span className="erp-field-hint">Condição de pagamento diferente da do cliente exige divisão com condição livre (VVND0100).</span>
@@ -893,8 +910,8 @@ export function Vvnd0300Page(): JSX.Element {
                       <div className="erp-fieldset-head">Transporte e valores</div>
                       <div className="erp-fieldset-body">
                         <div className="erp-field erp-c3">
-                          <label className="erp-label">Transportadora</label>
-                          <LookupField value={form.carrier_code} loader={loadCarriers} entityLabel="transportadora" placeholder="Padrão do cliente" disabled={!editable} onChange={(code) => setQ("carrier_code", code ?? undefined)} />
+                          <label className="erp-label">Portador (cobrança)</label>
+                          <LookupField value={form.carrier_code} loader={loadCarriers} entityLabel="portador" placeholder="Padrão do cliente" disabled={!editable} onChange={(code) => setQ("carrier_code", code ?? undefined)} />
                         </div>
                         <div className="erp-field erp-c3">
                           <label className="erp-label">Tipo de frete</label>

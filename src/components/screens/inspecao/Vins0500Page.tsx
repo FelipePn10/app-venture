@@ -9,6 +9,8 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { useAcessoStore } from "@/store/acessoStore";
 import { useAuthStore } from "@/store/authStore";
+import { loadCustomers } from "@/services/lookups";
+import { LookupField } from "@/components/ui/LookupField";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Aba = "ncs" | "capas" | "acoes";
@@ -184,7 +186,7 @@ export function Vins0500Page(): JSX.Element {
                 {nova.origem === "FORNECEDOR" && <div className="erp-field erp-c2"><label className="erp-label erp-req">Fornecedor</label>
                   <input className="erp-input" inputMode="numeric" value={nova.fornecedor} onChange={(e) => setNova((n) => ({ ...n, fornecedor: e.target.value }))} /></div>}
                 {nova.origem === "RECLAMACAO_CLIENTE" && <div className="erp-field erp-c2"><label className="erp-label erp-req">Cliente</label>
-                  <input className="erp-input" inputMode="numeric" value={nova.cliente} onChange={(e) => setNova((n) => ({ ...n, cliente: e.target.value }))} /></div>}
+                  <LookupField value={Number(nova.cliente) || undefined} onChange={(v) => setNova((n) => ({ ...n, cliente: v ? String(v) : "" }))} loader={loadCustomers} entityLabel="cliente" placeholder="Escolher cliente" clearable /></div>}
                 {nova.origem === "NC" && <div className="erp-field erp-c12"><small>NCs marcadas na aba "Não conformidades": {marcadas.length ? marcadas.join(", ") : "nenhuma — marque ao menos uma"}.</small></div>}
                 <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void criar()} disabled={busy || !nova.titulo.trim()}>Abrir CAPA</button></div>
               </div></div>

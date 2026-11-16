@@ -52,6 +52,10 @@ export interface CreateExitDTO {
   finalidade_compra?: string;
   /** Tipo de nota: seus indicadores (ST, diferimento, PIS/COFINS, DIFAL, ICMS isento) entram no cálculo. */
   invoice_type_id?: number;
+  /** CIF, FOB, TERCEIROS ou SEM_FRETE; vazio = o do pedido ou do cliente. */
+  tipo_frete?: string;
+  /** Transportadora (grupo transporta); vazia = a preferencial do cliente. */
+  shipping_carrier_id?: number;
   /** Texto livre das informações complementares; o sistema acrescenta o que a lei exige. */
   informacoes_complementares?: string;
   /**
@@ -187,7 +191,6 @@ export interface DestinatarioDaNota {
   email: string;
   telefone: string;
   finalidade_compra: string;
-  invoice_type_id?: number;
   bloqueado: boolean;
   enderecos: EnderecoDoDestinatario[];
   cfop_sem_endereco: CfopSugerido;
@@ -209,7 +212,6 @@ export async function getDestinatarioDaNota(customerCode: number): Promise<Desti
     email: parseStr(o, 'email'),
     telefone: parseStr(o, 'telefone'),
     finalidade_compra: parseStr(o, 'finalidade_compra'),
-    invoice_type_id: parseNum(o, 'invoice_type_id') || undefined,
     bloqueado: o['bloqueado'] === true,
     enderecos: unwrapArray(o['enderecos']).map((raw) => {
       const e = unwrapObject(raw);

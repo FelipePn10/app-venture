@@ -9,7 +9,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { confirmar } from "@/components/ui/dialogos";
-import { loadCarriers, loadCustomersById, loadFiscalExits } from "@/services/lookups";
+import { loadShippingCarriers, loadCustomersById, loadFiscalExits } from "@/services/lookups";
 import { hojeLocal } from "@/utils/dataLocal";
 import { FaturamentoDaCargaPanel } from "./FaturamentoDaCargaPanel";
 
@@ -131,7 +131,7 @@ export function CargasPanel(): JSX.Element {
             {nova && (
               <div className="erp-fieldset"><div className="erp-fieldset-head">Nova carga</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c4"><label className="erp-label">Descrição</label><input className="erp-input" placeholder="Ex.: Rota Sul — terça" value={nova.description ?? ""} onChange={(e) => setN("description", e.target.value)} /></div>
-                <div className="erp-field erp-c4"><label className="erp-label">Transportadora</label><LookupField value={nova.carrier_code} loader={loadCarriers} entityLabel="transportadora" clearable onChange={(c) => setN("carrier_code", c ? Number(c) : undefined)} /></div>
+                <div className="erp-field erp-c4"><label className="erp-label">Transportadora</label><LookupField value={nova.shipping_carrier_id} loader={loadShippingCarriers} entityLabel="transportadora" clearable onChange={(c) => setN("shipping_carrier_id", c ? Number(c) : undefined)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Saída prevista</label><input className="erp-input" type="date" value={nova.planned_ship_date ?? ""} onChange={(e) => setN("planned_ship_date", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Entrega prevista</label><input className="erp-input" type="date" value={nova.estimated_delivery ?? ""} onChange={(e) => setN("estimated_delivery", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Placa</label><input className="erp-input" value={nova.vehicle_plate ?? ""} onChange={(e) => setN("vehicle_plate", e.target.value.toUpperCase())} /></div>
@@ -180,7 +180,7 @@ export function CargasPanel(): JSX.Element {
                   </span>
                 </div><div className="erp-fieldset-body">
                   <div className="erp-field erp-c12"><dl className="erp-dados">
-                    <dt>Transportadora</dt><dd>{sel.carrier_code ? <EntityName code={sel.carrier_code} loader={loadCarriers} showCode={false} /> : "—"}</dd>
+                    <dt>Transportadora</dt><dd>{sel.shipping_carrier_id ? <EntityName code={sel.shipping_carrier_id} loader={loadShippingCarriers} showCode={false} /> : "—"}</dd>
                     <dt>Veículo</dt><dd>{[sel.vehicle_plate, sel.driver_name].filter(Boolean).join(" · ") || "—"}</dd>
                     <dt>Rota</dt><dd>{[sel.route_code, sel.origin && sel.destination ? `${sel.origin} → ${sel.destination}` : sel.destination].filter(Boolean).join(" · ") || "—"}</dd>
                     <dt>Saída / entrega</dt><dd>{sel.planned_ship_date || "—"} / {sel.estimated_delivery || "—"}</dd>
