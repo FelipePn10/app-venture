@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.0] — 2026-11-17
+
 ## Novidades
 - **Cadastro de cliente (VCLI0500):** passe o mouse sobre qualquer campo (ⓘ) para ver o que ele é, onde o sistema o usa e onde se cadastra. O **código do cliente é automático** (o próximo livre da sequência). Endereços e contatos já podem ser incluídos no cadastro novo e são gravados junto com o cliente.
 - **Limite de crédito de cliente novo** sai de uma conta: o menor entre a capacidade do cliente (% do capital social) e o apetite da empresa (% do faturamento médio mensal dela, com piso). O novo percentual fica na *Política de crédito*.
