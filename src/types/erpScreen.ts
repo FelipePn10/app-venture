@@ -359,7 +359,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VSUP0500",
     title: "Cadastro de Fornecedor",
-    description: "Cadastrar fornecedores/transportadoras: dados, endereço, pastas (telefones/emails/vencimentos/contatos/empresas), SEFAZ, auto-fill CNPJ e bloqueio.",
+    description: "Cadastrar fornecedores: dados, endereço, pastas (telefones/emails/vencimentos/contatos/empresas), auto-fill CNPJ e bloqueio. O perfil de transporte fica na VSUP0140.",
     module: "suprimento",
   },
   {
@@ -377,7 +377,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VSUP0140",
     title: "Cadastro de Transportadora",
-    description: "Cadastrar o perfil de transporte do fornecedor transportadora: RNTRC/ANTT, modal, tabela de frete, seguro, frota com motorista, regiões atendidas com prazo, ocorrências de entrega e cotação comparativa de frete.",
+    description: "Cadastrar, alterar, inativar e excluir a transportadora: RNTRC/ANTT, modal, tabela de frete com cubagem e despacho, produto perigoso, seguro, frota com dados do MDF-e e CNH do motorista, regiões atendidas, ocorrências, cadastros de apoio (tipos de veículo e de ocorrência) e cotação comparativa de frete.",
     module: "suprimento",
   },
   {

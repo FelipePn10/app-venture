@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## Novidades
+- **Cadastro de Transportadora (VSUP0140) completo:** veículo com os dados do MDF-e (UF da placa, RENAVAM conferido, tara, rodado, carroceria e proprietário TAC com RNTRC) e motorista com CPF, categoria e validade da CNH; tabela de frete com **fator de cubagem** e **taxa de despacho**; marca **aceita produto perigoso**; a transportadora nunca usada pode ser **excluída**.
+- **Cadastros de apoio na própria VSUP0140:** tipos de veículo (escolhido na frota, preenche rodado, carroceria, eixos e capacidade) e tipos de ocorrência (com *conta como falha* para a avaliação).
+- **Pendências antes de vencer:** RNTRC, seguro e CNH aparecem 30 dias antes do vencimento, além de veículo sem UF ou tara (o MDF-e não sai).
+- **Cotação comparativa de frete:** destino por UF, cidade ou CEP (a UF sai do CEP); a região da cidade vale só para ela; peso cobrado pelo maior entre real e cubado; prazo em dias úteis; quem tem RNTRC ou seguro vencido, carga acima da cobertura ou nenhum veículo que comporte aparece como *não pode levar* e não é indicada como mais barata ou mais rápida; produto perigoso tira quem não aceita.
+- **Carga e romaneio (VEXP0100):** a placa é sugerida pela frota da transportadora e já traz o motorista e o documento.
+- **Ocorrência de entrega** ligada ao romaneio (pelo número) e ao pedido de venda, conferidos.
+
+## Correções
+- **Segurança do cadastro:** transportadora em documento não é excluída; com romaneio, carga, pedido de compra ou aviso em aberto (ou cliente ativo que a usa como padrão) não é inativada; o fornecedor não é trocado depois de usada; veículo em carga aberta não sai da frota; fornecedor com transportadora ativa não é inativado; o cliente não grava transportadora inativa.
+- **VSUP0500:** saíram os botões *Consultar SEFAZ* (falhava sempre) e *Padrões de compra*.
+- Documentos antigos com transportadora inativada continuam mostrando o nome dela.
+
 ## [v1.19.1] — 2026-11-17
 
 ## Novidades
