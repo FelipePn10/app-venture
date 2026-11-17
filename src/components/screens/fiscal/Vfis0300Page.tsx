@@ -1,17 +1,14 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  type Cfop, type CfopDTOComSituacao, type CfopUtilization, type CfopIndOperacao, type CfopTipoUtil,
+  type Cfop, type CfopDTOComSituacao,
   listCfops, createCfop, updateCfop,
 } from "@/services/fiscalSupportService";
 import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
-import { enumLabel } from "@/utils/enumLabels";
+
 import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-const UTIL: CfopUtilization[] = ["INDUSTRIALIZACAO_COMERCIO", "IMOBILIZADO", "USO_CONSUMO"];
-const IND: CfopIndOperacao[] = ["NORMAL", "ENERGIA_ELETRICA", "TELECOMUNICACAO"];
-const TIPO: CfopTipoUtil[] = ["NORMAL", "VENDA_COMERCIAL_EXPORTADORA", "COMPRA_FIM_ESPECIFICO_EXPORTACAO", "EXPORTACAO"];
 const EMPTY: CfopDTOComSituacao = {
   code: 0, description: "", utilization: "INDUSTRIALIZACAO_COMERCIO",
   ind_operacao: "NORMAL", tipo_utilizacao: "NORMAL", difal: false, doacao: false, is_active: true,
@@ -95,7 +92,7 @@ export function Vfis0300Page(): JSX.Element {
     <div className="erp-screen">
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">CFOPs / Naturezas de Operação</span><span className="erp-crumb-code">VFIS0300</span></nav>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Fiscal</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">CFOPs</span><span className="erp-crumb-code">VFIS0300</span></nav>
         <div className="erp-titlebar-spacer" /><span className="erp-titlebar-meta">{list.length} CFOP(s)</span>
       </header>
 
@@ -114,11 +111,6 @@ export function Vfis0300Page(): JSX.Element {
             <div className="erp-fieldset"><div className="erp-fieldset-head">{editing ? `Editando CFOP ${form.code}` : "Novo CFOP"}</div><div className="erp-fieldset-body">
               <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label><input className="erp-input num" type="number" value={form.code || ""} disabled={editing} onChange={(e) => setF("code", Number(e.target.value))} /></div>
               <div className="erp-field erp-c10"><label className="erp-label erp-req">Descrição</label><input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
-              <div className="erp-field erp-c4"><label className="erp-label">Utilização</label><select className="erp-input" value={form.utilization} onChange={(e) => setF("utilization", e.target.value as CfopUtilization)}>{UTIL.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}</select></div>
-              <div className="erp-field erp-c4"><label className="erp-label">Ind. Operação</label><select className="erp-input" value={form.ind_operacao} onChange={(e) => setF("ind_operacao", e.target.value as CfopIndOperacao)}>{IND.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}</select></div>
-              <div className="erp-field erp-c4"><label className="erp-label">Tipo Utilização</label><select className="erp-input" value={form.tipo_utilizacao} onChange={(e) => setF("tipo_utilizacao", e.target.value as CfopTipoUtil)}>{TIPO.map((u) => <option key={u} value={u}>{enumLabel(u)}</option>)}</select></div>
-              <div className="erp-field erp-c3"><label className="erp-label">DIFAL</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.difal} onChange={(e) => setF("difal", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.difal ? "Sim" : "Não"}</span></div></div>
-              <div className="erp-field erp-c3"><label className="erp-label">Doação</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.doacao} onChange={(e) => setF("doacao", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.doacao ? "Sim" : "Não"}</span></div></div>
               {editing && <div className="erp-field erp-c3"><label className="erp-label">Situação</label><div className="erp-toggle-row"><label className="erp-toggle"><input type="checkbox" checked={form.is_active !== false} onChange={(e) => setF("is_active", e.target.checked)} /><div className="erp-toggle-track" /><div className="erp-toggle-thumb" /></label><span className="erp-toggle-label">{form.is_active !== false ? "Ativo" : "Inativo (a nota não aceita)"}</span></div></div>}
               {aberto?.oficial && (
                 <div className="erp-field erp-c12">
@@ -142,17 +134,15 @@ export function Vfis0300Page(): JSX.Element {
               <div className="erp-field erp-c4" style={{ display: "flex", alignItems: "flex-end" }}><label className="erp-check"><input type="checkbox" checked={inativos} onChange={(e) => setInativos(e.target.checked)} /> Mostrar inativos</label></div>
               <div className="erp-field erp-c12">
                 <table className="erp-grid">
-                  <thead><tr><th style={{ width: 80 }}>Código</th><th>Descrição</th><th>Utilização</th><th>Vigência</th><th>Indicadores</th><th>DIFAL</th><th style={{ width: 80 }}>Ações</th></tr></thead>
+                  <thead><tr><th style={{ width: 80 }}>Código</th><th>Descrição</th><th>Vigência</th><th>Indicadores</th><th style={{ width: 80 }}>Ações</th></tr></thead>
                   <tbody>
-                    {daPagina.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">{list.length === 0 ? "Nenhum CFOP cadastrado." : "Nenhum CFOP para o filtro."}</td></tr>}
+                    {daPagina.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">{list.length === 0 ? "Nenhum CFOP cadastrado." : "Nenhum CFOP para o filtro."}</td></tr>}
                     {daPagina.map((c) => (
                       <tr key={c.code} style={c.is_active === false ? { opacity: 0.55 } : undefined}>
                         <td style={{ fontWeight: 600 }}>{c.code}</td>
                         <td>{c.description}{!c.oficial && <span className="erp-badge erp-badge-amber" title="Código fora da tabela oficial do Portal da NF-e" style={{ marginLeft: 4 }}>fora da tabela</span>}</td>
-                        <td>{enumLabel(c.utilization)}</td>
                         <td>{c.oficial ? (vigente(c) ? (c.fim_vigencia ? `até ${dataBR(c.fim_vigencia)}` : `desde ${dataBR(c.inicio_vigencia)}`) : <span className="erp-badge erp-badge-red">encerrado em {dataBR(c.fim_vigencia)}</span>) : "—"}</td>
                         <td>{c.ind_nfe === false && <span className="erp-badge erp-badge-red">sem NF-e</span>}{INDICADORES.filter((x) => c[x.campo]).map((x) => <span key={x.campo} className="erp-badge erp-badge-blue" title={x.ajuda} style={{ marginLeft: 4 }}>{x.rotulo}</span>)}</td>
-                        <td>{c.difal ? <span className="erp-badge info">Sim</span> : <span className="erp-badge">Não</span>}</td>
                         <td><button className="erp-btn erp-btn-sm" onClick={() => edit(c)}>Editar</button></td>
                       </tr>
                     ))}

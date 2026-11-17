@@ -54,7 +54,7 @@ export function Vfis0305Page(): JSX.Element {
           <div className="erp-detail-body">
             <div className="erp-note" style={{ marginBottom: 12 }}>
               O tipo de nota decide se a saída gera título, movimenta estoque, baixa o pedido e entra como receita, e liga ou desliga ST, diferimento, PIS/COFINS e DIFAL no cálculo.
-              Alíquotas, CST e benefícios vêm das regras da <strong>VFIS0320 — Parâmetros ICMS/IPI</strong>, que podem ser filtradas por tipo de nota.
+              Alíquotas, CST e benefícios vêm das regras da <strong>VFIS0320 — Regras de ICMS/IPI</strong>, que podem ser filtradas por tipo de nota.
             </div>
             <SupportCrud resource="invoice-types" fields={CAMPOS} editable deletable inativavel preservar={PRESERVAR}
               columns={[{ key: "description", label: "Descrição" }, { key: "type", label: "Natureza", kind: "enum" }, { key: "generates_financial_title", label: "Título", kind: "bool" },

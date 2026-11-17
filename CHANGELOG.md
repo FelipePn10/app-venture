@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## Novidades
+- **Cadastro de cliente (VCLI0500):** passe o mouse sobre qualquer campo (ⓘ) para ver o que ele é, onde o sistema o usa e onde se cadastra. O **código do cliente é automático** (o próximo livre da sequência). Endereços e contatos já podem ser incluídos no cadastro novo e são gravados junto com o cliente.
+- **Limite de crédito de cliente novo** sai de uma conta: o menor entre a capacidade do cliente (% do capital social) e o apetite da empresa (% do faturamento médio mensal dela, com piso). O novo percentual fica na *Política de crédito*.
+- **Venda para a Zona Franca (SUFRAMA):** a inscrição válida do cliente vai na NF-e e, com a regra de ICMS/IPI marcada *Venda para a Zona Franca* (VFIS0320), a nota sai com ICMS isento e o valor desonerado abatido do total (motivo SUFRAMA), PIS/COFINS a alíquota zero, CFOP 6109/6110 e o cBenef do PR. A regra ganhou o código de enquadramento do IPI. A inscrição tem o dígito conferido; vencida, a prévia avisa. Tipo de NF que exige SUFRAMA não fatura sem ela.
+- **Tipo de NF do pedido vale no faturamento** (pelo pedido e pela carga): o da linha, senão o padrão do pedido. Linhas de tipos diferentes saem em notas separadas, com aviso na prévia.
+
+## Correções
+- **Lei da Transparência na NF-e:** na venda a consumidor final, a nota agora leva o valor aproximado dos tributos (federais, estaduais e municipais), calculado pela tabela IBPT da VFIS0110 — antes a IBPT era importada e não chegava à nota.
+- **Simulador de tributação (VFIS0325):** passa a considerar a SUFRAMA do cliente e mostra o ICMS desonerado da Zona Franca, como a nota.
+- **Telas fiscais revisadas:** saíram a VFIS0220 (CT-e — o frete recebido fica na VFIS0210, aba *Fretes*), a VFIS0340 (Simples — a apuração é no PGDAS-D; o crédito do Simples fica na VFIS0100) e a VFIS0550 (ressarcimento de ST), além das abas *Ajuste de ICMS (5.2 a 5.7)* e *Motivos DAPI* da VFIS0510 e de *Idiomas/Atributos* da VFIS0350: gravavam dados que nada usava.
+- **Notas especiais de ajuste (VFIS0560):** a nota agora pode ser **emitida** — só a emitida entra na apuração e vai ao SPED (E111); antes nenhuma saía do rascunho e nenhum ajuste chegava ao SPED. **Cancelar** tira a nota da apuração. Alterar a nota voltou a funcionar e grava período, data, código de ajuste e linha de apuração (antes eram descartados). A tela mostra só o que vale: código de ajuste, valor do ICMS e descrição; itens, CFOP e "gera resumo" saíram. O campo "Empresa" saiu: vale a empresa em que você está logado.
+- **Menu fiscal organizado** em *Documentos fiscais*, *Regras de tributação*, *Tabelas e cadastros*, *Apuração e obrigações* e *Configuração*, com a descrição de cada tela dizendo para que ela serve e o que a separa das vizinhas. VFIS0320 passa a se chamar **Regras de ICMS/IPI**.
+- **Campos sem efeito saíram das telas** (o valor já gravado é preservado): na VFIS0320, os que nenhum cálculo da venda usava (máscara, fornecedor, estabelecimento, tipo de NF de entrada, CST de entrada e de devolução, acréscimos e modalidades da ST, FCP-ST, campos de custo); na VFIS0300, utilização, indicador e tipo de utilização, DIFAL e doação; na VFIS0350, apuração; na VFIS0360, classificação e tipo de fornecedor.
+- VFIS0100: abrir a tela sem logo cadastrado não registra mais erro.
+- NF-e recebidas na SEFAZ (VFIS0210): com o token da Focus recusado, a tela agora pede para conferir o token na VFIS0100, em vez de "tente de novo em instantes".
+- O **indicador de IE** é calculado pela inscrição estadual, como a NF-e faz (antes o campo da tela era ignorado).
+- Pedido de venda (VVND0200): saiu o segundo campo "Portador", que não era usado; textos de condição de pagamento e tipo de NF não falam mais em "padrão do cliente".
+- Cadastros de apoio → Portador mostra só o que tem efeito (os demais campos continuam gravados).
+
 ## [v1.18.2] — 2026-11-16
 
 ## Novidades

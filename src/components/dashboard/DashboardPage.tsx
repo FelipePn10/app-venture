@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { Fragment, useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WindowControls } from "@/components/window/WindowControls";
@@ -220,6 +220,7 @@ export function DashboardPage(): JSX.Element {
       .ml{font-size:12px;font-weight:600;color:var(--v-text-2);flex:1}.mc{font-size:10px;font-weight:700;color:var(--v-text-3);background:var(--v-surface-3);border:1px solid var(--v-border);border-radius:10px;padding:1px 7px}
       .mcv{color:var(--v-text-muted);transition:transform .18s;flex-shrink:0}.mcv.exp{transform:rotate(90deg)}
       .mch{padding-left:10px;padding-bottom:4px;margin-left:6px;border-left:1px solid var(--v-border)}
+      .mgrp{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--v-text-muted, #888);padding:8px 8px 2px}
       /* Screen item */
       .si{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border-radius:7px;background:transparent;cursor:pointer;margin-bottom:1px;border:none;text-align:left;transition:background .1s}
       .si:hover{background:var(--v-green-soft)}.si:hover .ar{opacity:1;transform:translateX(2px)}.si:hover .fv{opacity:1}
@@ -356,7 +357,12 @@ export function DashboardPage(): JSX.Element {
                               <span className="mc">{screens.length}</span>
                               <svg className={`mcv${mExpanded?" exp":""}`} width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </button>
-                            {mExpanded && <div className="mch">{screens.map(s => renderScreenRow(s))}</div>}
+                            {mExpanded && <div className="mch">{screens.map((s, i) => (
+                              <Fragment key={s.code}>
+                                {s.grupo && s.grupo !== screens[i - 1]?.grupo && <div className="mgrp">{s.grupo}</div>}
+                                {renderScreenRow(s)}
+                              </Fragment>
+                            ))}</div>}
                           </div>
                         );})}
                     </div>

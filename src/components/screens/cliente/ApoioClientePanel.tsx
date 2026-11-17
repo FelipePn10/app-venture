@@ -27,9 +27,15 @@ const ABAS: { id: Tab; label: string }[] = [
 // e consumo à nota. As composições de base antigas não entram em cálculo
 // nenhum: não aparecem, mas continuam gravadas (TAX_PRESERVAR).
 const TAX_FIELDS: FieldSpec[] = [
-  { key: "description", label: "Descrição", col: 8, required: true },
-  { key: "is_consumer", label: "Consumidor final (uso e consumo)", kind: "bool", col: 4 },
+  { key: "description", label: "Descrição", col: 8, required: true,
+    dica: "Nome do grupo de tributação (ex.: Contribuinte indústria, Consumidor final). O cliente recebe o tipo na VCLI0500 → Fiscal. As regras de ICMS/IPI (VFIS0320) podem ser restritas a um tipo: a regra com o tipo do cliente vence a genérica." },
+  { key: "is_consumer", label: "Consumidor final (uso e consumo)", kind: "bool", col: 4,
+    dica: "Ligado: a venda para cliente deste tipo é tratada como uso e consumo (consumidor final: IPI na base do ICMS, DIFAL, sem diferimento) quando o cliente e o pedido não informam a finalidade da compra." },
 ];
+// Portador: tipo de cobrança, prazos, "adia para dia útil" e os efeitos no
+// crédito não entram em regra nenhuma (títulos não levam portador): não
+// aparecem, mas continuam gravados.
+const PORTADOR_PRESERVAR = ["billing_type", "uses_credit_limit", "consider_available", "postpone_due_date", "receipt_days", "payment_days"];
 const TAX_PRESERVAR = ["ipi_base_total_items", "ipi_base_subtract_discount", "ipi_base_add_freight", "ipi_base_add_expenses", "icms_base_total_items", "icms_base_subtract_discount", "icms_base_add_freight", "icms_base_add_ipi", "icms_base_add_expenses", "pis_cofins_base_total_items", "pis_cofins_base_subtract_discount", "pis_cofins_base_add_freight", "pis_cofins_base_add_insurance", "pis_cofins_base_add_expenses", "csll_base_total_items", "csll_base_subtract_discount", "csll_base_add_freight", "ir_base_total_items", "ir_base_subtract_discount", "ir_base_add_freight"];
 
 export function ApoioClientePanel(): JSX.Element {
@@ -79,18 +85,13 @@ export function ApoioClientePanel(): JSX.Element {
             fields={[{ key: "code", label: "Código", kind: "number", col: 2, required: true }, { key: "description", label: "Descrição", col: 4, required: true }, { key: "category", label: "Categoria", kind: "select", options: ["NORMAL", "CONSUMIDOR"], col: 3 }, { key: "delivery_days", label: "Dias entrega", kind: "number", col: 2 }]}
             columns={[{ key: "description", label: "Descrição" }, { key: "category", label: "Categoria" }, { key: "delivery_days", label: "Dias entrega", kind: "number" }]} />}
 
-          {tab === "portador" && <SupportCrud resource="carriers" inativavel
+          {tab === "portador" && <SupportCrud resource="carriers" inativavel preservar={PORTADOR_PRESERVAR}
             editable deletable
             fields={[
-              { key: "description", label: "Descrição", col: 5, required: true },
-              { key: "billing_type", label: "Cobrança", kind: "select", options: ["CARTEIRA", "COBRANCA_ESCRITURAL", "BOLETO"], col: 3 },
-              { key: "uses_credit_limit", label: "Usa limite crédito", kind: "bool", col: 2 },
-              { key: "consider_available", label: "Considera disponível", kind: "bool", col: 2 },
-              { key: "postpone_due_date", label: "Adia p/ dia útil", kind: "bool", col: 3 },
-              { key: "receipt_days", label: "Dias recebimento", kind: "number", col: 2 },
-              { key: "payment_days", label: "Dias compensação", kind: "number", col: 2 },
+              { key: "description", label: "Descrição", col: 8, required: true,
+                dica: "Banco ou carteira por onde o cliente paga (ex.: Itaú boleto, Carteira). Escolhido no cliente (VCLI0500 → Comercial e logística), vem sugerido no orçamento e no pedido e serve de critério na Política Comercial de Descontos (VPDV0108). Não é transportadora: essa fica no Cadastro de Transportadora (VSUP0140)." },
             ]}
-            columns={[{ key: "description", label: "Descrição" }, { key: "billing_type", label: "Cobrança" }, { key: "uses_credit_limit", label: "Limite", kind: "bool" }]} />}
+            columns={[{ key: "description", label: "Descrição" }]} />}
 
           {tab === "grupo" && (
             <>

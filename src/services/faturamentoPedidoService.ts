@@ -42,6 +42,8 @@ export interface PedidoParaFaturar {
   endereco_completo: boolean;
   /** O que a nota usa se o faturamento não disser outro: pedido, depois cliente. */
   tipo_frete_padrao?: string;
+  /** Tipo de NF padrão do pedido: a nota o usa se o faturamento não escolher outro. */
+  invoice_type_id?: number;
   shipping_carrier_id?: number;
   /** Endereço de entrega quando é outro que o do destinatário (vai no grupo de entrega da NF-e). */
   local_entrega?: string;
@@ -60,6 +62,8 @@ export interface PedidoParaFaturar {
   itens: PedidoItemParaFaturar[];
   valor_pendente: number;
   impedimentos: string[];
+  /** Pedem atenção, mas não impedem a nota (ex.: linhas com tipos de NF diferentes). */
+  avisos: string[];
   pode_faturar: boolean;
   notas_do_pedido: Array<{ id: number; numero_nf: number; status: string; valor_total: number }>;
 }
@@ -80,6 +84,7 @@ export async function previaFaturamentoPedido(code: number): Promise<PedidoParaF
     customer_city: parseStr(o, 'customer_city') || undefined,
     endereco_completo: Boolean(o['endereco_completo']),
     tipo_frete_padrao: parseStr(o, 'tipo_frete_padrao') || undefined,
+    invoice_type_id: parseNum(o, 'invoice_type_id') || undefined,
     shipping_carrier_id: parseNum(o, 'shipping_carrier_id') || undefined,
     local_entrega: parseStr(o, 'local_entrega') || undefined,
     representative_code: parseNum(o, 'representative_code') || undefined,
@@ -119,6 +124,7 @@ export async function previaFaturamentoPedido(code: number): Promise<PedidoParaF
     })),
     valor_pendente: parseNum(o, 'valor_pendente'),
     impedimentos: unwrapArray(o['impedimentos']).map((x) => String(x)),
+    avisos: unwrapArray(o['avisos']).map((x) => String(x)),
     pode_faturar: Boolean(o['pode_faturar']),
     notas_do_pedido: unwrapArray(o['notas_do_pedido']).map(unwrapObject).map((n) => ({
       id: parseNum(n, 'id'), numero_nf: parseNum(n, 'numero_nf'), status: parseStr(n, 'status'), valor_total: parseNum(n, 'valor_total'),

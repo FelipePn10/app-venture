@@ -275,7 +275,7 @@ export function Vfis0110Page(): JSX.Element {
           </div>
 
           <div className="erp-detail-body">
-            {!podeEditar && <div className="erp-feedback info">{SO_ADMIN}. Você pode consultar; as exceções da sua empresa (redução, ST, benefício) ficam na VFIS0320 — Parâmetros ICMS/IPI.</div>}
+            {!podeEditar && <div className="erp-feedback info">{SO_ADMIN}. Você pode consultar; as exceções da sua empresa (redução, ST, benefício) ficam na VFIS0320 — Regras de ICMS/IPI.</div>}
             {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
             {tab === "ibpt" && <IbptPanel podeEditar={podeEditar} />}

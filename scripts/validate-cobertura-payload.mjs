@@ -35,10 +35,20 @@ for (const campo of ['lista_valor_contabil', 'sintegra_sped_fiscal', 'calc_fomen
 const params = read('src/components/screens/fiscal/Vfis0320Page.tsx');
 check('parâmetros fiscais têm blocos por assunto', /const BLOCOS/.test(params) && /"especiais"/.test(params));
 check('parâmetros fiscais editam o registro inteiro', /setForm\(\{ \.\.\.p, ncm_code/.test(params));
-for (const campo of ['icms_red_pct_contrib', 'icms_subst_pct_contrib', 'bc_icms_st_modality',
-                     'icms_difal_type', 'ipi_red_pct_contrib', 'uses_icms_zona_franca', 'fcp_st_partilha_pct']) {
-  check(`parâmetros fiscais coletam ${campo}`, params.includes(campo));
+for (const campo of ['icms_red_pct_contrib', 'icms_difal_type', 'ipi_red_pct_contrib',
+                     'uses_icms_zona_franca', 'ipi_codigo_enquadramento']) {
+  check(`regras de ICMS/IPI coletam ${campo}`, params.includes(campo));
 }
+// Campos que o motor fiscal não lê saíram da tela (o valor gravado segue no
+// registro, que a edição manda inteiro): voltar com eles engana quem configura.
+for (const campo of ['icms_subst_pct_contrib', 'bc_icms_st_modality', 'fcp_st_partilha_pct']) {
+  check(`regras de ICMS/IPI não oferecem ${campo}, que o cálculo ignora`, !params.includes(campo));
+}
+
+// ── Notas especiais de ajuste (VFIS0560) ───────────────────────────────────
+// Sem emitir, nenhuma nota chegava ao SPED (o E111 só leva as emitidas).
+const notasEsp = read('src/components/screens/fiscal/Vfis0560Page.tsx');
+check('nota especial pode ser emitida e cancelada', /emitirNotaEspecial/.test(notasEsp) && /cancelarNotaEspecial/.test(notasEsp));
 
 // ── Classificação fiscal (VFIS0350) ────────────────────────────────────────
 const clas = read('src/components/screens/fiscal/Vfis0350Page.tsx');

@@ -23,6 +23,8 @@ export interface FieldSpec {
   placeholder?: string;
   /** Valor do campo em cadastro novo. */
   padrao?: boolean | string;
+  /** Explicação ao passar o mouse: o que é, onde é usado e onde se cadastra. */
+  dica?: string;
 }
 
 export interface ColumnSpec {
@@ -153,8 +155,8 @@ export function SupportCrud({ resource, fields, columns, title, editable = false
         {feedback && <div className="erp-field erp-c12"><div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div></div>}
 
         {fields.map((fs) => (
-          <div key={fs.key} className={`erp-field erp-c${fs.col ?? 4}`}>
-            <label className={`erp-label ${fs.required ? "erp-req" : ""}`}>{fs.label}</label>
+          <div key={fs.key} className={`erp-field erp-c${fs.col ?? 4}`} title={fs.dica}>
+            <label className={`erp-label ${fs.required ? "erp-req" : ""} ${fs.dica ? "erp-label-tip" : ""}`}>{fs.label}</label>
             {fs.kind === "bool" ? (
               <div className="erp-toggle-row">
                 <label className="erp-toggle">

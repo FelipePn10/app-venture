@@ -10,8 +10,9 @@ import { useAuthStore } from "@/store/authStore";
 
 const CAMPOS: { key: keyof CreditPolicy; label: string; hint: string; col?: number }[] = [
   { key: "max_limit", label: "Teto de limite por cliente (R$)", hint: "0 = sem teto." },
-  { key: "new_customer_capital_pct", label: "Cliente novo: % do capital social", hint: "Base do limite de quem ainda não tem histórico." },
-  { key: "new_customer_cap", label: "Cliente novo: teto (R$)", hint: "Sem capital social informado, a base é 25% deste valor." },
+  { key: "new_customer_capital_pct", label: "Cliente novo: % do capital social", hint: "Capacidade do cliente sem histórico: quanto do capital social dele o crédito pode alcançar." },
+  { key: "new_customer_revenue_pct", label: "Cliente novo: % do faturamento mensal da empresa", hint: "Apetite: quanto a empresa aceita expor num cliente ainda não testado, sobre o faturamento médio mensal dela (notas autorizadas dos últimos 12 meses)." },
+  { key: "new_customer_cap", label: "Cliente novo: piso do apetite (R$)", hint: "O mínimo do apetite, para empresa com pouco faturamento no sistema. Sem capital social informado, o limite parte de 25% deste valor." },
   { key: "override_tolerance_pct", label: "Tolerância para aprovar acima do sugerido (%)", hint: "Acima disso, só administrador." },
   { key: "overdue_block_days", label: "Dias de atraso que zeram o crédito", hint: "Título vencido há mais que isso (no cliente ou no grupo) bloqueia." },
   { key: "history_months", label: "Meses de histórico analisados", hint: "De 6 a 60." },
@@ -45,7 +46,8 @@ export function PoliticaCreditoPanel(): JSX.Element {
     <div className="erp-fieldset-body">
       {feedback && <div className="erp-field erp-c12"><div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div></div>}
       <div className="erp-field erp-c12"><div className="erp-note">
-        Como o limite é calculado: com histórico, média mensal faturada × (prazo médio ÷ 30 + 1); sem histórico, % do capital social com teto.
+        Como o limite é calculado: com histórico, média mensal faturada × (prazo médio ÷ 30 + 1); sem histórico, o menor entre a capacidade
+        do cliente (% do capital social) e o apetite da empresa (% do faturamento médio mensal dela, nunca abaixo do piso).
         O resultado é multiplicado pelo fator da classe (A 100%, B 80%, C 60%, D 30%, E 0%). CNPJ irregular, título vencido além da tolerância,
         protesto ou título baixado como perda zeram o limite.
       </div></div>

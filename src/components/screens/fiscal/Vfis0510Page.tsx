@@ -1,5 +1,3 @@
-import { MotivosDapiPanel } from "./MotivosDapiPanel";
-import { AjustesIcmsPanel } from "./AjustesIcmsPanel";
 import { LinhasApuracaoPanel } from "./LinhasApuracaoPanel";
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -101,14 +99,15 @@ export function AjustesApuracaoPanel(): JSX.Element {
 }
 
 /*
- * VFIS0510 — Tabelas da apuração de ICMS: as quatro tabelas de códigos oficiais
- * que quem fecha a apuração mantém (eram VFIS0500, VFIS0510, VFIS0520 e VFIS0530).
+ * VFIS0510 — Tabelas da apuração de ICMS: os códigos de ajuste da apuração
+ * (tabela 5.1.1) e as linhas de apuração, que as notas especiais (VFIS0560)
+ * usam e o SPED leva ao E111. As abas "Ajuste de ICMS (5.2 a 5.7)" e "Motivos
+ * de transferência DAPI" saíram: nada as usava (o SPED não gera C197/E220 e a
+ * DAPI é de Minas Gerais).
  */
 const ABAS = [
   { id: "ajuste-apuracao", label: "Ajuste de apuração (5.1.1)", Painel: AjustesApuracaoPanel },
-  { id: "ajuste-icms", label: "Ajuste de ICMS (5.2 a 5.7)", Painel: AjustesIcmsPanel },
   { id: "linhas", label: "Linhas de apuração", Painel: LinhasApuracaoPanel },
-  { id: "dapi", label: "Motivos de transferência DAPI", Painel: MotivosDapiPanel },
 ] as const;
 
 export function Vfis0510Page(): JSX.Element {

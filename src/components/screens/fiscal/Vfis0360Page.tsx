@@ -8,7 +8,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { type Cfop, listCfops } from "@/services/fiscalSupportService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadCfops, loadEntryOperations, loadInvoiceTypes, loadSupplierTypes } from "@/services/lookups";
+import { loadCfops, loadEntryOperations, loadInvoiceTypes } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "operacoes" | "grupos";
@@ -182,12 +182,6 @@ export function Vfis0360Page(): JSX.Element {
                     <option value="">— qualquer UF —</option>
                     {groups.map((g) => <option key={String(g.code)} value={String(g.code)}>{g.code} — {g.description}</option>)}
                   </select></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Tipo Fornecedor</label>
-                  <LookupField<string> value={form.supplier_type_code ? String(form.supplier_type_code) : undefined} loader={loadSupplierTypes} entityLabel="tipo de fornecedor" placeholder="Qualquer" clearable onChange={(c) => setF("supplier_type_code", c ? String(c) : "")} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Classif. (tipo)</label>
-                  <input className="erp-input" value={form.classification_type ?? ""} onChange={(e) => setF("classification_type", e.target.value)} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Classif. (código)</label>
-                  <input className="erp-input" value={form.classification_code ?? ""} onChange={(e) => setF("classification_code", e.target.value)} /></div>
                 <div className="erp-field erp-c12">
                   <label className="erp-label">Comportamento na nota de entrada</label>
                   <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>

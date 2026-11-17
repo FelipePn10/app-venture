@@ -91,7 +91,7 @@ export function Vfis0325Page(): JSX.Element {
               <div className="erp-note">
                 Monte uma venda — cliente (ou UF e inscrição estadual), finalidade e itens — e clique em <strong>Simular</strong>.
                 O sistema calcula ICMS, IPI, PIS/COFINS, ST e DIFAL exatamente como a nota fiscal vai calcular e mostra qual
-                regra de Parâmetros ICMS/IPI foi usada em cada item. Nada é gravado.
+                regra de Regras de ICMS/IPI foi usada em cada item. Nada é gravado.
               </div>
             )}
 
@@ -162,7 +162,7 @@ export function Vfis0325Page(): JSX.Element {
                           <td className="num">{money(l.valor_produtos)}</td>
                           <td>{l.cst_icms}{l.valor_credito_simples > 0 && <span className="erp-hint"> crédito {pct(l.aliq_credito_simples_pct)} = {money(l.valor_credito_simples)}</span>}</td>
                           <td className="num">{money(l.base_icms)}{l.icms_reducao_base_pct > 0 && <span className="erp-hint"> (red. {pct(l.icms_reducao_base_pct)})</span>}</td>
-                          <td className="num">{pct(l.aliq_icms_pct)} = {money(l.valor_icms)}</td>
+                          <td className="num">{pct(l.aliq_icms_pct)} = {money(l.valor_icms)}{(l.icms_valor_desonerado ?? 0) > 0 && <span className="erp-hint"> desonerado (Zona Franca) {money(l.icms_valor_desonerado)}</span>}</td>
                           <td className="num">{l.valor_icms_diferido > 0 ? `${pct(l.icms_diferimento_pct)} = ${money(l.valor_icms_diferido)}` : "—"}</td>
                           <td className="num">{l.valor_icms_st > 0 ? `MVA ${pct(l.mva_pct)}: ${money(l.valor_icms_st)}` : "—"}</td>
                           <td className="num">{l.cst_ipi} · {pct(l.aliq_ipi_pct)} = {money(l.valor_ipi)}</td>

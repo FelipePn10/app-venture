@@ -137,6 +137,16 @@ export async function updateNotaEspecial(dto: NotaEspecialDTO): Promise<NotaEspe
   const { data } = await httpClient.put(`${NOTAS_ESP}/`, dto);
   return asOne(data);
 }
+/** Emitir: o rascunho passa a valer na apuração e vai ao SPED (E111). */
+export async function emitirNotaEspecial(id: number): Promise<NotaEspecial> {
+  const { data } = await httpClient.post(`${NOTAS_ESP}/${id}/emitir`);
+  return asOne(data);
+}
+/** Cancelar: a nota sai da apuração. */
+export async function cancelarNotaEspecial(id: number): Promise<NotaEspecial> {
+  const { data } = await httpClient.post(`${NOTAS_ESP}/${id}/cancelar`);
+  return asOne(data);
+}
 export async function addNotaEspecialItem(notaId: number, dto: NotaEspecialItemDTO): Promise<NotaEspecialItemDTO> {
   const { data } = await httpClient.post(`${NOTAS_ESP}/${notaId}/itens`, dto);
   return asOne(data);

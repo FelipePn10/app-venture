@@ -70,19 +70,16 @@ const Vfis0100Page = lazy(() => import("./fiscal/Vfis0100Page").then((m) => ({ d
 const Vfis0110Page = lazy(() => import("./fiscal/Vfis0110Page").then((m) => ({ default: m.Vfis0110Page })));
 const Vfis0200Page = lazy(() => import("./fiscal/Vfis0200Page").then((m) => ({ default: m.Vfis0200Page })));
 const Vfis0210Page = lazy(() => import("./fiscal/Vfis0210Page").then((m) => ({ default: m.Vfis0210Page })));
-const Vfis0220Page = lazy(() => import("./fiscal/Vfis0220Page").then((m) => ({ default: m.Vfis0220Page })));
 const Vfis0300Page = lazy(() => import("./fiscal/Vfis0300Page").then((m) => ({ default: m.Vfis0300Page })));
 const Vfis0310Page = lazy(() => import("./fiscal/Vfis0310Page").then((m) => ({ default: m.Vfis0310Page })));
 const Vfis0320Page = lazy(() => import("./fiscal/Vfis0320Page").then((m) => ({ default: m.Vfis0320Page })));
 const Vfis0305Page = lazy(() => import("./fiscal/Vfis0305Page").then((m) => ({ default: m.Vfis0305Page })));
 const Vfis0325Page = lazy(() => import("./fiscal/Vfis0325Page").then((m) => ({ default: m.Vfis0325Page })));
-const Vfis0340Page = lazy(() => import("./fiscal/Vfis0340Page").then((m) => ({ default: m.Vfis0340Page })));
 const Vfis0345Page = lazy(() => import("./fiscal/Vfis0345Page").then((m) => ({ default: m.Vfis0345Page })));
 const Vfis0350Page = lazy(() => import("./fiscal/Vfis0350Page").then((m) => ({ default: m.Vfis0350Page })));
 const Vfis0670Page = lazy(() => import("./fiscal/Vfis0670Page").then((m) => ({ default: m.Vfis0670Page })));
 const Vfis0360Page = lazy(() => import("./fiscal/Vfis0360Page").then((m) => ({ default: m.Vfis0360Page })));
 const Vfis0510Page = lazy(() => import("./fiscal/Vfis0510Page").then((m) => ({ default: m.Vfis0510Page })));
-const Vfis0550Page = lazy(() => import("./fiscal/Vfis0550Page").then((m) => ({ default: m.Vfis0550Page })));
 const Vfis0560Page = lazy(() => import("./fiscal/Vfis0560Page").then((m) => ({ default: m.Vfis0560Page })));
 const Vfis0600Page = lazy(() => import("./fiscal/Vfis0600Page").then((m) => ({ default: m.Vfis0600Page })));
 const Vemp0100Page = lazy(() => import("./cadastros/Vemp0100Page").then((m) => ({ default: m.Vemp0100Page })));
@@ -247,13 +244,11 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VFIS0110: <Vfis0110Page />,
   VFIS0200: <Vfis0200Page />,
   VFIS0210: <Vfis0210Page />,
-  VFIS0220: <Vfis0220Page />,
   VFIS0300: <Vfis0300Page />,
   VFIS0310: <Vfis0310Page />,
   VFIS0305: <Vfis0305Page />,
   VFIS0320: <Vfis0320Page />,
   VFIS0325: <Vfis0325Page />,
-  VFIS0340: <Vfis0340Page />,
   VFIS0345: <Vfis0345Page />,
   VFIS0350: <Vfis0350Page />,
   VFIS0670: <Vfis0670Page />,
@@ -261,7 +256,6 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VAPR0100: <Vapr0100Page />,
   VFIS0360: <Vfis0360Page />,
   VFIS0510: <Vfis0510Page />,
-  VFIS0550: <Vfis0550Page />,
   VFIS0560: <Vfis0560Page />,
   VFIS0600: <Vfis0600Page />,
   // Custos

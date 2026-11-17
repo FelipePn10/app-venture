@@ -80,6 +80,8 @@ export interface ErpScreen {
   title: string;
   description: string;
   module: ErpModule;
+  /** Subgrupo dentro do módulo, mostrado como título no menu (opcional). */
+  grupo?: string;
 }
 
 /**
@@ -581,10 +583,130 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "financeiro",
   },
   {
+    code: "VFIS0200",
+    title: "NF-e de Saída",
+    description: "Emitir a nota de venda e demais saídas — avulsa ou faturando o pedido: rascunho, prévia, autorização, carta de correção e cancelamento.",
+    module: "fiscal",
+    grupo: "Documentos fiscais",
+  },
+  {
+    code: "VFIS0210",
+    title: "NF-e de Entrada",
+    description: "Lançar as notas de compra (XML ou manual), buscar as recebidas na SEFAZ e o frete das compras (CT-e), e aprovar a entrada.",
+    module: "fiscal",
+    grupo: "Documentos fiscais",
+  },
+  {
+    code: "VNFS0100",
+    title: "NFS-e (Nota Fiscal de Serviço)",
+    description: "Emitir e cancelar a nota de serviço (ISS) pela prefeitura, via Focus.",
+    module: "fiscal",
+    grupo: "Documentos fiscais",
+  },
+  {
+    code: "VFIS0320",
+    title: "Regras de ICMS/IPI",
+    description: "Como cada venda é tributada: alíquota, CST, redução, diferimento, ST, DIFAL, FCP, cBenef e Zona Franca — por UF de destino, NCM ou item, cliente, finalidade e tipo de nota.",
+    module: "fiscal",
+    grupo: "Regras de tributação",
+  },
+  {
+    code: "VFIS0305",
+    title: "Tipos de Nota Fiscal",
+    description: "O que cada tipo de nota de saída faz ao ser autorizada (título, estoque, baixa do pedido, receita) e o que ela calcula.",
+    module: "fiscal",
+    grupo: "Regras de tributação",
+  },
+  {
+    code: "VFIS0360",
+    title: "Tipos de Operação de Entrada",
+    description: "Natureza fiscal de cada compra (crédito de ICMS/IPI, estoque, financeiro) e as UFs em que ela vale.",
+    module: "fiscal",
+    grupo: "Regras de tributação",
+  },
+  {
+    code: "VFIS0325",
+    title: "Simulador de Tributação",
+    description: "Conferir, sem gravar nada, como a nota vai tributar uma venda: qual regra vale e quanto dá cada imposto.",
+    module: "fiscal",
+    grupo: "Regras de tributação",
+  },
+  {
+    code: "VFIS0110",
+    title: "Tabelas Tributárias",
+    description: "Alíquotas que valem sem regra específica: IPI e PIS/COFINS por NCM, ICMS interno e interestadual por UF e a tabela IBPT.",
+    module: "fiscal",
+    grupo: "Tabelas e cadastros",
+  },
+  {
+    code: "VFIS0350",
+    title: "Classificações Fiscais",
+    description: "NCM, CEST e os padrões fiscais (origem, unidade de tributação, cClassTrib) que os itens herdam.",
+    module: "fiscal",
+    grupo: "Tabelas e cadastros",
+  },
+  {
+    code: "VFIS0300",
+    title: "CFOPs",
+    description: "Tabela oficial de CFOPs usada nas notas de entrada e saída.",
+    module: "fiscal",
+    grupo: "Tabelas e cadastros",
+  },
+  {
+    code: "VFIS0310",
+    title: "Dispositivos Legais",
+    description: "Textos da base legal (isenção, redução, diferimento, IPI) que as regras de ICMS/IPI levam às informações complementares da nota.",
+    module: "fiscal",
+    grupo: "Tabelas e cadastros",
+  },
+  {
+    code: "VFIS0670",
+    title: "Reforma Tributária (IBS/CBS)",
+    description: "Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e a tabela oficial de classificação tributária.",
+    module: "fiscal",
+    grupo: "Tabelas e cadastros",
+  },
+  {
     code: "VFIN0400",
     title: "Apuração de Impostos",
-    description: "Apurar ICMS/IPI/PIS/COFINS por competência.",
+    description: "Apurar ICMS, IPI, PIS e COFINS do mês a partir das notas autorizadas.",
     module: "fiscal",
+    grupo: "Apuração e obrigações",
+  },
+  {
+    code: "VFIS0560",
+    title: "Notas Especiais de Ajuste",
+    description: "Ajustes da apuração do ICMS do mês que não vêm de nota (estornos, créditos outorgados): vão ao SPED no E111.",
+    module: "fiscal",
+    grupo: "Apuração e obrigações",
+  },
+  {
+    code: "VFIS0345",
+    title: "CIAP — Crédito do ICMS do Ativo",
+    description: "Crédito do ICMS dos bens do ativo em 48 parcelas: bens, apuração mensal, Bloco G do SPED e crédito no E111.",
+    module: "fiscal",
+    grupo: "Apuração e obrigações",
+  },
+  {
+    code: "VFIS0510",
+    title: "Tabelas da Apuração de ICMS",
+    description: "Códigos de ajuste da apuração (tabela 5.1.1) e linhas de apuração usados nas notas especiais de ajuste.",
+    module: "fiscal",
+    grupo: "Apuração e obrigações",
+  },
+  {
+    code: "VFIS0600",
+    title: "SPED EFD ICMS/IPI",
+    description: "Gerar o arquivo da EFD do mês com as notas de entrada, saída e CT-e e a apuração do ICMS e do IPI.",
+    module: "fiscal",
+    grupo: "Apuração e obrigações",
+  },
+  {
+    code: "VFIS0100",
+    title: "Configuração Fiscal",
+    description: "Emitente, regime tributário, Focus NF-e (token e ambiente), ICMS interno, diferimento, crédito do Simples, logo e exigências da emissão.",
+    module: "fiscal",
+    grupo: "Configuração",
   },
   {
     code: "VFIN0500",
@@ -609,108 +731,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     title: "Conciliação Bancária por OFX",
     description: "Importar extrato OFX real e conciliar movimentos da conta bancária.",
     module: "financeiro",
-  },
-  {
-    code: "VFIS0100",
-    title: "Configuração Fiscal",
-    description: "Configurar emitente, endereço, Focus NF-e, alíquotas e vencimentos.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0110",
-    title: "Tabelas Tributárias",
-    description: "Manter tabelas NCM (IPI/PIS/COFINS) e ICMS interno/interestadual.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0200",
-    title: "NF-e de Saída",
-    description: "Emitir NF-e de saída (avulsa ou faturando o pedido de venda): rascunho, prévia, autorização, CC-e, cancelamento.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0210",
-    title: "NF-e de Entrada",
-    description: "Importar o XML da NF-e de entrada, conciliar itens com o cadastro, plano de contas por item, parcelas e aprovar.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0220",
-    title: "CT-e (Conhecimento de Transporte)",
-    description: "Registrar CT-e e ratear frete vinculado à NF-e de entrada.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0300",
-    title: "CFOPs e Naturezas de Operação",
-    description: "Manter CFOPs e suas classificações de utilização.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0310",
-    title: "Dispositivos Legais",
-    description: "Cadastrar dispositivos legais (ICMS/IPI/PIS/COFINS/laudo).",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0305",
-    title: "Tipos de Nota Fiscal",
-    description: "Tipos de nota de saída: título, estoque, baixa do pedido, receita e o que entra no cálculo (ST, diferimento, PIS/COFINS, DIFAL).",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0320",
-    title: "Parâmetros ICMS/IPI",
-    description: "Parâmetros básicos de ICMS/IPI por NCM/Item, UF e operação.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0325",
-    title: "Simulador de Tributação",
-    description: "Calcular ICMS, IPI, PIS/COFINS, ST e DIFAL de uma venda como a NF-e vai calcular, por cliente, UF, finalidade e tipo de nota — sem gravar nada.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0340",
-    title: "Apuração do Simples Nacional",
-    description: "Apuração mensal do Simples Nacional por anexo.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0345",
-    title: "CIAP — Crédito do ICMS do Ativo",
-    description: "Bens do ativo imobilizado, parcelas mensais do crédito de ICMS pelo índice das saídas, Bloco G da EFD e crédito no E111.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0350",
-    title: "Classificações Fiscais",
-    description: "Cadastro de classificação fiscal de mercadorias (NCM/CEST), idiomas e atributos de exportação.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0360",
-    title: "Tipos de Operação de Entrada",
-    description: "Natureza fiscal das compras, grupos de estado e validação UF×natureza.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0510",
-    title: "Tabelas da Apuração de ICMS",
-    description: "Códigos de ajuste (5.1.1 e 5.2 a 5.7), linhas de apuração e motivos de transferência DAPI.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0550",
-    title: "Restituição / Ressarcimento de ICMS ST",
-    description: "Pedidos de restituição/ressarcimento/complementação de ICMS ST.",
-    module: "fiscal",
-  },
-  {
-    code: "VFIS0560",
-    title: "Notas Especiais de Ajuste",
-    description: "Notas complementares e de ajuste de apuração de ICMS (com itens).",
-    module: "fiscal",
   },
 
   // ── Cadastros & Plataforma / Contabilidade / NFS-e (novas)
@@ -749,12 +769,6 @@ export const ERP_SCREENS: ErpScreen[] = [
     title: "Contabilidade (SPED ECD)",
     description: "Plano de contas, contas contábeis, lançamentos e balancete (escrituração).",
     module: "contabilidade",
-  },
-  {
-    code: "VNFS0100",
-    title: "NFS-e (Nota Fiscal de Serviço)",
-    description: "Emitir, autorizar e cancelar NFS-e (modelo ABRASF via Focus), com cálculo de ISS.",
-    module: "fiscal",
   },
 
   // ── Estoque / Almoxarifado
@@ -840,7 +854,5 @@ export const ERP_SCREENS: ErpScreen[] = [
   { code: "VVND0710", title: "Contrato de Venda", description: "Contrato de fornecimento com o cliente: itens com preço fixado, teto, vigência, programação e pedidos de chamada pelo saldo.", module: "comercial" },
   { code: "VAPR0100", title: "Aprovações", description: "Solicitações por alçada (crédito do pedido, política comercial do orçamento) e políticas de aprovação.", module: "cadastros" },
   { code: "VADM0200", title: "Perfis de Acesso", description: "Perfis da empresa com permissão por módulo e ação, e os perfis de cada usuário.", module: "cadastros" },
-  { code: "VFIS0670", title: "Reforma Tributária (IBS/CBS)", description: "Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e tabela oficial de classificação tributária.", module: "fiscal" },
-  { code: "VFIS0600", title: "SPED EFD ICMS/IPI", description: "EFD do mês gerada das notas de entrada, saída e CT-e, com a apuração do ICMS e do IPI.", module: "fiscal" },
 
 ];
