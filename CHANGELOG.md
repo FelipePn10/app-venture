@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.1] — 2026-11-17
+
 ## Novidades
 - **Revisão automática do crédito (a cada 3 meses, configurável):** o sistema refaz a análise de cada cliente com os pagamentos e as compras do período. Reduz o limite na hora quando o cliente atrasa ou piora (zera num bloqueio), aumenta o bom pagador com histórico até +50% por revisão (configurável), respeita a exceção aprovada por administrador enquanto o cliente não piora e renova a validade, para o pedido não travar por limite vencido. Cliente sem histórico de pagamento ou bloqueado não é mexido: o limite vence na data dele e uma pessoa revisa. Cada decisão aparece na trilha como *Revisão automática*, com o motivo.
 - **Crédito sem depender de dado público:** em *Crédito → Faturamento declarado* registre a DRE, o balanço ou o IRPF que o cliente entregou. A capacidade do cliente novo passa a ser o maior entre o capital social (Receita) e o faturamento declarado — serve para pessoa física e para empresa sem capital informado ou com capital que não reflete o porte. Empresa recém-implantada informa o próprio faturamento mensal na *Política de crédito*.
