@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## Novidades
+- **Revisão automática do crédito (a cada 3 meses, configurável):** o sistema refaz a análise de cada cliente com os pagamentos e as compras do período. Reduz o limite na hora quando o cliente atrasa ou piora (zera num bloqueio), aumenta o bom pagador com histórico até +50% por revisão (configurável), respeita a exceção aprovada por administrador enquanto o cliente não piora e renova a validade, para o pedido não travar por limite vencido. Cliente sem histórico de pagamento ou bloqueado não é mexido: o limite vence na data dele e uma pessoa revisa. Cada decisão aparece na trilha como *Revisão automática*, com o motivo.
+- **Crédito sem depender de dado público:** em *Crédito → Faturamento declarado* registre a DRE, o balanço ou o IRPF que o cliente entregou. A capacidade do cliente novo passa a ser o maior entre o capital social (Receita) e o faturamento declarado — serve para pessoa física e para empresa sem capital informado ou com capital que não reflete o porte. Empresa recém-implantada informa o próprio faturamento mensal na *Política de crédito*.
+- **VCLI0510 — Saneamento do cadastro de clientes:** lista o que faz a NF-e ser rejeitada, o pedido travar ou o crédito errar (documento e IE inválidos, sem endereço, SUFRAMA inválida ou vencida, CNPJ irregular sem bloqueio, limites vencidos ou nunca analisados) com como resolver.
+- **Tipo de NF (VFIS0305):** agora dá para marcar *Exige SUFRAMA do cliente* — o faturamento já conferia a marca, mas ela não aparecia na tela.
+
+## Correções
+- **Impressões com perfil de acesso restrito:** pedido de venda, proposta, ficha do cliente, cotação de compra, nota de entrada, contas a pagar e a receber, plano de materiais, capacidade, programação, kardex, romaneio e custo de produção davam "esta operação ainda não pertence a nenhum módulo de permissão". Agora cada impressão segue a permissão do módulo da rotina.
+- **Política de crédito:** dias e meses só aceitam número inteiro; *Faturamento declarado* aceita "2.400.000,50" e "2400000.50".
+- **VCLI0510 — exportar** leva todas as pendências do filtro, não só a categoria aberta.
+- **Notas especiais de ajuste (VFIS0560):** alterar a nota pela lista não apaga mais o código de ajuste nem a linha de apuração.
+- **Campos sem efeito aposentados de vez:** as colunas que nenhum cálculo lia (VFIS0320, VFIS0300, VFIS0350, VFIS0360, Tipo de NF, Portador, Tipo de imposto e os itens da nota especial) saíram do banco; nas bases de produção nenhuma tinha valor preenchido, e o conteúdo foi arquivado.
+
 ## [v1.19.0] — 2026-11-17
 
 ## Novidades

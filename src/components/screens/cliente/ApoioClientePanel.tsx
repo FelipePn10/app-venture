@@ -24,19 +24,14 @@ const ABAS: { id: Tab; label: string }[] = [
 
 // Tipo de imposto: classifica o cliente para as regras da VFIS0320 (filtro
 // "tipo de imposto") e, marcado como consumidor final, leva a finalidade de uso
-// e consumo à nota. As composições de base antigas não entram em cálculo
-// nenhum: não aparecem, mas continuam gravadas (TAX_PRESERVAR).
+// e consumo à nota. As composições de base antigas saíram do banco na v1.20.0:
+// nenhum cálculo as usava.
 const TAX_FIELDS: FieldSpec[] = [
   { key: "description", label: "Descrição", col: 8, required: true,
     dica: "Nome do grupo de tributação (ex.: Contribuinte indústria, Consumidor final). O cliente recebe o tipo na VCLI0500 → Fiscal. As regras de ICMS/IPI (VFIS0320) podem ser restritas a um tipo: a regra com o tipo do cliente vence a genérica." },
   { key: "is_consumer", label: "Consumidor final (uso e consumo)", kind: "bool", col: 4,
     dica: "Ligado: a venda para cliente deste tipo é tratada como uso e consumo (consumidor final: IPI na base do ICMS, DIFAL, sem diferimento) quando o cliente e o pedido não informam a finalidade da compra." },
 ];
-// Portador: tipo de cobrança, prazos, "adia para dia útil" e os efeitos no
-// crédito não entram em regra nenhuma (títulos não levam portador): não
-// aparecem, mas continuam gravados.
-const PORTADOR_PRESERVAR = ["billing_type", "uses_credit_limit", "consider_available", "postpone_due_date", "receipt_days", "payment_days"];
-const TAX_PRESERVAR = ["ipi_base_total_items", "ipi_base_subtract_discount", "ipi_base_add_freight", "ipi_base_add_expenses", "icms_base_total_items", "icms_base_subtract_discount", "icms_base_add_freight", "icms_base_add_ipi", "icms_base_add_expenses", "pis_cofins_base_total_items", "pis_cofins_base_subtract_discount", "pis_cofins_base_add_freight", "pis_cofins_base_add_insurance", "pis_cofins_base_add_expenses", "csll_base_total_items", "csll_base_subtract_discount", "csll_base_add_freight", "ir_base_total_items", "ir_base_subtract_discount", "ir_base_add_freight"];
 
 export function ApoioClientePanel(): JSX.Element {
   const [tab, setTab] = useState<Tab>("regiao");
@@ -85,7 +80,7 @@ export function ApoioClientePanel(): JSX.Element {
             fields={[{ key: "code", label: "Código", kind: "number", col: 2, required: true }, { key: "description", label: "Descrição", col: 4, required: true }, { key: "category", label: "Categoria", kind: "select", options: ["NORMAL", "CONSUMIDOR"], col: 3 }, { key: "delivery_days", label: "Dias entrega", kind: "number", col: 2 }]}
             columns={[{ key: "description", label: "Descrição" }, { key: "category", label: "Categoria" }, { key: "delivery_days", label: "Dias entrega", kind: "number" }]} />}
 
-          {tab === "portador" && <SupportCrud resource="carriers" inativavel preservar={PORTADOR_PRESERVAR}
+          {tab === "portador" && <SupportCrud resource="carriers" inativavel
             editable deletable
             fields={[
               { key: "description", label: "Descrição", col: 8, required: true,
@@ -113,7 +108,7 @@ export function ApoioClientePanel(): JSX.Element {
               </div>
             </>
           )}
-          {tab === "imposto" && <SupportCrud resource="tax-types" inativavel preservar={TAX_PRESERVAR} fields={TAX_FIELDS} editable deletable
+          {tab === "imposto" && <SupportCrud resource="tax-types" inativavel fields={TAX_FIELDS} editable deletable
             columns={[{ key: "description", label: "Descrição" }, { key: "is_consumer", label: "Consumidor", kind: "bool" }]} />}
           {tab === "credito" && <PoliticaCreditoPanel />}
     </div>

@@ -10,8 +10,7 @@ import { useAuthStore } from "@/store/authStore";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const EMPTY: CfopDTOComSituacao = {
-  code: 0, description: "", utilization: "INDUSTRIALIZACAO_COMERCIO",
-  ind_operacao: "NORMAL", tipo_utilizacao: "NORMAL", difal: false, doacao: false, is_active: true,
+  code: 0, description: "", is_active: true,
 };
 type Sentido = "" | "ENTRADA" | "SAIDA";
 const POR_PAGINA = 50;
@@ -69,8 +68,7 @@ export function Vfis0300Page(): JSX.Element {
   const setF = <K extends keyof CfopDTOComSituacao>(k: K, v: CfopDTOComSituacao[K]) => { setForm((p) => ({ ...p, [k]: v })); setFeedback(null); };
   function novo() { setForm(EMPTY); setEditing(false); setAberto(null); setFeedback(null); }
   function edit(c: Cfop) {
-    setForm({ id: c.id, code: c.code, description: c.description, utilization: c.utilization, ind_operacao: c.ind_operacao,
-      tipo_utilizacao: c.tipo_utilizacao, difal: c.difal, doacao: c.doacao, is_active: c.is_active !== false });
+    setForm({ id: c.id, code: c.code, description: c.description, is_active: c.is_active !== false });
     setAberto(c); setEditing(true); setFeedback(null);
   }
 

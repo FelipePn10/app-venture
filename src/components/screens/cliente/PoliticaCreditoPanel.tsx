@@ -8,15 +8,22 @@ import { useAuthStore } from "@/store/authStore";
  * parâmetros do cálculo do limite sugerido; só o administrador altera.
  */
 
+// INTEIROS: dias e meses — o servidor recusa fração.
+const INTEIROS = new Set<keyof CreditPolicy>(["overdue_block_days", "history_months", "registration_check_days", "auto_review_months",
+  "validity_months_a", "validity_months_b", "validity_months_c", "validity_months_d", "validity_months_e"]);
 const CAMPOS: { key: keyof CreditPolicy; label: string; hint: string; col?: number }[] = [
   { key: "max_limit", label: "Teto de limite por cliente (R$)", hint: "0 = sem teto." },
-  { key: "new_customer_capital_pct", label: "Cliente novo: % do capital social", hint: "Capacidade do cliente sem histórico: quanto do capital social dele o crédito pode alcançar." },
+  { key: "new_customer_capital_pct", label: "Cliente novo: % do capital social", hint: "Capacidade do cliente sem histórico: quanto do capital social dele (Receita) o crédito pode alcançar." },
+  { key: "customer_revenue_pct", label: "Cliente novo: % do faturamento mensal declarado", hint: "Capacidade pelo faturamento que o cliente declarou (DRE, balanço, IRPF) — para quem não tem capital social público (CPF, ou capital que não reflete o porte). Vale o maior entre capital e faturamento declarado." },
   { key: "new_customer_revenue_pct", label: "Cliente novo: % do faturamento mensal da empresa", hint: "Apetite: quanto a empresa aceita expor num cliente ainda não testado, sobre o faturamento médio mensal dela (notas autorizadas dos últimos 12 meses)." },
-  { key: "new_customer_cap", label: "Cliente novo: piso do apetite (R$)", hint: "O mínimo do apetite, para empresa com pouco faturamento no sistema. Sem capital social informado, o limite parte de 25% deste valor." },
+  { key: "new_customer_cap", label: "Cliente novo: piso do apetite (R$)", hint: "O mínimo do apetite, para empresa com pouco faturamento no sistema. Sem capital social nem faturamento declarado, o limite parte de 25% deste valor." },
+  { key: "declared_monthly_revenue", label: "Faturamento mensal da empresa na implantação (R$)", hint: "Usado no apetite enquanto o sistema tem menos de 3 meses de notas autorizadas (empresa recém-implantada). 0 = não usar." },
   { key: "override_tolerance_pct", label: "Tolerância para aprovar acima do sugerido (%)", hint: "Acima disso, só administrador." },
   { key: "overdue_block_days", label: "Dias de atraso que zeram o crédito", hint: "Título vencido há mais que isso (no cliente ou no grupo) bloqueia." },
   { key: "history_months", label: "Meses de histórico analisados", hint: "De 6 a 60." },
   { key: "registration_check_days", label: "Reconsultar a Receita a cada (dias)", hint: "O agendador confere os CNPJs nesse intervalo." },
+  { key: "auto_review_months", label: "Revisão automática do limite a cada (meses)", hint: "O sistema refaz a análise com os pagamentos e as compras do período: reduz na hora quando o cliente atrasa, aumenta o bom pagador e renova a validade. 0 = desligada." },
+  { key: "auto_increase_max_pct", label: "Aumento máximo por revisão automática (%)", hint: "Quanto a revisão pode subir o limite de uma vez (sobre o limite atual). Só sobe quem tem histórico de pagamento; redução não tem limite. 0 = só reduz." },
 ];
 const VALIDADES: { key: keyof CreditPolicy; classe: string }[] = [
   { key: "validity_months_a", classe: "A" }, { key: "validity_months_b", classe: "B" }, { key: "validity_months_c", classe: "C" },
@@ -31,7 +38,7 @@ export function PoliticaCreditoPanel(): JSX.Element {
 
   useEffect(() => { getCreditPolicy().then(setP).catch((e) => setFeedback({ type: "error", message: errMessage(e) })); }, []);
 
-  const set = (k: keyof CreditPolicy, v: string) => setP((cur) => (cur ? { ...cur, [k]: v === "" ? 0 : Number(v) } : cur));
+  const set = (k: keyof CreditPolicy, v: string) => setP((cur) => (cur ? { ...cur, [k]: v === "" ? 0 : INTEIROS.has(k) ? Math.trunc(Number(v)) : Number(v) } : cur));
 
   async function salvar() {
     if (!p) return;
@@ -47,13 +54,14 @@ export function PoliticaCreditoPanel(): JSX.Element {
       {feedback && <div className="erp-field erp-c12"><div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div></div>}
       <div className="erp-field erp-c12"><div className="erp-note">
         Como o limite é calculado: com histórico, média mensal faturada × (prazo médio ÷ 30 + 1); sem histórico, o menor entre a capacidade
-        do cliente (% do capital social) e o apetite da empresa (% do faturamento médio mensal dela, nunca abaixo do piso).
+        do cliente (o maior entre % do capital social e % do faturamento mensal declarado) e o apetite da empresa (% do faturamento médio
+        mensal dela, nunca abaixo do piso). A revisão automática refaz a conta no intervalo abaixo e grava cada decisão na trilha do cliente.
         O resultado é multiplicado pelo fator da classe (A 100%, B 80%, C 60%, D 30%, E 0%). CNPJ irregular, título vencido além da tolerância,
         protesto ou título baixado como perda zeram o limite.
       </div></div>
       {CAMPOS.map((c) => (
         <div key={c.key} className={`erp-field erp-c${c.col ?? 4}`}><label className="erp-label">{c.label}</label>
-          <input className="erp-input num" type="number" step="0.01" min="0" value={p[c.key]} disabled={!isAdmin} onChange={(e) => set(c.key, e.target.value)} />
+          <input className="erp-input num" type="number" step={INTEIROS.has(c.key) ? 1 : 0.01} min="0" value={p[c.key]} disabled={!isAdmin} onChange={(e) => set(c.key, e.target.value)} />
           <span className="erp-field-hint">{c.hint}</span></div>
       ))}
       <div className="erp-field erp-c12"><label className="erp-label">Validade do limite por classe (meses)</label></div>

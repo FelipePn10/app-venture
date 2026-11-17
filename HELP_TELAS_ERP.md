@@ -196,6 +196,7 @@ regra de cada linha.
 
 | Código | Tela | Para que serve |
 |---|---|---|
+| [VCLI0510](#vcli0510--saneamento-do-cadastro-de-clientes) | Saneamento do Cadastro de Clientes | O que no cadastro faz a NF-e ser rejeitada, o pedido travar ou o crédito errar, com como resolver. |
 | [VCLI0500](#vcli0500--cadastro-de-cliente) | Cadastro de Cliente | Cadastrar, inativar e excluir clientes (matriz/filiais), dados fiscais e logísticos, limite de crédito calculado com trilha, Visão 360 e todos os cadastros de apoio. |
 
 **[Custos / Precificação](#custos--precificação)** — Custo-padrão do produto e margem de contribuição.
@@ -1188,12 +1189,27 @@ mais títulos pagos, somando o grupo econômico — mesma raiz de CNPJ): média
 mensal faturada × (prazo médio ÷ 30 + 1), ajustada pela classe. Pontuam:
 valor pago em dia, atraso médio e maior atraso, tempo de relacionamento,
 renegociações, devoluções; piora recente nos pagamentos tira pontos. Sem
-histórico: o menor entre a **capacidade do cliente** (um % do capital social
-dele) e o **apetite da empresa** (um % do faturamento médio mensal da própria
-empresa nos últimos 12 meses, nunca abaixo do piso da política) — quanto a
-empresa aceita arriscar num cliente ainda não testado. Os dois percentuais e o
-piso ficam na *Política de crédito*. E a classe
-nunca passa de C. **Zeram o limite:** CNPJ que não está ATIVO na Receita,
+histórico: o menor entre a **capacidade do cliente** e o **apetite da empresa**
+(um % do faturamento médio mensal da própria empresa nos últimos 12 meses,
+nunca abaixo do piso da política). A capacidade é o maior entre um % do
+**capital social** (Receita) e um % do **faturamento declarado** pelo cliente —
+quem não tem capital público (pessoa física, ou CNPJ sem o capital ou com
+capital que não reflete o porte) entrega a DRE, o balanço ou o IRPF, e você
+registra em *Crédito → Faturamento declarado* (vale a declaração mais recente
+com até 18 meses). Sem nenhum dos dois, o limite parte de 25% do piso. Empresa
+recém-implantada (menos de 3 meses de notas no sistema) informa o faturamento
+mensal dela na política. Percentuais e piso ficam na *Política de crédito*. E a
+classe nunca passa de C.
+
+**Revisão automática.** No intervalo da política (padrão: 3 meses) o sistema
+refaz a análise de cada cliente com os pagamentos e as compras do período:
+**reduz na hora** quando o cliente atrasou ou piorou (e zera num bloqueio),
+**aumenta** o bom pagador com histórico até o teto por revisão (padrão +50%),
+mantém a exceção aprovada por administrador enquanto o cliente não piora e
+renova a validade — o pedido não trava por limite vencido. Cliente **sem
+histórico de pagamento** no sistema não tem o limite reduzido nem renovado: sem
+dado para reavaliar, o limite vence na data dele e alguém revisa. Cada decisão entra
+na trilha como **Revisão automática**, com o motivo. **Zeram o limite:** CNPJ que não está ATIVO na Receita,
 título vencido além da tolerância (no cliente ou no grupo), título em protesto
 ou baixado como perda. Cada limite gravado fica na **trilha de crédito**, com o
 sugerido, o aprovado, quem aprovou e o motivo.
@@ -1234,6 +1250,25 @@ orçamento/pedido, VFIN0110) e tabela de venda (é do item, VCST0202).
 ## Custos / Precificação
 
 *Custo-padrão do produto e margem de contribuição.*
+
+#### VCLI0510 — Saneamento do Cadastro de Clientes
+
+**Para que serve.** Conferir de uma vez o cadastro dos clientes **ativos** e
+achar o que dá problema antes que ele apareça: NF-e rejeitada, pedido parado na
+análise de crédito ou limite calculado errado.
+
+**O que confere.** *Impede* (corrija já): CNPJ/CPF com dígito errado, IE que não
+confere com a UF do endereço, cliente sem endereço, SUFRAMA com dígito errado ou
+vencida, CNPJ irregular na Receita sem bloqueio, limite de crédito vencido.
+*Atenção*: CNPJ sem conferência recente na Receita, limite antigo nunca
+analisado, limite que vence em até 30 dias, cliente sem e-mail de NF-e.
+
+**Como usar.** Clique na categoria para ver os clientes e o que está errado em
+cada um; o "como resolver" diz onde corrigir na VCLI0500 (busque pelo código).
+**Conferir de novo** refaz a conta depois das correções. A tela só lê: nada é
+alterado aqui.
+
+---
 
 #### VCUS0200 — Margem de Contribuição
 

@@ -176,7 +176,7 @@ async function loadEndpointById(
 }
 
 /** Catálogos fiscais e de cadastro pela chave interna — ver `loadEndpointById`. */
-export const loadCfopsById = cached(() => loadEndpointById('/api/fiscal/support/cfops/', ['description', 'Description'], ['utilization']));
+export const loadCfopsById = cached(() => loadEndpointById('/api/fiscal/support/cfops/', ['description', 'Description']));
 export const loadLegalDevicesById = cached(() => loadEndpointById('/api/fiscal/support/dispositivos-legais/', ['description', 'Description'], ['type', 'Type']));
 export const loadInvoiceTypesById = cached(async () =>
   (await loadEndpointById('/api/customers/support/invoice-types', ['Description', 'description'], ['Type', 'type']))
@@ -982,7 +982,6 @@ export const loadCfops = cached(async () => {
   return (await listCfops()).map((c) => ({
     code: c.code,
     label: c.description || 'sem descrição',
-    sub: c.utilization || undefined,
     inactive: c.is_active === false,
   })).filter((o) => o.code);
 });
