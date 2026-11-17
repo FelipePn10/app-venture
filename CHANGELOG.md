@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.4] — 2026-11-17
+
 ## Novidades
 - **Cadastro de Transportadora (VSUP0140) completo:** veículo com os dados do MDF-e (UF da placa, RENAVAM conferido, tara, rodado, carroceria e proprietário TAC com RNTRC) e motorista com CPF, categoria e validade da CNH; tabela de frete com **fator de cubagem** e **taxa de despacho**; marca **aceita produto perigoso**; a transportadora nunca usada pode ser **excluída**.
 - **Cadastros de apoio na própria VSUP0140:** tipos de veículo (escolhido na frota, preenche rodado, carroceria, eixos e capacidade) e tipos de ocorrência (com *conta como falha* para a avaliação).
