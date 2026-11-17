@@ -253,6 +253,18 @@ export function Vmaq0200Page(): JSX.Element {
     };
   }, [roteiroDoItem, tForm.machine_code, tForm.production_time, tForm.production_time_unit, tForm.production_base_qty, machines, types]);
 
+  /**
+   * O roteiro tem tempo no centro desta máquina? Então o tempo daqui é
+   * opcional: o MRP usa o do roteiro e desta produtividade só a máquina e o
+   * rendimento. Antes a tela exigia o tempo dos dois lados.
+   */
+  const roteiroDaMaquinaTemTempo = useMemo(() => {
+    if (!roteiroDoItem || !tForm.machine_code) return false;
+    const maquina = machines.find((m) => m.code === tForm.machine_code);
+    const tipo = types.find((t) => t.code === maquina?.machine_type_code);
+    return !!tipo?.id && (roteiroDoItem.horasPorCentro.get(tipo.id) ?? 0) > 0;
+  }, [roteiroDoItem, tForm.machine_code, machines, types]);
+
   const [calc, setCalc] = useState({ item_code: "", mask: "", machine_code: 0, demand_qty: 0 });
   const [calcResult, setCalcResult] = useState<ProductionCalcResult | null>(null);
   const [sched, setSched] = useState({ machine_code: 0, schedule_date: "", planned_qty: 0, sequence: 0 });
@@ -567,7 +579,10 @@ export function Vmaq0200Page(): JSX.Element {
 
   const criarTempo = () => run(async () => {
     if (!tForm.item_code || !tForm.machine_code) { setFeedback({ type: "error", message: "Item e máquina são obrigatórios." }); return; }
-    if (!tForm.production_time || !tForm.production_base_qty) { setFeedback({ type: "error", message: "Tempo de ciclo e qtd base são obrigatórios." }); return; }
+    if (!tForm.production_base_qty) { setFeedback({ type: "error", message: "A quantidade base é obrigatória." }); return; }
+    if (!tForm.production_time && !roteiroDaMaquinaTemTempo) {
+      setFeedback({ type: "error", message: "Informe o tempo de produção: o roteiro deste item não tem tempo no centro desta máquina." }); return;
+    }
     await createItemMachineTime({ ...tForm, mask: tForm.mask || null });
     setFeedback({ type: "success", message: "Tempo item × máquina cadastrado." });
     setItemTimes(await listItemMachineTimes(tForm.item_code));
@@ -1269,7 +1284,7 @@ export function Vmaq0200Page(): JSX.Element {
           )}
           <div className="erp-field erp-c3"><label className="erp-label">Forma de produção</label><select className="erp-input" value={tForm.time_basis ?? "CYCLE"} onChange={(e) => setTForm((p) => ({ ...p, time_basis: e.target.value as "CYCLE" | "PROPORTIONAL" }))}><option value="PROPORTIONAL">Contínua — proporcional à quantidade</option><option value="CYCLE">Ciclos fechados — ocupa o ciclo inteiro</option></select></div>
           <div className="erp-field erp-c3"><label className="erp-label">Eficiência deste item (%)</label><input className="erp-input num" type="number" min="0.1" max="100" step="0.1" value={tForm.efficiency_rate == null ? "" : tForm.efficiency_rate * 100} onChange={(e) => setTForm((p) => ({ ...p, efficiency_rate: e.target.value === "" ? null : Number(e.target.value) / 100 }))} /><span className="erp-hint">Vazio herda a máquina. Não é aplicada duas vezes. Vale também sobre o tempo do roteiro.</span></div>
-          <div className="erp-field erp-c2"><label className="erp-label erp-req" htmlFor="maq-tempo-producao">Tempo de produção</label><input id="maq-tempo-producao" className="erp-input num" type="number" step="any" min="0.000001" value={tForm.production_time || ""} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /><span className="erp-hint">A ficha traz em segundos? Lance direto — não converta.{roteiroDoItem && roteiroDoItem.etapasComTempo > 0 ? " Com roteiro, o tempo da etapa prevalece." : ""}</span></div>
+          <div className="erp-field erp-c2"><label className={`erp-label${roteiroDaMaquinaTemTempo ? "" : " erp-req"}`} htmlFor="maq-tempo-producao">Tempo de produção</label><input id="maq-tempo-producao" className="erp-input num" type="number" step="any" min="0" value={tForm.production_time || ""} placeholder={roteiroDaMaquinaTemTempo ? "vem do roteiro" : undefined} onChange={(e) => setTForm((p) => ({ ...p, production_time: Number(e.target.value) }))} /><span className="erp-hint">{roteiroDaMaquinaTemTempo ? "O roteiro tem tempo no centro desta máquina: pode deixar em branco, o MRP usa o do roteiro." : "A ficha traz em segundos? Lance direto — não converta."}</span></div>
           <div className="erp-field erp-c2"><label className="erp-label" htmlFor="maq-unidade-tempo">Unidade tempo</label>
             <select id="maq-unidade-tempo" className="erp-input" value={tForm.production_time_unit} onChange={(e) => setTForm((p) => ({ ...p, production_time_unit: e.target.value }))}>
               {TIME_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
@@ -1304,7 +1319,7 @@ export function Vmaq0200Page(): JSX.Element {
                 : "Escolha o consumível primeiro."}
             </span></div>
           <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={criarTempo} disabled={busy}>Salvar produtividade</button></div>
-          {itemTimes.length > 0 && <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Máquina</th><th>Máscara</th><th>Produção</th><th>Eficiência</th><th>Preparação</th><th>Consumo</th><th></th></tr></thead><tbody>{itemTimes.map((row) => <tr key={`${row.machine_code}-${row.mask ?? ""}`}><td>{row.machine_code}</td><td>{row.mask || "Padrão"}</td><td>{row.production_base_qty} em {row.production_time} {row.production_time_unit.toLowerCase()}</td><td>{row.efficiency_rate == null ? "Da máquina" : `${row.efficiency_rate * 100}%`}</td><td>{row.setup_time} min</td><td>{row.consumable_id == null ? "—" : (() => {
+          {itemTimes.length > 0 && <div className="erp-field erp-c12"><table className="erp-grid"><thead><tr><th>Máquina</th><th>Máscara</th><th>Produção</th><th>Eficiência</th><th>Preparação</th><th>Consumo</th><th></th></tr></thead><tbody>{itemTimes.map((row) => <tr key={`${row.machine_code}-${row.mask ?? ""}`}><td>{row.machine_code}</td><td>{row.mask || "Padrão"}</td><td>{row.production_time ? `${row.production_base_qty} em ${row.production_time} ${row.production_time_unit.toLowerCase()}` : "Tempo do roteiro"}</td><td>{row.efficiency_rate == null ? "Da máquina" : `${row.efficiency_rate * 100}%`}</td><td>{row.setup_time} min</td><td>{row.consumable_id == null ? "—" : (() => {
             const c = consumiveis.find((x) => x.id === row.consumable_id);
             return `${row.consumption_per_hour}${c ? ` ${c.unit}/h · ${c.code}` : "/h"}`;
           })()}</td><td><button className="erp-btn" disabled={busy} onClick={() => setTForm({ ...row })}>Editar</button></td></tr>)}</tbody></table></div>}

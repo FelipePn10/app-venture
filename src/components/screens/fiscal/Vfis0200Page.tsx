@@ -14,7 +14,9 @@ import { definirClassTribDaLinha } from "@/services/reformaTributariaService";
 import { confirmar, pedirTexto } from "@/components/ui/dialogos";
 import { abrirDocumento } from "@/utils/abrirDocumento";
 import { chaveEmGrupos, documentoComMascara } from "@/utils/documentoFiscal";
-import { DanfePrevia } from "./DanfePrevia";
+import { DanfePrevia, ImpressaoDaPrevia } from "./DanfePrevia";
+import { PrintButton } from "@/components/ui/PrintButton";
+import { exportarPreviaNFe } from "@/services/impressaoService";
 
 type FeedbackState = { type: "success" | "error" | "info" | "warn"; message: string } | null;
 type Mode = "list" | "create" | "pedido" | "inutilizar";
@@ -97,6 +99,9 @@ export function Vfis0200Page(): JSX.Element {
   const [filtroSituacao, setFiltroSituacao] = useState<"" | SituacaoNF>("");
   const [pendView, setPendView] = useState<{ id: number; list: PendenciaNFe[] } | null>(null);
   const [previa, setPrevia] = useState<PreviaNFe | null>(null);
+  /** A prévia está indo para a impressora (a folha sai sozinha, em A4). */
+  const [imprimindoPrevia, setImprimindoPrevia] = useState(false);
+  const fimDaImpressao = useCallback(() => setImprimindoPrevia(false), []);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
 
@@ -403,6 +408,7 @@ export function Vfis0200Page(): JSX.Element {
         )}
       </div></section></div>
 
+      {previa && imprimindoPrevia && <ImpressaoDaPrevia previa={previa} onFim={fimDaImpressao} />}
       {previa && (
         <div className="erp-modal-backdrop" onClick={() => setPrevia(null)}>
           <div className="erp-modal erp-modal-lg" onClick={(e) => e.stopPropagation()}>
@@ -425,6 +431,9 @@ export function Vfis0200Page(): JSX.Element {
                 <span className={`erp-badge ${previa.ambiente.toLowerCase().startsWith("prod") ? "erp-badge-green" : "erp-badge-amber"}`}>
                   {previa.ambiente.toLowerCase().startsWith("prod") ? "PRODUÇÃO" : "HOMOLOGAÇÃO"}
                 </span>
+                <button className="erp-btn" onClick={() => setImprimindoPrevia(true)} disabled={imprimindoPrevia} title="Imprime a folha da prévia (sem valor fiscal)">Imprimir</button>
+                <PrintButton label="Exportar PDF" title="Baixa a prévia em PDF, no layout do DANFE" onPrint={() => exportarPreviaNFe(previa.fiscal_exit_id)}
+                  onError={(message) => setFeedback({ type: "error", message })} />
                 <button className="erp-btn" onClick={() => setPrevia(null)}>Fechar</button>
               </div>
             </div>
