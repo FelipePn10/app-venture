@@ -280,7 +280,7 @@ export function Vfis0100Page(): JSX.Element {
                   {" "}Exigir regra de ICMS/IPI em toda nota de venda
                 </label>
                 <span className="erp-field-hint">
-                  Ligado: a nota com item sem regra em Parâmetros ICMS/IPI (VFIS0320) fica impedida na prévia e não é transmitida.
+                  Ligado: a nota com item sem regra em Regras de ICMS/IPI (VFIS0320) fica impedida na prévia e não é transmitida.
                   Desligado: o item sem regra usa o ICMS interno abaixo e a prévia avisa. Confira os cenários no Simulador de Tributação (VFIS0325) antes de ligar.
                 </span>
               </div>

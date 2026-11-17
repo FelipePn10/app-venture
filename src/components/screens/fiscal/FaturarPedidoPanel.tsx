@@ -60,7 +60,7 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
       setPrevia(p);
       setQtds(Object.fromEntries(p.itens.map((i) => [i.sales_order_item_code, i.quantidade_pendente])));
       setCfop(p.cfop_sugerido); setNatureza(p.natureza_sugerida);
-      setFrete(""); setSeguro(""); setDesconto(""); setFinalidade(""); setTipoNota(undefined);
+      setFrete(""); setSeguro(""); setDesconto(""); setFinalidade(""); setTipoNota(p.invoice_type_id);
       setTipoFrete(p.tipo_frete_padrao ?? ""); setTransportadora(p.shipping_carrier_id);
     } catch (e) { onFeedback({ type: "error", message: errMessage(e) }); }
     finally { setBusy(false); }
@@ -124,6 +124,12 @@ export function FaturarPedidoPanel({ onCriada, onFeedback }: Props): JSX.Element
             <div className="erp-feedback error">
               <strong>O pedido não pode ser faturado agora:</strong>
               <ul style={{ margin: "4px 0 0 18px" }}>{previa.impedimentos.map((m, i) => <li key={i}>{m}</li>)}</ul>
+            </div>
+          )}
+          {previa.avisos.length > 0 && (
+            <div className="erp-feedback info">
+              <strong>Atenção:</strong>
+              <ul style={{ margin: "4px 0 0 18px" }}>{previa.avisos.map((m, i) => <li key={i}>{m}</li>)}</ul>
             </div>
           )}
 

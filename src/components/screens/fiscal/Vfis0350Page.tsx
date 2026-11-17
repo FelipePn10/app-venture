@@ -1,10 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import {
-  type FiscalClassificationDTO, type ClassificationExportAttrDTO,
+  type FiscalClassificationDTO,
   listFiscalClassifications, createFiscalClassification, updateFiscalClassification,
-  addClassificationLanguage, addClassificationExportAttribute, getClassificationDetail,
 } from "@/services/fiscalAdvancedService";
-import { errMessage, type Obj, parseStr } from "@/services/fiscalShared";
+import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { type ClassificacaoIBSCBS, listarClassificacoes } from "@/services/reformaTributariaService";
 import { listNcmTaxes } from "@/services/taxTableService";
@@ -12,8 +11,6 @@ import { listNcmTaxes } from "@/services/taxTableService";
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 // Dia LOCAL: toISOString() dá o dia em UTC, que já é amanhã depois das 21h.
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-const EMPTY_LANG = { language: "", description: "" };
-const EMPTY_ATTR = { ncm: "", code: "", description: "", domain: "", start_date: today(), end_date: "" };
 const EMPTY: FiscalClassificationDTO = {
   description: "", ncm: "", cest: "", ex_tarifario: "", ipi_rate: 0, ipi_indicator: "PERCENTUAL",
   pis_rate: 0, cofins_rate: 0, mod_bc_icms: "", mod_bc_icms_st: "", cod_clas_trib: "", obs_fiscal: "",
@@ -25,11 +22,6 @@ export function Vfis0350Page(): JSX.Element {
   const [form, setForm] = useState<FiscalClassificationDTO>(EMPTY);
   const [editCode, setEditCode] = useState<string | null>(null);
   const [list, setList] = useState<FiscalClassificationDTO[]>([]);
-  const [selected, setSelected] = useState<FiscalClassificationDTO | null>(null);
-  const [langs, setLangs] = useState<Obj[]>([]);
-  const [attrs, setAttrs] = useState<Obj[]>([]);
-  const [langForm, setLangForm] = useState(EMPTY_LANG);
-  const [attrForm, setAttrForm] = useState(EMPTY_ATTR);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
   // Tabela oficial de cClassTrib (só os admitidos na NF-e) para escolher o
@@ -64,38 +56,6 @@ export function Vfis0350Page(): JSX.Element {
       if (editCode !== null) { await updateFiscalClassification({ ...form, code: editCode }); setFeedback({ type: "success", message: `Classificação ${editCode} atualizada.` }); }
       else { await createFiscalClassification(form); setFeedback({ type: "success", message: "Classificação cadastrada." }); }
       novo(); await reload();
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-
-  async function abrir(c: FiscalClassificationDTO) {
-    if (!c.code) return;
-    setSelected(c); setLangForm(EMPTY_LANG); setAttrForm(EMPTY_ATTR); setBusy(true); setFeedback(null);
-    try {
-      const d = await getClassificationDetail(c.code);
-      setLangs(d.languages); setAttrs(d.exportAttributes);
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-
-  async function addLang() {
-    if (!selected?.code) return;
-    if (!langForm.language.trim() || !langForm.description.trim()) { setFeedback({ type: "error", message: "Idioma e descrição são obrigatórios." }); return; }
-    setBusy(true); setFeedback(null);
-    try {
-      await addClassificationLanguage({ classification_code: selected.code, ...langForm });
-      setLangForm(EMPTY_LANG); setLangs((await getClassificationDetail(selected.code)).languages);
-      setFeedback({ type: "success", message: "Idioma adicionado." });
-    } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-
-  async function addAttr() {
-    if (!selected?.code) return;
-    if (!attrForm.code.trim()) { setFeedback({ type: "error", message: "Código do atributo é obrigatório." }); return; }
-    setBusy(true); setFeedback(null);
-    try {
-      const dto: ClassificationExportAttrDTO = { classification_code: selected.code, ...attrForm };
-      await addClassificationExportAttribute(dto);
-      setAttrForm(EMPTY_ATTR); setAttrs((await getClassificationDetail(selected.code)).exportAttributes);
-      setFeedback({ type: "success", message: "Atributo de exportação adicionado." });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -135,7 +95,7 @@ export function Vfis0350Page(): JSX.Element {
             <div className="erp-field erp-c6"><label className="erp-label erp-req">Descrição</label>
               <input className="erp-input" value={form.description} onChange={(e) => setF("description", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label" title="O NCM liga a classificação à tabela tributária (VFIS0110), de onde a nota tira o IPI e as exceções de PIS/COFINS.">NCM</label>
-              <input className="erp-input" value={form.ncm ?? ""} placeholder="84714900" onChange={(e) => setF("ncm", e.target.value)} /></div>
+              <input className="erp-input" value={form.ncm ?? ""} placeholder="73089010" onChange={(e) => setF("ncm", e.target.value)} /></div>
             <div className="erp-field erp-c2"><label className="erp-label">CEST</label>
               <input className="erp-input" value={form.cest ?? ""} onChange={(e) => setF("cest", e.target.value)} /></div>
           
@@ -162,8 +122,6 @@ export function Vfis0350Page(): JSX.Element {
             </small></div>
             <div className="erp-field erp-c3"><label className="erp-label">IPI do NCM (VFIS0110)</label>
               <input className="erp-input num" id="classificacao-ipi-tabela" readOnly value={ipiDoNcm(form.ncm) ?? ""} placeholder={form.ncm ? "NCM fora da tabela" : "informe o NCM"} /></div>
-            <div className="erp-field erp-c3"><label className="erp-label" title="Regime de apuração usado na EFD e na devolução de compra.">Apuração</label>
-              <input className="erp-input" value={form.apuracao ?? ""} onChange={(e) => setF("apuracao", e.target.value || undefined)} /></div>
             <div className="erp-field erp-c3"><label className="erp-label">cClassTrib (IBS/CBS)</label>
               <input className="erp-input num" list="vfis0350-classtrib" maxLength={6} placeholder="000001" value={form.cod_clas_trib ?? ""} onChange={(e) => setF("cod_clas_trib", e.target.value)} />
               <datalist id="vfis0350-classtrib">{classTrib.filter((c) => c.suportado_emissao).map((c) => <option key={c.cclass_trib} value={c.cclass_trib}>{c.descricao.slice(0, 90)}</option>)}</datalist>
@@ -182,7 +140,6 @@ export function Vfis0350Page(): JSX.Element {
                   <td>{c.is_active === false ? <span className="erp-badge err">Não</span> : <span className="erp-badge ok">Sim</span>}</td>
                   <td>
                     <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => edit(c)}>Editar</button>
-                    <button className="erp-btn erp-btn-sm erp-btn erp-btn-sm" onClick={() => void abrir(c)} disabled={!c.code}>Idiomas/Atrib.</button>
                   </td>
                 </tr>
               ))}
@@ -190,66 +147,6 @@ export function Vfis0350Page(): JSX.Element {
           </table>
         </div></div>
         </div>
-        {selected && (
-          <>
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Idiomas — {selected.code} <button className="erp-btn" onClick={() => setSelected(null)}>Fechar</button></div><div className="erp-fieldset-body">
-              
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Idioma</label>
-                  <input className="erp-input" value={langForm.language} placeholder="en, es..." onChange={(e) => setLangForm((p) => ({ ...p, language: e.target.value }))} /></div>
-                <div className="erp-field erp-c8"><label className="erp-label erp-req">Descrição</label>
-                  <input className="erp-input" value={langForm.description} onChange={(e) => setLangForm((p) => ({ ...p, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
-                  <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void addLang()} disabled={busy}>+ Idioma</button></div>
-              
-            </div>
-              <div className="erp-fieldset-body">
-                <table className="erp-grid">
-                  <thead><tr><th>Idioma</th><th>Descrição</th></tr></thead>
-                  <tbody>
-                    {langs.length === 0 && <tr><td colSpan={2} className="erp-grid-empty">Nenhum idioma.</td></tr>}
-                    {langs.map((l, i) => <tr key={i}><td style={{ fontWeight: 600 }}>{parseStr(l, "language", "Language")}</td><td>{parseStr(l, "description", "Description")}</td></tr>)}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="erp-fieldset"><div className="erp-fieldset-head">Atributos de Exportação</div><div className="erp-fieldset-body">
-              
-                <div className="erp-field erp-c2"><label className="erp-label erp-req">Código</label>
-                  <input className="erp-input" value={attrForm.code} onChange={(e) => setAttrForm((p) => ({ ...p, code: e.target.value }))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">NCM</label>
-                  <input className="erp-input" value={attrForm.ncm} onChange={(e) => setAttrForm((p) => ({ ...p, ncm: e.target.value }))} /></div>
-                <div className="erp-field erp-c4"><label className="erp-label">Descrição</label>
-                  <input className="erp-input" value={attrForm.description} onChange={(e) => setAttrForm((p) => ({ ...p, description: e.target.value }))} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Domínio</label>
-                  <input className="erp-input" value={attrForm.domain} onChange={(e) => setAttrForm((p) => ({ ...p, domain: e.target.value }))} /></div>
-                <div className="erp-field erp-c2" style={{ justifyContent: "flex-end" }}>
-                  <button className="erp-btn erp-btn-primary" style={{ width: "100%" }} onClick={() => void addAttr()} disabled={busy}>+ Atributo</button></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Vigência início</label>
-                  <input className="erp-input" type="date" value={attrForm.start_date} onChange={(e) => setAttrForm((p) => ({ ...p, start_date: e.target.value }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Vigência fim</label>
-                  <input className="erp-input" type="date" value={attrForm.end_date} onChange={(e) => setAttrForm((p) => ({ ...p, end_date: e.target.value }))} /></div>
-              
-            </div>
-              <div className="erp-fieldset-body">
-                <table className="erp-grid">
-                  <thead><tr><th>Código</th><th>Descrição</th><th>Domínio</th><th>Início</th><th>Fim</th></tr></thead>
-                  <tbody>
-                    {attrs.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum atributo.</td></tr>}
-                    {attrs.map((a, i) => (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 600 }}>{parseStr(a, "code", "Code")}</td><td>{parseStr(a, "description", "Description")}</td>
-                        <td>{parseStr(a, "domain", "Domain") || "—"}</td>
-                        <td>{(parseStr(a, "start_date", "StartDate") || "").slice(0, 10) || "—"}</td>
-                        <td>{(parseStr(a, "end_date", "EndDate") || "").slice(0, 10) || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
       </div></section></div>
 
       <footer className="erp-statusbar">

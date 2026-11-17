@@ -29,6 +29,8 @@ interface LookupFieldProps<T extends string | number> {
   /** Fonte de dados (ex.: loadCustomers). */
   loader: LookupLoader;
   placeholder?: string;
+  /** Explicação do campo ao passar o mouse (sem ela, o botão mostra o valor ou o placeholder e cobre a dica do campo). */
+  dica?: string;
   /** Nome da entidade para textos ("cliente", "item"…). */
   entityLabel?: string;
   disabled?: boolean;
@@ -66,7 +68,7 @@ function mesmoCodigo(a: string | number, b: string | number | undefined | null):
 
 export function LookupField<T extends string | number = number>({
   value, onChange, loader, placeholder = "Selecionar…", entityLabel = "registro", disabled = false, clearable = true, allowManualCode = true,
-  includeInactive = false, textoLivre = false, vazio,
+  includeInactive = false, textoLivre = false, vazio, dica,
 }: LookupFieldProps<T>): JSX.Element {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -219,7 +221,7 @@ export function LookupField<T extends string | number = number>({
 
   return (
     <div className="erp-lookup" ref={wrapRef}>
-      <button type="button" className={`erp-lookup-control${open ? " open" : ""}`} onClick={openPanel} disabled={disabled} title={display || placeholder}>
+      <button type="button" className={`erp-lookup-control${open ? " open" : ""}`} onClick={openPanel} disabled={disabled} title={dica ? (display ? `${display}\n\n${dica}` : dica) : (display || placeholder)}>
         <span className={`erp-lookup-value${display ? "" : " placeholder"}`}>{display || placeholder}</span>
         {clearable && value ? (
           <span className="erp-lookup-clear" role="button" onClick={clear} title="Limpar">

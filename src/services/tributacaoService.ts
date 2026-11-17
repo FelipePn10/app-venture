@@ -56,6 +56,8 @@ export interface SimulacaoLinha {
   valor_fcp_uf_dest: number;
   aliq_credito_simples_pct: number;
   valor_credito_simples: number;
+  /** Zona Franca: ICMS desonerado (abatido do total). */
+  icms_valor_desonerado?: number;
   notas: string[];
 }
 
@@ -73,6 +75,7 @@ export interface SimulacaoResultado {
   totais: {
     base_icms: number; valor_icms: number; valor_icms_diferido: number; base_icms_st: number; valor_icms_st: number;
     valor_ipi: number; valor_pis: number; valor_cofins: number; valor_difal: number; valor_fcp_uf_dest: number;
+    icms_valor_desonerado?: number;
   };
   valor_total_nota: number;
   pendencias: { nivel: 'IMPEDE' | 'ATENCAO'; mensagem: string }[];

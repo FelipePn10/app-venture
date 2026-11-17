@@ -507,6 +507,7 @@ export function Vfis0200Page(): JSX.Element {
                             <br /><small style={{ opacity: 0.75 }}>
                               {it.regra_icms_ipi_id ? `regra nº ${it.regra_icms_ipi_id}` : <span title="Sem regra de ICMS/IPI: alíquota interna da empresa">regra geral da empresa</span>}
                               {it.valor_credito_simples > 0 && ` · crédito SN ${money(it.valor_credito_simples)}`}
+                              {it.icms_valor_desonerado > 0 && ` · ICMS desonerado (Zona Franca) ${money(it.icms_valor_desonerado)}`}
                             </small>
                           </td>
                           <td className="num">{money(it.valor_ipi)}{it.cst_ipi ? <><br /><small style={{ opacity: 0.75 }}>CST {it.cst_ipi}</small></> : null}</td>

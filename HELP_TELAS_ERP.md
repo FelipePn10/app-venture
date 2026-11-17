@@ -320,27 +320,24 @@ regra de cada linha.
 
 | Código | Tela | Para que serve |
 |---|---|---|
-| [VFIS0100](#vfis0100--configuração-fiscal) | Configuração Fiscal | Configurar emitente, endereço, Focus NF-e, alíquotas e vencimentos. |
-| [VFIS0110](#vfis0110--tabelas-tributárias) | Tabelas Tributárias | Manter tabelas NCM (IPI/PIS/COFINS) e ICMS interno/interestadual. |
-| [VFIS0200](#vfis0200--nf-e-de-saída) | NF-e de Saída | Emitir NF-e de saída (avulsa ou faturando o pedido de venda): rascunho, prévia, autorização, CC-e, cancelamento. |
-| [VFIS0210](#vfis0210--nf-e-de-entrada) | NF-e de Entrada | Importar o XML da NF-e de entrada, conciliar itens com o cadastro, plano de contas por item, parcelas e aprovar. |
-| [VFIS0220](#vfis0220--ct-e-conhecimento-de-transporte) | CT-e (Conhecimento de Transporte) | Registrar CT-e e ratear frete vinculado à NF-e de entrada. |
-| [VFIS0300](#vfis0300--cfops-e-naturezas-de-operação) | CFOPs e Naturezas de Operação | Manter CFOPs e suas classificações de utilização. |
-| [VFIS0310](#vfis0310--dispositivos-legais) | Dispositivos Legais | Cadastrar dispositivos legais (ICMS/IPI/PIS/COFINS/laudo). |
-| [VFIS0305](#vfis0305--tipos-de-nota-fiscal) | Tipos de Nota Fiscal | O que cada tipo de nota faz: título, estoque, baixa do pedido, receita, ST, diferimento, PIS/COFINS e DIFAL. |
-| [VFIS0320](#vfis0320--parâmetros-icmsipi) | Parâmetros ICMS/IPI | Parâmetros básicos de ICMS/IPI por NCM/Item, UF e operação. |
-| [VFIS0325](#vfis0325--simulador-de-tributação) | Simulador de Tributação | Calcular ICMS, IPI, PIS/COFINS, ST e DIFAL de uma venda como a NF-e vai calcular, por cliente, UF, finalidade e tipo de nota — sem gravar nada. |
-| [VFIS0340](#vfis0340--apuração-do-simples-nacional) | Apuração do Simples Nacional | Apuração mensal do Simples Nacional por anexo. |
-| [VFIS0345](#vfis0345--ciap--crédito-do-icms-do-ativo) | CIAP — Crédito do ICMS do Ativo | Bens do ativo imobilizado, parcelas mensais do crédito de ICMS pelo índice das saídas, Bloco G da EFD e crédito no E111. |
-| [VFIS0350](#vfis0350--classificações-fiscais) | Classificações Fiscais | Cadastro de classificação fiscal de mercadorias (NCM/CEST), idiomas e atributos de exportação. |
-| [VFIS0360](#vfis0360--tipos-de-operação-de-entrada) | Tipos de Operação de Entrada | Natureza fiscal das compras, grupos de estado e validação UF×natureza. |
-| [VFIS0510](#vfis0510--tabelas-da-apuração-de-icms) | Tabelas da Apuração de ICMS | Códigos de ajuste (5.1.1 e 5.2 a 5.7), linhas de apuração e motivos de transferência DAPI. |
-| [VFIN0400](#vfin0400--apuração-de-impostos) | Apuração de Impostos | Apurar ICMS/IPI/PIS/COFINS por competência e manter os lançamentos de resumo do ICMS. |
-| [VFIS0550](#vfis0550--restituição--ressarcimento-de-icms-st) | Restituição / Ressarcimento de ICMS ST | Pedidos de restituição/ressarcimento/complementação de ICMS ST. |
-| [VFIS0560](#vfis0560--notas-especiais-de-ajuste) | Notas Especiais de Ajuste | Notas complementares e de ajuste de apuração de ICMS (com itens). |
-| [VNFS0100](#vnfs0100--nfs-e-nota-fiscal-de-serviço) | NFS-e (Nota Fiscal de Serviço) | Emitir, autorizar e cancelar NFS-e (modelo ABRASF via Focus), com cálculo de ISS. |
-| [VFIS0670](#vfis0670--reforma-tributária-ibscbs) | Reforma Tributária (IBS/CBS) | Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e tabela oficial de classificação tributária. |
-| [VFIS0600](#vfis0600--sped-efd-icmsipi) | SPED EFD ICMS/IPI | EFD do mês gerada das notas de entrada, saída e CT-e, com a apuração do ICMS e do IPI. |
+| [VFIS0200](#vfis0200--nf-e-de-saída) | NF-e de Saída | **Documentos fiscais.** Emitir a nota de venda e demais saídas — avulsa ou faturando o pedido: rascunho, prévia, autorização, carta de correção e cancelamento. |
+| [VFIS0210](#vfis0210--nf-e-de-entrada) | NF-e de Entrada | **Documentos fiscais.** Lançar as notas de compra (XML ou manual), buscar as recebidas na SEFAZ e o frete das compras (CT-e), e aprovar a entrada. |
+| [VNFS0100](#vnfs0100--nfs-e-nota-fiscal-de-serviço) | NFS-e (Nota Fiscal de Serviço) | **Documentos fiscais.** Emitir e cancelar a nota de serviço (ISS) pela prefeitura, via Focus. |
+| [VFIS0320](#vfis0320--regras-de-icmsipi) | Regras de ICMS/IPI | **Regras de tributação.** Como cada venda é tributada: alíquota, CST, redução, diferimento, ST, DIFAL, FCP, cBenef e Zona Franca — por UF de destino, NCM ou item, cliente, finalidade e tipo de nota. |
+| [VFIS0305](#vfis0305--tipos-de-nota-fiscal) | Tipos de Nota Fiscal | **Regras de tributação.** O que cada tipo de nota de saída faz ao ser autorizada (título, estoque, baixa do pedido, receita) e o que ela calcula. |
+| [VFIS0360](#vfis0360--tipos-de-operação-de-entrada) | Tipos de Operação de Entrada | **Regras de tributação.** Natureza fiscal de cada compra (crédito de ICMS/IPI, estoque, financeiro) e as UFs em que ela vale. |
+| [VFIS0325](#vfis0325--simulador-de-tributação) | Simulador de Tributação | **Regras de tributação.** Conferir, sem gravar nada, como a nota vai tributar uma venda: qual regra vale e quanto dá cada imposto. |
+| [VFIS0110](#vfis0110--tabelas-tributárias) | Tabelas Tributárias | **Tabelas e cadastros.** Alíquotas que valem sem regra específica: IPI e PIS/COFINS por NCM, ICMS interno e interestadual por UF e a tabela IBPT. |
+| [VFIS0350](#vfis0350--classificações-fiscais) | Classificações Fiscais | **Tabelas e cadastros.** NCM, CEST e os padrões fiscais (origem, unidade de tributação, cClassTrib) que os itens herdam. |
+| [VFIS0300](#vfis0300--cfops) | CFOPs | **Tabelas e cadastros.** Tabela oficial de CFOPs usada nas notas de entrada e saída. |
+| [VFIS0310](#vfis0310--dispositivos-legais) | Dispositivos Legais | **Tabelas e cadastros.** Textos da base legal que as regras de ICMS/IPI levam às informações complementares da nota. |
+| [VFIS0670](#vfis0670--reforma-tributária-ibscbs) | Reforma Tributária (IBS/CBS) | **Tabelas e cadastros.** Alíquotas de IBS e CBS por ano, cClassTrib padrão por CFOP e a tabela oficial de classificação tributária. |
+| [VFIN0400](#vfin0400--apuração-de-impostos) | Apuração de Impostos | **Apuração e obrigações.** Apurar ICMS, IPI, PIS e COFINS do mês a partir das notas autorizadas. |
+| [VFIS0560](#vfis0560--notas-especiais-de-ajuste) | Notas Especiais de Ajuste | **Apuração e obrigações.** Ajustes da apuração do ICMS do mês que não vêm de nota (estornos, créditos outorgados): vão ao SPED no E111. |
+| [VFIS0345](#vfis0345--ciap--crédito-do-icms-do-ativo) | CIAP — Crédito do ICMS do Ativo | **Apuração e obrigações.** Crédito do ICMS dos bens do ativo em 48 parcelas: bens, apuração mensal, Bloco G do SPED e crédito no E111. |
+| [VFIS0510](#vfis0510--tabelas-da-apuração-de-icms) | Tabelas da Apuração de ICMS | **Apuração e obrigações.** Códigos de ajuste da apuração (tabela 5.1.1) e linhas de apuração usados nas notas especiais de ajuste. |
+| [VFIS0600](#vfis0600--sped-efd-icmsipi) | SPED EFD ICMS/IPI | **Apuração e obrigações.** Gerar o arquivo da EFD do mês com as notas de entrada, saída e CT-e e a apuração do ICMS e do IPI. |
+| [VFIS0100](#vfis0100--configuração-fiscal) | Configuração Fiscal | **Configuração.** Emitente, regime tributário, Focus NF-e (token e ambiente), ICMS interno, diferimento, crédito do Simples, logo e exigências da emissão. |
 
 **[Contabilidade](#contabilidade)** — Plano contábil, lançamentos, balancete, contabilização automática e ECD.
 
@@ -450,10 +447,12 @@ crédito, reserva de estoque, demanda para o MRP, expedição e faturamento.
    - **Identificação:** estabelecimento, cliente, moeda, emissão e entrega;
    - **Condições comerciais:** condição de pagamento, comissão, **finalidade da
      compra** (revenda, industrialização ou uso e consumo — define a tributação
-     da nota), portador, canal de venda, pedido do representante e indicador de
+     da nota), canal de venda, pedido do representante e indicador de
      presença;
-   - **Nota fiscal:** tipo de NF padrão e estabelecimento de cobrança;
-   - **Transporte e expedição:** transportadora, frete, volumes, espécie e pesos;
+   - **Nota fiscal:** tipo de NF padrão (vem escolhido no faturamento) e
+     estabelecimento de cobrança;
+   - **Transporte e expedição:** portador de cobrança (vem do cliente), frete,
+     volumes, espécie e pesos;
    - **Projeto:** código e nome, quando a venda pertence a um projeto.
 2. Grave: o pedido nasce como **Rascunho (R)**.
 3. Aba **Itens:** escolha o item; o sistema mostra as tabelas válidas para ele e
@@ -1139,14 +1138,32 @@ alteram e excluem ali mesmo; o que já está em uso não pode ser excluído —
 imposto): some das listas de escolha e volta com **Reativar**.
 
 **Passo a passo.**
-1. Clique em **+ Novo**. Em **Dados gerais** informe código, tipo de documento e
-   CNPJ/CPF.
+1. Clique em **+ Novo**. Em **Dados gerais** informe tipo de documento e
+   CNPJ/CPF. O **código é automático**: ao gravar, o cliente recebe o próximo
+   código livre da sequência.
    - Com CNPJ, use **Consultar CNPJ**: o sistema preenche razão social, IE,
      regime, CNAE, e-mail e endereço e **calcula o limite de crédito**. Confira
      antes de salvar.
-2. **Fiscal:** indicador de IE (contribuinte, isento, não contribuinte),
-   inscrições, regime tributário, finalidade da compra, CNAE, SUFRAMA com
-   validade e o e-mail que recebe o XML/DANFE.
+2. **Fiscal:** inscrições, regime tributário, finalidade da compra, tipo de
+   imposto, CNAE, SUFRAMA com validade e o e-mail que recebe o XML/DANFE.
+   A **SUFRAMA** (9 dígitos, com dígito verificador conferido) vai na NF-e
+   enquanto válida. Com a regra de ICMS/IPI marcada **Venda para a Zona Franca**
+   (VFIS0320), a venda a este cliente contribuinte, para revenda ou
+   industrialização, sai com ICMS isento e o valor desonerado abatido do total,
+   PIS/COFINS a alíquota zero, CFOP 6109/6110 e, no PR, cBenef PR810175. Vencida,
+   nada disso vale e a prévia avisa. Tipo de NF que exige SUFRAMA não fatura sem ela. O
+   **indicador de IE** da NF-e é calculado pela inscrição estadual (com número =
+   contribuinte; ISENTO = isento; em branco = não contribuinte).
+
+   **Passe o mouse sobre qualquer campo (ⓘ)** para ver o que ele é, onde o
+   sistema o usa e onde se cadastra o que ele escolhe. Os marcados como
+   *informativo* só ficam no cadastro e na ficha impressa.
+   **Portador e tipo de imposto não são obrigatórios.** O portador (banco ou
+   carteira de cobrança) só vem sugerido no orçamento e no pedido e serve de
+   critério na política comercial de descontos (VPDV0108); não vai para a nota
+   nem para os títulos. O tipo de imposto só muda o cálculo quando há regra de
+   ICMS/IPI (VFIS0320) feita para ele, ou quando ele é de consumidor final e a
+   finalidade da compra está em branco.
 3. **Comercial e logística:** representante, portador de cobrança, e-mail de
    cobrança, transportadora preferencial, tipo de frete, se exige número do
    pedido de compra (aí o pedido de venda só é confirmado com o número, que vai
@@ -1161,15 +1178,21 @@ imposto): some das listas de escolha e volta com **Reativar**.
    até quanto você pode aprovar e pede a justificativa (mínimo 15
    caracteres). Acima da tolerância ou do teto de crédito da política, só o
    administrador aprova. O quadro **Ao gravar** resume o que vai para a trilha.
-5. Salve. Depois use as abas **Endereços** e **Contatos** (incluir, editar e
-   excluir) e a **Visão 360**.
+5. **Endereços** e **Contatos** já podem ser incluídos no cadastro novo: ficam
+   guardados na tela e são gravados junto com o cliente (o endereço principal
+   é o de *Dados gerais*). Salve. A **Visão 360** abre depois de gravar, porque
+   mostra o faturamento, os títulos e os pedidos do cliente.
 
 **Como o limite é calculado.** Com histórico de pagamento nesta empresa (3 ou
 mais títulos pagos, somando o grupo econômico — mesma raiz de CNPJ): média
 mensal faturada × (prazo médio ÷ 30 + 1), ajustada pela classe. Pontuam:
 valor pago em dia, atraso médio e maior atraso, tempo de relacionamento,
 renegociações, devoluções; piora recente nos pagamentos tira pontos. Sem
-histórico: um percentual do capital social com teto (política), e a classe
+histórico: o menor entre a **capacidade do cliente** (um % do capital social
+dele) e o **apetite da empresa** (um % do faturamento médio mensal da própria
+empresa nos últimos 12 meses, nunca abaixo do piso da política) — quanto a
+empresa aceita arriscar num cliente ainda não testado. Os dois percentuais e o
+piso ficam na *Política de crédito*. E a classe
 nunca passa de C. **Zeram o limite:** CNPJ que não está ATIVO na Receita,
 título vencido além da tolerância (no cliente ou no grupo), título em protesto
 ou baixado como perda. Cada limite gravado fica na **trilha de crédito**, com o
@@ -3424,7 +3447,9 @@ alterada na **VEMP0100** (botão *Alterar na VEMP0100*).
 - **Tributação por regra:** *Exigir regra de ICMS/IPI em toda nota de venda* —
   ligado, a nota com item sem regra na VFIS0320 fica impedida na prévia;
   desligado, o item sem regra usa o ICMS interno e a prévia avisa. No Simples,
-  também o **crédito do Simples %**.
+  também o **crédito do Simples %**: a alíquota efetiva do ICMS dentro do DAS,
+  tirada do PGDAS-D do mês; é o crédito que a nota declara ao comprador. A
+  apuração do Simples é feita no PGDAS-D da Receita.
 - **Tributação e vencimentos:** ICMS interno, diferimento de ICMS e o **cBenef do
   diferimento** (no PR, por exemplo, o código do diferimento parcial), juros ao
   mês, multa de atraso e os dias de vencimento de ICMS, IPI e PIS/COFINS. Os
@@ -3449,9 +3474,12 @@ tributária aproximada do rodapé.
 - **ICMS entre estados:** por par origem → destino, a alíquota interestadual
   (origem e destino iguais é operação interna — use a aba anterior).
 - **IBPT (carga aproximada):** consulte, por NCM e UF, a carga federal (nacional e
-  importado), estadual e municipal que sai no rodapé da nota (Lei 12.741). O
-  administrador importa o CSV oficial do IBPT de cada UF; cada versão fica
-  guardada e vale a vigente.
+  importado), estadual e municipal. Na venda a consumidor final (não
+  contribuinte ou compra para uso e consumo), a NF-e leva nas informações
+  complementares o valor aproximado dos tributos (Lei 12.741), calculado pela
+  IBPT vigente da UF da empresa. O administrador importa o CSV oficial do IBPT
+  de cada UF; cada versão fica guardada e vale a vigente. Sem IBPT vigente para
+  o NCM, a linha fica fora do texto.
 
 As alíquotas aparecem e são digitadas em **%**.
 
@@ -3486,6 +3514,10 @@ devolução, remessa, beneficiamento.
   representante, condição de pagamento e as linhas com o que falta faturar.
   Fature tudo ou parte (desmarque linhas ou reduza quantidades); o resto continua
   pendente. Cada pedido mostra as notas já emitidas para ele.
+  O **tipo de nota** vem do pedido: o da linha, quando a linha tem um, senão o
+  tipo de NF padrão do pedido; dá para trocar ali. Uma nota tem um tipo só: se
+  as linhas têm tipos diferentes, a tela avisa e cada tipo sai numa nota
+  (fature as linhas de um tipo por vez).
 - **+ Nova NF-e:** a nota avulsa, em três partes:
   - **Destinatário:** em **Cliente cadastrado**, busque o cliente por nome, código
     ou CNPJ: razão social, CNPJ/CPF, inscrição estadual, endereço e contato vêm do
@@ -3645,34 +3677,23 @@ consumido vai para despesa, e nasce o título da transportadora.
 
 **Telas relacionadas.** VPDC0200, VFIS0360, VFIN0200, VINS0300, VSUP0130.
 
+
+**Frete sobre compras (CT-e recebido).** O CT-e da transportadora que trouxe a
+mercadoria entra na aba **Fretes (CT-e)**: importe o XML ou lance à mão, escolha
+o rateio entre os itens da nota de entrada e o vencimento — o frete gera o título
+a pagar e vai para o SPED (D100). A antiga VFIS0220 saiu: ela gravava um CT-e que
+nada usava e oferecia *emitir* CT-e, que é documento de transportadora.
 ---
 
 **Documento impresso.** **Espelho** (na lista) e **Espelho (PDF)** (na nota aberta) geram o espelho de conferência: cálculo do imposto, itens com classificação fiscal, conferência com o pedido de compra (confere ou divergente), créditos, custo que entra no estoque, parcelas do contas a pagar e o carimbo de aprovação.
 
-#### VFIS0220 — CT-e (Conhecimento de Transporte)
-
-Remetente e destinatário podem vir do cadastro de clientes: a busca acima dos campos
-preenche documento, nome, município e UF.
-
-**Para que serve.** Registrar e emitir CT-e: número, série, CFOP, datas, emitente
-(transportadora), tipo de rateio, frete, seguro, outros, ICMS e a NF-e de entrada
-vinculada.
-
-**Emitir na SEFAZ.** Além do registro, preencha os **dados de emissão**: natureza,
-finalidade, tomador, RNTRC, município e UF de início e de fim, produto
-predominante, valor da carga, remetente e destinatário. Sem o trajeto e as partes,
-o CT-e fica só como registro local (para apropriar o frete).
-
-**Telas relacionadas.** VFIS0210 (frete sobre compras).
-
----
-
-#### VFIS0300 — CFOPs e Naturezas de Operação
+#### VFIS0300 — CFOPs
 
 **Para que serve.** A tabela de CFOP: a **tabela oficial** do Portal Nacional da NF-e
-(619 códigos, com título, nota explicativa e vigência) mais o que a empresa ajusta
-em cada código: utilização, indicador de operação, tipo de utilização, DIFAL e
-doação.
+(619 códigos, com título, nota explicativa e vigência). A empresa só ajusta a
+descrição e a situação (ativo/inativo). Utilização, indicador de operação, tipo
+de utilização, DIFAL e doação saíram da tela: nenhum cálculo os usava — o DIFAL
+é decidido pela UF de destino e pelo tipo de destinatário (regras da VFIS0320).
 
 **Como usar.** **Buscar** por código (5101, ou só 51) ou parte da descrição; filtre
 **Entradas (1, 2, 3)** ou **Saídas (5, 6, 7)**; *Mostrar inativos*. **Editar** mostra
@@ -3682,7 +3703,8 @@ explicativa. Inativar um CFOP faz a nota que o usar ficar impedida.
 **Na nota.** A prévia e a transmissão impedem CFOP fora da tabela, inativo, fora da
 vigência, não permitido em NF-e e CFOP de **devolução** sem a nota referenciada.
 No faturamento do pedido, o item comprado (de revenda) sai com o CFOP de revenda
-(5102/6102/6108) mesmo que a nota tenha sido gerada com o de produção.
+(5102/6102/6108) mesmo que a nota tenha sido gerada com o de produção. Na venda
+com SUFRAMA para a Zona Franca, 6101/6107 vira 6109 e 6102/6108 vira 6110.
 
 ---
 
@@ -3707,40 +3729,40 @@ exemplo, saem sem título e sem receita.
 da **VFIS0320**, que podem ser filtradas pelo tipo de nota. Tipo em uso não sai:
 **inative** — some da escolha no faturamento e continua nas notas antigas.
 
-#### VFIS0320 — Parâmetros ICMS/IPI
+#### VFIS0320 — Regras de ICMS/IPI
 
-**Para que serve.** As **regras de tributação por cenário**: para que produto, cliente
-e operação vale qual ICMS e IPI. É o que o motor fiscal usa em cada linha da nota.
-Também concentra a redução e a substituição de ICMS.
+**Para que serve.** As **regras de tributação da venda**: para que produto, cliente e
+operação vale qual ICMS e IPI. É o que o motor fiscal usa em cada linha da NF-e de
+saída. A compra não usa estas regras: a natureza fiscal da entrada fica na VFIS0360.
+
+**Diferença das telas vizinhas.** VFIS0110 = alíquota padrão (vale quando não há
+regra aqui). VFIS0305 = o que o *tipo de nota* faz (título, estoque, receita).
+VFIS0325 = simular a regra sem gravar.
 
 **Abas.**
-1. **Identificação** — *a quem a regra se aplica*: UF (destino na saída, origem na
-   entrada), **NCM** ou **item** (nunca os dois), máscara do item, tipo de
-   operação (saída, entrada, ambas), cliente, **fornecedor**, estabelecimento do
-   cliente (busca pelo nome), **tipo de imposto do cliente**, tipo de NF de saída
-   e de entrada, **finalidade da compra** e descrição.
-2. **ICMS** — % contribuinte e não contribuinte, CST de cada um (e de devolução),
-   CSOSN, situação B, dispositivos legais, **% de redução** (e sobre o que incide),
-   **% de diferimento**, **código do benefício** (cBenef/RBC) e acréscimos.
-3. **Substituição e DIFAL** — MVA, % ST, % ST uso e consumo, redução da ST, ICMS
-   interno, modalidade da base, alíquota de destino, FCP-ST, DIFAL e os
-   dispositivos.
-4. **IPI** — tratamento, % de redução, CST de saída e de entrada.
-5. **Regimes especiais** — Simples (anexo), % ICMS e % ST para as origens 1, 2, 3 e
-   8 (importados, Resolução do Senado 13/2012), FCI e Zona Franca.
+1. **Identificação** — *a quem a regra se aplica*: UF de destino, **NCM** ou
+   **item** (nunca os dois), tipo de operação (saída ou ambas), cliente, **tipo de
+   imposto do cliente**, tipo de NF de saída e finalidade.
+2. **ICMS** — % e CST para contribuinte e não contribuinte, CSOSN, dispositivos
+   legais, **% de redução** (e sobre o que incide), **% de diferimento**,
+   **código do benefício** (cBenef) e acréscimo para não contribuinte.
+3. **Substituição e DIFAL** — MVA e % de redução da ST.
+4. **IPI** — tratamento, % de redução, CST de saída e **enquadramento (cEnq)**.
+5. **Regimes especiais** — FCP do produto, mercadoria importada (Resolução do
+   Senado 13/2012) e **Zona Franca de Manaus** (ICMS desonerado com SUFRAMA válido).
 
 **Qual regra vale (da mais específica para a mais geral).** Item > NCM completo >
-capítulo do NCM; tipo de nota; cliente > segmento > tipo de imposto > geral;
-finalidade; Simples; preferencial.
+capítulo do NCM; tipo de nota; cliente > tipo de imposto > geral; finalidade.
 
 **Regras do cadastro.**
 - Os percentuais vão em %, com até 4 casas.
-- Regra restrita a **fornecedor**, estabelecimento ou máscara vale só na
-  **entrada**; a NF de venda não a usa.
+- Campos que nenhum cálculo usava (máscara, fornecedor, estabelecimento, tipo de NF
+  de entrada, CST de entrada e de devolução, acréscimos e modalidades da ST, FCP-ST,
+  campos de custo) saíram da tela; o valor gravado em regras antigas é preservado.
 - Nos estados que exigem cBenef (PR, RS, RJ, SC, GO, DF), informe o código para
   CST com benefício (20, 40, 41, 50, 51, 90...).
 
-**Telas relacionadas.** VFIS0325 (simular), VFIS0100, VFIS0310, VFIS0200.
+**Telas relacionadas.** VFIS0325 (simular), VFIS0110, VFIS0305, VFIS0310, VFIS0200.
 
 ---
 
@@ -3759,14 +3781,6 @@ cenário antes de faturar.
 
 Se a venda não puder ser transmitida (ex.: falta regra com a exigência ligada), a
 tela mostra as pendências.
-
----
-
-#### VFIS0340 — Apuração do Simples Nacional
-
-**Para que serve.** Registrar a apuração mensal do Simples: período, anexo, receitas
-interna e externa, folha, receita bruta 12 meses, alíquota nominal e efetiva,
-alíquota efetiva de ICMS, parcela a deduzir, valor recolhido e observação.
 
 ---
 
@@ -3816,7 +3830,6 @@ herdam.
   para leitura, a alíquota que a nota vai usar; para mudá-la, altere o NCM na
   VFIS0110. Ficam aqui a **Apuração** (EFD e devolução de compra) e o
   **cClassTrib (IBS/CBS)**.
-- **Idiomas** e **Atributos de exportação**.
 
 **Regras.**
 - A lista mostra a coluna **IPI do NCM**. NCM fora da tabela aparece sem
@@ -3861,10 +3874,7 @@ mantém, uma por aba:
 
 - **Ajuste de apuração (5.1.1):** códigos de ajuste da apuração do ICMS do SPED —
   código, UF, vigência e descrição.
-- **Ajuste de ICMS (5.2 a 5.7):** códigos de ajuste de documento das tabelas 5.2,
-  5.3, 5.6 e 5.7 — código, UF, tabela, vigência e descrição.
 - **Linhas de apuração:** código, descrição, tipo, se aceita lançamentos e natureza.
-- **Motivos de transferência DAPI:** código, motivo, UF de destino e vigência.
 
 ---
 
@@ -3881,25 +3891,22 @@ imposto, uma linha por imposto.
 CFOP (base e valor), as notas de cada lançamento e os registros adicionais (C197 /
 processos).
 
-**Telas relacionadas.** VFIS0510 (tabelas da apuração), VFIS0340 (Simples), VFIN0500.
-
----
-
-#### VFIS0550 — Restituição / Ressarcimento de ICMS ST
-
-**Para que serve.** Os pedidos de restituição ou ressarcimento de ICMS-ST: documento
-de origem (empresa, período, tipo, UF, modelo, número, emitente, item, CFOP, CST) e
-os valores (base e alíquota da ST, valor da ST, base e valor da restituição).
-Liste por período (AAAA-MM).
+**Telas relacionadas.** VFIS0510 (tabelas da apuração), VFIN0500.
 
 ---
 
 #### VFIS0560 — Notas Especiais de Ajuste
 
-**Para que serve.** Notas especiais de ajuste do ICMS: finalidade, período, emissão,
-CFOP, linha da apuração, código de ajuste, totais e itens (com base, % e valor do
-ICMS e CST). *Gera resumo automático* lança no resumo de ICMS. A nota nasce em
-rascunho.
+**Para que serve.** Lançar os **ajustes da apuração do ICMS** do mês que não vêm de
+nota fiscal: estorno de crédito, crédito outorgado, ajuste de débito. O SPED leva
+cada ajuste ao registro **E111**. Nota complementar de ICMS é NF-e: emita-a na
+VFIS0200.
+
+**Como usar.** Informe período, data, **código de ajuste** (tabela 5.1.1, cadastrada
+na VFIS0510 — é ele que diz se é crédito ou débito) ou a linha de apuração,
+o **valor do ICMS** e a descrição. A nota nasce em **rascunho**, que não conta.
+**Emitir** exige código de ajuste (ou linha) e valor; a emitida entra na
+apuração e no SPED e não se altera mais. **Cancelar** tira a nota da apuração.
 
 ---
 

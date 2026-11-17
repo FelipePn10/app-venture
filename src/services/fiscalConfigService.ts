@@ -138,7 +138,9 @@ export async function updateFiscalBranding(input: { logo?: File; brandColor?: st
 
 export async function getFiscalBrandingLogo(): Promise<Blob | null> {
   try {
-    const { data } = await httpClient.get<Blob>(BRANDING_LOGO_PATH, { responseType: 'blob' });
+    const { data, status } = await httpClient.get<Blob>(BRANDING_LOGO_PATH, { responseType: 'blob' });
+    // 204 = sem logo configurado.
+    if (status === 204 || !data || data.size === 0) return null;
     return data;
   } catch (error: unknown) {
     const status = typeof error === 'object' && error !== null && 'response' in error

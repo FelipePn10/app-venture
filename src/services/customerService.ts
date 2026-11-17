@@ -363,7 +363,7 @@ export async function listCreditReviews(code: number): Promise<CreditReview[]> {
 }
 
 export interface CreditPolicy {
-  max_limit: number; new_customer_capital_pct: number; new_customer_cap: number; override_tolerance_pct: number;
+  max_limit: number; new_customer_capital_pct: number; new_customer_cap: number; new_customer_revenue_pct: number; override_tolerance_pct: number;
   overdue_block_days: number; history_months: number;
   validity_months_a: number; validity_months_b: number; validity_months_c: number; validity_months_d: number; validity_months_e: number;
   registration_check_days: number;

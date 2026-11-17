@@ -230,6 +230,10 @@ body:has(.erp-crumb-code) .screen-host-routine-code { display: none; }
 .erp-c5{grid-column:span 5}.erp-c6{grid-column:span 6}.erp-c7{grid-column:span 7}.erp-c8{grid-column:span 8}
 .erp-c9{grid-column:span 9}.erp-c10{grid-column:span 10}.erp-c11{grid-column:span 11}.erp-c12{grid-column:span 12}
 .erp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--v-text-3); }
+/* Rótulo com explicação ao passar o mouse (atributo title no campo). O ⓘ usa
+   o ::before reposicionado ao fim, porque o ::after é o asterisco do obrigatório. */
+.erp-label-tip { cursor: help; display: flex; align-items: baseline; }
+.erp-label-tip::before { content: "ⓘ"; order: 3; margin-left: 4px; font-weight: 400; color: var(--v-text-3); opacity: .75; }
 .erp-req::after { content: ' *'; color: var(--v-err); }
 /* Texto de apoio sob um campo: unidade de medida, origem do valor, formato aceito. */
 .erp-hint { font-size: 10px; line-height: 1.3; color: var(--v-text-muted); font-style: italic; }

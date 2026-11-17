@@ -393,6 +393,8 @@ export interface PreviaItemNFe {
   valor_difal: number;
   valor_fcp_uf_dest: number;
   valor_credito_simples: number;
+  /** Zona Franca: ICMS desonerado (abatido do total), motivo 7 = SUFRAMA. */
+  icms_valor_desonerado: number;
   /** Reforma tributária: CST/cClassTrib da linha e de onde veio. */
   cst_ibs_cbs: string;
   cclass_trib: string;
@@ -543,6 +545,7 @@ export async function previewExit(id: number): Promise<PreviaNFe> {
       valor_difal: parseNum(i, 'valor_difal', 'ValorDIFAL'),
       valor_fcp_uf_dest: parseNum(i, 'valor_fcp_uf_dest', 'ValorFCPUFDest'),
       valor_credito_simples: parseNum(i, 'valor_credito_simples', 'ValorCreditoSimples'),
+      icms_valor_desonerado: parseNum(i, 'icms_valor_desonerado'),
       mva: parseNum(i, 'mva', 'MVA'),
     })),
     totais: {

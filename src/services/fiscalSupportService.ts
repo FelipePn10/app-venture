@@ -194,6 +194,8 @@ export interface ParametroIcmsIpiDTO {
   legal_device_ipi_non_contrib_id?: number;
   cst_ipi_exit?: string;
   cst_ipi_entry?: string;
+  /** cEnq do IPI na saída (3 dígitos); vazio = 999. */
+  ipi_codigo_enquadramento?: string;
 
   // FCI, Zona Franca e benefícios
   icms_pct_origins_1238?: number;
