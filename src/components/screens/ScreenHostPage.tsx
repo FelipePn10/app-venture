@@ -38,6 +38,7 @@ const Vatc0310Page = lazy(() => import("./assistencia/Vatc0310Page").then((m) =>
 const Vatc0320Page = lazy(() => import("./assistencia/Vatc0320Page").then((m) => ({ default: m.Vatc0320Page })));
 const Vatc0400Page = lazy(() => import("./assistencia/Vatc0400Page").then((m) => ({ default: m.Vatc0400Page })));
 const Vcli0500Page = lazy(() => import("./cliente/Vcli0500Page").then((m) => ({ default: m.Vcli0500Page })));
+const Vcli0510Page = lazy(() => import("./cliente/Vcli0510Page").then((m) => ({ default: m.Vcli0510Page })));
 const Vcst0202Page = lazy(() => import("./custo/Vcst0202Page").then((m) => ({ default: m.Vcst0202Page })));
 const Vpdv0108Page = lazy(() => import("./pdv/Vpdv0108Page").then((m) => ({ default: m.Vpdv0108Page })));
 const Vpdv0111Page = lazy(() => import("./pdv/Vpdv0111Page").then((m) => ({ default: m.Vpdv0111Page })));
@@ -182,6 +183,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VATC0400: <Vatc0400Page />,
   // Cliente
   VCLI0500: <Vcli0500Page />,
+  VCLI0510: <Vcli0510Page />,
 
   // Vendas & Expedição (novas)
   VEXP0100: <Vexp0100Page />,

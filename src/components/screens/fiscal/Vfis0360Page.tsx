@@ -13,7 +13,7 @@ import { loadCfops, loadEntryOperations, loadInvoiceTypes } from "@/services/loo
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Tab = "operacoes" | "grupos";
 const EMPTY: EntryOperationDTO = {
-  code: "", description: "", invoice_type_code: "", nature_operation: "", state_group_code: "", supplier_type_code: "",
+  code: "", description: "", invoice_type_code: "", nature_operation: "", state_group_code: "",
   movimenta_estoque: true, gera_financeiro: true, credita_icms: true, credita_ipi: true, credita_pis_cofins: true,
 };
 

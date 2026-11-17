@@ -367,6 +367,7 @@ export interface CreditPolicy {
   overdue_block_days: number; history_months: number;
   validity_months_a: number; validity_months_b: number; validity_months_c: number; validity_months_d: number; validity_months_e: number;
   registration_check_days: number;
+  customer_revenue_pct: number; declared_monthly_revenue: number; auto_review_months: number; auto_increase_max_pct: number;
 }
 
 export async function getCreditPolicy(): Promise<CreditPolicy> {
@@ -377,6 +378,48 @@ export async function getCreditPolicy(): Promise<CreditPolicy> {
 export async function saveCreditPolicy(p: CreditPolicy): Promise<CreditPolicy> {
   const { data } = await httpClient.put(`${SUPPORT}/credit-policy`, p);
   return unwrapObject(data) as unknown as CreditPolicy;
+}
+
+// ─── Faturamento declarado (DRE, balanço, IRPF) ─────────────────────────────
+
+export type FonteDeclaracao = 'DRE' | 'BALANCO' | 'DECLARACAO' | 'IRPF' | 'OUTRO';
+export interface FinancialStatement {
+  id: number; customer_code: number; annual_revenue: number; reference_date: string; source: FonteDeclaracao;
+  notes?: string; created_by_name: string; created_at: string;
+  /** Tem até 18 meses: entra na análise. */ valid: boolean;
+  /** É a declaração que a análise usa agora (a mais recente, se válida). */ in_use: boolean;
+}
+
+export async function listFinancialStatements(code: number): Promise<FinancialStatement[]> {
+  const { data } = await httpClient.get(`${BASE}/${code}/financial-statements`);
+  return unwrapArray(data).map((x) => {
+    const o = unwrapObject(x);
+    return { ...(o as unknown as FinancialStatement), annual_revenue: parseNum(o, 'annual_revenue'), valid: o['valid'] === true, in_use: o['in_use'] === true };
+  });
+}
+
+export async function addFinancialStatement(code: number, dto: { annual_revenue: number; reference_date: string; source: FonteDeclaracao; notes?: string }): Promise<FinancialStatement> {
+  const { data } = await httpClient.post(`${BASE}/${code}/financial-statements`, dto);
+  return unwrapObject(data) as unknown as FinancialStatement;
+}
+
+export async function deleteFinancialStatement(code: number, id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/${code}/financial-statements/${id}`);
+}
+
+// ─── Saneamento do cadastro (VCLI0510) ───────────────────────────────────────
+
+export interface SaneamentoPendencia { customer_code: number; name: string; document: string; detalhe: string; como_resolver: string; }
+export interface SaneamentoCategoria { code: string; titulo: string; gravidade: 'IMPEDE' | 'ATENCAO'; total: number; clientes: SaneamentoPendencia[]; }
+export interface Saneamento {
+  gerado_em: string; clientes_ativos: number; clientes_com_pendencia: number; pendencias_que_impedem: number;
+  categorias: SaneamentoCategoria[];
+}
+
+export async function getSaneamento(): Promise<Saneamento> {
+  const { data } = await httpClient.get(`${BASE}/saneamento`);
+  const o = unwrapObject(data) as unknown as Saneamento;
+  return { ...o, categorias: (o.categorias ?? []).map((c) => ({ ...c, clientes: c.clientes ?? [] })) };
 }
 
 // ─── Visão 360 ──────────────────────────────────────────────────────────────

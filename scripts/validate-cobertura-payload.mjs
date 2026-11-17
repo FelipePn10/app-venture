@@ -22,13 +22,13 @@ check('vencimento do fornecedor usa payment_condition_id',
   /payment_condition_id: dueForm\.payment_condition_code/.test(read('src/components/screens/suprimento/Vsup0500Page.tsx')));
 
 // ── Tipo de nota fiscal (VFIS0305) ─────────────────────────────────────────
-// A tela mostra só os campos que o cálculo usa; os demais seguem preservados
-// na gravação (PRESERVAR), para não apagar o que já estava no cadastro.
+// A tela mostra só os campos que o cálculo usa. Os sem efeito saíram do banco
+// na v1.20.0 (migração 000499); "exige SUFRAMA" é lido no faturamento e tem de
+// poder ser marcado.
 const nf = read('src/components/screens/fiscal/Vfis0305Page.tsx');
-check('tipo de NF preserva os campos fora da tela', /preservar=\{PRESERVAR\}/.test(nf));
-for (const campo of ['lista_valor_contabil', 'sintegra_sped_fiscal', 'calc_fomentar', 'ciap',
-                     'dispositivo_legal_icms_id', 'hierarchy_icms', 'cod_beneficio_fiscal', 'impostos_nfe']) {
-  check(`tipo de NF não perde ${campo}`, nf.includes(campo));
+check('tipo de NF permite marcar "exige SUFRAMA"', /key: "exige_suframa"/.test(nf));
+for (const campo of ['lista_valor_contabil', 'sintegra_sped_fiscal', 'calc_fomentar', 'impostos_nfe']) {
+  check(`tipo de NF não oferece ${campo}, aposentado`, !nf.includes(campo));
 }
 
 // ── Parâmetros ICMS/IPI (VFIS0320) ─────────────────────────────────────────

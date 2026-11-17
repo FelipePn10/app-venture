@@ -1,7 +1,8 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   suggestCredit, setCreditLimit, listCreditReviews,
-  type CreditSuggestion, type CreditReview, type CreditFactor,
+  listFinancialStatements, addFinancialStatement, deleteFinancialStatement,
+  type CreditSuggestion, type CreditReview, type CreditFactor, type FinancialStatement, type FonteDeclaracao,
 } from "@/services/customerService";
 import { errMessage } from "@/services/fiscalShared";
 import { money, dataBR, diasAte, grupoDoFator, problemaDoLimite, comparadoAoRecomendado, type GrupoFator } from "./formato";
@@ -20,7 +21,11 @@ const CLASSE_TEXTO: Record<string, string> = {
   A: "risco muito baixo", B: "risco baixo", C: "risco moderado", D: "risco alto: todo pedido passa pela análise de crédito",
   E: "risco muito alto: todo pedido passa pela análise de crédito",
 };
-const ORIGEM: Record<string, string> = { CADASTRO: "Cadastro", REVISAO: "Revisão", LEGADO: "Limite antigo" };
+const ORIGEM: Record<string, string> = { CADASTRO: "Cadastro", REVISAO: "Revisão", LEGADO: "Limite antigo", AUTOMATICA: "Revisão automática" };
+const FONTES: { v: FonteDeclaracao; l: string }[] = [
+  { v: "DRE", l: "DRE" }, { v: "BALANCO", l: "Balanço patrimonial" }, { v: "IRPF", l: "IRPF (pessoa física)" },
+  { v: "DECLARACAO", l: "Declaração do cliente" }, { v: "OUTRO", l: "Outro documento" },
+];
 
 export function ClasseBadge({ classe }: { classe?: string }): JSX.Element {
   if (!classe) return <span className="erp-badge gray">sem análise</span>;
@@ -282,7 +287,7 @@ export function CreditoClientePanel({ code, currentLimit, riskClass, expiresAt, 
           {ultima && <div className="cc-atual-item">
             <div className="cc-label">Última decisão</div>
             <div className="cc-valor" style={{ fontSize: 15 }}>{ORIGEM[ultima.origin] ?? ultima.origin} em {dataBR(ultima.created_at)}</div>
-            <div className="cc-sub">{ultima.origin === "LEGADO" ? "sem análise do sistema" : ultima.deviates ? "diferente da recomendação" : "seguiu a recomendação"}{ultima.created_by_name && ultima.origin !== "LEGADO" ? ` · por ${ultima.created_by_name}` : ""}</div>
+            <div className="cc-sub">{ultima.origin === "LEGADO" ? "sem análise do sistema" : ultima.origin === "AUTOMATICA" ? "revisão trimestral pelo comportamento do cliente" : ultima.deviates ? "diferente da recomendação" : "seguiu a recomendação"}{ultima.created_by_name && ultima.origin !== "LEGADO" && ultima.origin !== "AUTOMATICA" ? ` · por ${ultima.created_by_name}` : ""}</div>
           </div>}
           <div className="cc-spacer" />
           <button className="erp-btn erp-btn-primary" onClick={() => void analisar()} disabled={busy}>{busy && !sug ? "Analisando…" : sug ? "Refazer análise" : "Fazer nova análise"}</button>
@@ -294,6 +299,7 @@ export function CreditoClientePanel({ code, currentLimit, riskClass, expiresAt, 
         )}
         <div className="cc-muted" style={{ marginTop: 10, fontSize: 11.5 }}>
           Na confirmação, o pedido a prazo vai para a análise de crédito quando: o limite está vencido; a classe é D ou E; o limite é zero; ou o cliente (ou o grupo econômico) tem título vencido além da tolerância.
+          O sistema revê o limite sozinho no intervalo da política (padrão: 3 meses): reduz na hora quando o cliente atrasa, aumenta o bom pagador e renova a validade (sem histórico de pagamento ele não mexe: o limite vence e alguém revisa) — cada decisão aparece na trilha como <strong>Revisão automática</strong>.
         </div>
       </div>
 
@@ -311,6 +317,8 @@ export function CreditoClientePanel({ code, currentLimit, riskClass, expiresAt, 
         </div>
       </>}
 
+      <FaturamentoDeclarado code={code} isAdmin={isAdmin} pessoaFisica={pessoaFisica} onChange={() => setSug(null)} />
+
       <div className="cc-card" style={{ marginTop: 14 }}>
         <div className="cc-card-title">Trilha de crédito · quem decidiu o quê</div>
         <table className="erp-grid">
@@ -321,7 +329,7 @@ export function CreditoClientePanel({ code, currentLimit, riskClass, expiresAt, 
               <Fragment key={r.id}>
                 <tr>
                   <td>{new Date(r.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</td>
-                  <td>{r.origin === "LEGADO" ? <span className="cc-muted">migração</span> : r.created_by_name || "—"}</td>
+                  <td>{r.origin === "LEGADO" ? <span className="cc-muted">migração</span> : r.origin === "AUTOMATICA" ? <span className="cc-muted">sistema</span> : r.created_by_name || "—"}</td>
                   <td>{ORIGEM[r.origin] ?? r.origin}</td>
                   <td style={{ textAlign: "right" }}>{money(r.suggested_limit)}</td>
                   <td style={{ textAlign: "right", fontWeight: 600 }}>
@@ -339,6 +347,88 @@ export function CreditoClientePanel({ code, currentLimit, riskClass, expiresAt, 
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Faturamento declarado pelo cliente: mede a capacidade de quem não tem dado
+ * público (CPF, ou CNPJ sem capital social na Receita, ou capital que não
+ * reflete o porte). Vale a declaração mais recente com até 18 meses.
+ */
+// onChange: a análise na tela deixa de valer quando a declaração muda.
+function FaturamentoDeclarado({ code, isAdmin, pessoaFisica, onChange }: { code: number; isAdmin: boolean; pessoaFisica?: boolean; onChange: () => void }): JSX.Element {
+  const [lista, setLista] = useState<FinancialStatement[]>([]);
+  const [form, setForm] = useState<{ annual_revenue: string; reference_date: string; source: FonteDeclaracao; notes: string }>(
+    { annual_revenue: "", reference_date: "", source: pessoaFisica ? "IRPF" : "DRE", notes: "" });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const carregar = useCallback(async () => {
+    try { setLista(await listFinancialStatements(code)); } catch (e) { setMsg({ type: "error", message: errMessage(e) }); }
+  }, [code]);
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  async function gravar() {
+    // "2.400.000,50", "2.400.000" e "2400000.50" — ponto só é milhar quando vem em grupos de 3.
+    const t = form.annual_revenue.trim().replace(/\s|R\$/g, "");
+    const v = Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
+    if (!(v > 0)) { setMsg({ type: "error", message: "Informe o faturamento anual (maior que zero)." }); return; }
+    if (!form.reference_date) { setMsg({ type: "error", message: "Informe a data de referência (o fim do período do documento)." }); return; }
+    setBusy(true); setMsg(null);
+    try {
+      await addFinancialStatement(code, { annual_revenue: v, reference_date: form.reference_date, source: form.source, notes: form.notes.trim() || undefined });
+      setForm({ ...form, annual_revenue: "", notes: "" });
+      setMsg({ type: "success", message: "Faturamento registrado. Faça uma nova análise para o limite considerar." });
+      onChange();
+      await carregar();
+    } catch (e) { setMsg({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); }
+  }
+  async function excluir(id: number) {
+    setBusy(true); setMsg(null);
+    try { await deleteFinancialStatement(code, id); onChange(); await carregar(); }
+    catch (e) { setMsg({ type: "error", message: errMessage(e) }); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="cc-card" style={{ marginTop: 14 }}>
+      <div className="cc-card-title">Faturamento declarado · capacidade de quem não tem dado público</div>
+      <div className="cc-muted" style={{ marginBottom: 10, fontSize: 12 }}>
+        Sem histórico de pagamento, o limite usa a capacidade do cliente: o maior entre o capital social (Receita) e o faturamento declarado aqui.
+        Registre a DRE, o balanço ou o IRPF (pessoa física) que o cliente entregou. Vale o mais recente com até 18 meses.
+      </div>
+      {msg && <div className={`erp-feedback ${msg.type}`}>{msg.message}</div>}
+      <div className="erp-fieldset-body" style={{ padding: 0 }}>
+        <div className="erp-field erp-c3"><label className="erp-label erp-req">Faturamento anual (R$)</label>
+          <input className="erp-input num" inputMode="decimal" value={form.annual_revenue} placeholder="Ex.: 2400000" onChange={(e) => setForm({ ...form, annual_revenue: e.target.value })} /></div>
+        <div className="erp-field erp-c2"><label className="erp-label erp-req">Referência</label>
+          <input className="erp-input" type="date" value={form.reference_date} onChange={(e) => setForm({ ...form, reference_date: e.target.value })} /></div>
+        <div className="erp-field erp-c3"><label className="erp-label erp-req">Documento</label>
+          <select className="erp-input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value as FonteDeclaracao })}>
+            {FONTES.map((f) => <option key={f.v} value={f.v}>{f.l}</option>)}</select></div>
+        <div className="erp-field erp-c3"><label className="erp-label">Observação</label>
+          <input className="erp-input" value={form.notes} placeholder="Ex.: DRE 2025 assinada pelo contador" onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+        <div className="erp-field erp-c1" style={{ justifyContent: "flex-end" }}>
+          <button className="erp-btn erp-btn-primary" onClick={() => void gravar()} disabled={busy}>Registrar</button></div>
+      </div>
+      <table className="erp-grid" style={{ marginTop: 8 }}>
+        <thead><tr><th>Referência</th><th>Documento</th><th style={{ textAlign: "right" }}>Faturamento anual</th><th>Situação</th><th>Registrado por</th><th>Observação</th><th /></tr></thead>
+        <tbody>
+          {lista.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma declaração registrada.</td></tr>}
+          {lista.map((f) => (
+            <tr key={f.id}>
+              <td>{dataBR(f.reference_date)}</td>
+              <td>{FONTES.find((x) => x.v === f.source)?.l ?? f.source}</td>
+              <td style={{ textAlign: "right" }}>{money(f.annual_revenue)}</td>
+              <td>{f.in_use ? <span className="erp-badge ok">Em uso na análise</span> : f.valid ? <span className="erp-badge info">Anterior</span> : <span className="erp-badge warn">Vencida (mais de 18 meses)</span>}</td>
+              <td>{f.created_by_name || "—"} · {dataBR(f.created_at)}</td>
+              <td>{f.notes ?? <span className="cc-muted">—</span>}</td>
+              <td>{isAdmin && <button className="erp-btn erp-btn-sm" onClick={() => void excluir(f.id)} disabled={busy}>Excluir</button>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -25,7 +25,7 @@ const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${Stri
 
 const EMPTY: NotaEspecialDTO = {
   empresa_id: 1, purpose: "AJUSTE", issue_date: todayIso(), period: currentPeriod(),
-  auto_generate_summary: false, total_value: 0, total_icms: 0, observation: "",
+  total_icms: 0, observation: "",
 };
 
 const SITUACAO: Record<string, { rotulo: string; cls: string }> = {

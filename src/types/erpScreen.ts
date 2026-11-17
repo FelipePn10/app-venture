@@ -444,6 +444,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     description: "Cadastrar clientes (matriz/filiais), dados fiscais, apoios vinculados, endereços, contatos e bloqueio/desbloqueio.",
     module: "cliente",
   },
+  {
+    code: "VCLI0510",
+    title: "Saneamento do Cadastro de Clientes",
+    description: "O que no cadastro dos clientes faz a NF-e ser rejeitada, o pedido travar ou o crédito errar — documento, IE, endereço, SUFRAMA, Receita e limites — com como resolver.",
+    module: "cliente",
+  },
 
   // ── Planejamento
 

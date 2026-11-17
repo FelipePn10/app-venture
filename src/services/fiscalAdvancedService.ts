@@ -96,32 +96,13 @@ export interface NotaEspecialDTO {
   purpose: NotaEspecialPurpose;
   issue_date: string;
   period: string;
-  cfop_id?: number;
   icms_apuracao_line_id?: number;
   adjustment_code_id?: number;
-  auto_generate_summary: boolean;
-  total_value: number;
   total_icms: number;
   observation?: string;
   status?: string;
 }
 export interface NotaEspecial extends NotaEspecialDTO { id: number; status?: string; }
-
-export interface NotaEspecialItemDTO {
-  id?: number;
-  sequence?: number;
-  item_code: string;
-  description: string;
-  quantity: number;
-  unit: string;
-  unit_value: number;
-  total_value: number;
-  icms_base: number;
-  icms_pct: number;
-  icms_value: number;
-  cst_icms: string;
-  cfop_id?: number;
-}
 
 const NOTAS_ESP = '/api/fiscal/notas-especiais';
 
@@ -146,14 +127,6 @@ export async function emitirNotaEspecial(id: number): Promise<NotaEspecial> {
 export async function cancelarNotaEspecial(id: number): Promise<NotaEspecial> {
   const { data } = await httpClient.post(`${NOTAS_ESP}/${id}/cancelar`);
   return asOne(data);
-}
-export async function addNotaEspecialItem(notaId: number, dto: NotaEspecialItemDTO): Promise<NotaEspecialItemDTO> {
-  const { data } = await httpClient.post(`${NOTAS_ESP}/${notaId}/itens`, dto);
-  return asOne(data);
-}
-export async function listNotaEspecialItens(notaId: number): Promise<Obj[]> {
-  const { data } = await httpClient.get(`${NOTAS_ESP}/${notaId}/itens`);
-  return unwrapArray(data).map(unwrapObject);
 }
 
 // ─── §34 Classificações fiscais ─────────────────────────────────────────────
@@ -291,10 +264,7 @@ export interface EntryOperationDTO {
   description: string;
   invoice_type_code?: CodigoNumerico;
   nature_operation: string;
-  classification_type?: string;
-  classification_code?: string;
   state_group_code?: CodigoNumerico;
-  supplier_type_code?: CodigoNumerico;
   is_active?: boolean;
   /**
    * Comportamento da nota com esta operação (o "TES"): movimenta estoque,
@@ -328,7 +298,6 @@ function comCodigosNumericos(dto: EntryOperationDTO): EntryOperationDTO {
     code: Number(dto.code),
     invoice_type_code: num(dto.invoice_type_code),
     state_group_code: num(dto.state_group_code),
-    supplier_type_code: num(dto.supplier_type_code),
   };
 }
 export async function createEntryOperation(dto: EntryOperationDTO): Promise<EntryOperationDTO> {

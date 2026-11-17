@@ -51,11 +51,6 @@ export async function updateDispositivoLegal(dto: DispositivoLegalDTO): Promise<
 export interface CfopDTO {
   code: number;
   description: string;
-  utilization: CfopUtilization;
-  ind_operacao: CfopIndOperacao;
-  tipo_utilizacao: CfopTipoUtil;
-  difal: boolean;
-  doacao: boolean;
 }
 export interface Cfop extends CfopDTO {
   id?: number;
@@ -137,9 +132,6 @@ export interface ParametroIcmsIpiDTO {
   legal_device_icms_non_contrib_id?: number;
   cst_icms_contrib: string;
   cst_icms_non_contrib: string;
-  cst_icms_contrib_dev?: string;
-  cst_icms_non_contrib_dev?: string;
-  cst_situation_b?: string;
   csosn_icms?: string;
   cod_beneficio_fiscal?: string;
 
@@ -153,37 +145,17 @@ export interface ParametroIcmsIpiDTO {
 
   // ICMS — diferimento
   icms_deferral_pct?: number;
-  icms_deferral_target?: string;
   legal_device_icms_deferral_id?: number;
   cod_benef_rbc?: string;
 
   // ICMS — substituição
-  icms_subst_pct_contrib?: number;
-  icms_subst_pct_non_contrib?: number;
-  icms_subst_pct_contrib_uc?: number;
   icms_subst_red_pct?: number;
-  legal_device_icms_subst_contrib_id?: number;
-  legal_device_icms_subst_non_contrib_id?: number;
-  legal_device_icms_subst_red_id?: number;
-  icms_internal_pct?: number;
-  bc_icms_st_modality?: string;
   icms_pct_for_st_contrib?: number;
   icms_pct_for_st_non_contrib?: number;
 
   // ICMS — acréscimos (FCP e outros)
-  icms_acres_pct_contrib?: number;
-  icms_acres_type_contrib?: string;
-  icms_acres_sum_contrib?: boolean;
   icms_acres_pct_non_contrib?: number;
   icms_acres_type_non_contrib?: string;
-  icms_acres_sum_non_contrib?: boolean;
-  icms_st_acres_pct_contrib?: number;
-  icms_st_acres_type_contrib?: string;
-  icms_st_acres_sum_contrib?: boolean;
-  icms_st_acres_pct_non_contrib?: number;
-  icms_st_acres_type_non_contrib?: string;
-  icms_st_acres_sum_non_contrib?: boolean;
-  fcp_st_partilha_pct?: number;
 
   // IPI
   ipi_red_pct_contrib?: number;
@@ -193,17 +165,12 @@ export interface ParametroIcmsIpiDTO {
   ipi_red_target_non_contrib?: string;
   legal_device_ipi_non_contrib_id?: number;
   cst_ipi_exit?: string;
-  cst_ipi_entry?: string;
   /** cEnq do IPI na saída (3 dígitos); vazio = 999. */
   ipi_codigo_enquadramento?: string;
 
   // FCI, Zona Franca e benefícios
   icms_pct_origins_1238?: number;
-  icms_subst_pct_origins_1238?: number;
-  calc_base_red_fci?: boolean;
-  cst_icms_fci?: string;
   uses_icms_zona_franca?: boolean;
-  dif_aliq_st_contrib_uc?: number;
   cod_benef_contrib?: string;
   cod_benef_non_contrib?: string;
   codigo_anexo_sn?: string;
@@ -213,8 +180,6 @@ export interface ParametroIcmsIpiDTO {
   // DIFAL
   icms_difal_red_pct?: number;
   icms_difal_type?: string;
-  difal_purchase_red_pct?: number;
-  difal_purchase_red_target?: string;
 
   // Cenário
   /** REVENDA, INDUSTRIALIZACAO ou USO_CONSUMO; vazio = qualquer finalidade. */
