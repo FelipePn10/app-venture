@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Novidades
+- **Prévia da NF-e (VFIS0200):** botões **Imprimir** (a folha da prévia sozinha, em A4, com a tarja "sem valor fiscal") e **Exportar PDF** (a prévia no layout do DANFE, com os mesmos campos da tela, para guardar ou mandar para conferência).
+
+## Correções
+- **MRP com tempo no roteiro:** o planejamento recusava com "produtividade inválida" quando a produtividade da máquina (VMAQ0200) estava sem tempo, mesmo com o tempo cadastrado na etapa do roteiro — o tempo tinha de ser digitado duas vezes. Agora, com tempo no roteiro, basta a máquina cadastrada na produtividade; o tempo da produtividade só é pedido quando a etapa do roteiro não tem tempo. As mensagens dizem o código do item e o centro, por exemplo: "cadastre o RN-01001 na produtividade de uma máquina de cada centro do roteiro (o tempo vem do roteiro)".
+- **VMAQ0200:** o tempo de produção pode ficar em branco quando o roteiro do item tem tempo no centro daquela máquina; a lista mostra "Tempo do roteiro".
+
 ## [v1.19.4] — 2026-11-17
 
 ## Novidades

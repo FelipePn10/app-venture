@@ -64,6 +64,8 @@ export const imprimirProposta = (code: number) => baixarPdf(`${BASE}/proposta/${
 
 // ── Fiscal / suprimentos ────────────────────────────────────────────────────
 export const imprimirEspelhoEntrada = (id: number) => baixarPdf(`${BASE}/nota-entrada/${id}`, `nf-entrada-${id}.pdf`);
+/** Prévia da NF-e em PDF (layout do DANFE, sem valor fiscal) — a mesma da tela de prévia. */
+export const exportarPreviaNFe = (id: number) => baixarPdf(`/api/fiscal/exits/${id}/previa/pdf`, `previa-nfe-${id}.pdf`);
 /** Sem fornecedor: mapa comparativo; com fornecedor: a solicitação para ele. */
 export const imprimirCotacao = (code: number, fornecedor?: number) =>
   baixarPdf(`${BASE}/cotacao/${code}`, fornecedor ? `cotacao-${code}-fornecedor-${fornecedor}.pdf` : `mapa-cotacao-${code}.pdf`, { fornecedor });

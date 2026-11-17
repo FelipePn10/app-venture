@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { PreviaNFe, PreviaParteNFe } from "@/services/nfeService";
 import { chaveEmGrupos, documentoComMascara } from "@/utils/documentoFiscal";
 
@@ -225,4 +227,32 @@ export function DanfePrevia({ previa }: { previa: PreviaNFe }): JSX.Element {
       </div>
     </div>
   );
+}
+
+/**
+ * Imprime a folha da prévia, sozinha e em A4. A folha é renderizada fora do
+ * modal (portal no body) e o CSS de impressão esconde o resto da tela: imprimir
+ * o modal direto cortava a nota na altura da janela e levava a tela junto.
+ * Chama `onFim` quando a caixa de impressão fecha (imprimiu ou cancelou).
+ */
+export function ImpressaoDaPrevia({ previa, onFim }: { previa: PreviaNFe; onFim: () => void }): JSX.Element {
+  useEffect(() => {
+    document.body.classList.add("imprimindo-previa");
+    let terminou = false;
+    const fim = () => {
+      if (terminou) return;
+      terminou = true;
+      document.body.classList.remove("imprimindo-previa");
+      onFim();
+    };
+    window.addEventListener("afterprint", fim);
+    // Um quadro depois do portal montado, para a folha já estar no DOM.
+    const id = window.setTimeout(() => { window.print(); }, 50);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("afterprint", fim);
+      document.body.classList.remove("imprimindo-previa");
+    };
+  }, [onFim]);
+  return createPortal(<div className="danfe-impressao"><DanfePrevia previa={previa} /></div>, document.body);
 }
