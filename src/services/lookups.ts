@@ -711,12 +711,15 @@ export const loadCostCenters = cached(() =>
 );
 
 /** Transportadoras (VEXP): a chave é o id do cadastro; o código mostrado é o do fornecedor. */
+// Inativas vêm marcadas: saem da escolha, mas a carga, o pedido e o cliente
+// antigos continuam mostrando o nome da transportadora em vez do id.
 export const loadShippingCarriers = cached(async () =>
-  (await listShippingCarriers({ onlyActive: true })).filter((c) => c.id).map((c) => ({
+  (await listShippingCarriers()).filter((c) => c.id).map((c) => ({
     code: c.id ?? 0,
     displayCode: c.supplier_code,
     label: c.supplier_name || `Transportadora ${c.supplier_code}`,
     sub: c.supplier_document || undefined,
+    inactive: c.is_active === false,
   })),
 );
 

@@ -12,6 +12,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
+import { PlacaDaFrota } from "@/components/ui/PlacaDaFrota";
 import { loadShippingCarriers, loadItems, loadProductionOrders, loadPurchaseOrders, loadSalesOrders, loadWarehouses } from "@/services/lookups";
 import { CargasPanel } from "./CargasPanel";
 import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
@@ -249,7 +250,7 @@ export function Vexp0100Page(): JSX.Element {
                 <select className="erp-input" value={transport.freight_modality} onChange={(e) => setTransport((p) => ({ ...p, freight_modality: e.target.value }))}>{FREIGHT_MODALITIES.map((m) => <option key={m} value={m}>{enumLabel(m)}</option>)}</select></div>
               <div className="erp-field erp-c2"><label className="erp-label">Valor frete</label><input className="erp-input num" type="number" step="0.01" value={transport.freight_value || ""} onChange={(e) => setTransport((p) => ({ ...p, freight_value: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Transportadora</label><LookupField value={transport.shipping_carrier_id} loader={loadShippingCarriers} entityLabel="transportadora" placeholder="Manter a atual" clearable onChange={(c) => setTransport((p) => ({ ...p, shipping_carrier_id: c ? Number(c) : undefined }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Placa</label><input className="erp-input" value={transport.vehicle_plate} onChange={(e) => setTransport((p) => ({ ...p, vehicle_plate: e.target.value }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Placa</label><PlacaDaFrota carrierId={transport.shipping_carrier_id ?? selected?.shipping_carrier_id} value={transport.vehicle_plate} onChange={(placa, v) => setTransport((p) => ({ ...p, vehicle_plate: placa, driver_name: v?.driver_name ?? p.driver_name }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Motorista</label><input className="erp-input" value={transport.driver_name} onChange={(e) => setTransport((p) => ({ ...p, driver_name: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">ANTT / Lacres</label><input className="erp-input" placeholder="ANTT / lacres" value={transport.seals} onChange={(e) => setTransport((p) => ({ ...p, seals: e.target.value }))} /></div>
               <div className="erp-field erp-c3"><label className="erp-label">Previsão de entrega</label><input className="erp-input" type="date" value={transport.estimated_delivery} onChange={(e) => setTransport((p) => ({ ...p, estimated_delivery: e.target.value }))} /></div>

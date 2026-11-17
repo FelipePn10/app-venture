@@ -10,6 +10,7 @@ import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
 import { confirmar } from "@/components/ui/dialogos";
 import { loadShippingCarriers, loadCustomersById, loadFiscalExits } from "@/services/lookups";
+import { PlacaDaFrota } from "@/components/ui/PlacaDaFrota";
 import { hojeLocal } from "@/utils/dataLocal";
 import { FaturamentoDaCargaPanel } from "./FaturamentoDaCargaPanel";
 
@@ -134,7 +135,7 @@ export function CargasPanel(): JSX.Element {
                 <div className="erp-field erp-c4"><label className="erp-label">Transportadora</label><LookupField value={nova.shipping_carrier_id} loader={loadShippingCarriers} entityLabel="transportadora" clearable onChange={(c) => setN("shipping_carrier_id", c ? Number(c) : undefined)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Saída prevista</label><input className="erp-input" type="date" value={nova.planned_ship_date ?? ""} onChange={(e) => setN("planned_ship_date", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Entrega prevista</label><input className="erp-input" type="date" value={nova.estimated_delivery ?? ""} onChange={(e) => setN("estimated_delivery", e.target.value)} /></div>
-                <div className="erp-field erp-c2"><label className="erp-label">Placa</label><input className="erp-input" value={nova.vehicle_plate ?? ""} onChange={(e) => setN("vehicle_plate", e.target.value.toUpperCase())} /></div>
+                <div className="erp-field erp-c2"><label className="erp-label">Placa</label><PlacaDaFrota carrierId={nova.shipping_carrier_id} value={nova.vehicle_plate ?? ""} onChange={(placa, v) => { setN("vehicle_plate", placa); if (v?.driver_name) setN("driver_name", v.driver_name); if (v?.driver_document) setN("driver_document", v.driver_document); }} /></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Motorista</label><input className="erp-input" value={nova.driver_name ?? ""} onChange={(e) => setN("driver_name", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Documento do motorista</label><input className="erp-input" value={nova.driver_document ?? ""} onChange={(e) => setN("driver_document", e.target.value)} /></div>
                 <div className="erp-field erp-c2"><label className="erp-label">Rota</label><input className="erp-input" value={nova.route_code ?? ""} onChange={(e) => setN("route_code", e.target.value)} /></div>

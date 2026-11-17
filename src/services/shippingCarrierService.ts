@@ -35,10 +35,54 @@ export const CARRIER_SHIPPER_TYPES = [
 /** Tipos de frete aceitos como padrão da transportadora. */
 export const CARRIER_FREIGHT_TYPES = ['CIF', 'FOB', 'TERCEIROS', 'SEM_FRETE'] as const;
 
-/** Tipos de ocorrência usados na avaliação da transportadora. */
-export const CARRIER_OCCURRENCE_TYPES = [
-  'ATRASO', 'AVARIA', 'EXTRAVIO', 'ENTREGA_PARCIAL', 'DEVOLUCAO', 'COBRANCA_INDEVIDA', 'ELOGIO',
+/** MDF-e tpRod: tipo de rodado do veículo. */
+export const WHEEL_TYPES = [
+  { value: '01', label: '01 — Truck' }, { value: '02', label: '02 — Toco' }, { value: '03', label: '03 — Cavalo mecânico' },
+  { value: '04', label: '04 — VAN' }, { value: '05', label: '05 — Utilitário' }, { value: '06', label: '06 — Outros' },
 ] as const;
+
+/** MDF-e tpCar: tipo de carroceria. */
+export const BODY_TYPES = [
+  { value: '00', label: '00 — Não aplicável' }, { value: '01', label: '01 — Aberta' }, { value: '02', label: '02 — Fechada/baú' },
+  { value: '03', label: '03 — Granelera' }, { value: '04', label: '04 — Porta-contêiner' }, { value: '05', label: '05 — Sider' },
+] as const;
+
+/** MDF-e tpProp: proprietário do veículo quando não é da própria transportadora. */
+export const OWNER_TYPES = [
+  { value: '0', label: 'TAC agregado' }, { value: '1', label: 'TAC independente' }, { value: '2', label: 'Outros' },
+] as const;
+
+export const CNH_CATEGORIES = ['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE'] as const;
+
+export interface VehicleTypeDTO {
+  id?: number;
+  code: string;
+  description: string;
+  wheel_type?: string;
+  body_type?: string;
+  axles?: number;
+  capacity_kg?: number;
+  capacity_m3?: number;
+  is_active?: boolean;
+  /** Veículos que usam o tipo: tipo em uso não se exclui. */
+  in_use?: number;
+}
+
+export interface OccurrenceTypeDTO {
+  id?: number;
+  code: string;
+  description: string;
+  /** Pesa contra a transportadora na avaliação (avaria sim; reentrega a pedido do cliente não). */
+  counts_as_failure?: boolean;
+  is_active?: boolean;
+  in_use?: number;
+}
+
+export interface CarrierUsageDTO {
+  documents: { document: string; total: number; open: number }[];
+  can_delete: boolean;
+  can_deactivate: boolean;
+}
 
 export function carrierModalLabel(value?: string): string {
   return CARRIER_MODALS.find((m) => m.value === value)?.label ?? (value || '—');
@@ -56,6 +100,15 @@ export interface CarrierVehicleDTO {
   driver_name?: string;
   driver_document?: string;
   driver_license?: string;
+  vehicle_type_id?: number;
+  plate_state?: string;
+  renavam?: string;
+  tare_kg?: number;
+  wheel_type?: string;
+  body_type?: string;
+  owner_type?: string;
+  driver_cnh_category?: string;
+  driver_cnh_expiry?: string;
   is_active?: boolean;
 }
 
@@ -74,6 +127,8 @@ export interface CarrierServiceAreaDTO {
 
 export interface CarrierPerformanceDTO {
   occurrences: number;
+  /** Ocorrências cujo tipo pesa contra a transportadora. */
+  failures: number;
   average_delay_days: number;
   total_cost_impact: number;
   last_occurrence_date?: string;
@@ -109,6 +164,11 @@ export interface ShippingCarrierDTO {
   contact_phone?: string;
   contact_email?: string;
   notes?: string;
+  /** kg por m³ do peso cubado (rodoviário costuma usar 300); 0 cobra só o peso real. */
+  cubage_factor?: number;
+  /** Taxa fixa por embarque (despacho/emissão do CT-e). */
+  dispatch_fee?: number;
+  accepts_dangerous_goods?: boolean;
   is_active?: boolean;
   /** O que não impede gravar mas impede transportar (habilitação/seguro vencido, frota vazia…). */
   alerts?: string[];
@@ -123,6 +183,8 @@ export interface CarrierOccurrenceDTO {
   occurrence_date: string;
   occurrence_type: string;
   sales_order_code?: number;
+  /** Código do romaneio (o que a VEXP0100 mostra). */
+  shipment_code?: number;
   delay_days?: number;
   cost_impact?: number;
   description?: string;
@@ -137,6 +199,9 @@ export interface FreightQuoteDTO {
   modal_label: string;
   service_area_id?: number;
   service_area: string;
+  charged_weight_kg: number;
+  cubed_weight_applied: boolean;
+  dispatch_fee_value: number;
   weight_value: number;
   ad_valorem_value: number;
   gris_value: number;
@@ -146,6 +211,8 @@ export interface FreightQuoteDTO {
   lead_days: number;
   estimated_delivery: string;
   alerts: string[];
+  /** Impede esta carga (RNTRC/seguro vencido, acima da cobertura, sem veículo que comporte): fica fora de "mais barata/rápida". */
+  blocking: string[];
 }
 
 export interface FreightComparisonDTO {
@@ -175,6 +242,15 @@ function parseVehicle(raw: unknown): CarrierVehicleDTO {
     driver_name: optStr(o, 'driver_name', 'DriverName'),
     driver_document: optStr(o, 'driver_document', 'DriverDocument'),
     driver_license: optStr(o, 'driver_license', 'DriverLicense'),
+    vehicle_type_id: optNum(o, 'vehicle_type_id'),
+    plate_state: optStr(o, 'plate_state'),
+    renavam: optStr(o, 'renavam'),
+    tare_kg: parseNum(o, 'tare_kg'),
+    wheel_type: optStr(o, 'wheel_type'),
+    body_type: optStr(o, 'body_type'),
+    owner_type: optStr(o, 'owner_type'),
+    driver_cnh_category: optStr(o, 'driver_cnh_category'),
+    driver_cnh_expiry: optStr(o, 'driver_cnh_expiry'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
   };
 }
@@ -229,6 +305,9 @@ function parseCarrier(raw: unknown): ShippingCarrierDTO {
     contact_phone: optStr(o, 'contact_phone', 'ContactPhone'),
     contact_email: optStr(o, 'contact_email', 'ContactEmail'),
     notes: optStr(o, 'notes', 'Notes'),
+    cubage_factor: parseNum(o, 'cubage_factor'),
+    dispatch_fee: parseNum(o, 'dispatch_fee'),
+    accepts_dangerous_goods: parseBool(o, 'accepts_dangerous_goods'),
     is_active: parseBool(o, 'is_active', 'IsActive'),
     alerts: Array.isArray(alerts) ? alerts.map(String) : [],
     vehicles: Array.isArray(vehicles) ? vehicles.map(parseVehicle) : [],
@@ -238,6 +317,7 @@ function parseCarrier(raw: unknown): ShippingCarrierDTO {
     const p = unwrapObject(perf);
     out.performance = {
       occurrences: parseNum(p, 'occurrences', 'Ocorrencias'),
+      failures: parseNum(p, 'failures'),
       average_delay_days: parseNum(p, 'average_delay_days', 'AtrasoMedio'),
       total_cost_impact: parseNum(p, 'total_cost_impact', 'CustoTotal'),
       last_occurrence_date: optStr(p, 'last_occurrence_date', 'UltimaData'),
@@ -255,6 +335,7 @@ function parseOccurrence(raw: unknown): CarrierOccurrenceDTO {
     occurrence_date: parseStr(o, 'occurrence_date', 'OccurrenceDate'),
     occurrence_type: parseStr(o, 'occurrence_type', 'OccurrenceType'),
     sales_order_code: optNum(o, 'sales_order_code', 'SalesOrderCode'),
+    shipment_code: optNum(o, 'shipment_code'),
     delay_days: parseNum(o, 'delay_days', 'DelayDays'),
     cost_impact: parseNum(o, 'cost_impact', 'CostImpact'),
     description: optStr(o, 'description', 'Description'),
@@ -272,6 +353,9 @@ function parseQuote(raw: unknown): FreightQuoteDTO {
     modal_label: parseStr(o, 'modal_label', 'ModalLabel'),
     service_area_id: optNum(o, 'service_area_id', 'RegiaoID'),
     service_area: parseStr(o, 'service_area', 'RegiaoDescricao'),
+    charged_weight_kg: parseNum(o, 'charged_weight_kg'),
+    cubed_weight_applied: parseBool(o, 'cubed_weight_applied'),
+    dispatch_fee_value: parseNum(o, 'dispatch_fee_value'),
     weight_value: parseNum(o, 'weight_value', 'ValorPorPeso'),
     ad_valorem_value: parseNum(o, 'ad_valorem_value', 'ValorAdValorem'),
     gris_value: parseNum(o, 'gris_value', 'ValorGris'),
@@ -281,6 +365,7 @@ function parseQuote(raw: unknown): FreightQuoteDTO {
     lead_days: parseNum(o, 'lead_days', 'PrazoDias'),
     estimated_delivery: parseStr(o, 'estimated_delivery', 'PrevisaoEntrega'),
     alerts: Array.isArray(alerts) ? alerts.map(String) : [],
+    blocking: Array.isArray(o['blocking']) ? (o['blocking'] as unknown[]).map(String) : [],
   };
 }
 
@@ -320,6 +405,75 @@ export async function setShippingCarrierStatus(id: number, isActive: boolean): P
   await httpClient.patch(`${BASE}/${id}/status`, { is_active: isActive });
 }
 
+/** Onde a transportadora está gravada — a tela consulta antes de oferecer excluir ou inativar. */
+export async function getShippingCarrierUsage(id: number): Promise<CarrierUsageDTO> {
+  const { data } = await httpClient.get(`${BASE}/${id}/usage`);
+  const o = unwrapObject(data);
+  const docs = o['documents'];
+  return {
+    documents: Array.isArray(docs) ? docs.map((d) => {
+      const x = unwrapObject(d);
+      return { document: parseStr(x, 'document'), total: parseNum(x, 'total'), open: parseNum(x, 'open') };
+    }) : [],
+    can_delete: parseBool(o, 'can_delete'),
+    can_deactivate: parseBool(o, 'can_deactivate'),
+  };
+}
+
+/** Só apaga transportadora nunca usada; com histórico, o caminho é inativar. */
+export async function deleteShippingCarrier(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/${id}`);
+}
+
+// ─── Cadastros de apoio ───────────────────────────────────────────────────────
+
+function parseVehicleType(raw: unknown): VehicleTypeDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: optNum(o, 'id'), code: parseStr(o, 'code'), description: parseStr(o, 'description'),
+    wheel_type: optStr(o, 'wheel_type'), body_type: optStr(o, 'body_type'), axles: optNum(o, 'axles'),
+    capacity_kg: parseNum(o, 'capacity_kg'), capacity_m3: parseNum(o, 'capacity_m3'),
+    is_active: parseBool(o, 'is_active'), in_use: parseNum(o, 'in_use'),
+  };
+}
+
+function parseOccurrenceType(raw: unknown): OccurrenceTypeDTO {
+  const o = unwrapObject(raw);
+  return {
+    id: optNum(o, 'id'), code: parseStr(o, 'code'), description: parseStr(o, 'description'),
+    counts_as_failure: parseBool(o, 'counts_as_failure'), is_active: parseBool(o, 'is_active'), in_use: parseNum(o, 'in_use'),
+  };
+}
+
+export async function listVehicleTypes(): Promise<VehicleTypeDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/vehicle-types`);
+  return unwrapArray(data).map(parseVehicleType);
+}
+
+export async function saveVehicleType(dto: VehicleTypeDTO): Promise<void> {
+  if (dto.id) await httpClient.put(`${BASE}/vehicle-types/${dto.id}`, dto);
+  else await httpClient.post(`${BASE}/vehicle-types`, dto);
+}
+
+export async function deleteVehicleType(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/vehicle-types/${id}`);
+}
+
+/** A empresa sem nenhum tipo recebe os padrões (atraso, avaria, extravio…) na primeira consulta. */
+export async function listOccurrenceTypes(): Promise<OccurrenceTypeDTO[]> {
+  const { data } = await httpClient.get(`${BASE}/occurrence-types`);
+  return unwrapArray(data).map(parseOccurrenceType);
+}
+
+export async function saveOccurrenceType(dto: OccurrenceTypeDTO): Promise<void> {
+  if (dto.id) await httpClient.put(`${BASE}/occurrence-types/${dto.id}`, dto);
+  else await httpClient.post(`${BASE}/occurrence-types`, dto);
+}
+
+export async function deleteOccurrenceType(id: number): Promise<void> {
+  await httpClient.delete(`${BASE}/occurrence-types/${id}`);
+}
+
 export async function listCarrierOccurrences(id: number, limit = 100): Promise<CarrierOccurrenceDTO[]> {
   const { data } = await httpClient.get(`${BASE}/${id}/occurrences`, { params: { limit: String(limit) } });
   return unwrapArray(data).map(parseOccurrence);
@@ -335,9 +489,11 @@ export async function createCarrierOccurrence(id: number, dto: CarrierOccurrence
  * barata primeiro e a mais rápida marcada. Quem não atende volta em
  * `not_served_by` — é informação, não erro.
  */
-export async function quoteFreight(params: { uf?: string; cep?: string; weightKg?: number; volumeM3?: number; cargoValue?: number; baseDate?: string }): Promise<FreightComparisonDTO> {
+export async function quoteFreight(params: { uf?: string; city?: string; cep?: string; weightKg?: number; volumeM3?: number; cargoValue?: number; baseDate?: string; dangerous?: boolean }): Promise<FreightComparisonDTO> {
   const query: Record<string, string> = {};
+  if (params.dangerous) query.dangerous = 'true';
   if (params.uf) query.uf = params.uf;
+  if (params.city) query.city = params.city;
   if (params.cep) query.cep = params.cep;
   if (params.weightKg !== undefined) query.weight_kg = String(params.weightKg);
   if (params.volumeM3 !== undefined) query.volume_m3 = String(params.volumeM3);

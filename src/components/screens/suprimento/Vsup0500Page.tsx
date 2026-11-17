@@ -6,7 +6,7 @@ import {
   listSuppliers, getSupplier, createSupplier, updateSupplier, blockSupplier, unblockSupplier,
   listSupplierTypes, addAddress, addPhone, addEmail, addDueDate, addContact,
   addContactPhone, addContactEmail,
-  listEnterprises, addEnterprise, sefazQuery, getPurchasingDefaults,
+  listEnterprises, addEnterprise,
   type ContactTypeDTO, type SupplierParametersDTO, type SupplierKind, SUPPLIER_KINDS,
   createSupplierType, updateSupplierType, listContactTypes, createContactType,
   getParameters, updateParameters,
@@ -82,7 +82,6 @@ export function Vsup0500Page(): JSX.Element {
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [entForm, setEntForm] = useState<{ enterprise_code?: number; financial_account: string; ipi: boolean; default_invoice_type_id: string; purchase_price_table_id: string }>({ enterprise_code: undefined, financial_account: "", ipi: false, default_invoice_type_id: "", purchase_price_table_id: "" });
-  const [entCode] = useState("1");
 
   // ── Cadastros de apoio (antiga VSUP0510) ───────────────────────────────────
   const [apoio, setApoio] = useState(false);
@@ -235,18 +234,6 @@ export function Vsup0500Page(): JSX.Element {
     try { if (isBlocked(s)) await unblockSupplier(s.code); else await blockSupplier(s.code); setFeedback({ type: "success", message: `Fornecedor ${isBlocked(s) ? "liberado" : "bloqueado"}.` }); await abrir(s.code); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
-  async function consultarSefaz() {
-    if (!form.code) return;
-    setBusy(true); setFeedback(null);
-    try {
-      const r = await sefazQuery(form.code);
-      const situacao = String(r.situacao_cadastral || r.billing_receipt_status || "").trim();
-      const partes = [r.nome ? String(r.nome) : "", r.uf ? `UF ${String(r.uf)}` : "", situacao ? `situação: ${situacao}` : ""].filter(Boolean);
-      setFeedback({ type: "info", message: `Consulta à SEFAZ concluída${partes.length ? ` — ${partes.join(" · ")}` : ""}. O resultado ficou gravado no fornecedor.` });
-      await abrir(form.code);
-    }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
   async function consultarCnpj() {
     if (form.document_type !== "CNPJ" || !validateCNPJOrCPF(form.document_number)) {
       setFeedback({ type: "error", message: "Informe um CNPJ válido antes de consultar." }); return;
@@ -276,24 +263,6 @@ export function Vsup0500Page(): JSX.Element {
       setEmailForm((current) => ({ ...current, email: data.email || current.email }));
       setFeedback({ type: "info", message: "Dados consultados. Revise as informações antes de salvar o fornecedor." });
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
-  }
-  async function verDefaults() {
-    if (!form.code) return;
-    setBusy(true); setFeedback(null);
-    try {
-      const r = await getPurchasingDefaults(form.code, Number(entCode) || 1);
-      const sim = (v: unknown) => (v ? "sim" : "não");
-      const partes = [
-        `condição de pagamento ${r.payment_condition_id ?? "não definida"}`,
-        `frete ${r.freight_type ? enumLabel(String(r.freight_type)).toLowerCase() : "não definido"}`,
-        `conta financeira ${r.financial_account || "não definida"}`,
-        `tipo de NF ${r.default_invoice_type_id ?? "não definido"}`,
-        `tabela de preço ${r.purchase_price_table_id ?? "não definida"}`,
-        `aplica IPI: ${sim(r.applies_ipi)}`,
-      ];
-      setFeedback({ type: "info", message: `Padrões de compra deste fornecedor na empresa: ${partes.join(" · ")}.` });
-    }
-    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function run(fn: () => Promise<void>, ok: string) {
     if (!form.code) { setFeedback({ type: "error", message: "Salve o fornecedor antes de editar as pastas." }); return; }
@@ -342,8 +311,6 @@ export function Vsup0500Page(): JSX.Element {
           <div className="erp-tgroup">
             <span className="erp-tgroup-label">Ações</span>
             <button className="erp-btn erp-btn-dark" onClick={() => void salvar()} disabled={busy}>{busy && <span className="erp-spin" />}{editing ? "Atualizar" : "Salvar"}</button>
-            {form.code && <button className="erp-btn" onClick={() => void consultarSefaz()} disabled={busy}>Consultar SEFAZ</button>}
-            {form.code && <button className="erp-btn" onClick={() => void verDefaults()} disabled={busy}>Padrões de compra</button>}
             {form.code && <button className={`erp-btn${isBlocked(form) ? " erp-btn-primary" : " erp-btn-danger"}`} onClick={() => void toggleBlock(form)} disabled={busy}>{isBlocked(form) ? "Liberar" : "Bloquear"}</button>}
           </div>
         )}
