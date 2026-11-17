@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.5] — 2026-11-17
+
 ## Novidades
 - **Prévia da NF-e (VFIS0200):** botões **Imprimir** (a folha da prévia sozinha, em A4, com a tarja "sem valor fiscal") e **Exportar PDF** (a prévia no layout do DANFE, com os mesmos campos da tela, para guardar ou mandar para conferência).
 
