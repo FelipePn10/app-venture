@@ -10,7 +10,7 @@ import { errMessage } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems, loadEstablishments } from "@/services/lookups";
+import { loadItems, loadEstablishments, loadSuppliers } from "@/services/lookups";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 const saldo = (it: RequisitionItemDTO) => it.quantity - (it.attended_qty ?? 0) - (it.cancelled_qty ?? 0);
@@ -181,9 +181,9 @@ export function Vsup0300Page(): JSX.Element {
                               <td className="num" style={{ fontWeight: 600 }}><EntityName code={it.item_code} loader={loadItems} prefix="Item" /></td>
                               <td className="num">{it.quantity}</td><td className="num">{it.attended_qty ?? 0}</td>
                               <td className="num" style={{ fontWeight: 700 }}>{sld}</td>
-                              <td><span className="erp-badge draft">{enumLabel(it.status)}</span></td>
-                              <td><input className="erp-input num" style={{ height: 28, width: 74 }} type="number" value={g.qty} disabled={sld <= 0} onChange={(e) => setGen((p) => ({ ...p, [it.id!]: { ...g, qty: e.target.value } }))} /></td>
-                              <td><input className="erp-input num" style={{ height: 28, width: 90 }} type="number" placeholder="preferencial" value={g.supplier} disabled={sld <= 0} onChange={(e) => setGen((p) => ({ ...p, [it.id!]: { ...g, supplier: e.target.value } }))} /></td>
+                              <td><span className="erp-badge draft">{enumLabel(it.status)}</span>{it.sem_fornecedor && <> <span className="erp-badge warn" title="O item não tem fornecedor vigente em VSUP0130 — Fornecedor Preferencial por Item. A linha não vira pedido até cadastrar.">Sem fornecedor</span></>}</td>
+                              <td><input className="erp-input num" style={{ height: 28, width: 74 }} type="number" min={0} max={sld} value={g.qty} disabled={sld <= 0} onChange={(e) => setGen((p) => ({ ...p, [it.id!]: { ...g, qty: e.target.value === "" ? "" : String(Math.min(sld, Math.max(0, Number(e.target.value)))) } }))} /></td>
+                              <td style={{ minWidth: 220 }} title="Em branco, usa o fornecedor preferencial do item. Só é aceito fornecedor vigente em VSUP0130 — Fornecedor Preferencial por Item."><LookupField value={g.supplier ? Number(g.supplier) : undefined} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Preferencial" disabled={sld <= 0} onChange={(c) => setGen((p) => ({ ...p, [it.id!]: { ...g, supplier: c ? String(c) : "" } }))} /></td>
                             </tr>
                           );
                         })}

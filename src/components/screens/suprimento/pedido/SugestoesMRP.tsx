@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { approveSuggestion, listSuggestions, rejectSuggestion, type SuggestionDTO } from "@/services/purchaseOrderService";
 import { errMessage, parseNum, parseStr } from "@/services/fiscalShared";
 import { LookupField } from "@/components/ui/LookupField";
+import { EntityName } from "@/components/ui/EntityName";
 import { loadItems, loadSuppliers } from "@/services/lookups";
 import { enumLabel } from "@/utils/enumLabels";
 
@@ -66,10 +67,10 @@ export function SugestoesMRP({ onFeedback, onPedidoGerado }: { onFeedback: (f: F
         <div className="erp-fieldset-body">
           <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
             <table className="erp-grid">
-              <thead><tr><th>Sugestão</th><th>Item</th><th className="num">Quantidade</th><th>Necessidade</th><th>Situação</th><th /></tr></thead>
+              <thead><tr><th>Sugestão</th><th>Item</th><th className="num">Quantidade</th><th>Necessidade</th><th>Fornecedor sugerido</th><th>Situação</th><th /></tr></thead>
               <tbody>
-                {carregando && <tr><td colSpan={6} className="erp-grid-empty"><span className="erp-spin" /> Carregando…</td></tr>}
-                {!carregando && lista.length === 0 && <tr><td colSpan={6} className="erp-grid-empty">Nenhuma sugestão de compra em aberto.</td></tr>}
+                {carregando && <tr><td colSpan={7} className="erp-grid-empty"><span className="erp-spin" /> Carregando…</td></tr>}
+                {!carregando && lista.length === 0 && <tr><td colSpan={7} className="erp-grid-empty">Nenhuma sugestão de compra em aberto.</td></tr>}
                 {!carregando && lista.map((s) => (
                   <Fragment key={s.code}>
                     <tr>
@@ -77,21 +78,25 @@ export function SugestoesMRP({ onFeedback, onPedidoGerado }: { onFeedback: (f: F
                       <td><strong>{s.item_code}</strong>{nomeItem[s.item_code] && <><br /><small>{nomeItem[s.item_code]}</small></>}</td>
                       <td className="num">{num(s.quantity)}</td>
                       <td>{(s.need_date ?? "").slice(0, 10).split("-").reverse().join("/") || "—"}</td>
+                      <td>{s.suggested_supplier_code ? <EntityName code={s.suggested_supplier_code} loader={loadSuppliers} showCode={false} /> : <span className="erp-badge warn" title="O planejamento não indicou fornecedor: o item não tinha fornecedor vigente em VSUP0130 — Fornecedor Preferencial por Item quando a sugestão foi calculada.">Sem fornecedor</span>}</td>
                       <td>{s.mrp_alert && <div className={`erp-badge ${s.mrp_alert === "CANCEL" ? "err" : "warn"}`} title={s.mrp_alert_text} style={{ marginRight: 8 }}>
                         {s.mrp_alert === "CANCEL" ? "MRP: não precisa mais" : s.mrp_alert === "RESCHEDULE_OUT" ? "MRP: pode adiar" : s.mrp_alert === "RESCHEDULE_IN" || s.mrp_alert === "EXPEDITE" ? "MRP: antecipar" : "MRP: revisar"}
                         {s.mrp_alert_date ? ` → ${s.mrp_alert_date.slice(0, 10).split("-").reverse().join("/")}` : ""}</div>}
                         {s.status === "RELEASED" ? <span title="O planejador firmou a necessidade no MRP (VMRP0100): o MRP já conta com esta compra. Falta virar pedido.">Firmada no MRP</span> : enumLabel(s.status)}</td>
                       <td style={{ whiteSpace: "nowrap" }}>
-                        <button className="erp-btn erp-btn-primary erp-btn-sm" disabled={busy} onClick={() => setAprovando({ code: s.code, preco: "" })}>Aprovar</button>{" "}
+                        <button className="erp-btn erp-btn-primary erp-btn-sm" disabled={busy} onClick={() => setAprovando({ code: s.code, fornecedor: s.suggested_supplier_code, preco: "" })}>Aprovar</button>{" "}
                         <button className="erp-btn erp-btn-danger erp-btn-sm" disabled={busy} onClick={() => void rejeitar(s.code)}>Rejeitar</button>
                       </td>
                     </tr>
                     {aprovando?.code === s.code && (
-                      <tr><td colSpan={6}>
+                      <tr><td colSpan={7}>
                         <div className="pdc-inline" style={{ flexWrap: "wrap", alignItems: "flex-end" }}>
                           <div style={{ minWidth: 280, flex: 1 }}><label className="erp-label erp-req">Fornecedor</label>
                             <LookupField value={aprovando.fornecedor} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Quem vende"
-                              onChange={(c) => setAprovando((a) => (a ? { ...a, fornecedor: c ? Number(c) : undefined } : a))} /></div>
+                              onChange={(c) => setAprovando((a) => (a ? { ...a, fornecedor: c ? Number(c) : undefined } : a))} />
+                            <span className="erp-field-hint">{aprovando.fornecedor && aprovando.fornecedor === s.suggested_supplier_code
+                              ? "Escolhido pelo planejamento (preferencial, ranking ou cota)."
+                              : "Só é aceito fornecedor vigente do item em VSUP0130 — Fornecedor Preferencial por Item."}</span></div>
                           <div style={{ width: 150 }}><label className="erp-label erp-req">Preço unitário</label>
                             <input className="erp-input num" type="number" step="0.0001" min="0" value={aprovando.preco}
                               onChange={(e) => setAprovando((a) => (a ? { ...a, preco: e.target.value } : a))} /></div>

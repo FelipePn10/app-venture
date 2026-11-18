@@ -1,4 +1,4 @@
-import { httpClient, parseStr, parseNum, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
 
 const BASE = '/api/purchase-requisitions';
 
@@ -17,6 +17,8 @@ export interface RequisitionItemDTO {
   status?: string;
   cost_center_code?: number;
   delivery_date?: string;
+  /** Item sem fornecedor vigente em VSUP0130: a linha não vira pedido até cadastrar. */
+  sem_fornecedor?: boolean;
 }
 
 export interface RequisitionDTO {
@@ -47,6 +49,7 @@ function parseItem(raw: unknown): RequisitionItemDTO {
     cancelled_qty: parseNum(o, 'cancelled_qty', 'CancelledQty'),
     status: parseStr(o, 'status', 'Status') || undefined,
     delivery_date: parseStr(o, 'delivery_date', 'DeliveryDate') || undefined,
+    sem_fornecedor: parseBool(o, 'sem_fornecedor') || undefined,
   };
 }
 function parseReq(raw: unknown): RequisitionDTO {
