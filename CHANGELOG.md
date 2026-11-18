@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.7] — 2026-11-18
+
 ## Novidades
 - **Fornecedor Preferencial por Item (VSUP0130) refeito:** cada fornecedor do item tem prazo de entrega, quantidade mínima, múltiplo de compra, cota da compra (%) e vigência; situação na lista (Vigente, Bloqueado, Vencido, Ainda não vigente); **Bloquear** e **Desbloquear** com motivo e histórico; código e descrição do fornecedor vêm da nota fiscal, somente leitura, com **Limpar**. A lista carrega ao escolher o item e avisa quando o item não tem fornecedor vigente.
 - **Item sem fornecedor não é comprado:** sem fornecedor vigente na VSUP0130 o item não entra em pedido de compra nem em remessa ao terceiro. A solicitação (VSUP0300) continua livre e mostra **Sem fornecedor** na linha.
