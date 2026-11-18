@@ -143,6 +143,8 @@ export interface SuggestionDTO {
   mrp_alert?: string;
   mrp_alert_text?: string;
   mrp_alert_date?: string;
+  /** Fornecedor que o planejamento escolheu (preferencial, ranking ou cota do VSUP0130). */
+  suggested_supplier_code?: number;
 }
 
 export interface PurchaseOrderConsultationFilter {
@@ -274,6 +276,7 @@ function parseSuggestion(raw: unknown): SuggestionDTO {
     mrp_alert: parseStr(o, 'mrp_alert') || undefined,
     mrp_alert_text: parseStr(o, 'mrp_alert_text') || undefined,
     mrp_alert_date: parseStr(o, 'mrp_alert_date') || undefined,
+    suggested_supplier_code: parseNum(o, 'suggested_supplier_code') || undefined,
   };
 }
 

@@ -101,40 +101,51 @@ export async function deletePriceTableItem(id: number): Promise<void> {
   await httpClient.delete(`/api/purchase-price-tables/items/${id}`);
 }
 
-// ── §14 Fornecedor Preferencial por Item ──
+// ── §14 Fornecedor Preferencial por Item (fonte de suprimento) ──
+export type ItemSupplierSituacao = 'VIGENTE' | 'BLOQUEADO' | 'VENCIDO' | 'FUTURO';
 export interface ItemSupplierDTO {
   id?: number;
   item_code: string;
   supplier_code: number;
   mask?: string;
   ranking: number;
+  /**
+   * Código e descrição do item no fornecedor: a entrada de NF-e aprende sozinha
+   * ao ligar a nota ao item. Só leitura na tela (limpar = clearLearnedItemSupplier).
+   */
   supplier_item_code?: string;
   supplier_item_desc?: string;
-  supplier_uom?: string;
+  /** Prazo de entrega DESTE fornecedor (dias). Vazio = vale o prazo de compra do item. */
   lead_time_days?: number;
+  /** Política de compra deste fornecedor, na unidade de estoque. */
+  min_order_qty?: number;
+  order_multiple?: number;
+  /** Cota da compra do item para este fornecedor (%). Vazio = fora da divisão. */
+  quota_percent?: number;
+  valid_from?: string;
+  valid_until?: string;
+  blocked?: boolean;
+  blocked_reason?: string;
+  blocked_at?: string;
+  situacao?: ItemSupplierSituacao;
 
-  /**
-   * O que muda de fato entre comprar do fornecedor A ou do B: a unidade em que
-   * ele fatura, quanto vem por embalagem e o fator de conversão para a unidade
-   * interna. Sem isso, um pedido de 10 caixas vira 10 unidades no estoque.
-   */
+  /** Mantidos como estão gravados (não editados nesta tela). */
+  supplier_uom?: string;
   xml_uom?: string;
   conversion_factor?: number;
   package_quantity?: number;
   barcode?: string;
   is_preferred?: boolean;
-  /** Homologação do fornecedor para este item. */
   classification_id?: number;
   classification_date?: string;
   classification_grade?: number;
-  /** Faturamento direto ao cliente, sem passar pelo estoque. */
   direct_billing?: boolean;
   third_party_order?: boolean;
   ignore_avg_cost_addition?: boolean;
   ecommerce?: boolean;
-  valid_until?: string;
   notes?: string;
 }
+const dia = (v: string): string | undefined => (v ? v.slice(0, 10) : undefined);
 function parseItemSupplier(raw: unknown): ItemSupplierDTO {
   const o = unwrapObject(raw);
   return {
@@ -146,6 +157,15 @@ function parseItemSupplier(raw: unknown): ItemSupplierDTO {
     supplier_item_desc: parseStr(o, 'supplier_description', 'SupplierDescription') || undefined,
     supplier_uom: parseStr(o, 'uom', 'UOM') || undefined,
     lead_time_days: parseNum(o, 'lead_time_days', 'LeadTimeDays') || undefined,
+    min_order_qty: parseNum(o, 'min_order_qty', 'MinOrderQty') || undefined,
+    order_multiple: parseNum(o, 'order_multiple', 'OrderMultiple') || undefined,
+    quota_percent: parseNum(o, 'quota_percent', 'QuotaPercent') || undefined,
+    valid_from: dia(parseStr(o, 'valid_from', 'ValidFrom')),
+    valid_until: dia(parseStr(o, 'valid_until', 'ValidUntil')),
+    blocked: parseBool(o, 'blocked', 'Blocked'),
+    blocked_reason: parseStr(o, 'blocked_reason', 'BlockedReason') || undefined,
+    blocked_at: parseStr(o, 'blocked_at', 'BlockedAt') || undefined,
+    situacao: (parseStr(o, 'situacao', 'Situacao') || 'VIGENTE') as ItemSupplierSituacao,
     mask: parseStr(o, 'mask', 'Mask') || undefined,
     xml_uom: parseStr(o, 'xml_uom', 'XMLUOM') || undefined,
     conversion_factor: parseNum(o, 'conversion_factor', 'ConversionFactor') || undefined,
@@ -153,13 +173,12 @@ function parseItemSupplier(raw: unknown): ItemSupplierDTO {
     barcode: parseStr(o, 'barcode', 'Barcode') || undefined,
     is_preferred: parseBool(o, 'is_preferred', 'IsPreferred'),
     classification_id: parseNum(o, 'classification_id', 'ClassificationID') || undefined,
-    classification_date: parseStr(o, 'classification_date', 'ClassificationDate') || undefined,
+    classification_date: dia(parseStr(o, 'classification_date', 'ClassificationDate')),
     classification_grade: parseNum(o, 'classification_grade', 'ClassificationGrade') || undefined,
     direct_billing: parseBool(o, 'direct_billing', 'DirectBilling'),
     third_party_order: parseBool(o, 'third_party_order', 'ThirdPartyOrder'),
     ignore_avg_cost_addition: parseBool(o, 'ignore_avg_cost_addition', 'IgnoreAvgCostAddition'),
     ecommerce: parseBool(o, 'ecommerce', 'Ecommerce'),
-    valid_until: parseStr(o, 'valid_until', 'ValidUntil') || undefined,
     notes: parseStr(o, 'notes', 'Notes') || undefined,
   };
 }
@@ -167,9 +186,71 @@ export async function listItemSuppliers(itemCode: string): Promise<ItemSupplierD
   const { data } = await httpClient.get(`/api/item-suppliers/item/${encodeURIComponent(itemCode)}`);
   return unwrapArray(data).map(parseItemSupplier);
 }
+/**
+ * Grava o vínculo com os nomes de campo do backend. Código e descrição no
+ * fornecedor não vão: o backend mantém o que a NF-e aprendeu.
+ */
 export async function upsertItemSupplier(dto: ItemSupplierDTO): Promise<ItemSupplierDTO> {
-  const { data } = await httpClient.post('/api/item-suppliers', dto);
+  const body = {
+    item_code: dto.item_code,
+    supplier_code: dto.supplier_code,
+    mask: dto.mask ?? '',
+    ranking: dto.ranking,
+    is_preferred: !!dto.is_preferred,
+    lead_time_days: dto.lead_time_days ?? 0,
+    min_order_qty: dto.min_order_qty ?? 0,
+    order_multiple: dto.order_multiple ?? 0,
+    quota_percent: dto.quota_percent || undefined,
+    valid_from: dto.valid_from || undefined,
+    valid_until: dto.valid_until || undefined,
+    uom: dto.supplier_uom || undefined,
+    xml_uom: dto.xml_uom || undefined,
+    conversion_factor: dto.conversion_factor || undefined,
+    package_quantity: dto.package_quantity ?? 0,
+    barcode: dto.barcode || undefined,
+    classification_id: dto.classification_id || undefined,
+    classification_date: dto.classification_date || undefined,
+    classification_grade: dto.classification_grade || undefined,
+    direct_billing: !!dto.direct_billing,
+    third_party_order: !!dto.third_party_order,
+    ignore_avg_cost_addition: !!dto.ignore_avg_cost_addition,
+    ecommerce: !!dto.ecommerce,
+    notes: dto.notes || undefined,
+  };
+  const { data } = await httpClient.post('/api/item-suppliers', body);
   return parseItemSupplier(data);
+}
+export async function blockItemSupplier(id: number, reason: string): Promise<ItemSupplierDTO> {
+  const { data } = await httpClient.post(`/api/item-suppliers/${id}/block`, { reason });
+  return parseItemSupplier(data);
+}
+export async function unblockItemSupplier(id: number, reason: string): Promise<ItemSupplierDTO> {
+  const { data } = await httpClient.post(`/api/item-suppliers/${id}/unblock`, { reason });
+  return parseItemSupplier(data);
+}
+export async function clearLearnedItemSupplier(id: number): Promise<ItemSupplierDTO> {
+  const { data } = await httpClient.post(`/api/item-suppliers/${id}/clear-learned`, {});
+  return parseItemSupplier(data);
+}
+export interface ItemSupplierBlockEvent {
+  id: number;
+  action: 'BLOQUEIO' | 'DESBLOQUEIO';
+  reason: string;
+  actor_id: string;
+  created_at: string;
+}
+export async function listItemSupplierBlockHistory(id: number): Promise<ItemSupplierBlockEvent[]> {
+  const { data } = await httpClient.get(`/api/item-suppliers/${id}/block-history`);
+  return unwrapArray(data).map((raw) => {
+    const o = unwrapObject(raw);
+    return {
+      id: parseNum(o, 'id', 'ID'),
+      action: parseStr(o, 'action', 'Action') as ItemSupplierBlockEvent['action'],
+      reason: parseStr(o, 'reason', 'Reason'),
+      actor_id: parseStr(o, 'actor_id', 'ActorID'),
+      created_at: parseStr(o, 'created_at', 'CreatedAt'),
+    };
+  });
 }
 export async function deleteItemSupplier(id: number): Promise<void> {
   await httpClient.delete(`/api/item-suppliers/${id}`);
