@@ -26,6 +26,17 @@ type Rodada = PipelineResult & { quando: string; plano: number };
 
 /** Parâmetro de sim/não: o catálogo usa S/N. */
 const ehSimNao = (v: string) => /^(S|N)$/i.test(v.trim());
+/**
+ * Parâmetros de lista fechada: o servidor só aceita estes valores. O 52 vale na
+ * hora (no início de cada ordem), não no próximo cálculo.
+ */
+const OPCOES: Record<number, { valor: string; rotulo: string }[]> = {
+  52: [
+    { valor: "NAO", rotulo: "Não conferir" },
+    { valor: "AVISAR", rotulo: "Avisar e deixar iniciar" },
+    { valor: "BLOQUEAR", rotulo: "Não deixar iniciar" },
+  ],
+};
 
 const SITUACAO_RODADA: Record<string, { rotulo: string; tom: Tom }> = {
   RUNNING: { rotulo: "Em andamento", tom: "info" },
@@ -306,7 +317,10 @@ export function Vpln0100Page(): JSX.Element {
                         <tr key={p.param_number}>
                           <td className="num">{p.param_number}</td>
                           <td className="vpl-strong">{p.description ?? p.param_key}{p.param_key && <span className="vpl-sub">{p.param_key}</span>}</td>
-                          <td>{ehSimNao(p.value)
+                          <td>{OPCOES[p.param_number]
+                            ? <select className="erp-cell-input" aria-label={`Valor do parâmetro ${p.param_number}`} value={(valor ?? p.value).toUpperCase()} onChange={(e) => setEditando((x) => ({ ...x, [p.param_number]: e.target.value }))}>
+                                {OPCOES[p.param_number].map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}</select>
+                            : ehSimNao(p.value)
                             ? <select className="erp-cell-input" aria-label={`Valor do parâmetro ${p.param_number}`} value={(valor ?? p.value).toUpperCase()} onChange={(e) => setEditando((x) => ({ ...x, [p.param_number]: e.target.value }))}>
                                 <option value="S">Sim</option><option value="N">Não</option></select>
                             : <input className="erp-cell-input" aria-label={`Valor do parâmetro ${p.param_number}`} value={valor ?? p.value} onChange={(e) => setEditando((x) => ({ ...x, [p.param_number]: e.target.value }))} />}</td>
@@ -321,7 +335,7 @@ export function Vpln0100Page(): JSX.Element {
                   </table>
                 )}
               </Painel>
-              <p className="erp-note">Os parâmetros valem para todos os planos da empresa. Mudar um parâmetro só afeta o próximo cálculo do MRP — rode o plano de novo para ver o efeito.</p>
+              <p className="erp-note">Os parâmetros valem para todos os planos da empresa. Mudar um parâmetro de cálculo só afeta o próximo cálculo do MRP — rode o plano de novo para ver o efeito. O 52 (conferência ao iniciar a ordem de produção) vale na hora, a partir da próxima ordem iniciada.</p>
             </>)}
           </div>
         </section>

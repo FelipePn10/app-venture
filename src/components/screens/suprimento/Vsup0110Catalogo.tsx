@@ -218,8 +218,8 @@ export function AbaConversoesPadrao({ aviso, unidades }: { aviso: Aviso; unidade
     if (!form.from_uom || !form.to_uom || !(Number(form.from_quantity) > 0) || !(Number(form.to_quantity) > 0)) { aviso("error", "Informe as duas unidades e as duas quantidades."); return; }
     setBusy(true);
     try {
-      await salvarConversaoPadrao({ ...form, from_quantity: form.from_quantity.replace(",", "."), to_quantity: form.to_quantity.replace(",", ".") });
-      aviso("success", `Conversão padrão gravada: ${ambosOsSentidos(form.from_uom, form.to_uom, form.from_quantity.replace(",", "."), form.to_quantity.replace(",", "."))}`);
+      const gravada = await salvarConversaoPadrao({ ...form, from_quantity: form.from_quantity.replace(",", "."), to_quantity: form.to_quantity.replace(",", ".") });
+      aviso(gravada.warnings.length ? "info" : "success", `Conversão padrão gravada: ${ambosOsSentidos(form.from_uom, form.to_uom, form.from_quantity.replace(",", "."), form.to_quantity.replace(",", "."))}${gravada.warnings.length ? ` — ${gravada.warnings.join(" ")}` : ""}`);
       setForm({ from_uom: "", to_uom: "", from_quantity: "1", to_quantity: "" });
       await carregar();
     } catch (e) { aviso("error", errMessage(e)); } finally { setBusy(false); }
@@ -227,7 +227,11 @@ export function AbaConversoesPadrao({ aviso, unidades }: { aviso: Aviso; unidade
   async function remover(c: ConversaoPadrao) {
     if (!(await confirmar({ titulo: "Excluir a conversão padrão?", assunto: `${c.from_uom} → ${c.to_uom}`, tom: "perigo", rotulo: "Excluir", mensagem: "Itens que não têm conversão própria entre essas unidades deixam de converter." }))) return;
     setBusy(true);
-    try { await excluirConversaoPadrao(c.id); await carregar(); aviso("success", "Conversão padrão excluída."); } catch (e) { aviso("error", errMessage(e)); } finally { setBusy(false); }
+    try {
+      const avisos = await excluirConversaoPadrao(c.id);
+      await carregar();
+      aviso(avisos.length ? "info" : "success", `Conversão padrão excluída.${avisos.length ? ` Atenção — ${avisos.join(" ")}` : ""}`);
+    } catch (e) { aviso("error", errMessage(e)); } finally { setBusy(false); }
   }
   return (
     <>

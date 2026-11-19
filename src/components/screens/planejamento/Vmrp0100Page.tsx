@@ -95,7 +95,14 @@ export function Vmrp0100Page(): JSX.Element {
     setUltimaRodada(r);
     setOrdemInicial("");
     await Promise.all([carregarResultado(plano), carregarPlanos()]);
-    setFeedback({ type: "success", message: `MRP calculado: ${num(r.items_processed ?? 0, 0)} item(ns) processado(s), ${num(r.orders_generated ?? 0, 0)} sugestão(ões) gerada(s).` });
+    const resumo = `MRP calculado: ${num(r.items_processed ?? 0, 0)} item(ns) processado(s), ${num(r.orders_generated ?? 0, 0)} sugestão(ões) gerada(s).`;
+    // Linha de estrutura em unidade que não converte para a de estoque do
+    // componente: o cálculo seguiu, mas a necessidade desse componente pode
+    // estar errada até a conversão ser cadastrada ou a linha corrigida.
+    const sem = r.estruturas_sem_conversao;
+    setFeedback(sem.length
+      ? { type: "info", message: `${resumo} Atenção — ${sem.length} linha(s) de estrutura sem conversão para a unidade de estoque do componente: ${sem.slice(0, 5).join(" · ")}${sem.length > 5 ? ` · … e mais ${sem.length - 5} (todas no impresso do plano de materiais)` : ""}` }
+      : { type: "success", message: resumo });
     setAba("geral");
   });
 

@@ -16,7 +16,8 @@ import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadEstablishments, defaultEnterprise } from "@/services/lookups";
+import { loadEstablishments, loadPurchasePriceTables, loadInvoiceTypesById, loadSupplierTypesById, defaultEnterprise } from "@/services/lookups";
+import { EntityName } from "@/components/ui/EntityName";
 import { lookupCnpj, type CnpjLookup } from "@/services/customerService";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
@@ -168,8 +169,13 @@ export function Vsup0500Page(): JSX.Element {
 
   function novo() { setForm(EMPTY); setEditing(false); setDetail(null); setEnterprises([]); setCnpjData(null); setFolder("dados"); setEditMode(true); setFeedback(null); }
 
-  async function abrir(code: number) {
-    setBusy(true); setFeedback(null);
+  /**
+   * Abre o fornecedor. Com `recarregar` (depois de gravar algo), fica na pasta
+   * em que o usuário estava e mantém o aviso — antes cada vínculo, telefone ou
+   * contato gravado voltava para "Dados" e apagava o "salvo".
+   */
+  async function abrir(code: number, recarregar = false) {
+    setBusy(true); if (!recarregar) setFeedback(null);
     setCnpjData(null);
     try {
       const raw = await getSupplier(code); setDetail(raw); const parsed = raw as Obj;
@@ -198,7 +204,7 @@ export function Vsup0500Page(): JSX.Element {
         billing_receipt_status: (parseStr(parsed, "billing_receipt_status", "BillingReceiptStatus") || undefined) as SupplierDTO["billing_receipt_status"],
         last_sefaz_query: parseStr(parsed, "last_sefaz_query", "LastSefazQuery") || undefined,
       });
-      setEditing(true); setFolder("dados"); setEditMode(true);
+      setEditing(true); if (!recarregar) setFolder("dados"); setEditMode(true);
       setEnterprises(await listEnterprises(code).catch(() => []));
     } catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
@@ -221,7 +227,7 @@ export function Vsup0500Page(): JSX.Element {
       if (editing) { await updateSupplier({ ...form, is_active: form.is_active !== false }); setFeedback({ type: "success", message: "Fornecedor atualizado." }); }
       else {
         const created = await createSupplier({ ...form, created_by: SYS_USER });
-        if (created?.code) { setFeedback({ type: "success", message: `Fornecedor ${created.code} criado.` }); await abrir(created.code); await reload(); return; }
+        if (created?.code) { setFeedback({ type: "success", message: `Fornecedor ${created.code} criado.` }); await abrir(created.code, true); await reload(); return; }
         setFeedback({ type: "success", message: "Fornecedor criado." });
       }
       await reload();
@@ -231,7 +237,7 @@ export function Vsup0500Page(): JSX.Element {
   async function toggleBlock(s: SupplierDTO) {
     if (!s.code) return;
     setBusy(true); setFeedback(null);
-    try { if (isBlocked(s)) await unblockSupplier(s.code); else await blockSupplier(s.code); setFeedback({ type: "success", message: `Fornecedor ${isBlocked(s) ? "liberado" : "bloqueado"}.` }); await abrir(s.code); }
+    try { if (isBlocked(s)) await unblockSupplier(s.code); else await blockSupplier(s.code); setFeedback({ type: "success", message: `Fornecedor ${isBlocked(s) ? "liberado" : "bloqueado"}.` }); await abrir(s.code, true); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   async function consultarCnpj() {
@@ -267,7 +273,7 @@ export function Vsup0500Page(): JSX.Element {
   async function run(fn: () => Promise<void>, ok: string) {
     if (!form.code) { setFeedback({ type: "error", message: "Salve o fornecedor antes de editar as pastas." }); return; }
     setBusy(true); setFeedback(null);
-    try { await fn(); setFeedback({ type: "success", message: ok }); await abrir(form.code); }
+    try { await fn(); setFeedback({ type: "success", message: ok }); await abrir(form.code, true); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
   const folderRows = (key: string): Obj[] => {
@@ -395,7 +401,7 @@ export function Vsup0500Page(): JSX.Element {
                     </div>
                     <div className="erp-field erp-c3" />
                     <div className="erp-field erp-c4"><label className="erp-label">Conta financeira padrão</label><input className="erp-input num" type="number" value={params.default_financial_account ?? ""} onChange={(e) => setP("default_financial_account", (e.target.value ? Number(e.target.value) : undefined) as never)} /></div>
-                    <div className="erp-field erp-c4"><label className="erp-label">Tipo de fornecedor para comprar</label><input className="erp-input num" type="number" value={params.purchase_supplier_type_id ?? ""} onChange={(e) => setP("purchase_supplier_type_id", (e.target.value ? Number(e.target.value) : undefined) as never)} /></div>
+                    <div className="erp-field erp-c4"><label className="erp-label">Tipo de fornecedor para comprar</label><LookupField value={params.purchase_supplier_type_id ?? undefined} loader={loadSupplierTypesById} entityLabel="tipo de fornecedor" placeholder="Selecionar" allowManualCode={false} onChange={(c) => setP("purchase_supplier_type_id", (c ? Number(c) : undefined) as never)} /></div>
                     <div className="erp-field erp-c4"><label className="erp-label">Fornecedor genérico da NF-e</label><input className="erp-input num" type="number" value={params.generic_supplier_code ?? ""} onChange={(e) => setP("generic_supplier_code", (e.target.value ? Number(e.target.value) : undefined) as never)} /></div>
                     <div className="erp-field erp-c4"><label className="erp-label">Data-base dos vencimentos</label>
                       <select className="erp-input" value={params.default_due_base_date ?? ""} onChange={(e) => setP("default_due_base_date", e.target.value || undefined)}>
@@ -631,14 +637,14 @@ export function Vsup0500Page(): JSX.Element {
                     <div className="erp-fieldset"><div className="erp-fieldset-head">Vincular empresa</div><div className="erp-fieldset-body">
                       <div className="erp-field erp-c4"><label className="erp-label">Estabelecimento</label><LookupField value={entForm.enterprise_code} loader={loadEstablishments} entityLabel="estabelecimento" placeholder="Selecionar" onChange={(c) => setEntForm((p) => ({ ...p, enterprise_code: c }))} /></div>
                       <div className="erp-field erp-c3"><label className="erp-label">Conta financeira</label><input className="erp-input num" type="number" value={entForm.financial_account} onChange={(e) => setEntForm((p) => ({ ...p, financial_account: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2"><label className="erp-label">Tipo NF default</label><input className="erp-input num" type="number" value={entForm.default_invoice_type_id} onChange={(e) => setEntForm((p) => ({ ...p, default_invoice_type_id: e.target.value }))} /></div>
-                      <div className="erp-field erp-c2"><label className="erp-label">Tab. preço compra</label><input className="erp-input num" type="number" value={entForm.purchase_price_table_id} onChange={(e) => setEntForm((p) => ({ ...p, purchase_price_table_id: e.target.value }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Tipo NF default</label><LookupField value={entForm.default_invoice_type_id ? Number(entForm.default_invoice_type_id) : undefined} loader={loadInvoiceTypesById} entityLabel="tipo de nota" placeholder="Selecionar" allowManualCode={false} onChange={(c) => setEntForm((p) => ({ ...p, default_invoice_type_id: c ? String(c) : "" }))} /></div>
+                      <div className="erp-field erp-c2"><label className="erp-label">Tab. preço compra</label><LookupField value={entForm.purchase_price_table_id ? Number(entForm.purchase_price_table_id) : undefined} loader={loadPurchasePriceTables} entityLabel="tabela de preço de compra" placeholder="Selecionar" onChange={(c) => setEntForm((p) => ({ ...p, purchase_price_table_id: c ? String(c) : "" }))} /></div>
                       <div className="erp-field erp-c1"><label className="erp-label">IPI</label><label className="erp-check"><input type="checkbox" checked={entForm.ipi} onChange={(e) => setEntForm((p) => ({ ...p, ipi: e.target.checked }))} /></label></div>
                       <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" onClick={() => void run(async () => { await addEnterprise({ supplier_code: form.code!, enterprise_code: Number(entForm.enterprise_code), financial_account: entForm.financial_account ? Number(entForm.financial_account) : undefined, ipi: entForm.ipi, default_invoice_type_id: entForm.default_invoice_type_id ? Number(entForm.default_invoice_type_id) : undefined, purchase_price_table_id: entForm.purchase_price_table_id ? Number(entForm.purchase_price_table_id) : undefined }); setEnterprises(await listEnterprises(form.code!)); }, "Vínculo de empresa salvo.")} disabled={busy}>+ Vincular empresa</button></div>
                     </div></div>
-                    <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th className="num">Empresa</th><th className="num">Conta fin.</th><th>IPI</th><th className="num">Tipo NF</th><th className="num">Tab. preço</th></tr></thead><tbody>
+                    <div className="erp-grid-wrap"><table className="erp-grid"><thead><tr><th className="num">Empresa</th><th className="num">Conta fin.</th><th>IPI</th><th>Tipo NF</th><th className="num">Tab. preço</th></tr></thead><tbody>
                       {enterprises.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">Nenhum vínculo.</td></tr>}
-                      {enterprises.map((e2, i) => <tr key={e2.id ?? i}><td className="num" style={{ fontWeight: 600 }}>{e2.enterprise_code}</td><td className="num">{e2.financial_account ?? "—"}</td><td>{e2.ipi ? "Sim" : "Não"}</td><td className="num">{e2.default_invoice_type_id ?? "—"}</td><td className="num">{e2.purchase_price_table_id ?? "—"}</td></tr>)}
+                      {enterprises.map((e2, i) => <tr key={e2.id ?? i}><td className="num" style={{ fontWeight: 600 }}>{e2.enterprise_code}</td><td className="num">{e2.financial_account ?? "—"}</td><td>{e2.ipi ? "Sim" : "Não"}</td><td>{e2.default_invoice_type_id ? <EntityName code={e2.default_invoice_type_id} loader={loadInvoiceTypesById} showCode={false} /> : "—"}</td><td>{e2.purchase_price_table_id ? <EntityName code={e2.purchase_price_table_id} loader={loadPurchasePriceTables} /> : "—"}</td></tr>)}
                     </tbody></table></div>
                   </>)}
                 </div>

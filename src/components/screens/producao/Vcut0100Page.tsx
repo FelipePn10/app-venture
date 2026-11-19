@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { SelectUnidade } from "@/components/ui/SelectUnidade";
 import {
   type CuttingPlanDTO, type CuttingPartDTO, type CuttingStockDTO, type PatternDTO, type CuttingSettings,
@@ -12,7 +12,7 @@ import {
   parseGeometry,
 } from "@/services/cuttingPlanService";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems } from "@/services/lookups";
+import { loadItems, loadWarehouses } from "@/services/lookups";
 import { errMessage, type Obj } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { enumLabel } from "@/utils/enumLabels";
@@ -70,6 +70,9 @@ export function Vcut0100Page(): JSX.Element {
   }, []);
 
   const listar = () => run(async () => { setPlans(await listCuttingPlans()); if (!settings) setSettings(await getCuttingSettings()); });
+  // Os padrões da empresa (modo de consumo, sobra mínima, depósito) aparecem ao abrir a tela;
+  // antes só surgiam depois de clicar em "Listar" e quem procurava o depósito padrão não achava.
+  useEffect(() => { getCuttingSettings().then((s) => setSettings((atual) => atual ?? s)).catch(() => {}); }, []);
   const abrir = (id?: number) => { if (id) void run(async () => { const d = await getCuttingPlan(id); setDetail(d); setUnplaced(d.unplaced ?? []); setProgram(null); }); };
   const refresh = useCallback(async (id: number) => { const d = await getCuttingPlan(id); setDetail(d); }, []);
 
@@ -158,7 +161,7 @@ export function Vcut0100Page(): JSX.Element {
               <div className="erp-field erp-c1"><label className="erp-label">Sobra mín.</label><input className="erp-input num" type="number" value={newPlan.min_remnant_mm || ""} onChange={(e) => setNewPlan((s) => ({ ...s, min_remnant_mm: Number(e.target.value) }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">UoM estoque</label><SelectUnidade aria-label="Unidade de estoque" compacto value={newPlan.stock_uom ?? ""} onChange={(u) => setNewPlan((s) => ({ ...s, stock_uom: u }))} /></div>
               <div className="erp-field erp-c1"><label className="erp-label">Fator UoM</label><input className="erp-input num" type="number" step="0.001" value={newPlan.uom_factor || ""} onChange={(e) => setNewPlan((s) => ({ ...s, uom_factor: Number(e.target.value) }))} /></div>
-              <div className="erp-field erp-c2"><label className="erp-label">Depósito (p/ firmar)</label><input className="erp-input num" type="number" value={newPlan.warehouse_id || ""} onChange={(e) => setNewPlan((s) => ({ ...s, warehouse_id: Number(e.target.value) }))} /></div>
+              <div className="erp-field erp-c2"><label className="erp-label">Depósito (p/ firmar)</label><LookupField value={newPlan.warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Selecionar" allowManualCode={false} onChange={(c) => setNewPlan((s) => ({ ...s, warehouse_id: c ? Number(c) : 0 }))} /></div>
               <div className="erp-field erp-c3" style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
                 <label className="erp-toggle-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><input type="checkbox" checked={!!newPlan.include_remnants} onChange={(e) => setNewPlan((s) => ({ ...s, include_remnants: e.target.checked }))} /> semear retalhos</label>
                 <button className="erp-btn erp-btn-primary" onClick={criar} disabled={busy}>Criar plano</button></div>
@@ -310,7 +313,7 @@ export function Vcut0100Page(): JSX.Element {
               <div className="erp-fieldset"><div className="erp-fieldset-head">Padrões da empresa (consumo)</div><div className="erp-fieldset-body">
                 <div className="erp-field erp-c3"><label className="erp-label">Modo de consumo</label><select className="erp-input" value={settings.default_consumption_mode ?? "AUTOMATIC"} onChange={(e) => setSettings((s) => ({ ...s, default_consumption_mode: e.target.value }))}><option value="AUTOMATIC">Automático (FIFO)</option><option value="MANUAL">Manual (por lote)</option></select></div>
                 <div className="erp-field erp-c3"><label className="erp-label">Sobra mínima padrão (mm)</label><input className="erp-input num" type="number" value={settings.default_min_remnant_mm ?? 0} onChange={(e) => setSettings((s) => ({ ...s, default_min_remnant_mm: Number(e.target.value) }))} /></div>
-                <div className="erp-field erp-c3"><label className="erp-label">Depósito padrão</label><input className="erp-input num" type="number" value={settings.default_warehouse_id ?? ""} onChange={(e) => setSettings((s) => ({ ...s, default_warehouse_id: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c3"><label className="erp-label">Depósito padrão</label><LookupField value={settings.default_warehouse_id || undefined} loader={loadWarehouses} entityLabel="almoxarifado" placeholder="Selecionar" allowManualCode={false} onChange={(c) => setSettings((s) => ({ ...s, default_warehouse_id: c ? Number(c) : undefined }))} /></div>
                 <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={salvarSettings} disabled={busy}>Salvar padrões</button></div>
               </div></div>
             )}

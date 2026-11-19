@@ -172,8 +172,11 @@ export function LookupField<T extends string | number = number>({
     // errado — numa base onde códigos comerciais numéricos convivem com chaves
     // internas, isso faz abrir a estrutura de OUTRO produto e concluir que ela
     // está vazia. Quem digita o código inteiro quer aquele item.
+    // Quando a chave é interna (id), o usuário digita o código que VÊ — o
+    // displayCode (código do fornecedor da transportadora, número da OF, código
+    // da tabela de compra). Antes a busca olhava só a chave e não achava nada.
     const relevancia = (o: LookupOption): number => {
-      const code = normalizarBusca(String(o.code));
+      const code = normalizarBusca(String(o.displayCode ?? o.code));
       if (code === q) return 0;                       // código exato
       if (code.startsWith(q)) return 1;               // código começa com
       if (code.includes(q)) return 2;                 // código contém
@@ -183,7 +186,7 @@ export function LookupField<T extends string | number = number>({
     };
 
     return disponiveis
-      .filter((o) => normalizarBusca(String(o.code)).includes(q) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.search ?? "").includes(q) || normalizarBusca(o.sub ?? "").includes(q))
+      .filter((o) => normalizarBusca(String(o.code)).includes(q) || (o.displayCode != null && normalizarBusca(String(o.displayCode)).includes(q)) || normalizarBusca(o.label).includes(q) || normalizarBusca(o.search ?? "").includes(q) || normalizarBusca(o.sub ?? "").includes(q))
       .map((o, i) => ({ o, r: relevancia(o), i }))
       .sort((a, b) => a.r - b.r || a.i - b.i)   // empate mantém a ordem original
       .map((x) => x.o)
@@ -197,7 +200,10 @@ export function LookupField<T extends string | number = number>({
   const donoDoApelido = manualCode
     ? options.find((option) => option.aliases?.some((a) => normalizarBusca(a.value) === normalizarBusca(manualCode)))
     : undefined;
-  const canUseManualCode = allowManualCode && manualCode.length > 0 && !donoDoApelido
+  // Lista de chave interna (com displayCode): o número digitado é o código
+  // visível, não a chave — gravá-lo como chave apontaria para outro registro.
+  const chaveInterna = options.some((option) => option.displayCode != null);
+  const canUseManualCode = allowManualCode && manualCode.length > 0 && !donoDoApelido && !chaveInterna
     && (typeof options[0]?.code !== "number" || /^\d+$/.test(manualCode))
     && !options.some((option) => String(option.code) === manualCode);
 

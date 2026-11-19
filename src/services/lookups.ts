@@ -17,6 +17,7 @@ import { listCalls as listTechnicalCalls } from '@/services/technicalAssistanceS
 import { listEmployees, listEmployeesByRole } from '@/services/employeeService';
 import { listOperations } from '@/services/manufacturingRoutingService';
 import { listCrpPlans } from '@/services/crpService';
+import { listPriceTables } from '@/services/purchasingMasterService';
 
 /**
  * Fontes de dados para o componente <LookupField>: em vez de o usuário digitar
@@ -692,6 +693,10 @@ export const loadSuppliers = cached(async () =>
 export const loadSupplierTypes = cached(async () =>
   (await listSupplierTypes()).filter((t) => t.code).map((t) => ({ code: String(t.code), label: t.description, sub: t.kind })),
 );
+/** Tipos de fornecedor pelo id (o parâmetro de compras da VSUP0500 grava supplier_types.id); a tela mostra o código. */
+export const loadSupplierTypesById = cached(async () =>
+  (await listSupplierTypes()).filter((t) => t.id).map((t) => ({ code: t.id as number, displayCode: t.code ? String(t.code) : undefined, label: t.description, sub: t.kind })),
+);
 
 export const loadRepresentatives = cached(async () =>
   (await listRepresentatives({ active_status: 'ACTIVE' })).filter((r) => r.is_active !== false && !r.is_blocked).map((r) => ({
@@ -743,6 +748,21 @@ export const loadPaymentConditions = cached(() =>
 
 export const loadSalesTables = cached(() =>
   loadEndpoint('/api/customers/support/sales-tables', ['Description', 'description'], ['TableType', 'table_type']),
+);
+
+/**
+ * Tabelas de preço de compra (VSUP0120). O vínculo do fornecedor com a empresa
+ * guarda o id da tabela; o usuário escolhe pelo código e pela descrição.
+ */
+export const loadPurchasePriceTables = cached(async () =>
+  (await listPriceTables())
+    .filter((t) => t.id)
+    .map((t) => ({
+      code: t.id ?? 0,
+      displayCode: t.code,
+      label: t.description || `Tabela ${t.code ?? ''}`,
+      sub: t.valid_to ? `vigente até ${t.valid_to.slice(0, 10).split('-').reverse().join('/')}` : undefined,
+    })),
 );
 
 export const loadSalesPricePolicies = cached(() =>

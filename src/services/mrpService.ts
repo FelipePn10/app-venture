@@ -112,6 +112,8 @@ export interface MrpRunResult {
   orders_generated?: number;
   started_at?: string;
   finished_at?: string;
+  /** Linhas de estrutura cuja unidade não converte para a de estoque do componente. */
+  estruturas_sem_conversao: string[];
 }
 
 function parseSuggestion(raw: unknown): MrpSuggestion {
@@ -213,6 +215,11 @@ export async function runMrp(planCode: number, initialOrderNumber = 10000, gener
     orders_generated: parseNum(o, 'orders_generated', 'OrdersGenerated', 'total_orders'),
     started_at: parseStr(o, 'started_at', 'StartedAt') || undefined,
     finished_at: parseStr(o, 'finished_at', 'FinishedAt') || undefined,
+    estruturas_sem_conversao: (() => {
+      const erros = unwrapObject(o['errors'] ?? o['Errors']);
+      const v = erros['estrutura_sem_conversao'];
+      return Array.isArray(v) ? v.map(String) : [];
+    })(),
   };
 }
 export async function getMrpProfile(itemCode: string, planCode: number): Promise<MrpProfileRow[]> {

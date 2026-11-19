@@ -34,8 +34,10 @@ export function SugestoesMRP({ onFeedback, onPedidoGerado }: { onFeedback: (f: F
   async function gerar() {
     if (!aprovando) return;
     if (!aprovando.fornecedor) { onFeedback({ type: "error", message: "Escolha o fornecedor." }); return; }
-    const preco = Number(aprovando.preco);
-    if (aprovando.preco.trim() === "" || !(preco >= 0)) { onFeedback({ type: "error", message: "Informe o preço unitário." }); return; }
+    // Vazio = preço da tabela de compra do fornecedor; sem tabela, o servidor
+    // recusa (pedido a R$ 0,00 passaria pela alçada sem parar em ninguém).
+    const preco = aprovando.preco.trim() === "" ? 0 : Number(aprovando.preco);
+    if (!(preco >= 0)) { onFeedback({ type: "error", message: "Preço unitário inválido." }); return; }
     setBusy(true);
     try {
       const o = await approveSuggestion(aprovando.code, { supplier_code: aprovando.fornecedor, unit_price: preco });
@@ -97,9 +99,11 @@ export function SugestoesMRP({ onFeedback, onPedidoGerado }: { onFeedback: (f: F
                             <span className="erp-field-hint">{aprovando.fornecedor && aprovando.fornecedor === s.suggested_supplier_code
                               ? "Escolhido pelo planejamento (preferencial, ranking ou cota)."
                               : "Só é aceito fornecedor vigente do item em VSUP0130 — Fornecedor Preferencial por Item."}</span></div>
-                          <div style={{ width: 150 }}><label className="erp-label erp-req">Preço unitário</label>
-                            <input className="erp-input num" type="number" step="0.0001" min="0" value={aprovando.preco}
-                              onChange={(e) => setAprovando((a) => (a ? { ...a, preco: e.target.value } : a))} /></div>
+                          <div style={{ width: 220 }}><label className="erp-label">Preço unitário</label>
+                            <input className="erp-input num" type="number" step="0.0001" min="0" value={aprovando.preco} placeholder="Tabela do fornecedor"
+                              aria-label="Preço unitário"
+                              onChange={(e) => setAprovando((a) => (a ? { ...a, preco: e.target.value } : a))} />
+                            <span className="erp-field-hint">Vazio: usa a tabela de preço do fornecedor. O pedido sai na unidade de compra (ex.: chapas inteiras), e o preço informado vale por essa unidade.</span></div>
                           <button className="erp-btn erp-btn-primary" disabled={busy} onClick={() => void gerar()}>Gerar pedido</button>
                           <button className="erp-btn" onClick={() => setAprovando(null)}>Desistir</button>
                         </div>

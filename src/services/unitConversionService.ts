@@ -104,13 +104,15 @@ export async function excluirSinonimo(id: number): Promise<void> {
 export interface ConversaoPadrao {
   id: number; from_uom: string; to_uom: string; from_quantity: string; to_quantity: string;
   factor: string; inverse_factor: string; dimension: string; is_system: boolean;
+  /** O que a gravação fez além do catálogo (ex.: estruturas recalculadas). */
+  warnings: string[];
 }
 function parsePadrao(raw: unknown): ConversaoPadrao {
   const o = unwrapObject(raw);
   return {
     id: num(o, 'id'), from_uom: str(o, 'from_uom'), to_uom: str(o, 'to_uom'), from_quantity: str(o, 'from_quantity'),
     to_quantity: str(o, 'to_quantity'), factor: str(o, 'factor'), inverse_factor: str(o, 'inverse_factor'),
-    dimension: str(o, 'dimension'), is_system: parseBool(o, 'is_system'),
+    dimension: str(o, 'dimension'), is_system: parseBool(o, 'is_system'), warnings: lista(o, 'warnings'),
   };
 }
 export async function listarConversoesPadrao(): Promise<ConversaoPadrao[]> {
@@ -121,8 +123,10 @@ export async function salvarConversaoPadrao(dto: { from_uom: string; to_uom: str
   const { data } = await httpClient.post('/api/units-of-measure/standard-conversions', dto);
   return parsePadrao(data);
 }
-export async function excluirConversaoPadrao(id: number): Promise<void> {
-  await httpClient.delete(`/api/units-of-measure/standard-conversions/${id}`);
+/** Devolve os avisos do recálculo: estruturas que dependiam da conversão excluída. */
+export async function excluirConversaoPadrao(id: number): Promise<string[]> {
+  const { data } = await httpClient.delete(`/api/units-of-measure/standard-conversions/${id}`);
+  return lista(unwrapObject(data), 'warnings');
 }
 
 // ── Conversões do item ──
