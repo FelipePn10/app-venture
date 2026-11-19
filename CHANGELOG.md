@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## [v1.19.8] — 2026-11-19
+
+## Novidades
+- **Cadeia de OFs (OF filha → OF pai):** a OF de um componente fabricado (bucha, tubo) nasce ligada ao pedido e à OF do produto que vai usá-lo. O que ela produz fica reservado para essa OF e não se mistura com outro pedido. As telas da OF mostram a OF pai, as OFs filhas e a reserva.
+- **Ordem da fabricação:** as etapas seguem a ordem do roteiro, e a programação começa por baixo (o componente termina antes de o produto começar). Ao iniciar uma OF com componente ainda em fabricação, o sistema avisa ou bloqueia, conforme o parâmetro da empresa.
+- **Preço de compra com descontos da tabela (VSUP0120):** descontos e acréscimos da tabela de preço de compra passam a valer no pedido digitado, no pedido gerado pela solicitação ou cotação e na aprovação das sugestões do MRP. O preço digitado pelo comprador continua como foi digitado.
+
+## Correções
+- **Faixa de quantidade da tabela de preço:** a quantidade mínima é comparada na unidade da tabela (5 chapas não pegam mais o preço da faixa de 10).
+- **Fornecedor (VSUP0500):** tabela de preço de compra, tipo de nota padrão e tipo de fornecedor para comprar são escolhidos pela busca, não mais digitados como número. Ao gravar, a tela continua na mesma pasta e mostra o aviso de salvo.
+- **Busca dos campos:** encontra pelo código que aparece na tela (transportadora, OF, tabela de preço).
+- **Central de notificações (VNOT0100):** a configuração fiscal do e-mail é escolhida pela razão social da própria empresa.
+- **Plano de corte (VCUT0100):** depósito escolhido pela busca de almoxarifados; os padrões da empresa aparecem ao abrir a tela.
+- **Estrutura e MRP:** linha de estrutura numa unidade sem conversão é apontada na tela, e a conversão padrão recalcula as estruturas que a usam.
+
 ## [v1.19.7] — 2026-11-18
 
 ## Novidades
