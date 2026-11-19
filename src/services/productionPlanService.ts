@@ -49,6 +49,9 @@ function parsePlan(raw: unknown): ProductionPlanDTO {
     order_item_code: parseNum(o, 'order_item_code', 'OrderItemCode') || undefined,
     is_active: o['is_active'] !== false && o['IsActive'] !== false,
     last_calculated_at: parseStr(o, 'last_calculated_at', 'LastCalculatedAt') || undefined,
+    // A alteração troca o plano inteiro: sem os parâmetros lidos aqui, salvar
+    // o plano apagaria a data das demandas independentes e o resto.
+    parameters: o['parameters'] && typeof o['parameters'] === 'object' ? (o['parameters'] as Record<string, unknown>) : undefined,
   };
 }
 
@@ -70,8 +73,14 @@ export async function createProductionPlan(dto: ProductionPlanDTO): Promise<Prod
   });
   return parsePlan(data);
 }
+/** Altera o plano. O servidor troca o plano INTEIRO: mande o plano lido, com a mudança. */
 export async function updateProductionPlan(dto: ProductionPlanDTO): Promise<ProductionPlanDTO> {
-  const { data } = await httpClient.put(`${BASE}/update`, dto);
+  const { data } = await httpClient.put(`${BASE}/update`, {
+    code: dto.code, name: dto.name, independent_demands: dto.independent_demands ?? 'ALL',
+    group_same_date_orders: !!dto.group_same_date_orders, planning_types: dto.planning_types ?? ['MRP'],
+    classification: dto.classification ?? null, class_item_codes: dto.class_item_codes ?? null,
+    order_item_code: dto.order_item_code ?? null, parameters: dto.parameters ?? {},
+  });
   return parsePlan(data);
 }
 export async function deleteProductionPlan(code: number): Promise<void> {

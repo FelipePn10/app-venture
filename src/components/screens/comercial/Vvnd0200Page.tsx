@@ -25,7 +25,7 @@ import { getCustomer, avisosDoCliente } from "@/services/customerService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { EntityName } from "@/components/ui/EntityName";
-import { loadCarriers, loadCustomers, loadEstablishments, loadInvoiceTypes, loadItems, loadPaymentConditions, loadRepresentatives, loadWarehouses, type LookupOption } from "@/services/lookups";
+import { loadCarriers, loadCustomers, loadEstablishments, loadInvoiceTypes, loadItems, loadPaymentConditions, loadProjects, loadRepresentatives, loadWarehouses, type LookupOption } from "@/services/lookups";
 import {
   getSalesOrderCommissionSplit,
   saveSalesOrderCommissionSplit,
@@ -479,8 +479,11 @@ export function Vvnd0200Page(): JSX.Element {
                 <div className="erp-fieldset">
                   <div className="erp-fieldset-head">Projeto</div>
                   <div className="erp-fieldset-body">
-                    <div className="erp-field erp-c3"><label className="erp-label">Código do projeto</label><input className="erp-input" value={newOrder.project_code ?? ""} onChange={(e) => setO("project_code", e.target.value || undefined)} /></div>
-                    <div className="erp-field erp-c6"><label className="erp-label">Nome do projeto</label><input className="erp-input" value={newOrder.project_name ?? ""} onChange={(e) => setO("project_name", e.target.value || undefined)} /></div>
+                    <div className="erp-field erp-c9"><label className="erp-label">Projeto</label>
+                      {/* Do cadastro de Projetos (VPLA0120): a OF deste pedido herda o projeto, e as dos componentes também. */}
+                      <LookupField value={newOrder.project_code || undefined} loader={loadProjects} entityLabel="projeto" clearable allowManualCode={false} textoLivre
+                        placeholder="Sem projeto" vazio="Nenhum projeto cadastrado — cadastre na VPLA0120"
+                        onChange={(c, op) => { setO("project_code", c ? String(c) : undefined); setO("project_name", c ? op?.label ?? newOrder.project_name : undefined); }} /></div>
                     <div className="erp-field erp-c12"><span className="erp-field-hint">Usado para agrupar pedidos de uma mesma obra ou contrato.</span></div>
                   </div>
                 </div>

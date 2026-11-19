@@ -47,20 +47,23 @@ async function sessao(email, senha, nome, passos) {
 await sessao('operador@panossoerp.demo', 'Operador@12345', 'operador', async (passo) => {
   await passo('abre a OF em produção', async (page) => {
     await page.locator('.erp-chip', { hasText: 'Todas' }).first().click();
-    await page.locator('.erp-list-row', { hasText: `OF ${OF}` }).first().click();
+    // Pelo código da linha: a linha de outra OF pode dizer "↳ para OF ${OF}".
+    await page.locator('.erp-list-row').filter({ has: page.locator('.erp-list-code', { hasText: new RegExp(`^(↳ )?OF ${OF}$`) }) }).first().click();
     await page.waitForSelector('.vpl-record-title');
   });
   await passo('não oferece ações de PCP', async (page) => {
-    for (const rotulo of ['+ Nova OF', 'Iniciar produção', 'Cancelar OF', 'Encerrar', 'Apurar custo']) {
+    for (const rotulo of ['+ Nova OF', 'Iniciar produção', 'Cancelar OF', 'Encerrar', 'Cliente e projeto']) {
       if (await page.getByRole('button', { name: rotulo, exact: true }).count()) throw new Error(`operador vê "${rotulo}"`);
     }
     if (await page.locator('.erp-tab', { hasText: 'Custo' }).count()) throw new Error('operador vê a aba Custo');
   });
-  await passo('Etapas: inicia e conclui a etapa liberada', async (page) => {
-    await page.locator('.erp-tab', { hasText: 'Etapas' }).first().click();
+  await passo('Execução: inicia e conclui a etapa liberada', async (page) => {
+    await page.locator('.erp-tab', { hasText: 'Execução' }).first().click();
+    const linha = page.locator('tr', { hasText: 'Corte a Laser' }).first();
+    // A etapa atual abre sozinha com horas e peças; outra etapa abre pela seta.
+    if (!(await page.locator('#et-horas').count())) await linha.getByRole('button', { name: 'Abrir a etapa' }).click();
     await page.fill('#et-horas', '0.8');
     await page.fill('#et-pecas', '40');
-    const linha = page.locator('tr', { hasText: 'Corte a Laser' }).first();
     await linha.getByRole('button', { name: 'Iniciar' }).click();
     await page.waitForTimeout(800);
     // Os dados da etapa valem para o próximo botão: preenche de novo para concluir.
@@ -70,8 +73,8 @@ await sessao('operador@panossoerp.demo', 'Operador@12345', 'operador', async (pa
     await page.waitForTimeout(800);
     await linha.getByText('Concluída').first().waitFor();
   });
-  await passo('Apontamento: sem entrega ao estoque, com aviso', async (page) => {
-    await page.locator('.erp-tab', { hasText: 'Apontamento' }).first().click();
+  await passo('Execução: sem entrega ao estoque, com aviso', async (page) => {
+    await page.locator('.erp-tab', { hasText: 'Execução' }).first().click();
     if (await page.getByRole('button', { name: /Registrar entrega|Entregar e concluir/ }).count()) throw new Error('operador vê a entrega ao estoque');
     await page.getByText('feitas pelo PCP ou almoxarifado').waitFor();
   });
@@ -100,12 +103,13 @@ await sessao('operador@panossoerp.demo', 'Operador@12345', 'operador', async (pa
 await sessao(process.env.EMAIL ?? 'admin@panossoerp.demo', process.env.PASSWORD ?? 'Demo@12345', 'pcp', async (passo) => {
   await passo('abre a OF concluída', async (page) => {
     await page.locator('.erp-chip', { hasText: 'Todas' }).first().click();
-    await page.locator('.erp-list-row', { hasText: `OF ${OF_CUSTO}` }).first().click();
+    await page.locator('.erp-list-row').filter({ has: page.locator('.erp-list-code', { hasText: new RegExp(`^(↳ )?OF ${OF_CUSTO}$`) }) }).first().click();
     await page.waitForSelector('.vpl-record-title');
   });
-  await passo('apura o custo por componente', async (page) => {
-    await page.getByRole('button', { name: 'Apurar custo' }).click();
-    await page.waitForTimeout(1200);
+  await passo('o custo vem calculado, sem botão de apurar', async (page) => {
+    if (await page.getByRole('button', { name: /Apurar custo|Apurar de novo/ }).count()) throw new Error('ainda há botão de apurar custo');
+    await page.locator('.erp-tab', { hasText: 'Custo' }).first().click();
+    await page.getByText(/atualizado em .* sozinho, a cada movimento/).waitFor();
     for (const c of ['Material', 'Máquina e preparação', 'Mão de obra', 'Serviços de terceiros', 'Indiretos']) {
       await page.locator('td', { hasText: c }).first().waitFor();
     }

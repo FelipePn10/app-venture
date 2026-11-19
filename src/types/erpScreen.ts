@@ -293,6 +293,12 @@ export const ERP_SCREENS: ErpScreen[] = [
     module: "planejamento",
   },
   {
+    code: "VPLA0120",
+    title: "Projetos",
+    description: "Obra, contrato ou desenvolvimento ao qual pedidos de venda, demandas e ordens de fabricação pertencem: a OF herda cliente e projeto da origem, e as OFs dos componentes herdam da OF pai.",
+    module: "planejamento",
+  },
+  {
     code: "VPLA0310",
     title: "Política de Planejamento por Item",
     description: "Estratégia (consumo pela venda ou sob encomenda), janela de consumo, horizonte firme e tempo de segurança por item ou por classificação; o que não for definido segue os parâmetros da empresa.",

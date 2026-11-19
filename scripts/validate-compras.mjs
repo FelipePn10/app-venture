@@ -74,4 +74,11 @@ check('mapa permite digitar o preço na própria célula', /gravarPreco/.test(ma
 check('mapa gera os pedidos dos escolhidos', /generateQuotationOrders/.test(mapa));
 check('mapa avisa quando há menos de dois fornecedores', /não há comparação/.test(mapa));
 
+// Tabela de preço (VSUP0120): fornecedor limpo é genérico — nunca 0, que a
+// busca de preço do pedido ignorava (Tecnofer, v1.19.8).
+const tabelaSrv = read('src/services/purchasingMasterService.ts');
+const tabela = read('src/components/screens/suprimento/Vsup0120Page.tsx');
+check('preço da tabela não manda fornecedor 0 (genérico vai vazio)', /supplier_code: dto\.supplier_code && dto\.supplier_code > 0 \? dto\.supplier_code : undefined/.test(tabelaSrv));
+check('limpar o fornecedor do preço volta a "Genérico"', /setIF\("supplier_code", Number\(c\) > 0 \? Number\(c\) : undefined\)/.test(tabela));
+
 console.log(`\n${checks.length}/${checks.length} validações de compras aprovadas.`);

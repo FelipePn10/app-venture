@@ -41,6 +41,35 @@ export interface ProductionOrderDTO {
   cost_pending?: string;
   /** Avisos do início (parâmetro de planejamento 52 em AVISAR): OF filha aberta, falta de material. */
   warnings?: string[];
+  /** Na criação da OF manual: cliente (código) e projeto (código). A OF do pedido, da demanda ou filha de outra OF herda os dois. */
+  customer_code?: number | null;
+  project_code?: string | null;
+  /** Identificação: item, cliente, projeto, pedido/demanda e lugar na cadeia. */
+  origin?: ProductionOrderOrigin;
+}
+
+/** De quem, para quê e para qual OF — para reconhecer a ordem sem decorar o número. */
+export interface ProductionOrderOrigin {
+  item_business_code: string;
+  item_name: string;
+  customer_code?: number;
+  customer_name?: string;
+  project_id?: number;
+  project_code?: string;
+  project_name?: string;
+  sales_orders: number[];
+  demands: number[];
+  /** OF que usa a peça desta (pai); ou a ordem planejada pai, quando ainda não virou OF. */
+  parent_order_id?: number;
+  parent_planned_order?: number;
+  parent_item?: string;
+  /** Produto final da cadeia (só quando não é a própria OF). */
+  root_order_id?: number;
+  root_item?: string;
+  /** 0 = produto final; 1 = componente direto; … */
+  level: number;
+  /** Quantas OFs de componentes fabricados ela tem. */
+  children: number;
 }
 
 export interface AppointmentDTO {
@@ -93,6 +122,11 @@ export interface OperationDTO {
   started_at?: string;
   completed_at?: string;
   actual_hours?: number;
+  /** Tempo padrão da etapa (roteiro): máquina/operação e preparação, em horas. */
+  planned_hours?: number;
+  setup_hours?: number;
+  /** Em andamento desde (o trecho atual, depois da última retomada): o cronômetro do posto. */
+  running_since?: string;
   notes?: string;
   id?: number;
   production_order_id?: number;
@@ -168,6 +202,32 @@ function parseOrder(raw: unknown): ProductionOrderDTO {
     cost_pending: parseStr(o, 'cost_pending', 'CostPending') || undefined,
     item_revision: parseStr(o, 'item_revision') || undefined,
     warnings: Array.isArray(o['warnings']) ? (o['warnings'] as unknown[]).map(String) : undefined,
+    origin: parseOrigin(o['origin']),
+  };
+}
+
+function parseOrigin(raw: unknown): ProductionOrderOrigin | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = unwrapObject(raw);
+  const nums = (v: unknown) => (Array.isArray(v) ? v.map(Number).filter((n) => Number.isFinite(n) && n > 0) : []);
+  const opt = (k: string) => parseNum(o, k) || undefined;
+  return {
+    item_business_code: parseStr(o, 'item_business_code'),
+    item_name: parseStr(o, 'item_name'),
+    customer_code: opt('customer_code'),
+    customer_name: parseStr(o, 'customer_name') || undefined,
+    project_id: opt('project_id'),
+    project_code: parseStr(o, 'project_code') || undefined,
+    project_name: parseStr(o, 'project_name') || undefined,
+    sales_orders: nums(o['sales_orders']),
+    demands: nums(o['demands']),
+    parent_order_id: opt('parent_order_id'),
+    parent_planned_order: opt('parent_planned_order'),
+    parent_item: parseStr(o, 'parent_item') || undefined,
+    root_order_id: opt('root_order_id'),
+    root_item: parseStr(o, 'root_item') || undefined,
+    level: parseNum(o, 'level'),
+    children: parseNum(o, 'children'),
   };
 }
 
@@ -216,6 +276,9 @@ function parseOperation(raw: unknown): OperationDTO {
     started_at: parseStr(o, 'started_at', 'StartedAt'),
     completed_at: parseStr(o, 'completed_at', 'CompletedAt'),
     actual_hours: parseNum(o, 'actual_hours', 'ActualHours'),
+    planned_hours: parseNum(o, 'planned_hours', 'PlannedHours'),
+    setup_hours: parseNum(o, 'setup_hours', 'SetupHours'),
+    running_since: parseStr(o, 'running_since') || undefined,
     notes: parseStr(o, 'notes', 'Notes'),
     status: parseStr(o, 'status', 'Status'),
     work_center_id: parseNum(o, 'work_center_id', 'WorkCenterID') || undefined,
@@ -276,6 +339,14 @@ export async function baixarFichaDaOrdem(id: number): Promise<void> {
 }
 export async function createProductionOrder(dto: ProductionOrderDTO): Promise<ProductionOrderDTO> {
   const { data } = await httpClient.post(`${BASE}/create`, dto);
+  return parseOrder(data);
+}
+/** Cliente e projeto da OF (vale também com a OF em produção). Vazio = sem. */
+export async function setProductionOrderOrigin(id: number, origem: { customer_code?: number | null; project_code?: string | null }): Promise<ProductionOrderDTO> {
+  const { data } = await httpClient.put(`${BASE}/${id}/origin`, {
+    customer_code: origem.customer_code ?? 0,
+    project_code: origem.project_code ?? '',
+  });
   return parseOrder(data);
 }
 export async function startProductionOrder(id: number): Promise<ProductionOrderDTO> {
@@ -397,6 +468,8 @@ export interface MaterialDTO {
   automatic_issue?: boolean;
   allocated_qty?: number;
   balance?: number;
+  /** Etapa do roteiro (sequência) em que o material entra; vazio = sem etapa definida. */
+  route_operation_sequence?: number;
 }
 
 export interface LotAllocation {
@@ -435,6 +508,7 @@ function parseMaterial(raw: unknown): MaterialDTO {
     substituted_item_code: parseStr(o, 'substituted_item_code', 'SubstitutedItemCode') || undefined,
     allocated_qty: parseNum(o, 'AttendedQuantity', 'attended_quantity'),
     balance: parseNum(o, 'balance', 'Balance'),
+    route_operation_sequence: parseNum(o, 'route_operation_sequence', 'RouteOperationSequence') || undefined,
   };
 }
 
@@ -447,6 +521,8 @@ export type MaterialAvailabilityStatus = 'COMPLETA' | 'PARCIAL' | 'SEM_SALDO' | 
 export interface MaterialAvailabilityLine {
   material_id: number;
   item_code: string;
+  /** Código do item que o usuário conhece (o de negócio). */
+  business_code?: string;
   description: string;
   uom?: string;
   warehouse_id?: number;
@@ -479,7 +555,7 @@ function parseAvailability(raw: unknown): MaterialAvailability {
     lines: linhas.map((r) => {
       const l = unwrapObject(r);
       return {
-        material_id: parseNum(l, 'material_id'), item_code: parseStr(l, 'item_code'), description: parseStr(l, 'description'),
+        material_id: parseNum(l, 'material_id'), item_code: parseStr(l, 'item_code'), business_code: parseStr(l, 'business_code') || undefined, description: parseStr(l, 'description'),
         uom: parseStr(l, 'uom') || undefined, warehouse_id: parseNum(l, 'warehouse_id') || undefined,
         required: parseNum(l, 'required'), issued: parseNum(l, 'issued'), remaining: parseNum(l, 'remaining'),
         free_stock: parseNum(l, 'free_stock'), committed_earlier: parseNum(l, 'committed_earlier'), reserved_for_order: parseNum(l, 'reserved_for_order'),
@@ -517,9 +593,23 @@ export interface ChainSalesOrder {
   sequence?: number;
   customer: string;
 }
-/** Cadeia da OF: pedidos que ela atende, OFs pai que ela abastece e OFs filhas dos componentes fabricados. */
+/** Demanda independente (sem pedido de venda) que a OF atende, direto ou pela OF pai. */
+export interface ChainDemand {
+  demand_code: number;
+  /** ESTOQUE, REPOSICAO, AMOSTRA… */
+  reason: string;
+  reason_label: string;
+  item_code: string;
+  business_code?: string;
+  description: string;
+  quantity: number;
+  demand_date: string;
+  status: string;
+}
+/** Cadeia da OF: pedidos e demandas que ela atende, OFs pai que ela abastece e OFs filhas dos componentes fabricados. */
 export interface ProductionChain {
   sales_orders: ChainSalesOrder[];
+  independent_demands: ChainDemand[];
   parents: ChainOrder[];
   children: ChainOrder[];
 }
@@ -542,6 +632,12 @@ export async function getProductionChain(id: number): Promise<ProductionChain> {
       const p = unwrapObject(r);
       return { sales_order_code: parseNum(p, 'sales_order_code'), sales_order_number: parseNum(p, 'sales_order_number'),
         sequence: parseNum(p, 'sequence') || undefined, customer: parseStr(p, 'customer') };
+    }),
+    independent_demands: lista('independent_demands').map((r) => {
+      const p = unwrapObject(r);
+      return { demand_code: parseNum(p, 'demand_code'), reason: parseStr(p, 'reason'), reason_label: parseStr(p, 'reason_label'),
+        item_code: parseStr(p, 'item_code'), business_code: parseStr(p, 'business_code') || undefined, description: parseStr(p, 'description'),
+        quantity: parseNum(p, 'quantity'), demand_date: parseStr(p, 'demand_date'), status: parseStr(p, 'status') };
     }),
     parents: lista('parents').map(parseChainOrder),
     children: lista('children').map(parseChainOrder),

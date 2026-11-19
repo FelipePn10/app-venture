@@ -39,11 +39,12 @@ await entrar(page);
 await page.goto(`${APP}/#/screen/VPRO0900`, { waitUntil: 'networkidle' });
 
 await passo(`abre a OF ${OF}`, async () => {
-  await page.locator('.erp-list-row', { hasText: `OF ${OF}` }).first().click();
+  // Pelo código da linha: a linha de outra OF pode dizer "↳ para OF ${OF}".
+  await page.locator('.erp-list-row').filter({ has: page.locator('.erp-list-code', { hasText: new RegExp(`^(↳ )?OF ${OF}$`) }) }).first().click();
   await page.waitForSelector('.vpl-record-title');
 });
-await passo('aba Etapas: zincagem com o terceiro, sem Iniciar', async () => {
-  await page.locator('.erp-tab', { hasText: 'Etapas' }).first().click();
+await passo('aba Execução: zincagem com o terceiro, sem Iniciar', async () => {
+  await page.locator('.erp-tab', { hasText: 'Execução' }).first().click();
   const linha = page.locator('tr', { hasText: 'Zincagem' }).first();
   await linha.getByText(/Com o terceiro — OS \d+/).waitFor();
   if (await linha.getByRole('button', { name: /Iniciar|Concluir/ }).count()) throw new Error('etapa do terceiro ainda oferece Iniciar/Concluir');

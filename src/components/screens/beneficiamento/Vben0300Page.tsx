@@ -62,7 +62,7 @@ export function Vben0300Page(): JSX.Element {
       await linkHoursSalesOrder(of.production_order_id, pedido);
       setVincular(null);
       await consultar();
-      setFeedback({ type: "success", message: `Pedido ligado à OF ${of.order_number}.` });
+      setFeedback({ type: "success", message: `Pedido ligado à OF ${of.production_order_id}.` });
     });
   };
 
@@ -97,7 +97,7 @@ export function Vben0300Page(): JSX.Element {
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VBEN0300 — Horas de Beneficiamento" filename="vben0300" build={() => ({
           columns: ["OF", "Situação", "Item", "Cliente", "Pedido", "Planejada", "Produzida", "Horas apontadas", "Apontamentos", "Horas nas operações", "Primeiro registro", "Último registro"],
-          rows: (linhas ?? []).map((h) => [String(h.order_number), situacaoOF(h.status).rotulo, `${h.item_business_code} ${h.item_description}`,
+          rows: (linhas ?? []).map((h) => [`OF ${h.production_order_id}`, situacaoOF(h.status).rotulo, `${h.item_business_code} ${h.item_description}`,
             h.customer_name || (h.customer_code ? String(h.customer_code) : "—"), h.sales_order_number ? String(h.sales_order_number) : "—",
             num(n(h.planned_qty), 4), num(n(h.produced_qty), 4), num(n(h.appointed_hours), 2), String(h.appointments), num(n(h.operation_hours), 2),
             data(h.first_record), data(h.last_record)]),
@@ -127,7 +127,7 @@ export function Vben0300Page(): JSX.Element {
                         const diverge = n(h.operation_hours) > 0 && n(h.appointed_hours) > 0 && Math.abs(n(h.operation_hours) - n(h.appointed_hours)) > 0.01;
                         return (
                           <tr key={h.production_order_id}>
-                            <td>OF {h.order_number}</td><td><Selo tom={s.tom}>{s.rotulo}</Selo></td>
+                            <td>OF {h.production_order_id}</td><td><Selo tom={s.tom}>{s.rotulo}</Selo></td>
                             <td>{h.item_business_code} — {h.item_description}</td>
                             <td>{h.customer_name || (h.customer_code ? `Cliente ${h.customer_code}` : <span className="erp-text-muted">sem pedido</span>)}</td>
                             <td>{h.sales_order_number ?? <button className="erp-btn erp-btn-sm" onClick={() => { setFeedback(null); setVincular({ of: h }); }} disabled={busy}>Vincular pedido</button>}</td>
@@ -152,7 +152,7 @@ export function Vben0300Page(): JSX.Element {
       {vincular && (
         <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ben-of-pedido" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setVincular(null); }}>
           <div className="erp-modal" style={{ width: "min(560px, 94vw)" }}>
-            <div className="erp-modal-head"><div><strong id="ben-of-pedido">Pedido da OF {vincular.of.order_number}</strong>
+            <div className="erp-modal-head"><div><strong id="ben-of-pedido">Pedido da OF {vincular.of.production_order_id}</strong>
               <div className="erp-field-hint">Liga a ordem aberta à mão ao pedido de venda, para as horas aparecerem no cliente certo.</div></div>
               <button className="erp-btn erp-btn-sm" onClick={() => setVincular(null)} disabled={busy}>Fechar</button></div>
             <div className="erp-modal-body">
