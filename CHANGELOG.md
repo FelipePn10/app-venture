@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## [v1.19.9] — 2026-11-19
+
+## Novidades
+- **Ordem de Produção (VPRO0900) reorganizada:** abas **Resumo, Execução, Materiais e Custo**. A Execução mostra o roteiro em sequência, cada etapa com o material dela, as horas e as peças. A OF mostra para qual cliente, projeto e OF pai ela é, e a árvore agrupa as OFs por pedido.
+- **Projetos (VPLA0120):** cadastro de projetos da obra ou do cliente. A OF herda cliente e projeto do pedido, da demanda ou da OF pai.
+- **Cronômetro da etapa:** concluir ou pausar sem digitar grava o tempo corrido e as peças da OF. Etapa esquecida aberta por mais de 12 horas pede as horas trabalhadas.
+- **Código de barras na própria etapa,** com **Imprimir etiqueta** e **Etiquetas das etapas** (uma por etapa a fazer).
+- **Baixa automática do material:** o material da OF sai do estoque no apontamento, na proporção do que foi produzido.
+- **Custo real sempre em dia:** atualiza sozinho também ao concluir uma etapa com horas e no apontamento pelo código de barras. OFs antigas que nunca tiveram custo recebem o custo sozinhas.
+
+## Correções
+- **Programação (VPRO0210):** uma OF que não cabe em um ano de máquina não trava mais a programação. Ela fica de fora, as outras são programadas, e o aviso diz a OF, a etapa e as horas pedidas.
+- **OF manual:** a estrutura é copiada já na unidade de conversão atual. Linha sem conversão é apontada antes de criar a OF.
+- **Pedido de venda:** não recusa mais com "já existe um registro" depois de pedidos importados.
+- **Tabela de preço de compra:** linha gravada sem fornecedor vale como preço para qualquer fornecedor.
+- **Planos (VMRP0100):** "Agrupar ordens do mesmo item no mesmo dia" pode ser marcado ao criar e ao alterar o plano.
+- **Número da OF:** beneficiamento e programação mostram o mesmo número de OF das outras telas.
+
 ## [v1.19.8] — 2026-11-19
 
 ## Novidades
