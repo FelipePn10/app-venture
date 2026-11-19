@@ -9,6 +9,7 @@ import {
   type NotificationDepartmentRecipient, type NotificationSubscription, type NotificationUserRecipient,
 } from '@/services/notificationService';
 import { SetoresSecao } from './SetoresSecao';
+import { getFiscalConfig } from '@/services/fiscalConfigService';
 
 type Tab = 'config' | 'subscriptions' | 'setores' | 'alerts' | 'history' | 'dead';
 type Feedback = { type: 'success' | 'error' | 'info'; message: string } | null;
@@ -25,6 +26,8 @@ function maskEmail(value: unknown): string { const email = String(value ?? ''); 
 export function Vnot0100Page(): JSX.Element {
   const [tab, setTab] = useState<Tab>('config');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  // A marca do e-mail só pode vir da configuração fiscal desta empresa (o servidor recusa a de outra).
+  const [configFiscal, setConfigFiscal] = useState<{ id: number; nome: string } | null>(null);
   const [events, setEvents] = useState<NotificationEvent[]>([]);
   const [subscriptions, setSubscriptions] = useState<NotificationSubscription[]>([]);
   const [users, setUsers] = useState<NotificationUserRecipient[]>([]);
@@ -53,6 +56,11 @@ export function Vnot0100Page(): JSX.Element {
   // A carga inicial é executada uma vez; atualizações posteriores são explícitas.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void run(loadBase); }, []);
+  useEffect(() => {
+    getFiscalConfig()
+      .then((c) => setConfigFiscal(c.id ? { id: c.id, nome: `${c.razao_social}${c.cnpj_empresa ? ` (${c.cnpj_empresa})` : ''}` } : null))
+      .catch(() => setConfigFiscal(null));
+  }, []);
 
   async function loadRecords(nextTab: Tab) {
     setTab(nextTab);
@@ -100,7 +108,11 @@ export function Vnot0100Page(): JSX.Element {
           <div className="erp-field erp-c3"><label className="erp-label">Retenção (dias)</label><input className="erp-input num" type="number" min={30} max={3650} value={settings.retention_days} onChange={(e) => setSettings({ ...settings, retention_days: Number(e.target.value) })}/></div>
           <div className="erp-field erp-c3"><label className="erp-label">Limite por minuto</label><input className="erp-input num" type="number" min={1} max={1000} value={settings.max_emails_per_minute} onChange={(e) => setSettings({ ...settings, max_emails_per_minute: Number(e.target.value) })}/></div>
           <div className="erp-field erp-c3"><label className="erp-label">Limite de anexo (MiB)</label><input className="erp-input num" type="number" min={0} max={25} value={Math.round(settings.max_attachment_bytes / 1048576)} onChange={(e) => setSettings({ ...settings, max_attachment_bytes: Number(e.target.value) * 1048576 })}/></div>
-          <div className="erp-field erp-c3"><label className="erp-label">Configuração fiscal</label><input className="erp-input num" type="number" value={settings.fiscal_config_id ?? ''} onChange={(e) => setSettings({ ...settings, fiscal_config_id: e.target.value ? Number(e.target.value) : null })}/><span className="erp-field-hint">Usada para logo e identidade visual.</span></div>
+          <div className="erp-field erp-c3"><label className="erp-label">Configuração fiscal</label><select className="erp-input" aria-label="Configuração fiscal" value={settings.fiscal_config_id ?? ''} onChange={(e) => setSettings({ ...settings, fiscal_config_id: e.target.value ? Number(e.target.value) : null })}>
+            <option value="">Não usar (nome da empresa, sem logo)</option>
+            {configFiscal && <option value={configFiscal.id}>{configFiscal.nome}</option>}
+            {settings.fiscal_config_id != null && settings.fiscal_config_id !== configFiscal?.id && <option value={settings.fiscal_config_id}>Configuração que não é desta empresa — troque</option>}
+          </select><span className="erp-field-hint">Razão social e logo usados no e-mail. Vêm da configuração fiscal desta empresa.</span></div>
           <div className="erp-field erp-c12" style={{ flexDirection: 'row', gap: 8 }}><button className="erp-btn erp-btn-primary" onClick={() => void saveSettings()} disabled={busy}>Salvar configuração</button><button className="erp-btn" onClick={() => void run(async () => { await enqueueNotificationTest(); setFeedback({ type: 'info', message: 'E-mail de teste enfileirado. A entrega deve ser acompanhada no Histórico.' }); })} disabled={busy}>Enviar e-mail de teste</button></div>
         </div></div>}
         {tab === 'subscriptions' && <><div className="erp-fieldset"><div className="erp-fieldset-head">Nova assinatura interna</div><div className="erp-fieldset-body">

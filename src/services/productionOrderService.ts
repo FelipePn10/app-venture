@@ -39,6 +39,8 @@ export interface ProductionOrderDTO {
   is_active?: boolean;
   /** OF encerrada sem o custo real apurado: o motivo. */
   cost_pending?: string;
+  /** Avisos do início (parâmetro de planejamento 52 em AVISAR): OF filha aberta, falta de material. */
+  warnings?: string[];
 }
 
 export interface AppointmentDTO {
@@ -165,6 +167,7 @@ function parseOrder(raw: unknown): ProductionOrderDTO {
     is_active: parseBool(o, 'is_active', 'IsActive'),
     cost_pending: parseStr(o, 'cost_pending', 'CostPending') || undefined,
     item_revision: parseStr(o, 'item_revision') || undefined,
+    warnings: Array.isArray(o['warnings']) ? (o['warnings'] as unknown[]).map(String) : undefined,
   };
 }
 
@@ -453,6 +456,8 @@ export interface MaterialAvailabilityLine {
   free_stock: number;
   /** O que as OFs abertas que estão na frente vão consumir do mesmo saldo. */
   committed_earlier: number;
+  /** A peça que a OF filha entregou reservada para esta OF (fora do livre, mas é dela). */
+  reserved_for_order: number;
   available: number;
   shortage: number;
   status: MaterialAvailabilityStatus;
@@ -477,7 +482,7 @@ function parseAvailability(raw: unknown): MaterialAvailability {
         material_id: parseNum(l, 'material_id'), item_code: parseStr(l, 'item_code'), description: parseStr(l, 'description'),
         uom: parseStr(l, 'uom') || undefined, warehouse_id: parseNum(l, 'warehouse_id') || undefined,
         required: parseNum(l, 'required'), issued: parseNum(l, 'issued'), remaining: parseNum(l, 'remaining'),
-        free_stock: parseNum(l, 'free_stock'), committed_earlier: parseNum(l, 'committed_earlier'),
+        free_stock: parseNum(l, 'free_stock'), committed_earlier: parseNum(l, 'committed_earlier'), reserved_for_order: parseNum(l, 'reserved_for_order'),
         available: parseNum(l, 'available'), shortage: parseNum(l, 'shortage'),
         status: (parseStr(l, 'status') || 'COMPLETA') as MaterialAvailabilityStatus,
       };
@@ -491,6 +496,60 @@ function parseAvailability(raw: unknown): MaterialAvailability {
 export async function getMaterialAvailability(id: number): Promise<MaterialAvailability> {
   const { data } = await httpClient.get(`${BASE}/${id}/material-availability`);
   return parseAvailability(data);
+}
+/** Ordem (OF ou planejada ainda sem OF) de um elo da cadeia de fabricação. */
+export interface ChainOrder {
+  planned_order_code?: number;
+  /** Sem OF: a ordem planejada ainda não foi liberada. */
+  production_order_id?: number;
+  item_code: string;
+  business_code?: string;
+  description: string;
+  status: string;
+  quantity: number;
+  produced: number;
+  /** Na filha: quanto da peça dela está reservado para a OF consultada. */
+  reserved: number;
+}
+export interface ChainSalesOrder {
+  sales_order_code: number;
+  sales_order_number: number;
+  sequence?: number;
+  customer: string;
+}
+/** Cadeia da OF: pedidos que ela atende, OFs pai que ela abastece e OFs filhas dos componentes fabricados. */
+export interface ProductionChain {
+  sales_orders: ChainSalesOrder[];
+  parents: ChainOrder[];
+  children: ChainOrder[];
+}
+function parseChainOrder(raw: unknown): ChainOrder {
+  const o = unwrapObject(raw);
+  return {
+    planned_order_code: parseNum(o, 'planned_order_code') || undefined,
+    production_order_id: parseNum(o, 'production_order_id') || undefined,
+    item_code: parseStr(o, 'item_code'), business_code: parseStr(o, 'business_code') || undefined,
+    description: parseStr(o, 'description'), status: parseStr(o, 'status'),
+    quantity: parseNum(o, 'quantity'), produced: parseNum(o, 'produced'), reserved: parseNum(o, 'reserved'),
+  };
+}
+export async function getProductionChain(id: number): Promise<ProductionChain> {
+  const { data } = await httpClient.get(`${BASE}/${id}/chain`);
+  const o = unwrapObject(data);
+  const lista = (k: string) => (Array.isArray(o[k]) ? (o[k] as unknown[]) : []);
+  return {
+    sales_orders: lista('sales_orders').map((r) => {
+      const p = unwrapObject(r);
+      return { sales_order_code: parseNum(p, 'sales_order_code'), sales_order_number: parseNum(p, 'sales_order_number'),
+        sequence: parseNum(p, 'sequence') || undefined, customer: parseStr(p, 'customer') };
+    }),
+    parents: lista('parents').map(parseChainOrder),
+    children: lista('children').map(parseChainOrder),
+  };
+}
+/** OF filha que ainda não terminou: o componente dela ainda não está pronto. */
+export function filhaPendente(f: ChainOrder): boolean {
+  return !f.production_order_id || !['COMPLETED', 'CLOSED', 'CANCELLED'].includes(f.status);
 }
 /** Resumo de faltas de várias OFs (selo da lista). */
 export async function getMaterialAvailabilitySummary(ids: number[]): Promise<Record<number, MaterialAvailability>> {

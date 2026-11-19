@@ -11,6 +11,8 @@ export type RegimeTributario = '1' | '2' | '3';
 export type FocusAmbiente = 'homologacao' | 'producao';
 
 export interface FiscalConfig {
+  /** Id da configuração da empresa (a VNOT0100 grava esse id para a marca do e-mail). */
+  id?: number;
   cnpj_empresa: string;
   razao_social: string;
   ie_empresa?: string;
@@ -66,6 +68,7 @@ function parseConfig(raw: unknown): FiscalConfig {
   const regime = parseStr(o, 'regime_tributario', 'RegimeTributario') || '3';
   const amb = parseStr(o, 'focus_nfe_ambiente', 'FocusNfeAmbiente') || 'homologacao';
   return {
+    id: parseNum(o, 'id', 'ID') || undefined,
     cnpj_empresa: parseStr(o, 'cnpj_empresa', 'CnpjEmpresa'),
     razao_social: parseStr(o, 'razao_social', 'RazaoSocial'),
     ie_empresa: parseStr(o, 'ie_empresa', 'IeEmpresa'),

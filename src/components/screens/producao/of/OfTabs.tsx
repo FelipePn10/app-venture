@@ -1,6 +1,6 @@
 import {
   type AppointmentDTO, type ConsumptionDTO, type CostDTO, type MaterialDTO, type OperationDTO, type ProductionOrderDTO,
-  type MaterialAvailability, type ProductionScanAction, type ProductionScanToken,
+  type MaterialAvailability, type ProductionChain, type ProductionScanAction, type ProductionScanToken, filhaPendente,
 } from "@/services/productionOrderService";
 import { Code128Barcode } from "@/components/ui/Code128Barcode";
 import { LookupField } from "@/components/ui/LookupField";
@@ -8,15 +8,16 @@ import { OPERACAO, SITUACAO_FALTA } from "./operacao";
 import { EntityName } from "@/components/ui/EntityName";
 import { loadEmployees, loadEmployeesById, loadItems, loadMachinesById, loadWarehouses } from "@/services/lookups";
 import { Detalhe, Painel, Progresso, Selo, Vazio } from "../../planejamento/planUi";
-import { data, dataHora, num, type Tom } from "../../planejamento/planFormat";
+import { data, dataHora, num, situacaoOF, type Tom } from "../../planejamento/planFormat";
 import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // ── Resumo ────────────────────────────────────────────────────────────────────
 
-export function ResumoTab({ of, operacoes, apontamentos, consumos }: {
+export function ResumoTab({ of, operacoes, apontamentos, consumos, cadeia = null, onAbrirOF }: {
   of: ProductionOrderDTO; operacoes: OperationDTO[]; apontamentos: AppointmentDTO[]; consumos: ConsumptionDTO[];
+  cadeia?: ProductionChain | null; onAbrirOF?: (id: number) => void;
 }): JSX.Element {
   const feitas = operacoes.filter((o) => o.status === "DONE" || o.status === "SKIPPED").length;
   // "Produzida" da ordem é o que ENTROU no estoque (entrega/conclusão); o
@@ -69,7 +70,58 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos }: {
         )}
       </Painel>
     </div>
+    {onAbrirOF && <div style={{ marginTop: 14 }}><CadeiaPainel cadeia={cadeia} onAbrir={onAbrirOF} /></div>}
   </>);
+}
+
+// ── Cadeia de fabricação ──────────────────────────────────────────────────────
+
+/**
+ * De onde vem e para onde vai esta ordem: os pedidos de venda que ela atende, a
+ * ordem que usa a peça dela (o RN que leva a bucha) e as ordens dos componentes
+ * fabricados para ela. A peça pronta da ordem do componente fica guardada para
+ * esta ordem — é o "Reservado".
+ */
+export function CadeiaPainel({ cadeia, onAbrir }: { cadeia: ProductionChain | null; onAbrir: (id: number) => void }): JSX.Element | null {
+  if (!cadeia || (cadeia.sales_orders.length + cadeia.parents.length + cadeia.children.length) === 0) return null;
+  const pendentes = cadeia.children.filter(filhaPendente).length;
+  const linha = (o: ProductionChain["children"][number], mostrarReserva: boolean) => {
+    const sit = o.production_order_id ? situacaoOF(o.status) : { rotulo: "Sem OF (ainda não liberada)", tom: "warn" as Tom };
+    return (
+      <tr key={`${o.planned_order_code ?? ""}-${o.production_order_id ?? ""}`}>
+        <td>{o.production_order_id
+          ? <button type="button" className="erp-btn erp-btn-sm" onClick={() => onAbrir(o.production_order_id!)} title="Abrir esta ordem">OF {o.production_order_id}</button>
+          : <span className="erp-text-muted">Planejada {o.planned_order_code}</span>}</td>
+        <td className="vpl-strong">{o.business_code || o.item_code}<span className="vpl-sub">{o.description}</span></td>
+        <td className="num">{num(o.produced)} / {num(o.quantity)}</td>
+        {mostrarReserva && <td className="num">{o.reserved ? num(o.reserved) : "—"}</td>}
+        <td><Selo tom={sit.tom}>{sit.rotulo}</Selo></td>
+      </tr>
+    );
+  };
+  return (
+    <Painel titulo="Cadeia de fabricação" sub={pendentes ? `${pendentes} componente(s) fabricado(s) ainda não pronto(s)` : undefined}
+      acoes={cadeia.children.length ? <Selo tom={pendentes ? "warn" : "ok"}>{pendentes ? "Componentes em produção" : "Componentes prontos"}</Selo> : undefined}>
+      {cadeia.sales_orders.length > 0 && (
+        <div style={{ marginBottom: 10 }}><div className="vpl-kv-label" style={{ marginBottom: 6 }}>Pedido(s) de venda atendido(s)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {cadeia.sales_orders.map((p) => <Selo key={`${p.sales_order_code}-${p.sequence ?? 0}`} tom="info">
+              Pedido {p.sales_order_number || p.sales_order_code}{p.sequence ? ` · item ${p.sequence}` : ""}{p.customer ? ` · ${p.customer}` : ""}</Selo>)}
+          </div></div>
+      )}
+      {cadeia.parents.length > 0 && (
+        <div style={{ marginBottom: 10 }}><div className="vpl-kv-label" style={{ marginBottom: 6 }}>Esta ordem fabrica componente para</div>
+          <table className="erp-grid"><thead><tr><th>Ordem</th><th>Item</th><th className="num">Entregue / planejado</th><th>Situação</th></tr></thead>
+            <tbody>{cadeia.parents.map((o) => linha(o, false))}</tbody></table></div>
+      )}
+      {cadeia.children.length > 0 && (
+        <div><div className="vpl-kv-label" style={{ marginBottom: 6 }}>Componentes fabricados para esta ordem</div>
+          <table className="erp-grid"><thead><tr><th>Ordem</th><th>Componente</th><th className="num">Entregue / planejado</th>
+            <th className="num" title="Peça pronta guardada para esta ordem">Reservado para esta OF</th><th>Situação</th></tr></thead>
+            <tbody>{cadeia.children.map((o) => linha(o, true))}</tbody></table></div>
+      )}
+    </Painel>
+  );
 }
 
 // ── Apontamento: produção, consumo e conclusão ───────────────────────────────
@@ -307,7 +359,7 @@ export function FaltasPainel({ disponibilidade }: { disponibilidade: MaterialAva
       acoes={<Selo tom={sit.tom}>{sit.rotulo}</Selo>} flush>
       {disponibilidade.lines.length === 0 ? <Vazio titulo="Todos os materiais já foram baixados" /> : (
         <table className="erp-grid">
-          <thead><tr><th>Item</th><th className="num">A baixar</th><th className="num">Livre no depósito</th><th className="num">OFs na frente</th><th className="num">Disponível</th><th className="num">Falta</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Item</th><th className="num">A baixar</th><th className="num">Livre no depósito</th><th className="num">OFs na frente</th><th className="num">Reservado para esta OF</th><th className="num">Disponível</th><th className="num">Falta</th><th>Situação</th></tr></thead>
           <tbody>{disponibilidade.lines.map((l) => {
             const s = SITUACAO_FALTA[l.status] ?? SITUACAO_FALTA.COMPLETA;
             return (
@@ -316,6 +368,7 @@ export function FaltasPainel({ disponibilidade }: { disponibilidade: MaterialAva
                 <td className="num">{num(l.remaining)} {l.uom ?? ""}</td>
                 <td className="num">{num(l.free_stock)}</td>
                 <td className="num" title="O que as ordens abertas que começam antes desta vão consumir do mesmo saldo">{l.committed_earlier ? num(l.committed_earlier) : "—"}</td>
+                <td className="num" title="Peça fabricada para esta ordem pela ordem do componente: fica guardada para ela e nenhuma outra ordem a usa">{l.reserved_for_order ? num(l.reserved_for_order) : "—"}</td>
                 <td className="num">{num(l.available)}</td>
                 <td className="num">{l.shortage > 0 ? <strong className="vpl-tom-danger">{num(l.shortage)}</strong> : "—"}</td>
                 <td><Selo tom={s.tom}>{l.status === "COMPLETA" ? "Disponível" : s.rotulo}</Selo></td>

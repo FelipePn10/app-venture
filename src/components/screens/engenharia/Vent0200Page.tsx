@@ -1082,7 +1082,15 @@ export function Vent0200Page(): JSX.Element {
         const gravado = await updateItem(itemEmEdicao, alteracao);
         const codigoGravado = parseStr(gravado, "code", "Code") || itemEmEdicao;
         const falha = form.controlsLot ? null : await gravarControles(codigoGravado);
-        setFeedback(falha ? { type: "error", message: `Item ${codigoGravado} alterado, mas ${falha}` } : { type: "success", message: `Item ${codigoGravado} alterado com sucesso.` });
+        // O servidor conta o que a alteração fez além do cadastro: trocando a
+        // unidade de estoque, as estruturas que usam o item são recalculadas
+        // (e a linha que ficou sem conversão precisa de revisão).
+        const avisos = Array.isArray(gravado["warnings"]) ? (gravado["warnings"] as unknown[]).map(String) : [];
+        setFeedback(falha
+          ? { type: "error", message: `Item ${codigoGravado} alterado, mas ${falha}` }
+          : avisos.length
+            ? { type: "warn", message: `Item ${codigoGravado} alterado. ${avisos.join(" ")}` }
+            : { type: "success", message: `Item ${codigoGravado} alterado com sucesso.` });
         setSerieGravada(form.controlsSerial);
         setErrors({});
         setSubmitTentado(false);

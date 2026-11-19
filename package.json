@@ -62,6 +62,7 @@
     "test:suprimentos": "node scripts/validate-suprimentos.mjs",
     "test:almoxarifado": "node scripts/validate-almoxarifado.mjs",
     "test:planejamento": "node scripts/validate-planejamento.mjs",
+    "test:cadeia-of": "node scripts/validate-cadeia-of.mjs",
     "version:sync": "node scripts/set-release-version.mjs",
     "test:compras": "node scripts/validate-compras.mjs",
     "audit:rotas": "node scripts/audit-route-sweep.mjs",

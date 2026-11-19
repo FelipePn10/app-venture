@@ -4,7 +4,8 @@ import { errMessage } from "@/services/fiscalShared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ehNaoEncontrado } from "@/utils/erroHttp";
 import {
-  type AppointmentDTO, type ConsumptionDTO, type CostDTO, type MaterialAvailability, type MaterialDTO, type OperationDTO, type ProductionOrderDTO, type ProductionScanToken,
+  type AppointmentDTO, type ConsumptionDTO, type CostDTO, type MaterialAvailability, type MaterialDTO, type OperationDTO, type ProductionChain, type ProductionOrderDTO, type ProductionScanToken,
+  filhaPendente, getProductionChain,
   addConsumption, addMaterial, baixarFichaDaOrdem, reapurarCustos, addScrapDestination, advanceOperation, allocateLots, appointProduction, cancelProductionOrder, closeProductionOrder,
   completeProductionOrder, createProductionOrder, createProductionScanToken, explodeOperations, getCost, getMaterialAvailability, getMaterialAvailabilitySummary,
   getProductionOrder, listAppointments,
@@ -94,6 +95,7 @@ export function Vpro0900Page(): JSX.Element {
   const [faltas, setFaltas] = useState<MaterialAvailability | null>(null);
   const [faltasLista, setFaltasLista] = useState<Record<number, MaterialAvailability>>({});
   const [confirmarInicio, setConfirmarInicio] = useState(false);
+  const [cadeia, setCadeia] = useState<ProductionChain | null>(null);
 
   const listar = useCallback(async () => {
     const l = await listProductionOrders();
@@ -124,6 +126,7 @@ export function Vpro0900Page(): JSX.Element {
     setCusto(gestor ? await parte("custo", () => getCost(id), null) : null);
     setMateriais(await parte("materiais", () => listMaterials(id), [] as MaterialDTO[]));
     setFaltas(await parte("faltas de material", () => getMaterialAvailability(id), null));
+    setCadeia(await parte("cadeia de fabricação", () => getProductionChain(id), null));
     if (naoCarregou.length) setFeedback({ type: "error", message: `Ordem aberta, mas não foi possível carregar: ${naoCarregou.join("; ")}.` });
   }, [setFeedback, gestor]);
 
@@ -162,6 +165,16 @@ export function Vpro0900Page(): JSX.Element {
   const transicao = (rotulo: string, fn: (id: number) => Promise<unknown>) => { const id = of?.id; if (!id) return; void run(async () => {
     await fn(id); await recarregar(); setFeedback({ type: "success", message: `OF ${id}: ${rotulo}.` });
   }); };
+  // O servidor confere o início (parâmetro de planejamento 52): em "avisar"
+  // a ordem começa e volta com os avisos; em "bloquear" ele recusa e diz o quê.
+  const iniciar = () => { const id = of?.id; if (!id) return; void run(async () => {
+    const r = await startProductionOrder(id); await recarregar();
+    setFeedback(r.warnings?.length
+      ? { type: "error", message: `OF ${id}: produção iniciada, mas atenção — ${r.warnings.join("; ")}.` }
+      : { type: "success", message: `OF ${id}: produção iniciada.` });
+  }); };
+  const filhasAbertas = (cadeia?.children ?? []).filter(filhaPendente);
+  const comFalta = !!faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO");
   // O encerramento vale mesmo se a apuração do custo falhar: aí a OF fica com
   // "custo pendente" e a tela diz o motivo.
   const encerrar = () => { const id = of?.id; if (!id) return; void run(async () => {
@@ -357,7 +370,7 @@ export function Vpro0900Page(): JSX.Element {
                   </div>
                   <div className="vpl-record-actions">
                     {gestor && st === "OPEN" && <button className="erp-btn erp-btn-primary" disabled={busy}
-                      onClick={() => (faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO") ? setConfirmarInicio(true) : transicao("produção iniciada", startProductionOrder))}>Iniciar produção</button>}
+                      onClick={() => (comFalta || filhasAbertas.length ? setConfirmarInicio(true) : iniciar())}>Iniciar produção</button>}
                     {gestor && operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>}
                     <button className="erp-btn" onClick={imprimir} disabled={busy} title="PDF da ordem para a fábrica: etapas na sequência, quem executa cada uma, material por etapa, ferramentas e serviços em terceiro">Imprimir OP</button>
                     {gestor && <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>}
@@ -367,7 +380,13 @@ export function Vpro0900Page(): JSX.Element {
                     {gestor && st !== "CLOSED" && st !== "CANCELLED" && <button className="erp-btn erp-btn-danger" onClick={() => setConfirmarCancelamento(true)} disabled={busy}>Cancelar OF</button>}
                   </div>
                 </div>
-                {(st === "OPEN" || st === "IN_PROGRESS") && faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO") && (
+                {st === "OPEN" && filhasAbertas.length > 0 && (
+                  <div className="erp-feedback info" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span>{filhasAbertas.length} componente(s) fabricado(s) para esta ordem ainda não pronto(s): {filhasAbertas.map((f) => f.production_order_id ? `OF ${f.production_order_id} (${f.business_code || f.item_code})` : `${f.business_code || f.item_code} sem OF`).join(", ")}.</span>
+                    <button className="erp-btn erp-btn-sm" onClick={() => setAba("resumo")}>Ver cadeia</button>
+                  </div>
+                )}
+                {(st === "OPEN" || st === "IN_PROGRESS") && comFalta && faltas && (
                   <div className="erp-feedback info" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
                     <span>Falta material: {faltas.missing_items} de {faltas.items} item(ns) sem saldo suficiente no depósito, contando as ordens que estão na frente.</span>
                     <button className="erp-btn erp-btn-sm" onClick={() => setAba("materiais")}>Ver faltas</button>
@@ -386,7 +405,7 @@ export function Vpro0900Page(): JSX.Element {
               <div style={{ marginTop: 10 }}><Abas abas={ABAS} ativa={aba} onChange={setAba} /></div>
               <div className="erp-detail-body">
                 <Aviso feedback={feedback} busy={busy} />
-                {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} />}
+                {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} cadeia={cadeia} onAbrirOF={(id) => abrir(id)} />}
                 {aba === "apontamento" && <ApontamentoTab of={of} busy={busy} app={app} setApp={setApp} cons={cons} setCons={setCons} apontamentos={apontamentos}
                   operacoesPendentes={pendentes} conclusao={conclusao} setConclusao={setConclusao} serie={serieDaOF}
                   onApontar={apontar} onConsumir={consumir} onRetornarSucata={retornarSucata} onConcluir={() => concluir()} gestor={gestor} />}
@@ -466,11 +485,16 @@ export function Vpro0900Page(): JSX.Element {
         </div>
       )}
 
-      <ConfirmDialog aberto={confirmarInicio} titulo="Iniciar a produção com falta de material?"
-        mensagem="Há material sem saldo suficiente no depósito para esta ordem (já contando as ordens que estão na frente). A produção pode parar na etapa que consome esse material."
-        assunto={faltas ? `${faltas.missing_items} de ${faltas.items} item(ns) com falta` : undefined} rotuloConfirmar="Iniciar mesmo assim"
+      <ConfirmDialog aberto={confirmarInicio} titulo={filhasAbertas.length ? "Iniciar antes de os componentes ficarem prontos?" : "Iniciar a produção com falta de material?"}
+        mensagem={[
+          filhasAbertas.length ? `Os componentes fabricados para esta ordem ainda não estão prontos: ${filhasAbertas.map((f) => f.production_order_id ? `OF ${f.production_order_id} (${f.business_code || f.item_code}, ${num(f.produced)} de ${num(f.quantity)} entregues)` : `${f.business_code || f.item_code} (ainda sem OF)`).join("; ")}.` : "",
+          comFalta ? "Há material sem saldo suficiente no depósito para esta ordem (já contando as ordens que estão na frente)." : "",
+          "A produção pode parar na etapa que usa esse material. Se a empresa estiver configurada para bloquear, o sistema não deixa iniciar.",
+        ].filter(Boolean).join(" ")}
+        assunto={[filhasAbertas.length ? `${filhasAbertas.length} componente(s) em produção` : "", comFalta && faltas ? `${faltas.missing_items} de ${faltas.items} item(ns) com falta` : ""].filter(Boolean).join(" · ") || undefined}
+        rotuloConfirmar="Iniciar mesmo assim"
         onCancelar={() => setConfirmarInicio(false)}
-        onConfirmar={() => { setConfirmarInicio(false); transicao("produção iniciada", startProductionOrder); }} />
+        onConfirmar={() => { setConfirmarInicio(false); iniciar(); }} />
       <ConfirmDialog aberto={confirmarSemBaixa} titulo="Concluir a ordem com material não baixado?"
         mensagem={`Estes materiais da lista ainda não saíram do estoque para a ordem: ${naoBaixados.map((l) => `${l.item_code} (falta ${num(l.remaining)} ${l.uom ?? ""})`.trim()).join("; ")}. Concluída assim, o custo real da ordem fica sem esse material. Registre o consumo na aba Apontamento se ele foi usado.`}
         assunto={`${naoBaixados.length} material(is) sem baixa`} rotuloConfirmar="Concluir mesmo assim"
