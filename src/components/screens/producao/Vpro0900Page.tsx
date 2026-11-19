@@ -9,19 +9,24 @@ import {
   addConsumption, addMaterial, baixarFichaDaOrdem, reapurarCustos, addScrapDestination, advanceOperation, allocateLots, appointProduction, cancelProductionOrder, closeProductionOrder,
   completeProductionOrder, createProductionOrder, createProductionScanToken, explodeOperations, getCost, getMaterialAvailability, getMaterialAvailabilitySummary,
   getProductionOrder, listAppointments,
-  listConsumptions, listMaterials, listOperations, listProductionOrders, scanProductionOrder, scrapReturn, settleCost, startProductionOrder,
+  listConsumptions, listMaterials, listOperations, listProductionOrders, scanProductionOrder, scrapReturn, setProductionOrderOrigin, startProductionOrder,
 } from "@/services/productionOrderService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { loadCostCentersById, loadItems, loadMachinesById, loadWarehouses } from "@/services/lookups";
+import { loadCostCentersById, loadCustomers, loadItems, loadMachinesById, loadProjects, loadWarehouses } from "@/services/lookups";
 import { type Aba, Abas, Aviso, Cabecalho, Progresso, Rodape, Selo, Vazio } from "../planejamento/planUi";
-import { data, normalizar, num, situacaoOF } from "../planejamento/planFormat";
+import { data, duracao, normalizar, num, situacaoOF } from "../planejamento/planFormat";
 import { useAcao } from "../planejamento/planHooks";
 import {
-  ApontamentoTab, ConsumosTab, CustoTab, EtapasTab, MateriaisTab, ResumoTab, type EntregaForm, type LeituraForm, type MaterialForm, type SerieDaOF,
+  CustoTab, ResumoTab, type EntregaForm, type LeituraForm, type MaterialForm, type SerieDaOF,
 } from "./of/OfTabs";
 import { OPERACAO, SITUACAO_FALTA } from "./of/operacao";
+import { IdentificacaoDaOF, LinhaDaOrigem, OrigemDialog } from "./of/OfIdentificacao";
+import { ExecucaoTab } from "./of/ExecucaoTab";
+import { MateriaisOFTab } from "./of/MateriaisOFTab";
+import { materiaisDaOF } from "./of/materiais";
+import { type LinhaDaArvore, destinoDaPeca, emArvore, itemDaOF, origemDaNecessidade, textoDeBusca } from "./of/identificacao";
 import { lerSeries, obterPerfil } from "@/services/posVendaService";
 import { hojeLocal } from "@/utils/dataLocal";
 import { useBuscaDosItens } from "@/hooks/useBuscaDosItens";
@@ -35,8 +40,13 @@ import { useAuthStore } from "@/store/authStore";
  * fica à esquerda (com busca, situação e o quanto já foi produzido), a ordem
  * aberta à direita, e as abas seguem o trabalho com a ordem: resumo → apontar
  * → etapas do roteiro → materiais → consumos → custo.
+ *
+ * Cada OF diz o que fabrica, para quem (cliente, pedido ou demanda), em que
+ * projeto e para qual OF a peça dela vai; a árvore mostra o produto final com
+ * as OFs dos componentes penduradas. O material sai sozinho no apontamento e
+ * na entrega (lista da OF), e o custo real se atualiza a cada movimento.
  */
-type AbaOF = "resumo" | "apontamento" | "etapas" | "materiais" | "consumos" | "custo";
+type AbaOF = "resumo" | "execucao" | "materiais" | "custo";
 type FiltroSituacao = "ativas" | "OPEN" | "IN_PROGRESS" | "COMPLETED" | "todas";
 const FILTROS: { id: FiltroSituacao; rotulo: string }[] = [
   { id: "ativas", rotulo: "Em aberto" }, { id: "OPEN", rotulo: "Abertas" }, { id: "IN_PROGRESS", rotulo: "Em produção" },
@@ -52,6 +62,9 @@ const APONTAMENTO_VAZIO: AppointmentDTO = { production_order_id: 0, produced_qty
 const CONSUMO_VAZIO: ConsumptionDTO = { production_order_id: 0, item_code: "", consumed_qty: 0 };
 const MATERIAL_VAZIO: MaterialForm = { item_code: "", quantity: "", automatic_issue: true, substituted_item_code: "" };
 const LEITURA_VAZIA: LeituraForm = { token: "", action: "RESOLVER", device_id: "terminal-producao", employee_id: "", good_quantity: "", scrap_quantity: "", hours: "", scrap_reason: "", complete_operation: false };
+
+/** Acima disso o cronômetro não grava sozinho: a etapa provavelmente ficou aberta. */
+const ETAPA_ESQUECIDA_H = 12;
 
 export function Vpro0900Page(): JSX.Element {
   const { busy, feedback, setFeedback, run } = useAcao();
@@ -86,6 +99,8 @@ export function Vpro0900Page(): JSX.Element {
   const [etapa, setEtapa] = useState({ horas: "", pecas: "", motivo: "" });
   const [matForm, setMatForm] = useState<MaterialForm>(MATERIAL_VAZIO);
   const [token, setToken] = useState<ProductionScanToken | null>(null);
+  // Código de barras por etapa: aparece na própria etapa e sai na etiqueta.
+  const [tokensEtapa, setTokensEtapa] = useState<Record<number, ProductionScanToken>>({});
   const [leitura, setLeitura] = useState<LeituraForm>(LEITURA_VAZIA);
   const [novaAberta, setNovaAberta] = useState(false);
   const [nova, setNova] = useState<ProductionOrderDTO>(NOVA_OF);
@@ -96,6 +111,10 @@ export function Vpro0900Page(): JSX.Element {
   const [faltasLista, setFaltasLista] = useState<Record<number, MaterialAvailability>>({});
   const [confirmarInicio, setConfirmarInicio] = useState(false);
   const [cadeia, setCadeia] = useState<ProductionChain | null>(null);
+  const [origemAberta, setOrigemAberta] = useState(false);
+  // Lista ou árvore (produto final com as OFs dos componentes): lembrado por usuário neste computador.
+  const [arvore, setArvore] = useState<boolean>(() => { try { return localStorage.getItem("vpro0900.arvore") === "1"; } catch { return false; } });
+  useEffect(() => { try { localStorage.setItem("vpro0900.arvore", arvore ? "1" : "0"); } catch { /* sem armazenamento: só não lembra */ } }, [arvore]);
 
   const listar = useCallback(async () => {
     const l = await listProductionOrders();
@@ -113,9 +132,6 @@ export function Vpro0900Page(): JSX.Element {
   useEffect(() => { void run(listar); }, [run, listar]);
 
   const carregarOF = useCallback(async (id: number) => {
-    const [o, ap, co, ops] = await Promise.all([getProductionOrder(id), listAppointments(id), listConsumptions(id), listOperations(id)]);
-    setOf(o); setApontamentos(ap); setConsumos(co); setOperacoes(ops);
-    setApp({ ...APONTAMENTO_VAZIO, production_order_id: id }); setCons({ ...CONSUMO_VAZIO, production_order_id: id });
     // Custo e materiais podem não existir ainda (404): a falta deles não impede
     // abrir a ordem. Qualquer outra falha abre a ordem e avisa o que não carregou.
     const naoCarregou: string[] = [];
@@ -123,14 +139,23 @@ export function Vpro0900Page(): JSX.Element {
       try { return await f(); }
       catch (e) { if (!ehNaoEncontrado(e)) naoCarregou.push(`${nome} (${errMessage(e)})`); return vazio; }
     };
-    setCusto(gestor ? await parte("custo", () => getCost(id), null) : null);
-    setMateriais(await parte("materiais", () => listMaterials(id), [] as MaterialDTO[]));
-    setFaltas(await parte("faltas de material", () => getMaterialAvailability(id), null));
-    setCadeia(await parte("cadeia de fabricação", () => getProductionChain(id), null));
+    // Tudo é buscado junto e a tela troca de uma vez: antes a OF nova aparecia
+    // com o custo, os materiais, as faltas e a cadeia da OF anterior enquanto
+    // cada parte carregava, e o "Iniciar produção" conferia as filhas da OF errada.
+    const [[o, ap, co, ops], custoDaOF, mats, faltasDaOF, cadeiaDaOF] = await Promise.all([
+      Promise.all([getProductionOrder(id), listAppointments(id), listConsumptions(id), listOperations(id)]),
+      gestor ? parte("custo", () => getCost(id), null) : Promise.resolve(null),
+      parte("materiais", () => listMaterials(id), [] as MaterialDTO[]),
+      parte("faltas de material", () => getMaterialAvailability(id), null),
+      parte("cadeia de fabricação", () => getProductionChain(id), null),
+    ]);
+    setOf(o); setApontamentos(ap); setConsumos(co); setOperacoes(ops);
+    setApp({ ...APONTAMENTO_VAZIO, production_order_id: id }); setCons({ ...CONSUMO_VAZIO, production_order_id: id });
+    setCusto(custoDaOF); setMateriais(mats); setFaltas(faltasDaOF); setCadeia(cadeiaDaOF);
     if (naoCarregou.length) setFeedback({ type: "error", message: `Ordem aberta, mas não foi possível carregar: ${naoCarregou.join("; ")}.` });
   }, [setFeedback, gestor]);
 
-  const abrir = (id?: number) => { if (id) void run(async () => { setToken(null); await carregarOF(id); }); };
+  const abrir = (id?: number) => { if (id) void run(async () => { setToken(null); setTokensEtapa({}); await carregarOF(id); }); };
   const recarregar = async () => { if (of?.id) { await carregarOF(of.id); await listar(); } };
 
   const contagem = useMemo(() => {
@@ -148,15 +173,16 @@ export function Vpro0900Page(): JSX.Element {
     const q = normalizar(busca.trim());
     return ordens
       .filter((o) => lida !== undefined || filtro === "todas" || (filtro === "ativas" ? o.status === "OPEN" || o.status === "IN_PROGRESS" : o.status === filtro))
-      .filter((o) => (lida !== undefined ? String(o.id) === lida : !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""} ${apelidoDoItem(o.item_code)}`).includes(q)))
+      .filter((o) => (lida !== undefined ? String(o.id) === lida : !q || normalizar(`${o.id} ${o.order_number ?? ""} ${o.item_code} ${o.mask ?? ""} ${apelidoDoItem(o.item_code)} ${textoDeBusca(o)}`).includes(q)))
       .sort((a, b) => (a.start_date ?? "9999").localeCompare(b.start_date ?? "9999") || (a.id ?? 0) - (b.id ?? 0));
   }, [ordens, busca, filtro, apelidoDoItem]);
+  const linhas = useMemo<LinhaDaArvore[]>(() => (arvore ? emArvore(visiveis) : visiveis.map((o) => ({ tipo: "of" as const, o, nivel: 0 }))), [arvore, visiveis]);
 
   // ── Ações da ordem ──
   const criar = () => run(async () => {
     if (!nova.item_code) { setFeedback({ type: "error", message: "Escolha o item." }); return; }
     if (!(nova.planned_qty > 0)) { setFeedback({ type: "error", message: "Informe a quantidade a produzir." }); return; }
-    const criada = await createProductionOrder(nova);
+    const criada = await createProductionOrder({ ...nova, customer_code: nova.customer_code || undefined, project_code: nova.project_code || undefined });
     setNovaAberta(false); setNova(NOVA_OF);
     await listar();
     if (criada.id) { await carregarOF(criada.id); setAba("resumo"); }
@@ -180,15 +206,18 @@ export function Vpro0900Page(): JSX.Element {
   const encerrar = () => { const id = of?.id; if (!id) return; void run(async () => {
     const r = await closeProductionOrder(id); await recarregar();
     setFeedback(r.cost_pending
-      ? { type: "error", message: `OF ${id} encerrada, mas ${r.cost_pending}. Use "Apurar custo" depois de corrigir.` }
+      ? { type: "error", message: `OF ${id} encerrada, mas ${r.cost_pending}. Corrija a causa e o custo se refaz no próximo "Reapurar todas as OFs" (administrador).` }
       : { type: "success", message: `OF ${id}: encerrada.` });
   }); };
   const explodir = () => { const id = of?.id; if (!id) return; void run(async () => {
     const ops = await explodeOperations(id); setOperacoes(ops);
-    setFeedback({ type: ops.length ? "success" : "info", message: ops.length ? `${ops.length} etapa(s) criada(s) a partir do roteiro.` : "O item não tem roteiro padrão: nenhuma etapa criada." });
-    if (ops.length) setAba("etapas");
+    setFeedback({ type: ops.length ? "success" : "info", message: ops.length ? `${ops.length} etapa(s) do roteiro aplicada(s) à ordem.` : "O item não tem roteiro aprovado: nenhuma etapa criada. Cadastre e aprove o roteiro do item." });
+    if (ops.length) setAba("execucao");
   }); };
-  const apurarCusto = () => { const id = of?.id; if (!id) return; void run(async () => { setCusto(await settleCost(id)); await recarregar(); setFeedback({ type: "success", message: "Custo real apurado." }); setAba("custo"); }); };
+  const salvarOrigem = (v: { customer_code?: number | null; project_code?: string | null }) => { const id = of?.id; if (!id) return; void run(async () => {
+    await setProductionOrderOrigin(id, v); setOrigemAberta(false); await recarregar();
+    setFeedback({ type: "success", message: `OF ${id}: cliente e projeto gravados.` });
+  }); };
 
   const reapurarTodas = () => void run(async () => {
     const r = await reapurarCustos();
@@ -201,13 +230,13 @@ export function Vpro0900Page(): JSX.Element {
     if (!app.produced_qty && !app.scrapped_qty) { setFeedback({ type: "error", message: "Informe a quantidade boa e/ou o refugo." }); return; }
     if (!app.employee_id) { setFeedback({ type: "error", message: "Informe o operador que produziu." }); return; }
     await appointProduction({ ...app, production_order_id: id });
-    await recarregar(); setFeedback({ type: "success", message: "Apontamento registrado." });
+    await recarregar(); setFeedback({ type: "success", message: "Apontamento registrado: os materiais com baixa automática saíram do estoque e o custo da ordem foi atualizado." });
   }); };
   const consumir = () => { const id = of?.id; if (!id) return; void run(async () => {
     if (!cons.item_code || !cons.consumed_qty) { setFeedback({ type: "error", message: "Escolha o insumo e a quantidade." }); return; }
     if (!cons.warehouse_id) { setFeedback({ type: "error", message: "Escolha o depósito de onde o insumo sai." }); return; }
     await addConsumption({ ...cons, production_order_id: id });
-    await recarregar(); setFeedback({ type: "success", message: "Consumo registrado: saída do estoque para a ordem." });
+    await recarregar(); setFeedback({ type: "success", message: "Consumo registrado: saída do estoque para a ordem (descontada da baixa automática se o material está na lista)." });
   }); };
   // Antes caía no depósito 2 quando nenhum era escolhido — sucata entrava num
   // depósito que a pessoa nem viu. Agora o depósito é obrigatório.
@@ -241,8 +270,16 @@ export function Vpro0900Page(): JSX.Element {
 
   const alterarEtapa = (opId: number, status: string) => run(async () => {
     if ((status === "PAUSED" || status === "INTERRUPTED") && !etapa.motivo.trim()) { setFeedback({ type: "error", message: "Informe o motivo da pausa ou da interrupção." }); return; }
+    // Vazios: as horas vêm do cronômetro da etapa e as peças, da ordem (o servidor calcula).
     const horas = Number(etapa.horas) || 0, pecas = Number(etapa.pecas) || 0;
-    if (status === "DONE" && horas <= 0 && pecas <= 0) { setFeedback({ type: "error", message: "Informe as horas trabalhadas ou as peças produzidas para concluir a etapa — é o que desconta a vida útil da ferramenta." }); return; }
+    // Etapa esquecida em andamento (virou a noite): o cronômetro gravaria o
+    // tempo parado como trabalhado. Acima de 12 h corridas, pede as horas.
+    const op = operacoes.find((o) => o.id === opId);
+    const corridas = op?.status === "IN_PROGRESS" && op.running_since ? (Date.now() - new Date(op.running_since).getTime()) / 3_600_000 : 0;
+    if (!horas && status !== "IN_PROGRESS" && corridas > ETAPA_ESQUECIDA_H) {
+      setFeedback({ type: "error", message: `A etapa ${op?.sequence ?? ""} está em andamento há ${duracao(corridas * 60)} — parece que ficou aberta. Digite as horas trabalhadas para ${status === "DONE" ? "concluir" : "pausar"}.` });
+      return;
+    }
     const enviado = etapa;
     const r = await advanceOperation(opId, status, horas, etapa.motivo.trim(), pecas);
     // Limpa só o que foi enviado: o operador pode ter digitado o próximo motivo
@@ -255,13 +292,30 @@ export function Vpro0900Page(): JSX.Element {
     await recarregar();
     // Ferramenta no limite não é notícia boa: sai como aviso, não como sucesso.
     const alertas = Array.isArray(r.tool_alerts) ? r.tool_alerts.join(" · ") : "";
-    setFeedback({ type: alertas ? "error" : "success", message: `Etapa ${OPERACAO[status]?.rotulo.toLowerCase() ?? status}.${alertas ? ` Atenção: ${alertas}` : ""}` });
+    const gravado = [
+      Number(r.recorded_hours) > 0 ? `${duracao(Number(r.recorded_hours) * 60)}${r.hours_from_clock ? " pelo cronômetro" : ""}` : "",
+      Number(r.recorded_qty) > 0 ? `${num(Number(r.recorded_qty))} peça(s)${r.qty_proposed ? " (quantidade da ordem)" : ""}` : "",
+    ].filter(Boolean).join(" · ");
+    setFeedback({ type: alertas ? "error" : "success", message: `Etapa ${OPERACAO[status]?.rotulo.toLowerCase() ?? status}${gravado ? `: ${gravado}` : ""}.${alertas ? ` Atenção: ${alertas}` : ""}` });
   });
   const gerarCodigo = (opId?: number) => { const id = of?.id; if (!id) return; void run(async () => {
     const t = await createProductionScanToken({ production_order_id: id, operation_id: opId });
     setToken(t); setLeitura((s) => ({ ...s, token: t.token }));
-    setFeedback({ type: "success", message: "Código de barras gerado para a etapa." });
+    if (opId) setTokensEtapa((m) => ({ ...m, [opId]: t }));
+    const op = operacoes.find((o) => o.id === opId);
+    setFeedback({ type: "success", message: `Código de barras da etapa ${op?.sequence ?? ""} gerado: está na etapa, pronto para imprimir a etiqueta.` });
   }); };
+  // Etiquetas de todas as etapas que ainda vão ser feitas no posto (o terceiro anda pela OS).
+  const gerarEtiquetas = () => { const id = of?.id; if (!id) return; void run(async () => {
+    const alvo = operacoes.filter((o) => o.id && o.status !== "DONE" && o.status !== "SKIPPED" && !o.service_order_code);
+    if (!alvo.length) { setFeedback({ type: "error", message: "Não há etapa a fazer no posto para etiquetar." }); return; }
+    const novos: Record<number, ProductionScanToken> = {};
+    for (const o of alvo) novos[o.id as number] = await createProductionScanToken({ production_order_id: id, operation_id: o.id });
+    setTokensEtapa((m) => ({ ...m, ...novos }));
+    imprimirEtiquetas(Object.keys(novos).map(Number));
+  }); };
+  const [etiquetasImpressas, setEtiquetasImpressas] = useState<number[]>([]);
+  const imprimirEtiquetas = (ids: number[]) => { setEtiquetasImpressas(ids); window.setTimeout(() => window.print(), 150); };
   const ler = () => run(async () => {
     if (!leitura.token.trim() || !leitura.device_id.trim()) { setFeedback({ type: "error", message: "Leia o código de barras e informe o dispositivo." }); return; }
     const r = await scanProductionOrder({
@@ -291,14 +345,12 @@ export function Vpro0900Page(): JSX.Element {
   }); };
 
   const st = of?.status;
-  const pendentes = operacoes.filter((op) => op.status !== "DONE" && op.status !== "SKIPPED").length;
+  const linhasMat = useMemo(() => materiaisDaOF(materiais, faltas, of?.planned_qty ?? 0), [materiais, faltas, of?.planned_qty]);
   const ABAS: Aba<AbaOF>[] = [
     { id: "resumo", label: "Resumo" },
-    { id: "apontamento", label: "Apontamento", contador: apontamentos.length, hint: "Produção, refugo, consumo de insumo e conclusão" },
-    { id: "etapas", label: "Etapas", contador: operacoes.length, hint: "Etapas do roteiro e leitura por código de barras" },
-    { id: "materiais", label: "Materiais", contador: materiais.length, alerta: !!faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO"), hint: "Materiais da ordem, lotes e sucata" },
-    { id: "consumos", label: "Consumos", contador: consumos.length },
-    ...(gestor ? [{ id: "custo" as AbaOF, label: "Custo", hint: "Custo real × padrão" }] : []),
+    { id: "execucao", label: "Execução", contador: operacoes.length, hint: "O roteiro na sequência: cada etapa com o material que entra nela, horas e peças; o apontamento da última etapa e a entrega ao estoque" },
+    { id: "materiais", label: "Materiais", contador: linhasMat.length, alerta: !!faltas && (faltas.status === "PARCIAL" || faltas.status === "SEM_SALDO"), hint: "Tudo o que a ordem consome (da estrutura): por peça, previsto, já saiu, falta sair e saldo; consumo extra ou perda" },
+    ...(gestor ? [{ id: "custo" as AbaOF, label: "Custo", hint: "Custo real em dia (atualizado a cada movimento) × padrão" }] : []),
   ];
   const sit = situacaoOF(st);
   const passo = CICLO.findIndex((c) => c.status === st);
@@ -312,8 +364,9 @@ export function Vpro0900Page(): JSX.Element {
         <div className="erp-tgroup"><button className="erp-btn" onClick={() => void run(async () => { await listar(); if (of?.id) await carregarOF(of.id); })} disabled={busy}>Atualizar</button></div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VPRO0900 — Ordem de Produção" filename="vpro0900" build={() => ({
-          columns: ["OF", "Item", "Planejada", "Produzida", "Refugo", "Situação", "Início", "Término"],
-          rows: visiveis.map((o) => [String(o.id), o.item_code, num(o.planned_qty), num(o.produced_qty ?? 0), num(o.scrapped_qty ?? 0), situacaoOF(o.status).rotulo, data(o.start_date), data(o.end_date)]),
+          columns: ["OF", "Item", "Descrição", "Cliente", "Projeto", "Atende", "Para a OF", "Planejada", "Produzida", "Refugo", "Situação", "Início", "Término"],
+          rows: visiveis.map((o) => [String(o.id), itemDaOF(o).codigo, itemDaOF(o).nome, o.origin?.customer_name ?? "", o.origin?.project_code ?? "", origemDaNecessidade(o.origin),
+            destinoDaPeca(o.origin).replace("↳ para ", ""), num(o.planned_qty), num(o.produced_qty ?? 0), num(o.scrapped_qty ?? 0), situacaoOF(o.status).rotulo, data(o.start_date), data(o.end_date)]),
         })} /></div>
       </div>
 
@@ -323,23 +376,35 @@ export function Vpro0900Page(): JSX.Element {
             <div className="erp-panel-head">
               <span className="erp-panel-title">Ordens</span><span className="erp-count">{visiveis.length}</span>
               <div className="erp-panel-head-spacer" />
-              <input className="erp-search" placeholder="OF, item ou leia o código da OF…" aria-label="Buscar ordem" value={busca} onChange={(e) => setBusca(e.target.value)}
+              <input className="erp-search" placeholder="OF, item, cliente, projeto, pedido…" aria-label="Buscar ordem" value={busca} onChange={(e) => setBusca(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && ofLida) abrir(Number(ofLida)); }} title="O código de barras da ordem impressa (OF000607) abre a ordem: leia e tecle Enter" />
             </div>
             <div className="vpl-list-filters">
               {FILTROS.map((f) => <button key={f.id} type="button" className={`erp-chip${filtro === f.id ? " active" : ""}`} onClick={() => setFiltro(f.id)}>{f.rotulo} · {contagem[f.id]}</button>)}
+              <span style={{ flex: 1 }} />
+              <button type="button" className={`erp-chip${arvore ? " active" : ""}`} aria-pressed={arvore} onClick={() => setArvore((v) => !v)}
+                title="Mostra a OF do produto final com as OFs dos componentes fabricados para ela penduradas, na ordem em que começam">{arvore ? "Árvore ✓" : "Árvore"}</button>
             </div>
             <div className="erp-list">
               {visiveis.length === 0 && <div className="erp-list-empty">{ordens.length ? "Nenhuma ordem com esse filtro." : "Nenhuma ordem de produção ainda."}</div>}
-              {visiveis.map((o) => {
+              {linhas.map((linha) => {
+                if (linha.tipo === "grupo") return (
+                  <div key={`g-${linha.chave}`} className="vpro-grupo" style={{ padding: "8px 14px 6px", background: "var(--v-surface-2, #f1f3f1)", borderBottom: "1px solid var(--v-border-soft, #e3e6e3)", fontSize: 12 }}>
+                    <strong>{linha.titulo}</strong>{linha.detalhe && <span className="erp-text-muted"> · {linha.detalhe}</span>}
+                    <span className="erp-text-muted" style={{ float: "right" }}>{linha.quantidade} OF(s)</span>
+                  </div>
+                );
+                const { o, nivel } = linha;
                 const s = situacaoOF(o.status);
+                const item = itemDaOF(o);
                 const f = o.id ? faltasLista[o.id] : undefined;
                 const comFalta = f && (f.status === "PARCIAL" || f.status === "SEM_SALDO");
                 return (
                   <div key={o.id} className={`erp-list-row${of?.id === o.id ? " sel" : ""}`} onClick={() => abrir(o.id)} role="button" tabIndex={0}
+                    style={nivel ? { paddingLeft: 12 + nivel * 16, borderLeft: "2px solid var(--v-border, #d0d5dd)" } : undefined}
                     onKeyDown={(e) => { if (e.key === "Enter") abrir(o.id); }}>
-                    <span className="erp-list-code">OF {o.id}</span>
-                    <span className="erp-list-sub">{o.item_code}</span>
+                    <span className="erp-list-code">{nivel ? "↳ " : ""}OF {o.id}</span>
+                    <span className="erp-list-sub" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.nome ? `${item.codigo} · ${item.nome}` : item.codigo}>{item.codigo}{item.nome ? <span className="erp-text-muted"> · {item.nome}</span> : null}</span>
                     <span className="vpl-list-row-right">
                       {comFalta && <Selo tom={SITUACAO_FALTA[f.status].tom} title={`${f.missing_items} de ${f.items} material(is) sem saldo suficiente`}>Falta material</Selo>}
                       <Selo tom={s.tom}>{s.rotulo}</Selo></span>
@@ -348,6 +413,7 @@ export function Vpro0900Page(): JSX.Element {
                       <div style={{ flex: 1 }} title="Entregue ao estoque"><Progresso valor={o.produced_qty ?? 0} total={o.planned_qty || 0} /></div>
                       <span className="erp-list-money">{num(o.produced_qty ?? 0)}/{num(o.planned_qty)}</span>
                     </div>
+                    {arvore && nivel > 0 ? <LinhaDaOrigem o={{ ...o, origin: o.origin && { ...o.origin, level: 0 } }} /> : <LinhaDaOrigem o={o} />}
                   </div>
                 );
               })}
@@ -364,16 +430,17 @@ export function Vpro0900Page(): JSX.Element {
               <div style={{ padding: "14px 16px 0" }}>
                 <div className="vpl-record">
                   <div className="vpl-record-main">
-                    <div className="vpl-record-title">OF {of.id} <Selo tom={sit.tom}>{sit.rotulo}</Selo></div>
-                    <div className="vpl-record-sub">{of.item_code}{of.mask ? ` · ${of.mask}` : ""} · {num(of.planned_qty)} a produzir · {data(of.start_date)} → {data(of.end_date)}</div>
-                    {of.cost_pending && <div style={{ marginTop: 6 }}><Selo tom="danger">Custo não apurado</Selo> <span className="erp-hint">{of.cost_pending}</span></div>}
+                    <div className="vpl-record-title">OF {of.id} · {itemDaOF(of).codigo} <Selo tom={sit.tom}>{sit.rotulo}</Selo></div>
+                    <div className="vpl-record-sub">{itemDaOF(of).nome ? `${itemDaOF(of).nome} · ` : ""}{of.mask ? `${of.mask} · ` : ""}{num(of.planned_qty)} a produzir · {data(of.start_date)} → {data(of.end_date)}</div>
+                    <IdentificacaoDaOF of={of} onAbrirOF={(id) => abrir(id)} onEditar={gestor && st !== "CLOSED" && st !== "CANCELLED" ? () => setOrigemAberta(true) : undefined} />
+                    {of.cost_pending && <div style={{ marginTop: 6 }}><Selo tom="danger">Custo não atualizado</Selo> <span className="erp-hint">{of.cost_pending}</span></div>}
                   </div>
                   <div className="vpl-record-actions">
                     {gestor && st === "OPEN" && <button className="erp-btn erp-btn-primary" disabled={busy}
                       onClick={() => (comFalta || filhasAbertas.length ? setConfirmarInicio(true) : iniciar())}>Iniciar produção</button>}
-                    {gestor && operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}>Explodir roteiro</button>}
+                    {gestor && operacoes.length === 0 && (st === "OPEN" || st === "IN_PROGRESS") && <button className="erp-btn" onClick={explodir} disabled={busy}
+                      title="Esta ordem não tem etapas (foi criada antes de o item ter roteiro aprovado). As ordens novas já nascem com as etapas, e iniciar a produção aplica o roteiro sozinho.">Aplicar roteiro</button>}
                     <button className="erp-btn" onClick={imprimir} disabled={busy} title="PDF da ordem para a fábrica: etapas na sequência, quem executa cada uma, material por etapa, ferramentas e serviços em terceiro">Imprimir OP</button>
-                    {gestor && <button className="erp-btn" onClick={apurarCusto} disabled={busy}>Apurar custo</button>}
                     {(st === "COMPLETED" || st === "CLOSED") && of?.id && <PrintButton label="Custo da OF (PDF)" onPrint={() => imprimirCustoProducao({ ordens: [of.id!] })} disabled={busy}
                       title="Composição do custo real × padrão, materiais consumidos e horas de cada etapa (depois de apurar o custo)" />}
                     {gestor && st === "COMPLETED" && <button className="erp-btn erp-btn-primary" onClick={encerrar} disabled={busy}>Encerrar</button>}
@@ -406,15 +473,17 @@ export function Vpro0900Page(): JSX.Element {
               <div className="erp-detail-body">
                 <Aviso feedback={feedback} busy={busy} />
                 {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} cadeia={cadeia} onAbrirOF={(id) => abrir(id)} />}
-                {aba === "apontamento" && <ApontamentoTab of={of} busy={busy} app={app} setApp={setApp} cons={cons} setCons={setCons} apontamentos={apontamentos}
-                  operacoesPendentes={pendentes} conclusao={conclusao} setConclusao={setConclusao} serie={serieDaOF}
-                  onApontar={apontar} onConsumir={consumir} onRetornarSucata={retornarSucata} onConcluir={() => concluir()} gestor={gestor} />}
-                {aba === "etapas" && <EtapasTab of={of} busy={busy} operacoes={operacoes} etapa={etapa} setEtapa={setEtapa} onAlterar={(i, s) => void alterarEtapa(i, s)}
-                  onGerarCodigo={gerarCodigo} token={token} leitura={leitura} setLeitura={setLeitura} onLer={() => void ler()} onExplodir={explodir} />}
-                {aba === "materiais" && <MateriaisTab busy={busy} materiais={materiais} disponibilidade={faltas} form={matForm} setForm={setMatForm} onIncluir={incluirMaterial} onAlocar={alocar}
-                  onSucata={(m) => setSucata({ material: m, quantidade: "", deposito: m.warehouse_id })} gestor={gestor} />}
-                {aba === "consumos" && <ConsumosTab consumos={consumos} />}
-                {aba === "custo" && <CustoTab custo={custo} busy={busy} onApurar={apurarCusto} onReapurarTodas={administrador ? reapurarTodas : undefined} />}
+                {aba === "execucao" && <ExecucaoTab key={of.id} of={of} busy={busy} gestor={gestor} operacoes={operacoes} materiais={linhasMat}
+                  etapa={etapa} setEtapa={setEtapa} onAlterar={(i, s) => void alterarEtapa(i, s)} onGerarCodigo={gerarCodigo} onExplodir={explodir}
+                  tokensEtapa={tokensEtapa} onEtiquetas={gerarEtiquetas} onImprimirEtiqueta={(i) => imprimirEtiquetas([i])} etiquetasImpressas={etiquetasImpressas}
+                  app={app} setApp={setApp} onApontar={apontar} apontamentos={apontamentos}
+                  conclusao={conclusao} setConclusao={setConclusao} onConcluir={() => concluir()} serie={serieDaOF}
+                  token={token} leitura={leitura} setLeitura={setLeitura} onLer={() => void ler()} onVerMateriais={() => setAba("materiais")} />}
+                {aba === "materiais" && <MateriaisOFTab of={of} busy={busy} gestor={gestor} linhas={linhasMat} disponibilidade={faltas}
+                  cons={cons} setCons={setCons} onConsumir={consumir} onRetornarSucata={retornarSucata} apontamentos={apontamentos} consumos={consumos}
+                  form={matForm} setForm={setMatForm} onIncluir={incluirMaterial} onAlocar={alocar}
+                  onSucata={(m) => setSucata({ material: m, quantidade: "", deposito: m.warehouse_id })} />}
+                {aba === "custo" && <CustoTab custo={custo} busy={busy} onReapurarTodas={administrador ? reapurarTodas : undefined} />}
               </div>
             </>)}
           </section>
@@ -438,6 +507,12 @@ export function Vpro0900Page(): JSX.Element {
                   <LookupField value={nova.item_code || undefined} loader={loadItems} entityLabel="item" onChange={(c) => setNova((p) => ({ ...p, item_code: String(c ?? "") }))} /></div>
                 <div className="erp-field erp-c4"><label className="erp-label erp-req" htmlFor="nova-qtd">Quantidade</label>
                   <input id="nova-qtd" className="erp-input num" type="number" min={0} value={nova.planned_qty || ""} onChange={(e) => setNova((p) => ({ ...p, planned_qty: Number(e.target.value) }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Cliente</label>
+                  <LookupField value={nova.customer_code || undefined} loader={loadCustomers} entityLabel="cliente" clearable placeholder="Sem cliente (estoque)"
+                    onChange={(c) => setNova((p) => ({ ...p, customer_code: c ? Number(c) : null }))} /></div>
+                <div className="erp-field erp-c6"><label className="erp-label">Projeto</label>
+                  <LookupField value={nova.project_code || undefined} loader={loadProjects} entityLabel="projeto" clearable allowManualCode={false} placeholder="Sem projeto" vazio="Nenhum projeto cadastrado — cadastre na VPLA0120"
+                    onChange={(c) => setNova((p) => ({ ...p, project_code: c ? String(c) : null }))} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label">Máquina</label>
                   <LookupField value={nova.machine_id || undefined} loader={loadMachinesById} entityLabel="máquina" clearable onChange={(c) => setNova((p) => ({ ...p, machine_id: c ? Number(c) : undefined }))} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label" htmlFor="nova-ini">Início</label>
@@ -463,6 +538,8 @@ export function Vpro0900Page(): JSX.Element {
           </div>
         </div>
       )}
+
+      {origemAberta && of && <OrigemDialog of={of} busy={busy} onSalvar={salvarOrigem} onFechar={() => setOrigemAberta(false)} />}
 
       {sucata && (
         <div className="erp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sucata-titulo" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setSucata(null); }}>
@@ -496,7 +573,7 @@ export function Vpro0900Page(): JSX.Element {
         onCancelar={() => setConfirmarInicio(false)}
         onConfirmar={() => { setConfirmarInicio(false); iniciar(); }} />
       <ConfirmDialog aberto={confirmarSemBaixa} titulo="Concluir a ordem com material não baixado?"
-        mensagem={`Estes materiais da lista ainda não saíram do estoque para a ordem: ${naoBaixados.map((l) => `${l.item_code} (falta ${num(l.remaining)} ${l.uom ?? ""})`.trim()).join("; ")}. Concluída assim, o custo real da ordem fica sem esse material. Registre o consumo na aba Apontamento se ele foi usado.`}
+        mensagem={`Estes materiais da lista ainda não saíram do estoque para a ordem: ${naoBaixados.map((l) => `${l.item_code} (falta ${num(l.remaining)} ${l.uom ?? ""})`.trim()).join("; ")}. Os de baixa automática saem agora, na entrega final; os de baixa manual ficam de fora e o custo real da ordem fica sem eles. Registre o consumo na aba Materiais (Consumo extra ou perda) se foram usados.`}
         assunto={`${naoBaixados.length} material(is) sem baixa`} rotuloConfirmar="Concluir mesmo assim"
         onCancelar={() => setConfirmarSemBaixa(false)}
         onConfirmar={() => { setConfirmarSemBaixa(false); concluir(true); }} />

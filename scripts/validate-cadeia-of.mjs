@@ -18,6 +18,8 @@ const servico = read('src/services/productionOrderService.ts');
 const tela = read('src/components/screens/producao/Vpro0900Page.tsx');
 const abas = read('src/components/screens/producao/of/OfTabs.tsx');
 const params = read('src/components/screens/planejamento/Vpln0100Page.tsx');
+const materiaisTab = read('src/components/screens/producao/of/MateriaisOFTab.tsx');
+const materiaisJuncao = read('src/components/screens/producao/of/materiais.ts');
 
 // Bloco de uma função do serviço e os campos que ela lê.
 const bloco = (src, nome) => {
@@ -33,9 +35,13 @@ check('o início da OF lê os avisos do servidor', lidos(servico, 'parseOrder').
 check('a disponibilidade lê o reservado para a OF', lidos(servico, 'parseAvailability').includes('reserved_for_order'));
 check('a tela usa a resposta do início (não descarta os avisos)', /startProductionOrder\(id\)/.test(tela) && /r\.warnings/.test(tela));
 check('o início confirma com componente fabricado ainda não pronto', /filhasAbertas\.length \? setConfirmarInicio|filhasAbertas\.length \?/.test(tela));
-check('a aba Materiais mostra a coluna do reservado', /Reservado para esta OF/.test(abas) && /reserved_for_order/.test(abas));
+check('a aba Materiais mostra o reservado para a OF', /reservado para esta OF/.test(materiaisTab) && /reserved_for_order/.test(materiaisJuncao));
 check('o resumo mostra a cadeia e abre a OF ligada', /CadeiaPainel/.test(abas) && /onAbrirOF=/.test(tela));
 check('OF filha cancelada não conta como pendente', /'CANCELLED'\]\.includes/.test(bloco(servico, 'filhaPendente')));
+check('a cadeia lê a demanda independente (produção para estoque, sem pedido)', lidos(servico, 'getProductionChain').includes('independent_demands') && lidos(servico, 'getProductionChain').includes('demand_code'));
+check('o painel da cadeia mostra a demanda independente', /independent_demands\.length > 0/.test(abas) && /Demanda\(s\) independente\(s\) atendida\(s\)/.test(abas));
+check('trocar de OF não mostra a cadeia/materiais/faltas da OF anterior (carrega tudo e troca de uma vez)', !/set\w+\(await parte\(/.test(tela) && /setCadeia\(cadeiaDaOF\)/.test(tela));
+check('a observação da OF não mostra a marca técnica do MRP (parent_item=)', /parent_item=\\d\+/.test(abas) && /notasLegiveis\(of\.notes\)/.test(abas));
 check('parâmetro 52 tem só as opções que o servidor aceita', /52: \[/.test(params) && ['NAO', 'AVISAR', 'BLOQUEAR'].every((v) => params.includes(`valor: "${v}"`)));
 
 const BACKEND = process.env.VENTURE_BACKEND_ROOT ?? '/home/felipepanosso/GolandProjects/panossoerp-ajustes';
@@ -54,7 +60,7 @@ if (!fs.existsSync(path.join(BACKEND, 'go.mod'))) {
   check('a rota da cadeia existe no backend', /Get\("\/\{id\}\/chain"/.test(rota));
   const casos = [
     ['ordem da cadeia (parseChainOrder)', lidos(servico, 'parseChainOrder'), tags(resp, 'ProductionChainOrder')],
-    ['cadeia (getProductionChain)', lidos(servico, 'getProductionChain'), new Set([...tags(resp, 'ProductionChainResponse'), ...tags(resp, 'ProductionChainSalesOrder')])],
+    ['cadeia (getProductionChain)', lidos(servico, 'getProductionChain'), new Set([...tags(resp, 'ProductionChainResponse'), ...tags(resp, 'ProductionChainSalesOrder'), ...tags(resp, 'ProductionChainDemand')])],
     ['linha da disponibilidade (parseAvailability)', lidos(servico, 'parseAvailability'),
       new Set([...tags(disp, 'MaterialAvailabilityLine'), ...tags(disp, 'MaterialAvailabilitySummary')])],
     ['avisos do início (parseOrder)', ['warnings'], tags(resp, 'ProductionOrderResponse')],

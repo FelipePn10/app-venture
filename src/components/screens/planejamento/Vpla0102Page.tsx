@@ -4,7 +4,7 @@ import {
   type ConsumoDoItem, consumoDoItem, decimalParaApi, encerrarDemanda, gerarOFDaDemanda, listarDemandas, motivoDe, obterDemanda,
 } from "@/services/demandaService";
 import { type MovementTypeDTO, listMovementTypes } from "@/services/stockService";
-import { loadCostCenters, loadCustomers, loadItems, loadWarehouses } from "@/services/lookups";
+import { loadCostCenters, loadCustomers, loadItems, loadProjects, loadWarehouses } from "@/services/lookups";
 import { LookupField } from "@/components/ui/LookupField";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { hojeLocal } from "@/utils/dataLocal";
@@ -414,8 +414,11 @@ export function Vpla0102Page(): JSX.Element {
                   <LookupField value={form.centro} loader={loadCostCenters} entityLabel="centro de custo" clearable onChange={(c) => setForm((f) => f && ({ ...f, centro: c ? Number(c) : undefined }))} /></div>
                 <div className="erp-field erp-c6"><label className="erp-label">Cliente (opcional)</label>
                   <LookupField value={form.cliente} loader={loadCustomers} entityLabel="cliente" clearable onChange={(c) => setForm((f) => f && ({ ...f, cliente: c ? Number(c) : undefined }))} /></div>
-                <div className="erp-field erp-c6"><label className={`erp-label${form.motivo === "PROJETO" ? " erp-req" : ""}`} htmlFor="dem-proj">Projeto / obra</label>
-                  <input id="dem-proj" className="erp-input" maxLength={60} value={form.projeto} onChange={(e) => setForm((f) => f && ({ ...f, projeto: e.target.value }))} /></div>
+                <div className="erp-field erp-c6"><label className={`erp-label${form.motivo === "PROJETO" ? " erp-req" : ""}`}>Projeto / obra</label>
+                  <LookupField value={form.projeto || undefined} loader={loadProjects} entityLabel="projeto" clearable allowManualCode={false} textoLivre
+                    placeholder="Sem projeto" vazio="Nenhum projeto cadastrado — cadastre na VPLA0120"
+                    onChange={(c) => setForm((f) => f && ({ ...f, projeto: c ? String(c) : "" }))} />
+                  <span className="erp-hint">Do cadastro de Projetos (VPLA0120): a OF desta demanda herda o projeto, e as dos componentes também.</span></div>
                 <div className="erp-field erp-c4"><label className="erp-label" htmlFor="dem-prio">Prioridade</label>
                   <select id="dem-prio" className="erp-input" value={form.prioridade} onChange={(e) => setForm((f) => f && ({ ...f, prioridade: Number(e.target.value) }))}>
                     {PRIORIDADES.map((p) => <option key={p.v} value={p.v}>{p.r}</option>)}

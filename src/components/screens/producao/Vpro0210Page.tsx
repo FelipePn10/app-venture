@@ -111,8 +111,14 @@ export function Vpro0210Page(): JSX.Element {
     const base = `${r.scheduled_operations} operação(ões) sequenciada(s) em ${r.orders_processed} ordem(ns).`;
     // Programando para trás, ordem que precisaria começar no passado não cabe
     // no prazo: é a informação que o PCP procura, não pode virar só uma barra.
-    setFeedback(r.late_orders.length
-      ? { type: "info", message: `${base} ${r.late_orders.length} ordem(ns) não cabe(m) no prazo e foram reprogramadas para frente: OF ${r.late_orders.join(", ")}.` }
+    const atraso = r.late_orders.length
+      ? ` ${r.late_orders.length} ordem(ns) não cabe(m) no prazo e foram reprogramadas para frente: OF ${r.late_orders.join(", ")}.`
+      : "";
+    // OF que não cabe em um ano de máquina fica fora e as outras seguem
+    // programadas: o aviso diz qual OF e etapa olhar.
+    const fora = r.without_capacity.length ? ` Ficaram fora da programação: ${r.without_capacity.join("; ")}.` : "";
+    setFeedback(atraso || fora
+      ? { type: fora ? "error" : "info", message: `${base}${atraso}${fora}` }
       : { type: "success", message: base });
   });
 
@@ -257,7 +263,7 @@ export function Vpro0210Page(): JSX.Element {
                         <thead><tr><th>OF</th><th>Item · operação</th><th>Centro</th><th>Início</th><th>Fim</th><th className="num">Duração</th><th className="num">Feito</th><th>Situação</th><th /></tr></thead>
                         <tbody>{barras.map((b, i) => (
                           <tr key={`${b.sequence_id ?? "f"}-${i}`} className={b.is_late ? "vpl-late" : undefined}>
-                            <td className="vpl-strong">OF {b.order_number ?? b.production_order_id ?? "—"}</td>
+                            <td className="vpl-strong">OF {b.production_order_id ?? b.order_number ?? "—"}</td>
                             <td>{b.item_code ?? b.label}{b.operation_name && <span className="vpl-sub">{b.operation_name}</span>}</td>
                             <td>{b.work_center_name ?? nomeCentro(b.work_center_id)}</td>
                             <td>{dataHora(b.start)}</td><td>{dataHora(b.end)}</td>
@@ -319,7 +325,7 @@ export function Vpro0210Page(): JSX.Element {
                         <option value="">Selecionar…</option>
                         {sequenciaveis.map((b) => (
                           <option key={b.sequence_id} value={b.sequence_id}>
-                            OF {b.order_number ?? b.production_order_id} · {b.item_code ?? b.label}{b.operation_name ? ` · ${b.operation_name}` : ""} · {b.work_center_name ?? nomeCentro(b.work_center_id)} · {dataHora(b.start)}
+                            OF {b.production_order_id ?? b.order_number} · {b.item_code ?? b.label}{b.operation_name ? ` · ${b.operation_name}` : ""} · {b.work_center_name ?? nomeCentro(b.work_center_id)} · {dataHora(b.start)}
                           </option>
                         ))}
                       </select>

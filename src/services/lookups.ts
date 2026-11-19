@@ -1,6 +1,7 @@
 import { enumLabel } from '@/utils/enumLabels';
 import { useAuthStore } from '@/store/authStore';
 import { aoInvalidarListas, invalidarListas } from '@/services/lookupInvalidation';
+import { listProjects, SITUACAO_PROJETO } from '@/services/projectService';
 import { httpClient, unwrapArray, unwrapObject, parseNum, parseStr } from '@/services/fiscalShared';
 import { listCustomers } from '@/services/customerService';
 import { listItems } from '@/services/itemService';
@@ -219,6 +220,21 @@ export const loadSuppliersById = cached(async () =>
     label: `${s.code} — ${s.name || s.trade_name || 'sem nome'}`,
     sub: s.document_number || undefined,
     inactive: s.is_active === false,
+  })),
+);
+
+/**
+ * Projetos (VPLA0120) pelo CÓDIGO, que é o que o pedido, a demanda e a OF
+ * guardam. Encerrado ou cancelado não recebe vínculo novo: sai da escolha e
+ * continua identificando o que já está ligado.
+ */
+export const loadProjects = cached(async () =>
+  (await listProjects()).map((p) => ({
+    code: p.code,
+    label: p.name,
+    sub: [p.customer_name, p.status !== 'ATIVO' ? SITUACAO_PROJETO[p.status].rotulo : ''].filter(Boolean).join(' · ') || undefined,
+    search: p.customer_name ?? '',
+    inactive: p.status !== 'ATIVO',
   })),
 );
 

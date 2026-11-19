@@ -39,6 +39,8 @@ export interface SequenceResult {
   orders_processed: number;
   /** Ordens que não cabem no prazo: para entregar na data teriam de começar no passado. */
   late_orders: number[];
+  /** Ordens que ficaram fora da programação: uma etapa não cabe em um ano do centro (uma frase por ordem). */
+  without_capacity: string[];
 }
 
 /**
@@ -53,6 +55,7 @@ export async function sequenceAps(direction: string = 'FORWARD'): Promise<Sequen
     scheduled_operations: parseNum(o, 'scheduled_operations', 'ScheduledOperations'),
     orders_processed: parseNum(o, 'orders_processed', 'OrdersProcessed'),
     late_orders: unwrapArray(o['late_orders'] ?? o['LateOrders']).map((x) => Number(x)),
+    without_capacity: unwrapArray(o['without_capacity']).map((x) => String(x)),
   };
 }
 

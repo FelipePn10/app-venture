@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  type InterFactoryDTO, type ProductionPlanDTO, createProductionPlan, getInterFactories, setInterFactories,
+  type InterFactoryDTO, type ProductionPlanDTO, createProductionPlan, getInterFactories, setInterFactories, updateProductionPlan,
 } from "@/services/productionPlanService";
 import { type SalesOrderItemDTO, listSalesOrderItems, listSalesOrders } from "@/services/salesOrderService";
 import { abrangenciaDo, demandasIndependentes } from "./planos";
@@ -9,7 +9,8 @@ import { dataHora } from "../planFormat";
 import { useAcao } from "../planHooks";
 
 type Abrangencia = "todos" | "classificacao" | "ordem";
-const NOVO = { code: "", name: "", abrangencia: "todos" as Abrangencia, classification: "", class_item_codes: "", order_item_code: "" };
+const NOVO = { code: "", name: "", abrangencia: "todos" as Abrangencia, classification: "", class_item_codes: "", order_item_code: "", agrupa: false };
+const AGRUPA_DICA = "Ordens planejadas do mesmo item com a mesma data viram uma só (menos ordens e menos preparação de máquina).";
 
 
 /**
@@ -60,11 +61,24 @@ export function PlanosTab({ planos, plano, onEscolher, onRecarregar }: {
       classification: novo.abrangencia === "classificacao" ? novo.classification.trim() : undefined,
       class_item_codes: novo.abrangencia === "classificacao" && novo.class_item_codes.trim() ? novo.class_item_codes.trim() : undefined,
       order_item_code: novo.abrangencia === "ordem" ? Number(novo.order_item_code) : undefined,
+      group_same_date_orders: novo.agrupa,
     });
     setNovo(NOVO);
     await onRecarregar();
     onEscolher(code);
     setFeedback({ type: "success", message: `Plano ${code} criado e selecionado. Rode o MRP na barra acima.` });
+  });
+
+  // Alterar o plano escolhido: nome e agrupamento. O resto do plano vai como foi lido.
+  const atual = planos.find((p) => p.code === plano);
+  const [edicao, setEdicao] = useState<{ name: string; agrupa: boolean } | null>(null);
+  useEffect(() => { setEdicao(atual ? { name: atual.name, agrupa: !!atual.group_same_date_orders } : null); }, [atual]);
+  const salvarPlano = () => run(async () => {
+    if (!atual || !edicao) return;
+    if (!edicao.name.trim()) { setFeedback({ type: "error", message: "Informe o nome do plano." }); return; }
+    await updateProductionPlan({ ...atual, name: edicao.name.trim(), group_same_date_orders: edicao.agrupa });
+    await onRecarregar();
+    setFeedback({ type: "success", message: `Plano ${atual.code} salvo${edicao.agrupa ? ": ordens do mesmo item no mesmo dia serão agrupadas no próximo MRP" : ""}.` });
   });
 
   const salvarInter = (lista: InterFactoryDTO[], msg: string) => run(async () => {
@@ -89,13 +103,14 @@ export function PlanosTab({ planos, plano, onEscolher, onRecarregar }: {
           ? <Vazio titulo="Nenhum plano cadastrado" texto="Crie o primeiro plano abaixo. O MRP sempre roda sobre um plano." />
           : (
             <table className="erp-grid">
-              <thead><tr><th>Plano</th><th>Abrangência</th><th>Demandas independentes</th><th>Modos</th><th>Último cálculo</th><th>Situação</th><th /></tr></thead>
+              <thead><tr><th>Plano</th><th>Abrangência</th><th>Demandas independentes</th><th>Modos</th><th>Agrupa no mesmo dia</th><th>Último cálculo</th><th>Situação</th><th /></tr></thead>
               <tbody>{planos.map((p) => (
                 <tr key={p.code} className={`vpl-click${plano === p.code ? " erp-row-sel" : ""}`} onClick={() => onEscolher(p.code)}>
                   <td className="vpl-strong">{p.code} · {p.name}</td>
                   <td>{abrangenciaDo(p)}</td>
                   <td>{demandasIndependentes(p.independent_demands)}</td>
                   <td>{(p.planning_types ?? []).join(", ") || "—"}</td>
+                  <td>{p.group_same_date_orders ? "Sim" : "Não"}</td>
                   <td>{p.last_calculated_at ? dataHora(p.last_calculated_at) : <span className="erp-text-muted">Nunca calculado</span>}</td>
                   <td>{p.is_active ? <Selo tom="ok">Ativo</Selo> : <Selo tom="muted">Inativo</Selo>}</td>
                   <td className="vpl-actions">{plano === p.code ? <Selo tom="info">Em uso na tela</Selo> : <button className="erp-btn erp-btn-sm" onClick={(e) => { e.stopPropagation(); onEscolher(p.code); }}>Usar este plano</button>}</td>
@@ -136,8 +151,22 @@ export function PlanosTab({ planos, plano, onEscolher, onRecarregar }: {
                 </select>
                 <span className="erp-hint">Só essa linha entra no cálculo (sem previsão, demanda independente ou outros pedidos). Para o dia a dia, use "Todos os itens".</span></div>
             </>)}
+            <div className="erp-field erp-c12"><label className="erp-check" title={AGRUPA_DICA}><input type="checkbox" checked={novo.agrupa} onChange={(e) => setNovo((p) => ({ ...p, agrupa: e.target.checked }))} />Agrupar ordens do mesmo item no mesmo dia</label>
+              <span className="erp-hint">{AGRUPA_DICA}</span></div>
             <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void criar()} disabled={busy}>Criar plano</button></div>
           </div>
+        </Painel>
+
+        <Painel titulo="Alterar plano" sub={atual ? `plano ${atual.code}` : "escolha um plano"}>
+          {!atual || !edicao ? <p className="erp-hint">Escolha um plano na lista para alterar.</p> : (
+            <div className="erp-fieldset-body" style={{ padding: 0 }}>
+              <div className="erp-field erp-c12"><label className="erp-label erp-req" htmlFor="pl-ed-name">Nome</label>
+                <input id="pl-ed-name" className="erp-input" value={edicao.name} onChange={(e) => setEdicao((s) => s && { ...s, name: e.target.value })} /></div>
+              <div className="erp-field erp-c12"><label className="erp-check" title={AGRUPA_DICA}><input id="pl-ed-agrupa" type="checkbox" checked={edicao.agrupa} onChange={(e) => setEdicao((s) => s && { ...s, agrupa: e.target.checked })} />Agrupar ordens do mesmo item no mesmo dia</label>
+                <span className="erp-hint">{AGRUPA_DICA} Vale a partir do próximo cálculo do MRP.</span></div>
+              <div className="erp-field erp-c12"><button className="erp-btn erp-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void salvarPlano()} disabled={busy}>Salvar plano</button></div>
+            </div>
+          )}
         </Painel>
 
         <Painel titulo="Empresas inter-fábrica" sub={plano ? `plano ${plano}` : "escolha um plano"}>

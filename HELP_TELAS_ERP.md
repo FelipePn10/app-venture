@@ -247,6 +247,7 @@ regra de cada linha.
 | [VPLA0102](#vpla0102--demanda-independente) | Demanda Independente | Produzir ou comprar sem pedido de venda: estoque, amostra, feira, consumo interno, assistência, projeto; consumo pela venda e OF direta. |
 | [VMRP0100](#vmrp0100--mrp--planejamento-de-materiais) | MRP — Planejamento de Materiais | Rodar o MRP por plano, analisar sugestões de ordens, firmar (→ Ordem Planejada/OF), perfil MRP por item, exceções e regras configuradas. |
 | [VPRE0201](#vpre0201--previsão-de-vendas) | Previsão de Vendas | Lançar, gerar (histórico ou estatística) e comparar com o realizado a previsão de vendas; apropriação e bloqueio. |
+| [VPLA0120](#vpla0120--projetos) | Projetos | Obra, contrato ou desenvolvimento de pedidos, demandas e OFs; a OF herda cliente e projeto da origem e as dos componentes, da OF pai. |
 | [VPLA0310](#vpla0310--política-de-planejamento-por-item) | Política de Planejamento por Item | Estratégia (consumo pela venda ou sob encomenda), janela de consumo, horizonte firme e tempo de segurança por item ou classificação. |
 
 **[Suprimento](#suprimento)** — Fornecedores, pedido de compra, solicitação, cotação, contratos, recebimento e serviços de terceiros.
@@ -1871,7 +1872,9 @@ tudo num quadro (Gantt) e remanejar quando precisa.
 
 **Sentido da programação.** Para frente (a partir de hoje) ou para trás (a partir
 da entrega). Ordens que não cabem no prazo são reprogramadas para frente, e a
-mensagem lista quais.
+mensagem lista quais. A OF com uma etapa que não cabe em um ano de máquina fica
+fora da programação e as demais são programadas; a mensagem diz a OF, a etapa e
+as horas pedidas (quase sempre tempo do roteiro na unidade errada).
 
 **Barra da tela.**
 - **Parâmetros:** a lista das máquinas que o sequenciamento enxerga, com o
@@ -1923,10 +1926,27 @@ e baixar o estoque com os retalhos.
 **Para que serve.** A ordem de fabricação (OF): do início à entrega no estoque, com
 apontamentos, etapas, materiais, consumos e o custo real.
 
+**Reconhecer a OF.** Cada linha da lista diz o item (código e nome), o **cliente**,
+o **projeto**, o **pedido ou a demanda** que ela atende e, quando é OF de
+componente, **"↳ para OF 239 · RN-01001"** — a ordem que usa a peça dela. O botão
+**Árvore** agrupa as ordens pelo **pedido de venda** (senão a demanda, senão o
+projeto) — o título do grupo mostra o cliente — e, dentro do grupo, pendura as
+OFs dos componentes embaixo da OF do produto final, na ordem em que começam.
+OF sem pedido, demanda nem projeto fica no fim, em **Sem pedido, demanda ou
+projeto**. A busca acha por OF, item, cliente, projeto, pedido,
+demanda ou OF pai. No cabeçalho da OF aberta, **Componente para** e **Produto
+final** abrem a ordem com um clique.
+
+**Cliente e projeto.** A OF já nasce com os dois: vêm do pedido de venda, da
+demanda independente ou, na OF de componente, da OF pai. **Cliente e projeto** no
+cabeçalho troca os dois; as OFs dos componentes que herdaram desta acompanham, e
+a que tem cliente ou projeto próprio fica como está. Projeto com cliente traz o
+cliente junto. OF encerrada ou cancelada não muda.
+
 **Origem.** A OF nasce ao **firmar** uma ordem planejada do MRP (VMRP0100), pelo
 **Gerar OF agora** da demanda independente (VPLA0102) ou pelo botão **+ Nova OF**
-(item, quantidade, máquina, início, término, almoxarifado que recebe, centro de
-custo, prioridade, observações). O início não pode ser depois do término, e o
+(item, quantidade, cliente, projeto, máquina, início, término, almoxarifado que
+recebe, centro de custo, prioridade, observações). O início não pode ser depois do término, e o
 almoxarifado que recebe precisa ser da empresa em que você está.
 
 **Situações.** Aberta → Em produção → Concluída → Encerrada (ou Cancelada).
@@ -1937,12 +1957,14 @@ almoxarifado que recebe precisa ser da empresa em que você está.
 |---|---|---|
 | Criar OF | **+ Nova OF** (ou firmar no VMRP0100) | PCP |
 | Iniciar produção | botão **Iniciar produção** | PCP |
-| Iniciar/pausar/concluir etapa | aba **Etapas** | Operador (posto) e PCP |
-| Apontar produção e refugo, registrar consumo | aba **Apontamento** | Operador e PCP |
-| Entregar ao estoque / concluir a OF | aba **Apontamento** → **Entregar e concluir** | PCP ou almoxarifado |
+| Iniciar/pausar/concluir etapa | aba **Execução**, na linha da etapa | Operador (posto) e PCP |
+| Apontar produção e refugo (o material sai sozinho) | aba **Execução** → **Apontar produção — última etapa** | Operador e PCP |
+| Consumo extra ou perda | aba **Materiais** → **Consumo extra ou perda** | Operador e PCP |
+| Entregar ao estoque / concluir a OF | aba **Execução** → **Entregar ao estoque** | PCP ou almoxarifado |
 | Encerrar (após concluída) | botão **Encerrar** | PCP |
 | Cancelar | botão **Cancelar OF** — só sem apontamento, consumo ou peças no terceiro; cancela junto a OS de terceiro e a inspeção abertas | PCP |
-| Apurar custo | botão **Apurar custo** / aba **Custo** | PCP / custos |
+| Trocar cliente e projeto | botão **Cliente e projeto** | PCP |
+| Custo real | aba **Custo** — atualizado sozinho a cada movimento | PCP / custos |
 
 O perfil **Operador** vê só o que pode fazer: abre a OF, executa etapas, aponta,
 consome e imprime. Para ler o código de barras da ordem impressa, leia na busca da
@@ -1960,23 +1982,52 @@ estoque (entrega) move.
    - **Imprimir OP:** baixa o PDF da ordem para a fábrica — observações, etapas na
      sequência com quem executa (centro ou terceiro), peças que entram, horas,
      inspeção, material por etapa, ferramentas, serviços em terceiro e campos de visto.
-   - **Explodir roteiro**, **Apurar custo**, **Encerrar**.
-2. **Apontamento:** quantidade boa, refugo e motivo, data, máquina e **operador**
-   (obrigatório). *Baixa automática da estrutura no depósito* baixa os
-   componentes junto. Também há a leitura por **código de barras** (código lido,
-   ação, dispositivo, funcionário).
-3. **Etapas:** as operações do roteiro — iniciar, **pausar** ou **interromper**
-   (com motivo) e **concluir**. Para concluir, informe horas trabalhadas ou peças
-   produzidas: é o que desconta a vida útil da ferramenta. Etapa feita em
-   **terceiro** mostra "Com o terceiro — OS n": ela anda pela OS no VTPS0100 (a
-   remessa põe em andamento, o recebimento de todas as peças conclui e libera a
-   etapa seguinte), não pelos botões.
-4. **Materiais:** o que a ordem consome — a baixar, livre no depósito, o que as OFs
-   da frente vão consumir, disponível e falta. Inclua material, aloque lotes e
-   registre o destino da sucata.
-5. **Consumos:** registre o consumo do insumo (sai do estoque para a ordem) ou
-   **retorne como sucata** (volta ao estoque com valor).
-6. **Custo:** custo real × padrão nos mesmos componentes do custo padrão
+   - **Encerrar**. **Aplicar roteiro** só aparece na OF sem etapas (criada antes
+     de o item ter roteiro aprovado); iniciar a produção também aplica sozinho.
+2. **Execução:** o que a fábrica faz, na ordem do roteiro. Cada linha é uma
+   etapa (copiada do roteiro aprovado do item quando a OF é criada — mudar o
+   roteiro depois não muda a OF), com a situação, quantos materiais entram nela
+   e os botões **Iniciar**, **Pausar**, **Interromper** (com motivo) e
+   **Concluir**. A seta da linha abre a etapa: o **material desta etapa** (da
+   estrutura — por peça, previsto, já saiu, falta sair, baixa automática ou
+   manual), **horas trabalhadas** e **peças feitas** (descontam a vida útil da
+   ferramenta e entram no custo), o **código de barras da etapa** e o
+   histórico. **Não é preciso digitar horas nem peças:** a etapa cronometra
+   sozinha de **Iniciar** até **Pausar**, **Interromper** ou **Concluir** (as
+   pausas ficam de fora) e, sem peças informadas, vale a quantidade da ordem;
+   digitar corrige. Etapa em andamento há mais de 12 h (esquecida aberta de um
+   dia para o outro) não grava sozinha: digite as horas trabalhadas. A linha mostra **⏱** com o tempo da etapa em andamento e
+   **Horas real / padrão** (padrão = preparação + operação do roteiro; em
+   vermelho quando passa). **Código de barras da etapa** mostra o código ali
+   mesmo, com **Imprimir etiqueta**; **Etiquetas das etapas** gera e imprime
+   uma etiqueta por etapa a fazer. A etapa atual já abre sozinha. Material sem etapa definida na
+   estrutura aparece na primeira etapa. Etapa feita em **terceiro** mostra "Com
+   o terceiro — OS n": ela anda pela OS no VTPS0100 (a remessa põe em
+   andamento, o recebimento de todas as peças conclui), não pelos botões.
+   - **Apontar produção — última etapa:** peças boas, refugo e motivo, data,
+     máquina e **operador** (obrigatório) das peças que terminaram o roteiro.
+     Os materiais de **baixa automática** saem do estoque na proporção das
+     peças boas, cada um do seu almoxarifado — não é preciso lançar o consumo.
+     Pode apontar em partes (por turno).
+   - **Entregar ao estoque** (PCP ou almoxarifado) e a lista de **Apontamentos**.
+   - **Leitura por código de barras** (terminal do chão de fábrica) fica
+     recolhida no fim da aba.
+3. **Materiais:** tudo o que a ordem consome, numa lista só — vem da estrutura
+   do item na criação, com as trocas feitas depois (substituto, material
+   incluído): etapa em que entra, por peça, previsto, **já saiu**, **falta
+   sair**, disponível (com o que está **reservado para esta OF** e o que as OFs
+   da frente vão consumir), almoxarifado e baixa **automática** (sai no
+   apontamento e na entrega) ou **manual** (sai pela requisição ou pelo
+   consumo). OF antiga que nasceu sem lista recebe a lista da estrutura vigente
+   sozinha; se ela já tinha produzido algo, a lista entra com baixa **manual**,
+   para não lançar de uma vez o material do que já foi feito. Na mesma aba: **Consumo extra ou perda** (só para o que a baixa
+   automática não cobre: material fora da lista, perda além da prevista ou
+   material de baixa manual; se o item está na lista, o que sair ali é
+   descontado da próxima baixa — nunca sai duas vezes), **Retornar como
+   sucata**, o histórico **Lançado à mão** e, para o PCP, **Incluir ou trocar
+   material**, **Lotes** e **Sucata** por linha.
+4. **Custo:** atualizado **sozinho** a cada apontamento, consumo, entrega e
+   devolução de sucata — não há botão de apurar. Custo real × padrão nos mesmos componentes do custo padrão
    (VCUS0100): **material** (o que saiu do estoque para a OF), **máquina e
    preparação** e **mão de obra** (horas apontadas nas etapas × taxas do centro),
    **serviços de terceiros** (peças recebidas × preço do pedido, da VTPS0100 ou do
@@ -1992,7 +2043,9 @@ unidade; vazio, se o perfil tiver máscara, o sistema gera. Entrega
 parcial mantém a OF em produção; a entrega **final** conclui. Não dá para
 concluir com quantidade zero se houver ordem de serviço de terceiro pendente.
 
-**Encerrar** apura o custo real. A mensagem avisa se ficou algum custo pendente.
+**Encerrar** fecha o custo real. Se o custo não pôde ser atualizado (por exemplo,
+falta a taxa do centro), a OF mostra **Custo não atualizado** com o motivo;
+corrigida a causa, o próximo movimento ou o **Reapurar todas as OFs** refaz.
 
 **Telas relacionadas.** VMRP0100, VENT0202, VPRO0210, VEST0100, VPRO1000,
 VTPS0100 (serviço de terceiro).
@@ -2193,7 +2246,7 @@ planejador.
 | **Exceções** | As mensagens do cálculo com a ação na própria linha: reprogramar para a data que o cálculo pede, cancelar ordem sem demanda ou marcar como analisada (fica registrado quem tratou e como). **Horizonte firme**: a sugestão precisava começar dentro do horizonte firme (VPLA0310/parâmetros da VPLN0100) e foi para o fim dele; a mensagem diz quanto ela chega depois da necessidade — firme a ordem à mão se precisar antes e marque como tratada. **Demanda vencida** (estoque que passou da janela de consumo sem venda) e **demanda atrasada** (amostra, feira, projeto com saldo e data vencida): **Encerrar saldo** encerra a demanda (VPLA0102) ali mesmo. **Enviar as exceções por webhook ou e-mail** manda a lista do plano a quem precisa saber |
 | **Rastreamento** | De cada pedido ou demanda até as compras dos componentes, e de uma ordem até quem depende dela — "esta compra serve a quem?" e "o que falta para este pedido sair?" |
 | **Perfil do item** | O perfil por data: demanda, planejadas, firmes e estoque projetado — e quando o estoque fura. Também as regras configuradas do item: **Campo** `lead_time` (prazo em dias úteis) ou `lote_minimo`, o **Valor** e, se a regra for só para uma configuração, a **Condição da máscara** (igual, diferente ou faixa "mínimo-máximo"). Sem condição, a regra vale para o item inteiro |
-| **Planos** | Cadastro dos planos (código, nome, abrangência, classificação) e as empresas inter-fábrica de cada plano. Na abrangência *um item de ordem*, busque o pedido pelo **número** e escolha a linha |
+| **Planos** | Cadastro dos planos (código, nome, abrangência, classificação, **Agrupar ordens do mesmo item no mesmo dia**) e as empresas inter-fábrica de cada plano. Na abrangência *um item de ordem*, busque o pedido pelo **número** e escolha a linha. **Alterar plano** muda o nome e o agrupamento do plano escolhido; vale no próximo cálculo |
 | **Relatórios** | Relatórios do plano em grade legível |
 
 **De onde vem o prazo.** O MRP recua o início de cada ordem pelo prazo do item,
@@ -2249,6 +2302,25 @@ de compra), VVND0200 (aba Atendimento).
   previsão; semanas cuja segunda-feira cai no período são recusadas na gravação.
 
 **Telas relacionadas.** VCAL0100, VVND0500.
+
+---
+
+#### VPLA0120 — Projetos
+
+**Para que serve.** Cadastrar a obra, o contrato ou o desenvolvimento ao qual
+pedidos de venda, demandas independentes e ordens de fabricação pertencem.
+
+**Campos.** Código (o que se escolhe no pedido e na demanda), nome, cliente
+(vazio = projeto interno), situação (Ativo, Encerrado, Cancelado), início,
+término e observações. O código não se repete na empresa.
+
+**Como a OF usa.** O pedido de venda (VVND0200) e a demanda (VPLA0102) escolhem o
+projeto desta lista; a OF gerada herda o projeto e o cliente, e as OFs dos
+componentes herdam da OF pai. Projeto encerrado ou cancelado não recebe OF nova;
+as já ligadas continuam. A lista mostra quantas OFs do projeto estão abertas e
+no total — busque o código do projeto na VPRO0900 para vê-las.
+
+**Telas relacionadas.** VPRO0900, VVND0200, VPLA0102.
 
 ---
 

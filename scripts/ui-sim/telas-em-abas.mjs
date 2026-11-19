@@ -183,18 +183,18 @@ try {
   await page.locator('.erp-list-row', { hasText: 'OF 77' }).click();
   await page.locator('.erp-detail-panel .erp-tabs').waitFor();
   const abasOf = (await page.locator('.erp-detail-panel .erp-tabs .erp-tab').allTextContents()).join(' | ');
-  for (const esperada of ['Resumo', 'Apontamento', 'Etapas', 'Materiais', 'Consumos', 'Custo']) {
+  for (const esperada of ['Resumo', 'Execução', 'Materiais', 'Custo']) {
     assert.ok(abasOf.includes(esperada), `a aba "${esperada}" não apareceu na OF: ${abasOf}`);
   }
   texto = await corpo();
   assert.ok(!contem(texto, 'Apontar produção'), 'o apontamento apareceu no resumo');
-  await page.locator('.erp-detail-panel .erp-tabs .erp-tab', { hasText: 'Apontamento' }).click();
+  await page.locator('.erp-detail-panel .erp-tabs .erp-tab', { hasText: 'Execução' }).click();
   texto = await corpo();
-  assert.ok(contem(texto, 'Apontar produção') && contem(texto, 'Entregar ao estoque'), 'a aba Apontamento não trouxe apontamento e entrega');
-  assert.ok(!contem(texto, 'Leitura por código de barras'), 'a leitura por código apareceu fora da aba Etapas');
-  await page.locator('.erp-detail-panel .erp-tabs .erp-tab', { hasText: 'Etapas' }).click();
+  assert.ok(contem(texto, 'Corte') && contem(texto, 'Apontar produção') && contem(texto, 'Entregar ao estoque'), 'a aba Execução não trouxe o roteiro, o apontamento e a entrega');
+  assert.ok(contem(texto, 'Leitura por código de barras'), 'a leitura por código sumiu da Execução');
+  await page.locator('.erp-detail-panel .erp-tabs .erp-tab', { hasText: 'Materiais' }).click();
   texto = await corpo();
-  assert.ok(contem(texto, 'Corte') && contem(texto, 'Leitura por código de barras'), 'a aba Etapas não trouxe o roteiro');
+  assert.ok(contem(texto, 'Falta sair') && contem(texto, 'Consumo extra ou perda'), 'a aba Materiais não trouxe a lista e o consumo extra');
 
   const semRuido = erros.filter((e) => !/favicon|ResizeObserver|Failed to load resource/i.test(e));
   assert.deepEqual(semRuido, [], `erros de console: ${semRuido.join(' | ')}`);

@@ -146,7 +146,7 @@ export function Vben0200Page(): JSX.Element {
               columns: ["Data", "Tipo", "Cliente", "NF-e do cliente", "Item do cliente", "Descrição", "NCM", "UM", "Quantidade", "Valor unit.", "CFOP", "Nota de saída", "OF", "Observação"],
               rows: (movs ?? []).map((m) => [dataHora(m.created_at), `${MOVEMENT_LABELS[m.movement_type]}${m.reversed_at ? " (estornado)" : ""}`, `${m.customer_code} ${m.customer_name}`,
                 `${m.nfe_number}/${m.nfe_series}`, m.customer_item_code, m.description, m.ncm, m.uom, num(n(m.quantity), 4), num(n(m.unit_value), 4), m.cfop ?? "—",
-                m.exit_nf_number ? `${m.exit_nf_number}/${m.exit_nf_series ?? ""}` : "—", m.production_order_number ? `OF ${m.production_order_number}` : "—", m.reversal_reason ?? m.reason ?? ""]),
+                m.exit_nf_number ? `${m.exit_nf_number}/${m.exit_nf_series ?? ""}` : "—", m.production_order_id ? `OF ${m.production_order_id}` : "—", m.reversal_reason ?? m.reason ?? ""]),
             })} />}
         </div>
       </div>
@@ -223,7 +223,7 @@ export function Vben0200Page(): JSX.Element {
                         <td className="num">{m.movement_type === "RECEIPT" ? "+" : "−"}{num(n(m.quantity), 4)}</td>
                         <td>{m.cfop ?? "—"}</td>
                         <td>{m.exit_nf_number ? `${m.exit_nf_number}/${m.exit_nf_series ?? ""}${m.exit_nf_status ? ` · ${STATUS_NOTA[m.exit_nf_status] ?? m.exit_nf_status.toLowerCase()}` : ""}` : "—"}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>{m.production_order_number ? `OF ${m.production_order_number}` : "—"}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{m.production_order_id ? `OF ${m.production_order_id}` : "—"}</td>
                         <td>{m.reversal_reason ?? (m.scrap_destination ? SCRAP_LABELS[m.scrap_destination] : null) ?? m.reason ?? "—"}</td>
                       </tr>
                     ))}</tbody>

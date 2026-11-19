@@ -94,7 +94,9 @@ export async function listPriceTableItems(code: number): Promise<PriceTableItemD
   return unwrapArray(data).map(parseTableItem);
 }
 export async function upsertPriceTableItem(dto: PriceTableItemDTO): Promise<PriceTableItemDTO> {
-  const { data } = await httpClient.post('/api/purchase-price-tables/items', dto);
+  // Fornecedor vazio/0 é preço genérico: não manda 0 (a busca de preço ignorava a linha).
+  const body = { ...dto, supplier_code: dto.supplier_code && dto.supplier_code > 0 ? dto.supplier_code : undefined };
+  const { data } = await httpClient.post('/api/purchase-price-tables/items', body);
   return parseTableItem(data);
 }
 export async function deletePriceTableItem(id: number): Promise<void> {

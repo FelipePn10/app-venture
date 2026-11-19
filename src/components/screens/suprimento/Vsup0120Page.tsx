@@ -165,7 +165,7 @@ export function Vsup0120Page(): JSX.Element {
                       <div className="erp-field erp-c2"><label className="erp-label erp-req">Preço</label><input className="erp-input num" type="number" step="0.01" value={itemForm.price} onChange={(e) => setIF("price", Number(e.target.value))} /></div>
                       <div className="erp-field erp-c1"><label className="erp-label">UM</label><SelectUnidade aria-label="Unidade de compra" value={itemForm.uom} onChange={(u) => setIF("uom", u)} /></div>
                       <div className="erp-field erp-c2"><label className="erp-label">Qtd mín.</label><input className="erp-input num" type="number" value={itemForm.min_qty ?? 0} onChange={(e) => setIF("min_qty", Number(e.target.value))} /></div>
-                      <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label><LookupField value={itemForm.supplier_code} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Genérico" onChange={(c) => setIF("supplier_code", c)} /></div>
+                      <div className="erp-field erp-c3"><label className="erp-label">Fornecedor</label><LookupField value={itemForm.supplier_code} loader={loadSuppliers} entityLabel="fornecedor" placeholder="Genérico" onChange={(c) => setIF("supplier_code", Number(c) > 0 ? Number(c) : undefined)} /></div>
                       <div className="erp-field erp-c4">
                         <label className="erp-check">
                           <input type="checkbox" checked={itemForm.update_replacement_value ?? false}
