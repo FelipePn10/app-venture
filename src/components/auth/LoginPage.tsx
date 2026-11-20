@@ -9,6 +9,7 @@ import {
   dominioDoEmail,
   lerTenantAtivo,
   resolverTenantPorEmail,
+  type Tenant,
 } from "@/services/tenantDirectory";
 import { WindowControls } from "@/components/window/WindowControls";
 import { PasswordChangeDialog } from "@/components/system/PasswordChangeDialog";
@@ -43,6 +44,13 @@ export function LoginPage(): JSX.Element {
   const [empresaLabel, setEmpresaLabel] = useState<string | null>(
     () => lerTenantAtivo()?.name ?? null,
   );
+  // Grupo de empresas (ex.: Tecnofer/Truckparts): cada uma tem servidor, base e
+  // senha próprios, e a pessoa escolhe aqui em qual entrar. Começa na última
+  // escolhida; fora de um grupo a lista fica vazia e o seletor nem aparece.
+  const [grupo, setGrupo] = useState<Tenant[]>([]);
+  const [tenantEscolhido, setTenantEscolhido] = useState<string | null>(
+    () => lerTenantAtivo()?.id ?? null,
+  );
 
   useEffect(() => {
     let alive = true;
@@ -60,20 +68,32 @@ export function LoginPage(): JSX.Element {
     const dominio = dominioDoEmail(email);
     if (!dominio || !dominio.includes(".")) {
       setEmpresaLabel(null);
+      setGrupo([]);
       return;
     }
     let alive = true;
     const timer = setTimeout(() => {
-      void resolverTenantPorEmail(email).then((resolvido) => {
+      void resolverTenantPorEmail(email, tenantEscolhido).then((resolvido) => {
         if (!alive) return;
         setEmpresaLabel(resolvido.fixadoNoBuild ? null : (resolvido.tenant?.name ?? null));
+        setGrupo(resolvido.alternativas);
+        if (resolvido.alternativas.length > 0) setTenantEscolhido(resolvido.tenant?.id ?? null);
       });
     }, 400);
     return () => {
       alive = false;
       clearTimeout(timer);
     };
-  }, [email]);
+  }, [email, tenantEscolhido]);
+
+  function escolherEmpresaDoGrupo(id: string): void {
+    setTenantEscolhido(id);
+    setEmpresaLabel(grupo.find((t) => t.id === id)?.name ?? null);
+    // A lista de empresas internas veio do servidor anterior: não vale no outro.
+    setEmpresas([]);
+    setEmpresaEscolhida(undefined);
+    setErrorMessage(null);
+  }
 
   const versionLabel = clientVersion && clientVersion !== "dev" ? `v${clientVersion}` : "dev";
 
@@ -96,7 +116,7 @@ export function LoginPage(): JSX.Element {
     try {
       // A empresa é resolvida ANTES do login: é ela que define para qual servidor
       // a requisição vai. Gravar depois não serviria — o pedido já teria saído.
-      const destino = await resolverTenantPorEmail(email);
+      const destino = await resolverTenantPorEmail(email, tenantEscolhido);
       definirTenantAtivo(destino);
 
       const response = await login({ email, password, rememberMe, enterpriseCode: empresaEscolhida });
@@ -478,6 +498,34 @@ export function LoginPage(): JSX.Element {
         .lp-input.lp-input-error {
           border-color: #e05252;
           box-shadow: 0 0 0 3px rgba(224, 82, 82, 0.1);
+        }
+
+        .lp-grupo {
+          display: flex;
+          gap: 8px;
+        }
+
+        .lp-grupo-opcao {
+          flex: 1;
+          padding: 9px 12px;
+          border: 1px solid #d5ddd7;
+          border-radius: 8px;
+          background: #fff;
+          color: #2f3b33;
+          font-size: 13px;
+          cursor: pointer;
+        }
+
+        .lp-grupo-opcao:focus-visible {
+          outline: 2px solid #3e9654;
+          outline-offset: 2px;
+        }
+
+        .lp-grupo-ativa {
+          border-color: #3e9654;
+          background: rgba(62, 150, 84, 0.08);
+          color: #1f5a30;
+          font-weight: 600;
         }
 
         .lp-field-tenant {
@@ -1005,7 +1053,7 @@ export function LoginPage(): JSX.Element {
                     {fieldErrors.email}
                   </span>
                 )}
-                {!fieldErrors.email && empresaLabel && (
+                {!fieldErrors.email && empresaLabel && grupo.length === 0 && (
                   <span className="lp-field-tenant">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                       <path
@@ -1020,6 +1068,29 @@ export function LoginPage(): JSX.Element {
                   </span>
                 )}
               </div>
+
+              {grupo.length > 1 && (
+                <div className="lp-field">
+                  <div className="lp-field-label">
+                    <span className="lp-label-text">Entrar em</span>
+                  </div>
+                  <div className="lp-grupo" role="radiogroup" aria-label="Empresa do grupo">
+                    {grupo.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={tenantEscolhido === t.id}
+                        className={`lp-grupo-opcao${tenantEscolhido === t.id ? " lp-grupo-ativa" : ""}`}
+                        onClick={() => escolherEmpresaDoGrupo(t.id)}
+                      >
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="lp-field-tenant">Usuário e senha são os desta empresa.</span>
+                </div>
+              )}
 
               {/* Senha */}
               <div className="lp-field">
@@ -1221,7 +1292,7 @@ export function LoginPage(): JSX.Element {
           </div>
         </section>
       </main>
-      {showPasswordDialog && <PasswordChangeDialog onClose={() => setShowPasswordDialog(false)} />}
+      {showPasswordDialog && <PasswordChangeDialog tenantId={tenantEscolhido} onClose={() => setShowPasswordDialog(false)} />}
       {showNotes && <ReleaseNotesDialog onClose={() => setShowNotes(false)} />}
     </>
   );
