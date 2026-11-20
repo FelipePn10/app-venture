@@ -8,6 +8,7 @@ import { CrpCargaChart } from "./crp/CrpCargaChart";
 import { type Aba, Abas, Aviso, Cabecalho, Kpis, Painel, Progresso, Rodape, Selo, Vazio } from "../planejamento/planUi";
 import { data, dataHora, horas, num, pct } from "../planejamento/planFormat";
 import { useAcao } from "../planejamento/planHooks";
+import { chaveDaEmpresa } from "@/services/tenantDirectory";
 
 /**
  * CRP — Capacity Requirements Planning: quanto de máquina o plano pede, por
@@ -28,7 +29,7 @@ export function Vpro0200Page(): JSX.Element {
   const { busy, feedback, setFeedback, run } = useAcao();
   const [aba, setAba] = useState<AbaCrp>("geral");
   const [planos, setPlanos] = useState<CrpPlanOption[]>([]);
-  const [plano, setPlano] = useState<number | undefined>(() => { try { return Number(localStorage.getItem(CHAVE_PLANO)) || undefined; } catch { return undefined; } });
+  const [plano, setPlano] = useState<number | undefined>(() => { try { return Number(localStorage.getItem(chaveDaEmpresa(CHAVE_PLANO))) || undefined; } catch { return undefined; } });
   const [linhas, setLinhas] = useState<CrpEntry[]>([]);
   const [centros, setCentros] = useState<Map<number, string>>(new Map());
   const [filtroCentro, setFiltroCentro] = useState<number | "">("");
@@ -50,7 +51,7 @@ export function Vpro0200Page(): JSX.Element {
 
   useEffect(() => {
     if (!plano) { setLinhas([]); return; }
-    try { localStorage.setItem(CHAVE_PLANO, String(plano)); } catch { /* preferência local */ }
+    try { localStorage.setItem(chaveDaEmpresa(CHAVE_PLANO), String(plano)); } catch { /* preferência local */ }
     void run(async () => { setLinhas(await listCrpPlan(plano)); });
   }, [plano, run]);
 

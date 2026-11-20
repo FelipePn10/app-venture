@@ -19,6 +19,7 @@ import { ReleaseNotesDialog } from "@/components/system/ReleaseNotesDialog";
 import { PreferenciasDialog } from "@/components/system/PreferenciasDialog";
 import { sincronizarPreferencias } from "@/services/preferenciasService";
 import { searchErpScreens } from "@/utils/screenSearch";
+import { fecharJanelasDeRotina } from "@/services/windowSession";
 
 const MAX_RECENTS   = 5;
 const MAX_FAVORITES = 8;
@@ -115,7 +116,7 @@ export function DashboardPage(): JSX.Element {
 
   function getNameByCode(code: string): string { return ERP_SCREENS.find(s => s.code === code)?.title ?? code; }
 
-  function handleLogout() { clearAuthData(); navigate("/login", { replace: true }); }
+  function handleLogout() { void fecharJanelasDeRotina(); clearAuthData(); navigate("/login", { replace: true }); }
 
   const toggleFavorite = useCallback((code: string) => {
     setFavorites(prev => {

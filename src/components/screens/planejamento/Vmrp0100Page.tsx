@@ -22,6 +22,7 @@ import { abrangenciaDo, demandasIndependentes } from "./mrp/planos";
 import { RelatoriosTab } from "./mrp/RelatoriosTab";
 import { CoberturaTab } from "./mrp/CoberturaTab";
 import { type AlvoRastreamento, RastreamentoTab } from "./mrp/RastreamentoTab";
+import { chaveDaEmpresa } from "@/services/tenantDirectory";
 
 /**
  * MRP — Planejamento das Necessidades de Materiais.
@@ -36,7 +37,7 @@ type AbaMrp = "geral" | "cobertura" | "sugestoes" | "planejadas" | "excecoes" | 
 const CHAVE_PLANO = "vmrp0100.plano";
 
 function planoLembrado(): number | undefined {
-  try { return Number(localStorage.getItem(CHAVE_PLANO)) || undefined; } catch { return undefined; }
+  try { return Number(localStorage.getItem(chaveDaEmpresa(CHAVE_PLANO))) || undefined; } catch { return undefined; }
 }
 
 export function Vmrp0100Page(): JSX.Element {
@@ -75,7 +76,7 @@ export function Vmrp0100Page(): JSX.Element {
   useEffect(() => { void run(carregarPlanos); }, [run, carregarPlanos]);
   useEffect(() => {
     if (!plano) return;
-    try { localStorage.setItem(CHAVE_PLANO, String(plano)); } catch { /* preferência local, opcional */ }
+    try { localStorage.setItem(chaveDaEmpresa(CHAVE_PLANO), String(plano)); } catch { /* preferência local, opcional */ }
     setCarregado(false);
     void run(() => carregarResultado(plano));
   }, [plano, run, carregarResultado]);

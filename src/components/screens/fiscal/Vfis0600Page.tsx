@@ -3,6 +3,7 @@ import { gerarEfdAutomatica, type SpedEfdPedido, type SpedEfdResultado } from "@
 import { errMessage } from "@/services/fiscalShared";
 import { downloadBlob } from "@/services/fileDownload";
 import { paraLatin1, competenciaAnterior, cpfValido } from "./spedArquivo";
+import { chaveDaEmpresa } from "@/services/tenantDirectory";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
 
@@ -14,10 +15,10 @@ const CHAVE_PREFERENCIAS = "vfis0600.preferencias";
 type Preferencias = Pick<SpedEfdPedido, "perfil" | "ind_atividade" | "contabilista_nome" | "contabilista_cpf" | "contabilista_crc" | "contabilista_cnpj" | "cod_receita_icms">;
 
 function lerPreferencias(): Partial<Preferencias> {
-  try { return JSON.parse(localStorage.getItem(CHAVE_PREFERENCIAS) ?? "{}") as Partial<Preferencias>; } catch { return {}; }
+  try { return JSON.parse(localStorage.getItem(chaveDaEmpresa(CHAVE_PREFERENCIAS)) ?? "{}") as Partial<Preferencias>; } catch { return {}; }
 }
 function gravarPreferencias(p: Preferencias): void {
-  try { localStorage.setItem(CHAVE_PREFERENCIAS, JSON.stringify(p)); } catch { /* navegador sem armazenamento: só não lembra */ }
+  try { localStorage.setItem(chaveDaEmpresa(CHAVE_PREFERENCIAS), JSON.stringify(p)); } catch { /* navegador sem armazenamento: só não lembra */ }
 }
 
 function pedidoInicial(): SpedEfdPedido {

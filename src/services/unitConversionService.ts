@@ -1,4 +1,5 @@
 import { httpClient, parseStr, parseNum, parseBool, unwrapArray, unwrapObject, type Obj } from '@/services/fiscalShared';
+import { aoInvalidarListas } from '@/services/lookupInvalidation';
 
 /**
  * Unidades de medida e conversões (VSUP0110).
@@ -61,6 +62,7 @@ export async function ativarUnidade(code: string, ativa: boolean): Promise<void>
  */
 let cacheUnidades: Promise<Unidade[]> | null = null;
 let cacheLidoEm = 0;
+aoInvalidarListas(() => { cacheUnidades = null; });
 /** O cache vale 30 s: o bastante para as telas abertas juntas não repetirem a consulta. */
 const VALIDADE_CACHE_MS = 30_000;
 /**

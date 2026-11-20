@@ -1,4 +1,5 @@
 import { httpClient, unwrapArray, parseStr, parseNum, unwrapObject } from '@/services/fiscalShared';
+import { aoInvalidarListas } from '@/services/lookupInvalidation';
 
 /**
  * Mapas id→nome para clientes e fornecedores, usados para exibir nomes em telas
@@ -10,6 +11,8 @@ type NameMap = Map<number, string>;
 
 let customersCache: Promise<NameMap> | null = null;
 let suppliersCache: Promise<NameMap> | null = null;
+// Outra empresa no login (Tecnofer → Truckparts) não pode herdar os nomes da anterior.
+aoInvalidarListas(() => { customersCache = null; suppliersCache = null; });
 
 function buildMap(raw: unknown): NameMap {
   const map: NameMap = new Map();

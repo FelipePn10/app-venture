@@ -13,6 +13,9 @@ declare module '@tauri-apps/api/webviewWindow' {
   export class WebviewWindow {
     constructor(label: string, options?: WebviewOptions);
     static getByLabel(label: string): Promise<WebviewWindow | null>;
+    static getAll(): Promise<WebviewWindow[]>;
+    readonly label: string;
+    close(): Promise<void>;
     setFocus(): Promise<void>;
     once(event: 'tauri://created' | 'tauri://error', handler: (event: unknown) => void): Promise<() => void>;
   }
