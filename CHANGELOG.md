@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.11] — 2026-11-20
+
 ## Correções
 - **Trocar de empresa no mesmo computador (Tecnofer ↔ Truckparts):** ao sair, as rotinas abertas fecham e as listas dos campos de busca recomeçam do zero, então a outra empresa não mostra mais cadastros da anterior. O plano escolhido (VPRO0200, VMRP0100), o almoxarifado e as ondas da VEST0150 e as preferências do SPED (VFIS0600) passam a ser guardados por empresa.
 
