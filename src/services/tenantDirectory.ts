@@ -381,6 +381,22 @@ export function lerTenantAtivo(): TenantAtivoGuardado | null {
   }
 }
 
+/**
+ * Chave do armazenamento local para dado que é da EMPRESA (id de plano, de
+ * almoxarifado, perfil do SPED). Num computador que entra nas empresas de um
+ * grupo, a mesma chave misturaria a Tecnofer com a Truckparts — e um id de uma
+ * base aponta para outro registro na outra. A empresa padrão e as sem grupo
+ * ficam com a chave antiga, para não perder o que já estava guardado.
+ */
+export function chaveDaEmpresa(chave: string): string {
+  const ativo = lerTenantAtivo();
+  if (!ativo?.id) return chave;
+  const catalogo = lerCatalogoGuardado()?.catalogo ?? FALLBACK_DIRECTORY;
+  if (ativo.id === catalogo.defaultTenantId) return chave;
+  const tenant = catalogo.tenants.find((t) => t.id === ativo.id) ?? null;
+  return empresasDoGrupo(catalogo, tenant).length > 0 ? `${chave}@${ativo.id}` : chave;
+}
+
 export function esquecerTenantAtivo(): void {
   apagarLocal(ACTIVE_TENANT_KEY);
 }

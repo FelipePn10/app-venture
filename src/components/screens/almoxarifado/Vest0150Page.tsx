@@ -13,6 +13,7 @@ import { dataBR, qtd, useAcao } from "./estoque/comum";
 import { FeedbackBox } from "./estoque/ui";
 import { CuidadosDosItens } from "@/components/system/CuidadosDosItens";
 import { cuidadosDosItens, textoDoCuidado, type CuidadoDoItem } from "@/services/cuidadosDosItens";
+import { chaveDaEmpresa } from "@/services/tenantDirectory";
 
 type Modo = "consultar" | "separar" | "contar" | "mover" | "receber" | "compra" | "ciclica" | "etiquetas";
 const MODOS: { id: Modo; label: string; dica: string }[] = [
@@ -30,10 +31,10 @@ const CHAVE_ONDA = "vest0150.onda.";
 const grande = { fontSize: 22, height: 52 } as const;
 
 function lerGuardado(chave: string): string | null {
-  try { return localStorage.getItem(chave); } catch { return null; }
+  try { return localStorage.getItem(chaveDaEmpresa(chave)); } catch { return null; }
 }
 function guardar(chave: string, valor: string | null) {
-  try { if (valor === null) localStorage.removeItem(chave); else localStorage.setItem(chave, valor); } catch { /* sem armazenamento, segue sem guardar */ }
+  try { if (valor === null) localStorage.removeItem(chaveDaEmpresa(chave)); else localStorage.setItem(chaveDaEmpresa(chave), valor); } catch { /* sem armazenamento, segue sem guardar */ }
 }
 
 /** Campo do leitor: o leitor digita o código e manda Enter. Fica sempre pronto para a próxima leitura. */

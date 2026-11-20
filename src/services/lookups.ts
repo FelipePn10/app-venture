@@ -77,6 +77,7 @@ export type LookupLoader = () => Promise<LookupOption[]>;
  */
 interface ItemDoPosto { id: number; code: string; name: string; is_active: boolean }
 let cadastrosDoPosto: Promise<{ machines: ItemDoPosto[]; employees: ItemDoPosto[]; warehouses: ItemDoPosto[] }> | null = null;
+aoInvalidarListas(() => { cadastrosDoPosto = null; });
 function doPosto() {
   if (!cadastrosDoPosto) {
     cadastrosDoPosto = httpClient.get('/api/production-order/shop-floor-lookups').then(({ data }) => {

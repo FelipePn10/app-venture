@@ -515,6 +515,19 @@ await it('portal/tenants.json é aceito pelo validador do app', async () => {
   assert.deepEqual((await m.resolverTenantPorEmail('pessoa@usimacusinagem.com.br')).alternativas, []);
 });
 
+await it('preferência da empresa: Truckparts separada; Tecnofer e Usimac com a chave antiga', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  assert.equal(m.chaveDaEmpresa('vpro0200.plano'), 'vpro0200.plano', 'sem empresa gravada');
+  m.definirTenantAtivo(await m.resolverTenantPorEmail('pcp@tecnofer.com.br'));
+  assert.equal(m.chaveDaEmpresa('vpro0200.plano'), 'vpro0200.plano');
+  m.definirTenantAtivo(await m.resolverTenantPorEmail('pcp@tecnofer.com.br', 'truckparts'));
+  assert.equal(m.chaveDaEmpresa('vpro0200.plano'), 'vpro0200.plano@truckparts');
+  m.definirTenantAtivo(await m.resolverTenantPorEmail('pcp@usimacusinagem.com.br'));
+  assert.equal(m.chaveDaEmpresa('vpro0200.plano'), 'vpro0200.plano');
+});
+
 // ── relatório ────────────────────────────────────────────────────────────────
 
 let falhas = 0;

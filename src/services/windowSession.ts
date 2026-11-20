@@ -59,3 +59,15 @@ export async function receiveWindowSession(): Promise<Session | null> {
     })();
   });
 }
+
+/**
+ * Ao sair, as rotinas abertas guardam a sessão da empresa que saiu. O próximo
+ * login pode ser em outra (Tecnofer → Truckparts): elas fecham junto.
+ */
+export async function fecharJanelasDeRotina(): Promise<void> {
+  if (!isTauri() || getCurrentWindow().label !== 'main') return;
+  try {
+    const janelas = await WebviewWindow.getAll();
+    await Promise.all(janelas.filter((j) => j.label.startsWith('screen-')).map((j) => j.close().catch(() => {})));
+  } catch { /* sem permissão ou fora do Tauri: as rotinas pedem login sozinhas */ }
+}

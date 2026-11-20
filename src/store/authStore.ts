@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, type StateStorage } from 'zustand/middleware';
 import type { AuthUser } from '@/types/auth';
+import { invalidarListas } from '@/services/lookupInvalidation';
 
 /**
  * Onde a sessão é guardada depende do "manter conectado":
@@ -153,8 +154,11 @@ export const useAuthStore = create<AuthState>()(
           userName: userName ?? state.userName,
           user: user ?? state.user,
         })),
-      clearAuthData: () =>
-        set({ token: null, refreshToken: null, expiresAt: null, userName: null, user: null }),
+      clearAuthData: () => {
+        set({ token: null, refreshToken: null, expiresAt: null, userName: null, user: null });
+        // As listas memorizadas são da empresa que saiu; o próximo login pode ser em outra.
+        invalidarListas();
+      },
       isAuthenticated: () => {
         const { token, expiresAt } = get();
         return Boolean(token) && !isTokenExpired(expiresAt);
