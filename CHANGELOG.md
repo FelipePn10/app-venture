@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## Novidades
+- **Tecnofer e Truckparts no mesmo login:** quem é da Tecnofer escolhe em **Entrar em: Tecnofer | Truckparts** e entra com o mesmo e-mail e a mesma senha. O sistema lembra a última empresa usada no computador. Para trocar de empresa, saia e entre escolhendo a outra.
+
+## Correções
+- **Trocar senha no login:** a troca vai para a empresa escolhida, não mais para a última usada no computador.
+
 ## [v1.19.9] — 2026-11-19
 
 ## Novidades

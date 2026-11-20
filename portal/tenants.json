@@ -7,17 +7,41 @@
     "Um cliente novo entra aqui, sem nova versão do desktop. Regras:",
     "  - apiUrl precisa ser https, só host, sem caminho nem credencial;",
     "  - emailDomains sem @ e em minúsculas;",
-    "  - domínio fora da lista cai em defaultApiUrl, que hoje é a Tecnofer.",
+    "  - domínio fora da lista cai em defaultApiUrl; defaultTenantId diz de quem",
+    "    é esse servidor (precisa ter o MESMO apiUrl), hoje a Tecnofer;",
+    "  - group reúne empresas do mesmo grupo: no login, quem cai numa delas escolhe",
+    "    em qual entrar (Tecnofer/Truckparts). Sem group, não há seletor (Usimac).",
     "",
     "Este arquivo NÃO contém segredo: é só o mapa de para onde cada empresa fala."
   ],
   "defaultApiUrl": "https://api.venturerp.com",
+  "defaultTenantId": "tecnofer",
   "tenants": [
+    {
+      "id": "tecnofer",
+      "name": "Tecnofer",
+      "apiUrl": "https://api.venturerp.com",
+      "emailDomains": [
+        "tecnofer.com.br"
+      ],
+      "group": "tecnofer"
+    },
+    {
+      "id": "truckparts",
+      "name": "Truckparts",
+      "apiUrl": "https://truckparts.api.venturerp.com",
+      "emailDomains": [
+        "truckparts.com.br"
+      ],
+      "group": "tecnofer"
+    },
     {
       "id": "usimac",
       "name": "Usimac Usinagem",
       "apiUrl": "https://usimac.api.venturerp.com",
-      "emailDomains": ["usimacusinagem.com.br"]
+      "emailDomains": [
+        "usimacusinagem.com.br"
+      ]
     }
   ]
 }

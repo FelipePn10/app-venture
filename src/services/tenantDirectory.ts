@@ -38,12 +38,23 @@ export interface Tenant {
   apiUrl: string;
   /** Domínios de e-mail que levam a esta empresa. */
   emailDomains: string[];
+  /**
+   * Grupo econômico (ex.: "tecnofer" reúne Tecnofer e Truckparts). Quem cai numa
+   * empresa de grupo com mais de uma empresa escolhe no login em qual entrar.
+   * Sem grupo, o login segue direto — é o caso da Usimac.
+   */
+  group?: string;
 }
 
 export interface TenantDirectory {
   tenants: Tenant[];
   /** Usado quando o domínio digitado não está em nenhum tenant. */
   defaultApiUrl: string;
+  /**
+   * Empresa que atende domínios fora do catálogo. Só serve para o login saber o
+   * NOME e o GRUPO de quem cai no padrão (ex.: usuário da Tecnofer com Gmail).
+   */
+  defaultTenantId?: string;
 }
 
 /**
@@ -53,7 +64,22 @@ export interface TenantDirectory {
  */
 const FALLBACK_DIRECTORY: TenantDirectory = {
   defaultApiUrl: 'https://api.venturerp.com',
+  defaultTenantId: 'tecnofer',
   tenants: [
+    {
+      id: 'tecnofer',
+      name: 'Tecnofer',
+      apiUrl: 'https://api.venturerp.com',
+      emailDomains: ['tecnofer.com.br'],
+      group: 'tecnofer',
+    },
+    {
+      id: 'truckparts',
+      name: 'Truckparts',
+      apiUrl: 'https://truckparts.api.venturerp.com',
+      emailDomains: ['truckparts.com.br'],
+      group: 'tecnofer',
+    },
     {
       id: 'usimac',
       name: 'Usimac Usinagem',
@@ -116,6 +142,7 @@ function tenantValido(valor: unknown): valor is Tenant {
   if (typeof t.name !== 'string' || !t.name.trim()) return false;
   if (typeof t.apiUrl !== 'string' || !urlDeApiValida(t.apiUrl)) return false;
   if (!Array.isArray(t.emailDomains)) return false;
+  if (t.group !== undefined && typeof t.group !== 'string') return false;
   return t.emailDomains.every((d) => typeof d === 'string' && d.includes('.'));
 }
 
@@ -128,14 +155,25 @@ function catalogoValido(valor: unknown): TenantDirectory | null {
       ? normalizarUrl(bruto.defaultApiUrl)
       : '';
   if (!padrao && lista.length === 0) return null;
-  return {
-    defaultApiUrl: padrao || FALLBACK_DIRECTORY.defaultApiUrl,
-    tenants: lista.map((t) => ({
+  const tenants: Tenant[] = lista.map((t) => {
+    const grupo = t.group?.trim().toLowerCase();
+    return {
       id: t.id.trim(),
       name: t.name.trim(),
       apiUrl: normalizarUrl(t.apiUrl),
       emailDomains: t.emailDomains.map((d) => d.trim().toLowerCase()).filter(Boolean),
-    })),
+      ...(grupo ? { group: grupo } : {}),
+    };
+  });
+  const defaultApiUrl = padrao || FALLBACK_DIRECTORY.defaultApiUrl;
+  // O tenant padrão só vale se existir E falar com o mesmo servidor do padrão:
+  // um catálogo incoerente não pode desviar quem cai no padrão para outra API.
+  const idPadrao = typeof bruto.defaultTenantId === 'string' ? bruto.defaultTenantId.trim() : '';
+  const tenantPadrao = tenants.find((t) => t.id === idPadrao && t.apiUrl === defaultApiUrl);
+  return {
+    defaultApiUrl,
+    ...(tenantPadrao ? { defaultTenantId: tenantPadrao.id } : {}),
+    tenants,
   };
 }
 
@@ -238,34 +276,69 @@ export function acharTenantPorDominio(catalogo: TenantDirectory, dominio: string
   return escolhido;
 }
 
+/**
+ * Empresas entre as quais a pessoa pode escolher no login: as do mesmo grupo do
+ * tenant, na ordem do catálogo. Vazio quando o tenant não tem grupo ou o grupo
+ * tem uma empresa só — aí não há escolha a oferecer.
+ */
+export function empresasDoGrupo(catalogo: TenantDirectory, tenant: Tenant | null): Tenant[] {
+  if (!tenant?.group) return [];
+  const doGrupo = catalogo.tenants.filter((t) => t.group === tenant.group);
+  return doGrupo.length > 1 ? doGrupo : [];
+}
+
 export interface TenantResolvido {
   /** Nulo quando o domínio não está no catálogo e caiu no servidor padrão. */
   tenant: Tenant | null;
   apiUrl: string;
   /** Verdadeiro quando o endereço vem do build, não do catálogo. */
   fixadoNoBuild: boolean;
+  /** Empresas do grupo para o seletor do login; vazio = sem seletor. */
+  alternativas: Tenant[];
 }
+
+/** Uma revalidação forçada por sessão: ver `resolverTenantPorEmail`. */
+let catalogoRevalidado = false;
 
 /**
  * Resolve para onde o login deve ir. Não lança: um catálogo inalcançável ou um
  * domínio fora dele ainda produzem um endereço utilizável.
  */
-export async function resolverTenantPorEmail(email: string): Promise<TenantResolvido> {
+export async function resolverTenantPorEmail(
+  email: string,
+  escolhidoId?: string | null,
+): Promise<TenantResolvido> {
   if (PINNED_API_URL) {
-    return { tenant: null, apiUrl: normalizarUrl(PINNED_API_URL), fixadoNoBuild: true };
+    return { tenant: null, apiUrl: normalizarUrl(PINNED_API_URL), fixadoNoBuild: true, alternativas: [] };
   }
   // Servidor de desenvolvimento (dev:demo, dev:training…): o proxy do vite já
   // aponta para o backend certo. Consultar o catálogo aqui gravaria o endereço
   // padrão — o de produção — e o login da demo iria parar em produção.
   if (import.meta.env.DEV) {
-    return { tenant: null, apiUrl: '', fixadoNoBuild: true };
+    return { tenant: null, apiUrl: '', fixadoNoBuild: true, alternativas: [] };
   }
-  const catalogo = await carregarCatalogo();
-  const tenant = acharTenantPorDominio(catalogo, dominioDoEmail(email));
+  const dominio = dominioDoEmail(email);
+  let catalogo = await carregarCatalogo();
+  let porDominio = acharTenantPorDominio(catalogo, dominio);
+  // Domínio desconhecido com catálogo em cache: pode ser empresa que entrou
+  // depois da última busca (a cópia vale 24 h). Busca de novo uma vez por sessão,
+  // senão o primeiro usuário da empresa nova cairia no servidor padrão.
+  if (!porDominio && dominio.includes('.') && !catalogoRevalidado) {
+    catalogoRevalidado = true;
+    catalogo = await carregarCatalogo(true);
+    porDominio = acharTenantPorDominio(catalogo, dominio);
+  }
+  const padrao = catalogo.tenants.find((t) => t.id === catalogo.defaultTenantId) ?? null;
+  const resolvido = porDominio ?? padrao;
+  const alternativas = empresasDoGrupo(catalogo, resolvido);
+  // A escolha só vale dentro do grupo: um id guardado de outra empresa (ou
+  // adulterado) não desvia o login para um servidor fora do grupo do e-mail.
+  const tenant = alternativas.find((t) => t.id === escolhidoId) ?? resolvido;
   return {
     tenant,
     apiUrl: tenant ? tenant.apiUrl : catalogo.defaultApiUrl,
     fixadoNoBuild: false,
+    alternativas,
   };
 }
 

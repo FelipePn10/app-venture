@@ -369,6 +369,127 @@ await it('empresa gravada vence o padrão', async () => {
   assert.equal(m.urlDaApiAtiva(), 'https://usimac.api.venturerp.com');
 });
 
+// ── grupo de empresas (Tecnofer + Truckparts) ────────────────────────────────
+
+const GRUPO = {
+  defaultApiUrl: 'https://api.venturerp.com',
+  defaultTenantId: 'tecnofer',
+  tenants: [
+    { id: 'tecnofer', name: 'Tecnofer', apiUrl: 'https://api.venturerp.com', emailDomains: ['tecnofer.com.br'], group: 'tecnofer' },
+    { id: 'truckparts', name: 'Truckparts', apiUrl: 'https://truckparts.api.venturerp.com', emailDomains: ['truckparts.com.br'], group: 'Tecnofer' },
+    { id: 'usimac', name: 'Usimac Usinagem', apiUrl: 'https://usimac.api.venturerp.com', emailDomains: ['usimacusinagem.com.br'] },
+  ],
+};
+const ids = (lista) => lista.map((t) => t.id);
+
+await it('e-mail da Tecnofer oferece Tecnofer e Truckparts, entrando na Tecnofer', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('compras@tecnofer.com.br');
+  assert.deepEqual(ids(r.alternativas), ['tecnofer', 'truckparts']);
+  assert.equal(r.tenant.id, 'tecnofer');
+  assert.equal(r.apiUrl, 'https://api.venturerp.com');
+});
+
+await it('escolher a Truckparts manda o login para a API da Truckparts', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('compras@tecnofer.com.br', 'truckparts');
+  assert.equal(r.tenant.id, 'truckparts');
+  assert.equal(r.apiUrl, 'https://truckparts.api.venturerp.com');
+  m.definirTenantAtivo(r);
+  assert.equal(m.lerTenantAtivo().id, 'truckparts');
+  assert.equal(m.urlDaApiAtiva(), 'https://truckparts.api.venturerp.com');
+});
+
+await it('e-mail da Truckparts entra na Truckparts e também vê o seletor', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('fiscal@truckparts.com.br');
+  assert.equal(r.tenant.id, 'truckparts');
+  assert.deepEqual(ids(r.alternativas), ['tecnofer', 'truckparts']);
+});
+
+await it('Usimac não vê seletor, nem com escolha de outra empresa gravada', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('compras@usimacusinagem.com.br', 'truckparts');
+  assert.deepEqual(r.alternativas, []);
+  assert.equal(r.tenant.id, 'usimac', 'uma escolha fora do grupo desviou o login');
+  assert.equal(r.apiUrl, 'https://usimac.api.venturerp.com');
+});
+
+await it('escolha desconhecida é ignorada e vale a empresa do e-mail', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('compras@tecnofer.com.br', 'atacante');
+  assert.equal(r.tenant.id, 'tecnofer');
+});
+
+await it('domínio fora do catálogo cai na Tecnofer padrão, com o seletor do grupo', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('pessoa@gmail.com');
+  assert.equal(r.tenant.id, 'tecnofer');
+  assert.equal(r.apiUrl, 'https://api.venturerp.com');
+  assert.deepEqual(ids(r.alternativas), ['tecnofer', 'truckparts']);
+});
+
+await it('defaultTenantId que aponta para outro servidor é ignorado', async () => {
+  instalarDisco();
+  instalarRede({ ...GRUPO, defaultTenantId: 'truckparts' });
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('pessoa@gmail.com');
+  assert.equal(r.tenant, null);
+  assert.equal(r.apiUrl, 'https://api.venturerp.com', 'o padrão foi desviado para outra API');
+  assert.deepEqual(r.alternativas, []);
+});
+
+await it('grupo com uma empresa só não mostra seletor', async () => {
+  instalarDisco();
+  instalarRede({
+    defaultApiUrl: 'https://api.venturerp.com',
+    tenants: [{ id: 'solo', name: 'Solo', apiUrl: 'https://solo.api.venturerp.com', emailDomains: ['solo.com.br'], group: 'solo' }],
+  });
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('a@solo.com.br');
+  assert.deepEqual(r.alternativas, []);
+});
+
+await it('grupo inválido no catálogo descarta só aquele tenant', async () => {
+  instalarDisco();
+  instalarRede({ ...GRUPO, tenants: [...GRUPO.tenants, { id: 'x', name: 'X', apiUrl: 'https://x.api.venturerp.com', emailDomains: ['x.com.br'], group: 7 }] });
+  const m = await carregarModulo();
+  assert.equal((await m.resolverTenantPorEmail('a@x.com.br')).tenant.id, 'tecnofer');
+  assert.equal((await m.resolverTenantPorEmail('a@truckparts.com.br')).tenant.id, 'truckparts');
+});
+
+await it('cache recente sem a empresa nova: revalida uma vez e acha a Truckparts', async () => {
+  const guardado = { buscadoEm: Date.now(), catalogo: CATALOGO };
+  instalarDisco({ inicial: { 'erp-tenant-catalogo': JSON.stringify(guardado) } });
+  const chamadas = instalarRede(GRUPO);
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('fiscal@truckparts.com.br');
+  assert.equal(r.tenant.id, 'truckparts', 'o cache de 24 h escondeu a empresa nova');
+  assert.equal(chamadas.length, 1);
+  await m.resolverTenantPorEmail('pessoa@outra-desconhecida.com.br');
+  assert.equal(chamadas.length, 1, 'revalidou mais de uma vez na sessão');
+});
+
+await it('sem rede e sem cache, a lista embutida já conhece a Truckparts', async () => {
+  instalarDisco();
+  instalarRede('falha');
+  const m = await carregarModulo();
+  const r = await m.resolverTenantPorEmail('compras@tecnofer.com.br', 'truckparts');
+  assert.equal(r.apiUrl, 'https://truckparts.api.venturerp.com');
+});
+
 // ── o catálogo que vamos publicar de verdade ─────────────────────────────────
 
 await it('portal/tenants.json é aceito pelo validador do app', async () => {
@@ -389,6 +510,9 @@ await it('portal/tenants.json é aceito pelo validador do app', async () => {
   assert.ok(chamadas.length > 0);
   const padrao = await m.resolverTenantPorEmail('alguem@dominio-nao-listado.test');
   assert.equal(padrao.apiUrl, bruto.defaultApiUrl.replace(/\/+$/, ''), 'defaultApiUrl foi recusado');
+  // O grupo publicado: Tecnofer e Truckparts escolhem; Usimac não.
+  assert.deepEqual(ids(padrao.alternativas), ['tecnofer', 'truckparts'], 'defaultTenantId/grupo não chegaram');
+  assert.deepEqual((await m.resolverTenantPorEmail('pessoa@usimacusinagem.com.br')).alternativas, []);
 });
 
 // ── relatório ────────────────────────────────────────────────────────────────

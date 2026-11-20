@@ -6,6 +6,7 @@ import {
   completePasswordChange, myPasswordChangeRequests, requestPasswordChange, solicitacaoAtiva,
 } from '@/services/passwordChangeService';
 import { errMessage } from '@/services/fiscalShared';
+import { definirTenantAtivo, resolverTenantPorEmail } from '@/services/tenantDirectory';
 
 /**
  * Troca de senha a partir da tela de login. A API exige autenticação, então o
@@ -20,7 +21,8 @@ const LS_ANTIGO = 'venture_pwd_change_request';
 
 const dataHora = (s?: string) => (s ? new Date(s).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
-export function PasswordChangeDialog({ onClose }: { onClose: () => void }): JSX.Element {
+/** `tenantId`: empresa escolhida no login (grupo Tecnofer/Truckparts). */
+export function PasswordChangeDialog({ onClose, tenantId }: { onClose: () => void; tenantId?: string | null }): JSX.Element {
   const [email, setEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [token, setToken] = useState<string | null>(null);
@@ -69,6 +71,9 @@ export function PasswordChangeDialog({ onClose }: { onClose: () => void }): JSX.
     event.preventDefault();
     if (!email.trim() || !currentPassword) { setError('Informe o e-mail e a senha atual.'); return; }
     void executar(async () => {
+      // A senha a trocar é a da empresa do e-mail (e da escolhida no grupo), não a
+      // do último servidor usado nesta máquina.
+      definirTenantAtivo(await resolverTenantPorEmail(email, tenantId));
       const res = await login({ email: email.trim(), password: currentPassword });
       if (!res.token) throw new Error('Não foi possível confirmar a senha atual.');
       setToken(res.token);
