@@ -77,7 +77,7 @@ const FALLBACK_DIRECTORY: TenantDirectory = {
       id: 'truckparts',
       name: 'Truckparts',
       apiUrl: 'https://truckparts.api.venturerp.com',
-      emailDomains: ['truckparts.com.br'],
+      emailDomains: ['truckpartsir.com.br'],
       group: 'tecnofer',
     },
     {
@@ -395,6 +395,35 @@ export function chaveDaEmpresa(chave: string): string {
   if (ativo.id === catalogo.defaultTenantId) return chave;
   const tenant = catalogo.tenants.find((t) => t.id === ativo.id) ?? null;
   return empresasDoGrupo(catalogo, tenant).length > 0 ? `${chave}@${ativo.id}` : chave;
+}
+
+const ESCOLHA_POR_DOMINIO_KEY = 'erp-tenant-escolha-por-dominio';
+
+function lerEscolhas(): Record<string, string> {
+  try {
+    const v = JSON.parse(lerLocal(ESCOLHA_POR_DOMINIO_KEY) ?? '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Empresa do grupo escolhida da última vez com este DOMÍNIO de e-mail. É por
+ * domínio, não uma só: no mesmo computador o Rulian entra na Tecnofer com
+ * @tecnofer.com.br e na Truckparts com @truckpartsir.com.br — uma escolha única
+ * mandaria o e-mail da Truckparts para o servidor da Tecnofer. Sem escolha
+ * guardada vale a empresa dona do domínio.
+ */
+export function escolhaGuardadaPara(email: string): string | null {
+  const dominio = dominioDoEmail(email);
+  return dominio ? (lerEscolhas()[dominio] ?? null) : null;
+}
+
+export function guardarEscolhaPara(email: string, tenantId: string | null | undefined): void {
+  const dominio = dominioDoEmail(email);
+  if (!dominio || !tenantId) return;
+  gravarLocal(ESCOLHA_POR_DOMINIO_KEY, JSON.stringify({ ...lerEscolhas(), [dominio]: tenantId }));
 }
 
 export function esquecerTenantAtivo(): void {

@@ -528,6 +528,26 @@ await it('preferência da empresa: Truckparts separada; Tecnofer e Usimac com a 
   assert.equal(m.chaveDaEmpresa('vpro0200.plano'), 'vpro0200.plano');
 });
 
+await it('escolha lembrada por domínio: um e-mail não herda a empresa do outro', async () => {
+  instalarDisco();
+  instalarRede(GRUPO);
+  const m = await carregarModulo();
+  assert.equal(m.escolhaGuardadaPara('comercial@tecnofer.com.br'), null);
+  m.guardarEscolhaPara('pcp@tecnofer.com.br', 'truckparts');
+  m.guardarEscolhaPara('comercial@truckparts.com.br', 'truckparts');
+  m.guardarEscolhaPara('sem-dominio', 'tecnofer');
+  m.guardarEscolhaPara('x@usimacusinagem.com.br', null);
+  assert.equal(m.escolhaGuardadaPara('Outro@Tecnofer.com.br'), 'truckparts', 'vale para o domínio todo');
+  assert.equal(m.escolhaGuardadaPara('comercial@truckparts.com.br'), 'truckparts');
+  assert.equal(m.escolhaGuardadaPara('x@usimacusinagem.com.br'), null);
+  m.guardarEscolhaPara('pcp@tecnofer.com.br', 'tecnofer');
+  assert.equal(m.escolhaGuardadaPara('pcp@tecnofer.com.br'), 'tecnofer', 'a última escolha vence');
+  assert.equal(m.escolhaGuardadaPara('comercial@truckparts.com.br'), 'truckparts', 'outro domínio intacto');
+  // Domínio da Truckparts sem escolha guardada cai na Truckparts, mesmo com a Tecnofer como padrão.
+  const r = await m.resolverTenantPorEmail('financeiro@truckparts.com.br', m.escolhaGuardadaPara('financeiro@outro.com.br'));
+  assert.equal(r.tenant.id, 'truckparts');
+});
+
 // ── relatório ────────────────────────────────────────────────────────────────
 
 let falhas = 0;
