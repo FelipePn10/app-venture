@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { login, EmpresaObrigatoriaError, type EmpresaDeAcesso } from "@/services/authService";
@@ -7,6 +7,8 @@ import { getRememberedEmail, isRememberMeChosen, setRememberMe, useAuthStore } f
 import {
   definirTenantAtivo,
   dominioDoEmail,
+  escolhaGuardadaPara,
+  guardarEscolhaPara,
   lerTenantAtivo,
   resolverTenantPorEmail,
   type Tenant,
@@ -48,6 +50,7 @@ export function LoginPage(): JSX.Element {
   // senha próprios, e a pessoa escolhe aqui em qual entrar. Começa na última
   // escolhida; fora de um grupo a lista fica vazia e o seletor nem aparece.
   const [grupo, setGrupo] = useState<Tenant[]>([]);
+  const ultimoDominio = useRef<string | null>(null);
   const [tenantEscolhido, setTenantEscolhido] = useState<string | null>(
     () => lerTenantAtivo()?.id ?? null,
   );
@@ -71,9 +74,17 @@ export function LoginPage(): JSX.Element {
       setGrupo([]);
       return;
     }
+    // Domínio novo: começa na empresa usada da última vez com ESTE domínio (ou na
+    // dona dele), não na do último login de outro e-mail.
+    let escolhido = tenantEscolhido;
+    if (dominio !== ultimoDominio.current) {
+      ultimoDominio.current = dominio;
+      escolhido = escolhaGuardadaPara(email);
+      setTenantEscolhido(escolhido);
+    }
     let alive = true;
     const timer = setTimeout(() => {
-      void resolverTenantPorEmail(email, tenantEscolhido).then((resolvido) => {
+      void resolverTenantPorEmail(email, escolhido).then((resolvido) => {
         if (!alive) return;
         setEmpresaLabel(resolvido.fixadoNoBuild ? null : (resolvido.tenant?.name ?? null));
         setGrupo(resolvido.alternativas);
@@ -122,6 +133,7 @@ export function LoginPage(): JSX.Element {
       const response = await login({ email, password, rememberMe, enterpriseCode: empresaEscolhida });
       // A escolha é registrada ANTES de gravar o token: é ela que decide se a
       // sessão vai para o disco ou só para a janela atual.
+      guardarEscolhaPara(email, destino.tenant?.id);
       setRememberMe(rememberMe, email);
       setAuthData({
         token: response.token,
