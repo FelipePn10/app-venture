@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.12] — 2026-11-21
+
 ## Correções
 - **Login da Truckparts com o e-mail @truckpartsir.com.br:** o e-mail da Truckparts já abre na Truckparts. O computador lembra a empresa escolhida para cada domínio de e-mail, então quem entra na Tecnofer com @tecnofer.com.br e na Truckparts com @truckpartsir.com.br não precisa trocar a empresa no seletor toda vez.
 
