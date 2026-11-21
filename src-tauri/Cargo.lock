@@ -920,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "erp_venture_desktop"
-version = "1.19.11"
+version = "1.19.12"
 dependencies = [
  "serde_json",
  "tauri",
