@@ -13,9 +13,13 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currenc
 
 // ── Resumo ────────────────────────────────────────────────────────────────────
 
-export function ResumoTab({ of, operacoes, apontamentos, consumos, cadeia = null, onAbrirOF }: {
+const PRIORIDADE: Record<string, string> = { LOW: "Baixa", BAIXA: "Baixa", NORMAL: "Normal", HIGH: "Alta", ALTA: "Alta", URGENT: "Urgente", URGENTE: "Urgente", CRITICAL: "Crítica" };
+/** A prioridade fica gravada em código (o sequenciamento ordena por ela); na tela vai em português. */
+const rotuloPrioridade = (p?: string | null): string => (p ? PRIORIDADE[p.trim().toUpperCase()] ?? p : "Normal");
+
+export function ResumoTab({ of, operacoes, apontamentos, consumos, cadeia = null, onAbrirOF, onEditarObservacao }: {
   of: ProductionOrderDTO; operacoes: OperationDTO[]; apontamentos: AppointmentDTO[]; consumos: ConsumptionDTO[];
-  cadeia?: ProductionChain | null; onAbrirOF?: (id: number) => void;
+  cadeia?: ProductionChain | null; onAbrirOF?: (id: number) => void; onEditarObservacao?: () => void;
 }): JSX.Element {
   const feitas = operacoes.filter((o) => o.status === "DONE" || o.status === "SKIPPED").length;
   // "Produzida" da ordem é o que ENTROU no estoque (entrega/conclusão); o
@@ -41,7 +45,7 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos, cadeia = null
           { label: "Início", value: data(of.start_date) },
           { label: "Término", value: data(of.end_date) },
           { label: "Máquina", value: of.machine_id ? <EntityName code={of.machine_id} loader={loadMachinesById} prefix="Máquina" showCode={false} /> : "—" },
-          { label: "Prioridade", value: of.priority || "—" },
+          { label: "Prioridade", value: rotuloPrioridade(of.priority) },
           { label: "Origem", value: of.planned_order_id ? `Ordem planejada ${of.planned_order_id} (MRP)` : "Criada manualmente" },
           { label: "Cliente", value: of.origin?.customer_name || "—" },
           { label: "Projeto", value: of.origin?.project_code ? `${of.origin.project_code}${of.origin.project_name && of.origin.project_name !== of.origin.project_code ? ` — ${of.origin.project_name}` : ""}` : "—" },
@@ -50,7 +54,9 @@ export function ResumoTab({ of, operacoes, apontamentos, consumos, cadeia = null
           <Progresso valor={apontadoBom} total={of.planned_qty || 0} /></div>
         <div style={{ marginTop: 10 }}><div className="vpl-kv-label" style={{ marginBottom: 6 }}>Entregue ao estoque</div>
           <Progresso valor={of.produced_qty ?? 0} total={of.planned_qty || 0} /></div>
-        {notasLegiveis(of.notes) && <p className="erp-note" style={{ marginTop: 12 }}>{notasLegiveis(of.notes)}</p>}
+        {notasLegiveis(of.notes) && <p className="erp-note" style={{ marginTop: 12, whiteSpace: "pre-line" }}>{notasLegiveis(of.notes)}</p>}
+        {onEditarObservacao && <button className="erp-btn erp-btn-sm" style={{ marginTop: 10 }} onClick={onEditarObservacao}
+          title="Instrução para o operador: sai na ordem impressa">{notasLegiveis(of.notes) ? "Alterar observação" : "Incluir observação"}</button>}
       </Painel>
       <Painel titulo="Andamento">
         <Detalhe itens={[
