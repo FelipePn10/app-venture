@@ -3,7 +3,7 @@
 ## Unreleased
 
 ## Melhorias
-- NF-e de Saída (VFIS0200): o botão **Descartar** tira de uso a nota em rascunho ou rejeitada que não vai ser transmitida — ela não vai à SEFAZ e o romaneio e o saldo do pedido ficam livres para uma nota nova. A nota descartada aparece como "Descartada", sem número.
+- Na tela de NF-e de Saída, o botão **Descartar** tira de uso a nota em rascunho ou rejeitada que não vai ser transmitida — ela não vai à SEFAZ e o romaneio e o saldo do pedido ficam livres para uma nota nova. A nota descartada aparece como "Descartada", sem número.
 
 ## Correções
 - A NF-e emitida pelo romaneio baixa o pedido na autorização e devolve tudo no cancelamento (atendido, situação do pedido e reserva); o mesmo pedido não é mais faturado duas vezes por dois romaneios.
