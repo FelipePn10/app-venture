@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.15] — 2026-11-23
+
 ## Melhorias
 - Ordem de produção: na aba Resumo, o botão **Incluir observação** (ou **Alterar observação**) registra a instrução para o operador mesmo com a ordem em produção — ela sai na ordem impressa.
 
