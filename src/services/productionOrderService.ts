@@ -745,7 +745,11 @@ export interface ProductionScanDTO {
   hours?: string;
   scrap_reason?: string;
   complete_operation?: boolean;
+  /** Máquina do apontamento (opcional). */
+  machine_id?: number;
 }
+/** Material que a leitura baixou do estoque (baixa automática). */
+export interface ProductionScanIssue { item_code: string; quantity: string; warehouse_id: number }
 export interface ProductionScanResult {
   next_action?: string;
   message?: string;
@@ -755,6 +759,7 @@ export interface ProductionScanResult {
   status?: string;
   operation_status?: string;
   replayed?: boolean;
+  auto_issues?: ProductionScanIssue[];
 }
 export async function createProductionScanToken(dto: { production_order_id: number; operation_id?: number; valid_until?: string }): Promise<ProductionScanToken> {
   const { data } = await httpClient.post('/api/production-order/scanner/tokens', dto);

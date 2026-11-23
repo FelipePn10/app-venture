@@ -559,3 +559,8 @@ export function resumoPedidosGerados(r: Obj): { type: 'success' | 'info'; messag
   if (avisos.length) partes.push(`Atenção: ${avisos.join(' · ')}`);
   return { type: alcada.length || rascunho.length || avisos.length || pedidos.length === 0 ? 'info' : 'success', message: partes.join(' ') };
 }
+/** Envia o resumo do pedido por WhatsApp (o PDF continua indo por e-mail). Fica no mesmo histórico de envios. */
+export async function sendOrderWhatsApp(code: number, para: string[], mensagem?: string): Promise<EnvioPedido> {
+  const { data } = await httpClient.post(`${BASE}/${code}/enviar-whatsapp`, { para, mensagem: mensagem ?? '' });
+  return parseEnvio(unwrapObject(data));
+}

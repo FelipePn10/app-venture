@@ -1,3 +1,4 @@
+import { PortalLinksPanel } from "./PortalLinksPanel";
 import { ApoioClientePanel } from "./ApoioClientePanel";
 import { CreditoClientePanel, ExplicacaoDoLimite, DecisaoDoLimite } from "./CreditoClientePanel";
 import { money, vencimentoDoCredito, problemaDoLimite } from "./formato";
@@ -23,7 +24,7 @@ import { validateCNPJOrCPF } from "@/utils/validation";
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
 type Mode = "list" | "edit" | "apoio";
-type Folder = "dados" | "fiscal" | "comercial" | "credito" | "enderecos" | "contatos" | "visao";
+type Folder = "dados" | "fiscal" | "comercial" | "credito" | "enderecos" | "contatos" | "visao" | "portal";
 const SYS = "00000000-0000-0000-0000-000000000000";
 const EMPTY: CustomerDTO = { name: "", document_type: "CNPJ", document_number: "", is_corporate: false, allows_partial_billing: true };
 const EMPTY_ADDR = { address_type: "COBRANCA" as AddressType, zip_code: "", street: "", number: "", complement: "", neighborhood: "", city: "", uf: "", country: "Brasil", is_default: true };
@@ -36,6 +37,7 @@ const ABAS: { id: Folder; label: string; precisaCodigo?: boolean }[] = [
   { id: "dados", label: "Dados gerais" }, { id: "fiscal", label: "Fiscal" }, { id: "comercial", label: "Comercial e logística" },
   { id: "credito", label: "Crédito" }, { id: "enderecos", label: "Endereços" },
   { id: "contatos", label: "Contatos" }, { id: "visao", label: "Visão 360", precisaCodigo: true },
+  { id: "portal", label: "Portal do cliente", precisaCodigo: true },
 ];
 
 const opt = (v?: string) => (v && v.trim() ? v.trim() : undefined);
@@ -668,6 +670,7 @@ export function Vcli0500Page(): JSX.Element {
             )}
 
             {mode === "edit" && folder === "visao" && form.code && <VisaoClientePanel code={form.code} />}
+            {mode === "edit" && folder === "portal" && form.code && <PortalLinksPanel cliente={Number(form.code)} />}
           </div>
         </section>
       </div>

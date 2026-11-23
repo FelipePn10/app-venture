@@ -510,8 +510,8 @@ await it('portal/tenants.json é aceito pelo validador do app', async () => {
   assert.ok(chamadas.length > 0);
   const padrao = await m.resolverTenantPorEmail('alguem@dominio-nao-listado.test');
   assert.equal(padrao.apiUrl, bruto.defaultApiUrl.replace(/\/+$/, ''), 'defaultApiUrl foi recusado');
-  // O grupo publicado: Tecnofer e Truckparts escolhem; Usimac não.
-  assert.deepEqual(ids(padrao.alternativas), ['tecnofer', 'truckparts'], 'defaultTenantId/grupo não chegaram');
+  // O grupo publicado: Tecnofer, Truckparts e o treino da Tecnofer escolhem; Usimac não.
+  assert.deepEqual(ids(padrao.alternativas), ['tecnofer', 'truckparts', 'tecnofer-treino'], 'defaultTenantId/grupo não chegaram');
   assert.deepEqual((await m.resolverTenantPorEmail('pessoa@usimacusinagem.com.br')).alternativas, []);
 });
 

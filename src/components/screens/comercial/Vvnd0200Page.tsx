@@ -1,8 +1,9 @@
+import { pendenciasDoDia, repetirPedido, simularPromessa } from "@/services/gestaoService";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { imprimirPedidoVenda } from "@/services/impressaoService";
 import { FINALIDADES_COMPRA } from "@/services/customerService";
 import { SelectUnidade } from "@/components/ui/SelectUnidade";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type SalesOrderDTO,
   type SalesOrderItemDTO,
@@ -192,6 +193,31 @@ export function Vvnd0200Page(): JSX.Element {
     await refreshSelected(selected.code);
     setFeedback({ type: "success", message: po.trim() ? "Pedido de compra do cliente gravado." : "Pedido de compra do cliente removido." });
   });
+  // Prazo possível (promessa de entrega): o saldo das linhas contra o estoque,
+  // o que já vai entrar e a reposição pela estrutura — sem gravar nada.
+  const prazoPossivel = () => { const linhas = (selected?.items ?? [])
+      .filter((l) => l.status !== "CANCELLED" && l.item_code)
+      .map((l) => ({ item_code: l.item_code, quantity: String(Math.max(0, (l.requested_qty ?? 0) - (l.attended_qty ?? 0) - (l.cancelled_qty ?? 0))) }))
+      .filter((l) => Number(l.quantity) > 0);
+    if (!linhas.length) { setFeedback({ type: "info", message: "Não há saldo a entregar neste pedido." }); return; }
+    void run(async () => {
+      const r = await simularPromessa(linhas);
+      const ultima = r.reduce((m, p) => (p.promised_date > m ? p.promised_date : m), "");
+      const br = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR");
+      const ORIGEM: Record<string, string> = { ESTOQUE: "do estoque", ENTRADA_PREVISTA: "entrada já prevista", NOVA_PRODUCAO: "fabricar", NOVA_COMPRA: "comprar" };
+      const detalhe = r.map((p) => `${p.item_code}: ${ORIGEM[p.source] ?? p.source}, pronto em ${br(p.promised_date)}`).join(" · ");
+      const combinada = selected?.delivery_date?.slice(0, 10);
+      const atrasa = combinada && ultima && ultima.slice(0, 10) > combinada;
+      setFeedback({ type: atrasa ? "error" : "success", message: `Prazo possível: ${br(ultima)}${combinada ? ` (entrega combinada ${br(combinada)}${atrasa ? " — antes do possível: renegocie ou reprograme" : " — dá para cumprir"})` : ""}. ${detalhe}.` });
+    });
+  };
+  // Repetir: copia o pedido como rascunho novo, com o preço de hoje.
+  const repetir = (code?: number) => { if (!code) return; void run(async () => {
+    const r = await repetirPedido(code);
+    setOrders(await listSalesOrders());
+    setCreating(false); setTab("dados"); await refreshSelected(r.code);
+    setFeedback({ type: r.skipped.length ? "info" : "success", message: `Pedido ${r.code} criado como rascunho com ${r.lines} linha(s) do pedido ${code}${r.skipped.length ? `. Ficaram de fora: ${r.skipped.join("; ")}` : ""}.` });
+  }); };
   const abrir = (code?: number) => { if (!code) return; setCreating(false); setTab("dados"); void run(async () => { await refreshSelected(code); }); };
 
   const criarPedido = () => run(async () => {
@@ -287,11 +313,22 @@ export function Vvnd0200Page(): JSX.Element {
   const itemsTotal = useMemo(() => items.reduce((s, it) => s + (it.total_net ?? 0), 0), [items]);
   const isDraft = selected?.status === "R";
 
+  // Pedidos que o cliente fez pelo portal: o aviso fica no topo até alguém
+  // confirmar (vem da Central de Pendências, a mesma contagem do cartão).
+  const [portalAbertos, setPortalAbertos] = useState(0);
+  const [soPortal, setSoPortal] = useState(false);
+  const contarPortal = useCallback(() => {
+    void pendenciasDoDia().then((l) => setPortalAbertos(l.find((p) => p.key === "pedidos_portal")?.count ?? 0)).catch(() => setPortalAbertos(0));
+  }, []);
+  useEffect(() => { contarPortal(); }, [contarPortal, orders]);
+  const verPedidosDoPortal = () => void run(async () => { setOrders(await listSalesOrders()); setSoPortal(true); });
+
   const visibleOrders = useMemo(() => {
     const q = listSearch.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter((o) => String(o.code ?? "").includes(q) || String(o.customer_code ?? "").includes(q));
-  }, [orders, listSearch]);
+    const base = soPortal ? orders.filter((o) => o.origin === "PORTAL" && o.status === "R") : orders;
+    if (!q) return base;
+    return base.filter((o) => String(o.code ?? "").includes(q) || String(o.customer_code ?? "").includes(q));
+  }, [orders, listSearch, soPortal]);
 
   const sm = statusMeta(selected?.status);
 
@@ -326,6 +363,10 @@ export function Vvnd0200Page(): JSX.Element {
             : <button className="erp-btn" onClick={() => bloquear(selected?.code)} disabled={busy || !selected}>Bloquear</button>}
           <button className="erp-btn erp-btn-danger" onClick={() => { setCancelReason(""); setCancelComplement(""); setCancelDialog(true); }} disabled={busy || !selected || selected?.status === "CANCELLED" || selected?.status === "F"}
             title={selected?.status === "F" ? "Pedido faturado: cancele a NF-e antes — ela devolve o pedido à carteira" : undefined}>Cancelar</button>
+          <button className="erp-btn" onClick={prazoPossivel} disabled={busy || !selected?.code || !(selected?.items?.length)}
+            title="Quando dá para entregar o saldo do pedido: estoque, entradas previstas e reposição pela estrutura">Prazo possível</button>
+          <button className="erp-btn" onClick={() => repetir(selected?.code)} disabled={busy || !selected?.code}
+            title="Cria um pedido novo, em rascunho, com os mesmos itens e o preço de hoje">Repetir pedido</button>
           <PrintButton label="Imprimir pedido" onPrint={() => imprimirPedidoVenda(selected!.code!)} disabled={busy || !selected?.code}
             title="PDF do pedido para o cliente: entrega, condições, itens com impostos, parcelas, totais e aceite" />
         </div>
@@ -365,6 +406,15 @@ export function Vvnd0200Page(): JSX.Element {
         </div>
       )}
 
+      {portalAbertos > 0 && (
+        <div className="erp-feedback info" role="status" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ flex: 1 }}><strong>{portalAbertos} pedido(s) feito(s) pelo cliente no portal</strong> aguardam a sua confirmação (preço e prazo). O cliente vê "Aguardando confirmação" até você confirmar.</span>
+          {soPortal
+            ? <button className="erp-btn erp-btn-sm" onClick={() => setSoPortal(false)}>Mostrar todos</button>
+            : <button className="erp-btn erp-btn-sm erp-btn-primary" onClick={verPedidosDoPortal}>Ver pedidos do portal</button>}
+        </div>
+      )}
+
       {/* ── MASTER-DETAIL ─────────────────────────────────────────────── */}
       <div className="erp-main">
         {/* LIST */}
@@ -389,6 +439,7 @@ export function Vvnd0200Page(): JSX.Element {
                   <div className="erp-list-meta">
                     <span className={`erp-badge ${m.cls}`}>{m.label}</span>
                     {o.is_blocked && <span className="erp-badge warn">Bloqueado</span>}
+                    {o.origin === "PORTAL" && <span className="erp-badge info" title="Pedido feito pelo próprio cliente no portal">Portal</span>}
                     <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--v-text-3)" }}>{o.emission_date?.slice(0, 10)}</span>
                   </div>
                 </div>

@@ -1,3 +1,4 @@
+import { EmPoderAba } from "./EmPoderAba";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type ServicePrice, type ServiceOrder, type ServiceMovement, type GlobalConversion, type PriceHistoryEntry,
@@ -25,12 +26,13 @@ type Feedback = { type: "success" | "error" | "info"; message: string } | null;
  * quanto custa, o que está lá fora agora, o que saiu e voltou de cada ordem, e
  * como converter a unidade do fornecedor para a nossa.
  */
-type Aba = "precos" | "ordens" | "movimentos" | "conversoes";
+type Aba = "precos" | "ordens" | "movimentos" | "empoder" | "conversoes";
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: "precos", label: "Preços de serviço" },
   { id: "ordens", label: "Ordens de serviço" },
   { id: "movimentos", label: "Remessa e retorno" },
+  { id: "empoder", label: "Em poder de terceiros" },
   { id: "conversoes", label: "Conversões de unidade" },
 ];
 
@@ -239,7 +241,8 @@ export function Vtps0100Page(): JSX.Element {
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Atualizar</span>
-          <button className="erp-btn erp-btn-dark" disabled={busy}
+          <button className="erp-btn erp-btn-dark"
+            disabled={busy || aba === "empoder"}
             onClick={() => { if (aba === "precos") void carregarPrecos(); else if (aba === "conversoes") void carregarConversoes(); else void carregarOrdens(); }}>
             {busy && <span className="erp-spin" />}Carregar
           </button>
@@ -622,6 +625,8 @@ export function Vtps0100Page(): JSX.Element {
                 </>
               )
             )}
+
+            {aba === "empoder" && <EmPoderAba onAbrirOrdens={() => setAba("ordens")} />}
 
             {/* ═══ CONVERSÕES ═══ */}
             {aba === "conversoes" && (

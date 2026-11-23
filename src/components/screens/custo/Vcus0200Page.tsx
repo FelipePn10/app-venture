@@ -1,3 +1,4 @@
+import { MargemDoPedidoAba } from "./MargemDoPedidoAba";
 import { useCallback, useEffect, useState } from "react";
 import {
   type MarginParameters, type MarginLine, type MarginSummary,
@@ -22,7 +23,7 @@ import { loadItems, loadCustomers } from "@/services/lookups";
  * aparece como ruim.
  */
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type Aba = "parametros" | "apuracao" | "simulacao";
+type Aba = "parametros" | "apuracao" | "simulacao" | "pedido";
 
 const hoje = new Date();
 const primeiroDiaDoMes = () => `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
@@ -152,10 +153,12 @@ export function Vcus0200Page(): JSX.Element {
           <div className="erp-tabs">
             <button className={`erp-tab ${aba === "apuracao" ? "active" : ""}`} onClick={() => setAba("apuracao")}>Apuração</button>
             <button className={`erp-tab ${aba === "simulacao" ? "active" : ""}`} onClick={() => setAba("simulacao")}>Simulação</button>
+            <button className={`erp-tab ${aba === "pedido" ? "active" : ""}`} onClick={() => setAba("pedido")}>Por pedido</button>
             <button className={`erp-tab ${aba === "parametros" ? "active" : ""}`} onClick={() => setAba("parametros")}>Parâmetros do mês</button>
           </div>
           <div className="erp-detail-body">
 
+            {aba === "pedido" && <MargemDoPedidoAba />}
             {aba === "parametros" && (
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">Parâmetros de {String(params.mes).padStart(2, "0")}/{params.ano}</div>

@@ -1,3 +1,6 @@
+import { useAuthStore } from "@/store/authStore";
+import { apurarTodosOsCustos } from "@/services/gestaoService";
+import { VariacoesOFAba } from "./VariacoesOFAba";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { imprimirCustoProducao } from "@/services/impressaoService";
 import { CustosPadraoVigentes } from "./CustosPadraoVigentes";
@@ -64,6 +67,7 @@ const COST_TABS = [
   "Custos de compra",
   "Histórico",
   "Rateio contábil",
+  "Variações das OFs",
 ] as const;
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -157,6 +161,14 @@ export function Vcus0100Page(): JSX.Element {
     ].filter((l) => l.valor !== 0 || l.rotulo === "Indiretos");
   }, [rollup, regras.length]);
 
+  const admin = (useAuthStore((st) => st.user?.role) ?? "").toUpperCase() === "ADMIN";
+  const apurarTodos = async () => {
+    if (!(await confirmar({ titulo: "Apurar o custo-padrão de todos", mensagem: "Recalcula o custo-padrão de todos os itens fabricados pela estrutura e pelo roteiro vigentes. Pode levar alguns minutos.", rotulo: "Apurar" }))) return;
+    void run(async () => {
+      const r = await apurarTodosOsCustos();
+      setFeedback({ type: r.failures.length ? "error" : "success", message: `${r.calculated} item(ns) apurado(s)${r.failures.length ? ` · falhas: ${r.failures.slice(0, 5).join("; ")}${r.failures.length > 5 ? "…" : ""}` : ""}.` });
+    });
+  };
   const rodarRollup = () => run(async () => {
     if (!rollupItem) { setFeedback({ type: "error", message: "Escolha o item a apurar." }); return; }
     const lote = Number(rollupLote) || 1;
@@ -399,6 +411,8 @@ export function Vcus0100Page(): JSX.Element {
                       <button className="erp-btn erp-btn-primary" onClick={rodarRollup} disabled={busy}>
                         {busy ? <><span className="erp-spin" />Apurando…</> : "Apurar custo"}
                       </button>
+                      {admin && <button className="erp-btn" style={{ marginLeft: 8 }} onClick={() => void apurarTodos()} disabled={busy}
+                        title="Recalcula o custo-padrão de todos os itens fabricados pela estrutura e roteiro vigentes">Apurar todos os itens</button>}
                     </div>
                   </div>
                 </div>
@@ -910,6 +924,7 @@ export function Vcus0100Page(): JSX.Element {
             )}
 
             {/* ── 5. Rateio contábil ───────────────────────────────────────── */}
+            {activeTab === 6 && <VariacoesOFAba />}
             {activeTab === 5 && (
               <>
                 <div className="erp-fieldset">

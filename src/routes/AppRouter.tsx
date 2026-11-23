@@ -5,6 +5,7 @@ import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { ScreenHostPage } from "@/components/screens/ScreenHostPage";
 import { useAuthStore } from "@/store/authStore";
 import { BackendUpdateBanner } from "@/components/system/BackendUpdateBanner";
+import { PortalPage } from "@/components/portal/PortalPage";
 
 function PrivateRoute({ children }: { children: JSX.Element }): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
@@ -20,6 +21,9 @@ export function AppRouter(): JSX.Element {
       <SessionBootstrap>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          {/* Portal do cliente: público, autenticado pelo token do link. */}
+          <Route path="/portal/:token" element={<PortalPage />} />
+          <Route path="/portal/:empresa/:token" element={<PortalPage />} />
           <Route
             path="/dashboard"
             element={

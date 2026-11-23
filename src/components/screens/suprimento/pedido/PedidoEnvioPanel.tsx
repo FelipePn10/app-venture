@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  downloadOrderPdf, listRecipients, listShipments, sendOrder,
+  downloadOrderPdf, listRecipients, listShipments, sendOrder, sendOrderWhatsApp,
   type Destinatario, type EnvioPedido,
 } from "@/services/purchaseOrderService";
 import { errMessage } from "@/services/fiscalShared";
@@ -29,6 +29,7 @@ export function PedidoEnvioPanel({ code, numero, situacao, onFeedback }: {
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [outros, setOutros] = useState("");
   const [mensagem, setMensagem] = useState("");
+  const [celular, setCelular] = useState("");
   const [envios, setEnvios] = useState<EnvioPedido[]>([]);
   const [busy, setBusy] = useState(false);
   const aprovado = situacao === "APPROVED" || situacao === "PARTIAL";
@@ -63,6 +64,22 @@ export function PedidoEnvioPanel({ code, numero, situacao, onFeedback }: {
     } finally {
       setBusy(false);
       try { setEnvios(await listShipments(code)); } catch { /* o histórico recarrega na próxima abertura */ }
+    }
+  }
+
+  // WhatsApp: o resumo do pedido (o PDF vai por e-mail). O cadastro do fornecedor
+  // não tem celular, então o número é digitado aqui.
+  async function enviarWhatsApp() {
+    if (!celular.trim()) { onFeedback({ type: "error", message: "Digite o celular do fornecedor (DDD + número)." }); return; }
+    setBusy(true);
+    try {
+      const e = await sendOrderWhatsApp(code, [celular], mensagem);
+      onFeedback({ type: "success", message: `Resumo do pedido enviado por WhatsApp para ${e.destinatarios}.` });
+    } catch (e) {
+      onFeedback({ type: "error", message: errMessage(e) });
+    } finally {
+      setBusy(false);
+      try { setEnvios(await listShipments(code)); } catch { /* recarrega na próxima abertura */ }
     }
   }
 
@@ -106,6 +123,16 @@ export function PedidoEnvioPanel({ code, numero, situacao, onFeedback }: {
             <button className="erp-btn erp-btn-primary" onClick={() => void enviar()} disabled={busy || !aprovado}
               title={aprovado ? undefined : "Aprove o pedido antes de enviar"}>Enviar pedido por e-mail</button>
           </div>
+          <div className="erp-field erp-c4">
+            <label className="erp-label" htmlFor="pdc-zap">Celular do fornecedor (WhatsApp)</label>
+            <input id="pdc-zap" className="erp-input" inputMode="tel" placeholder="(44) 99999-0000" value={celular} disabled={!aprovado} onChange={(e) => setCelular(e.target.value)} />
+          </div>
+          <div className="erp-field erp-c8" style={{ justifyContent: "flex-end" }}>
+            <div className="pdc-inline" style={{ padding: 0 }}>
+              <button className="erp-btn" onClick={() => void enviarWhatsApp()} disabled={busy || !aprovado}>Enviar resumo por WhatsApp</button>
+              <span className="pdc-hint">Vai o número, o valor e a entrega, com a mesma mensagem acima; o PDF segue por e-mail.</span>
+            </div>
+          </div>
         </div>
       </div>
       <div className="erp-fieldset">
@@ -113,12 +140,12 @@ export function PedidoEnvioPanel({ code, numero, situacao, onFeedback }: {
         <div className="erp-fieldset-body">
           <div className="erp-field erp-c12" style={{ overflowX: "auto" }}>
             <table className="erp-grid">
-              <thead><tr><th>Quando</th><th>Por</th><th>Para</th><th>Situação</th></tr></thead>
+              <thead><tr><th>Quando</th><th>Por</th><th>Canal</th><th>Para</th><th>Situação</th></tr></thead>
               <tbody>
-                {envios.length === 0 && <tr><td colSpan={4} className="erp-grid-empty">O pedido ainda não foi enviado.</td></tr>}
+                {envios.length === 0 && <tr><td colSpan={5} className="erp-grid-empty">O pedido ainda não foi enviado.</td></tr>}
                 {envios.map((e) => (
                   <tr key={e.id}>
-                    <td>{dataHora(e.enviado_em)}</td><td>{e.enviado_por ?? "—"}</td><td>{e.destinatarios}</td>
+                    <td>{dataHora(e.enviado_em)}</td><td>{e.enviado_por ?? "—"}</td><td>{e.assunto.startsWith("WhatsApp") ? "WhatsApp" : "E-mail"}</td><td>{e.destinatarios}</td>
                     <td>
                       <span className={`erp-badge ${e.situacao === "ENVIADO" ? "erp-badge-green" : "erp-badge-red"}`}>{e.situacao === "ENVIADO" ? "Enviado" : "Falhou"}</span>
                       {e.erro && <><br /><small className="pdc-falta">{e.erro}</small></>}
