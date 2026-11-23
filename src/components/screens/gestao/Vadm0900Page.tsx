@@ -67,6 +67,7 @@ export function Vadm0900Page(): JSX.Element {
                     <li>Banco Inter, WhatsApp e hub de frete ficam <strong>desligados</strong> no treino.</li>
                     <li>O nome da empresa ganha <strong>[TREINO]</strong> na frente.</li>
                     <li>O que se faz no treino <strong>não volta</strong> para a produção.</li>
+                    <li>O treino é uma cópia da <strong>Tecnofer</strong>: só os usuários da Tecnofer entram (no login, "Tecnofer — Treino"). Senhas e o token de produção da NF-e não são copiados.</li>
                   </ul>
                 </Painel>
               </div>

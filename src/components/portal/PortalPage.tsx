@@ -15,7 +15,8 @@ const qtd = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3 
 // Converter pelo fuso do navegador mostrava 21/11 para um pedido de 22/11.
 const dia = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-const aConfirmar = (p: PedidoPortal) => p.lines.length > 0 && p.lines.every((l) => l.to_be_priced);
+// Basta uma linha sem preço para o total ainda não valer.
+const aConfirmar = (p: PedidoPortal) => p.lines.some((l) => l.to_be_priced);
 
 type Aba = "pedidos" | "financeiro" | "notas";
 type Filtro = "andamento" | "faturados" | "todos";

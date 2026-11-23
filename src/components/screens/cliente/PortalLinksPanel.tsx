@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { criarLinkPortal, listarLinksPortal, revogarLinkPortal, type LinkPortal } from "@/services/gestaoService";
+import { criarLinkPortal, listarLinksPortal, revogarLinkPortal, statusIntegracoes, type LinkPortal } from "@/services/gestaoService";
 import { confirmar } from "@/components/ui/dialogos";
 import { Aviso, Painel, Selo, Vazio } from "../planejamento/planUi";
 import { dataHora, data } from "../planejamento/planFormat";
@@ -17,6 +17,10 @@ export function PortalLinksPanel({ cliente }: { cliente: number }): JSX.Element 
   const [descricao, setDescricao] = useState("");
   const [novo, setNovo] = useState<LinkPortal | null>(null);
 
+  // Sem o endereço público do portal no servidor (PORTAL_BASE_URL) o link não
+  // tem para onde levar o cliente: o botão fica desligado, com o motivo.
+  const [portalLigado, setPortalLigado] = useState<boolean | null>(null);
+  useEffect(() => { void statusIntegracoes().then((st) => setPortalLigado(st.portal)).catch(() => setPortalLigado(null)); }, []);
   const listar = useCallback(async () => { setLinks(await listarLinksPortal(cliente)); }, [cliente]);
   useEffect(() => { void run(listar); }, [run, listar]);
 
@@ -24,7 +28,7 @@ export function PortalLinksPanel({ cliente }: { cliente: number }): JSX.Element 
     const l = await criarLinkPortal(cliente, dias, descricao);
     setNovo(l); setDescricao(""); await listar();
   });
-  const endereco = (l: LinkPortal) => l.url || `${window.location.origin}${window.location.pathname}#/portal/${l.token}`;
+  const endereco = (l: LinkPortal) => l.url ?? "";
   const revogar = async (l: LinkPortal) => {
     if (!(await confirmar({ titulo: "Revogar o link do portal", mensagem: "Quem tiver este link deixa de acessar o portal na hora. Para voltar a dar acesso, gere um link novo.", rotulo: "Revogar", tom: "perigo" }))) return;
     void run(async () => { await revogarLinkPortal(l.id); await listar(); setFeedback({ type: "success", message: "Link revogado." }); });
@@ -41,9 +45,10 @@ export function PortalLinksPanel({ cliente }: { cliente: number }): JSX.Element 
           </select></div>
         <div className="erp-field erp-c6"><label className="erp-label" htmlFor="pl-desc">Para quem</label>
           <input id="pl-desc" className="erp-input" maxLength={120} placeholder="ex.: compras — Maria" value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
-        <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gerar} disabled={busy}>Gerar link</button></div>
+        <div className="erp-field erp-c3" style={{ justifyContent: "flex-end" }}><button className="erp-btn erp-btn-primary" onClick={gerar} disabled={busy || portalLigado === false}>Gerar link</button></div>
       </div>
-      {novo?.token && (
+      {portalLigado === false && <div className="erp-feedback warn" style={{ marginTop: 10 }}>O endereço público do portal não está configurado neste servidor, então o link não teria onde abrir. Peça ao suporte para ligar o portal do cliente.</div>}
+      {novo?.token && endereco(novo) && (
         <div className="erp-feedback success" style={{ marginTop: 10 }}>
           <div style={{ marginBottom: 6 }}>Link gerado. Copie e envie ao cliente — <strong>ele não aparece de novo</strong>.</div>
           <div style={{ display: "flex", gap: 6 }}>
