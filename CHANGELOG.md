@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## Melhorias
+- Na tela de NF-e de Saída, o botão **Descartar** tira de uso a nota em rascunho ou rejeitada que não vai ser transmitida — ela não vai à SEFAZ e o romaneio e o saldo do pedido ficam livres para uma nota nova. A nota descartada aparece como "Descartada", sem número.
+
+## Correções
+- A NF-e emitida pelo romaneio baixa o pedido na autorização e devolve tudo no cancelamento (atendido, situação do pedido e reserva); o mesmo pedido não é mais faturado duas vezes por dois romaneios.
+- A remessa para o terceiro leva a peça que realmente sai (não o produto acabado da OF), com o valor certo em poder do terceiro; no Paraná, a NF-e de remessa já sai com o código de benefício fiscal.
+- O romaneio mostra o número da NF-e autorizada (antes aparecia "NF-e 0").
+- A promessa de entrega usa o mesmo prazo do MRP, inclusive a etapa no terceiro.
+
 ## [v1.19.13] — 2026-11-23
 
 ## Novidades

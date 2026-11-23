@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { rotuloDaNota,
   type FiscalExit, type PreviaNFe, type ExitStatus,
-  listExits, authorizeExit, cancelExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
+  listExits, authorizeExit, cancelExit, descartarExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
   previewExit, getExitDocumentos,
 } from "@/services/nfeService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
@@ -54,7 +54,8 @@ const ROTULO_SITUACAO: Record<SituacaoNF, string> = {
   outra: "—",
 };
 
-function statusPill(status: string): JSX.Element {
+function statusPill(status: string, descartada = false): JSX.Element {
+  if (descartada) return <span className="erp-badge erp-badge-gray" title="Rascunho descartado: nunca foi à SEFAZ">Descartada</span>;
   const sit = situacaoDaNota(status);
   const cls = sit === "autorizada" ? "erp-badge-green"
     : sit === "cancelada" ? "erp-badge-red"
@@ -193,6 +194,19 @@ export function Vfis0200Page(): JSX.Element {
     if (j === null) return;
     setBusy(true); setFeedback(null);
     try { const r = await cancelExit(nf.id, j); setFeedback(comAvisos(`NF-e ${nf.numero_nf} cancelada.`, r.warnings, nf.id)); await reload(); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  async function descartar(nf: FiscalExit) {
+    const ok = await confirmar({
+      titulo: "Descartar nota",
+      assunto: resumoDaNota(nf),
+      mensagem: "A nota nunca foi autorizada: ela é descartada aqui, sem ir à SEFAZ, e não pode mais ser transmitida. O romaneio e o saldo do pedido ficam livres para uma nota nova.",
+      rotulo: "Descartar", tom: "perigo",
+    });
+    if (!ok) return;
+    setBusy(true); setFeedback(null);
+    try { await descartarExit(nf.id); setFeedback({ type: "success", message: "Nota descartada." }); await reload(); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -356,13 +370,15 @@ export function Vfis0200Page(): JSX.Element {
                     {notasFiltradas.map((nf) => {
                       const sit = situacaoDaNota(nf.status);
                       const isAuth = sit === "autorizada";
-                      const transmitida = !!nf.focus_ref;
+                      // Descartada (cancelada sem autorização) não tem chave nem DANFE.
+                      const transmitida = !!nf.focus_ref && !!nf.chave_nfe;
+                      const descartada = sit === "cancelada" && !nf.chave_nfe;
                       return (
                         <tr key={nf.id}>
                           <td style={{ fontWeight: 600 }}>{nf.numero_nf > 0 ? nf.numero_nf : "—"}{nf.finalidade === 4 && <><br /><span className="erp-badge erp-badge-amber" title={nf.nfe_referenciada ? `Devolução da NF-e ${nf.nfe_referenciada}` : "Devolução de compra"}>Devolução</span></>}</td>
                           <td>{nf.serie}</td>
                           <td>{nf.razao_social_destinatario}<br /><small style={{ color: "var(--v-text-muted)" }}>{documentoComMascara(nf.cnpj_destinatario)}</small></td>
-                          <td>{statusPill(nf.status)}</td>
+                          <td>{statusPill(nf.status, descartada)}</td>
                           <td className="num">{money(nf.valor_total)}</td>
                           <td>{dataBR(nf.data_emissao)}</td>
                           <td>
@@ -374,10 +390,12 @@ export function Vfis0200Page(): JSX.Element {
                                 title={sit === "rejeitada" ? "Transmite de novo depois da correção" : "Consulte o Status antes: a nota pode já ter chegado à SEFAZ"}>Reenviar</button>}
                               {(isAuth || sit === "cancelada") && transmitida && <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy} title="Abre o PDF da nota" onClick={() => void abrirDanfe(nf)}>DANFE</button>}
                               {isAuth && transmitida && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void cce(nf)}>Nova CC-e</button>}
-                              {(isAuth || sit === "cancelada") && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
-                              {sit !== "rascunho" && <button className="erp-btn erp-btn-sm" disabled={busy} title="Consulta a situação da nota na SEFAZ" onClick={() => void consultarStatus(nf)}>Status</button>}
-                              {(isAuth || sit === "cancelada") && <button className="erp-btn erp-btn-sm" disabled={busy} title="Títulos, estoque e pedido desta nota" onClick={() => void verPendencias(nf.id)}>Efeitos</button>}
+                              {(isAuth || sit === "cancelada") && !descartada && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
+                              {sit !== "rascunho" && !descartada && <button className="erp-btn erp-btn-sm" disabled={busy} title="Consulta a situação da nota na SEFAZ" onClick={() => void consultarStatus(nf)}>Status</button>}
+                              {(isAuth || sit === "cancelada") && !descartada && <button className="erp-btn erp-btn-sm" disabled={busy} title="Títulos, estoque e pedido desta nota" onClick={() => void verPendencias(nf.id)}>Efeitos</button>}
                               {isAuth && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => void cancelar(nf)}>Cancelar</button>}
+                              {(sit === "rascunho" || sit === "rejeitada") && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy}
+                                title="Descarta a nota que não vai ser transmitida" onClick={() => void descartar(nf)}>Descartar</button>}
                             </div>
                           </td>
                         </tr>

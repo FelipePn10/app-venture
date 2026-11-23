@@ -274,6 +274,12 @@ export async function cancelExit(code: number, justificativa: string): Promise<F
   const { data } = await httpClient.post(`${BASE}/exits/${code}/cancel`, { justificativa });
   return parseExit(data);
 }
+/** Descarta a nota que nunca foi autorizada (rascunho ou rejeitada): ela fica
+ * cancelada sem ir à SEFAZ e solta o romaneio e o saldo do pedido. */
+export async function descartarExit(code: number, motivo?: string): Promise<FiscalExit> {
+  const { data } = await httpClient.post(`${BASE}/exits/${code}/descartar`, motivo ? { motivo } : {});
+  return parseExit(data);
+}
 export async function cartaCorrecaoExit(code: number, textoCorrecao: string): Promise<Obj> {
   const { data } = await httpClient.post(`${BASE}/exits/${code}/carta-correcao`, { texto_correcao: textoCorrecao });
   return unwrapObject(data);
