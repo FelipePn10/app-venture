@@ -1,3 +1,4 @@
+import { CobrancaDoTitulo } from "./CobrancaDoTitulo";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { imprimirContasReceber } from "@/services/impressaoService";
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -85,6 +86,7 @@ export function Vfin0210Page(): JSX.Element {
   const [aging, setAging] = useState<AgingBucket[]>([]);
   const [filtros, setFiltros] = useState<ListFilters>({});
   const [baixa, setBaixa] = useState<{ alvo: ContaReceber; dto: BaixaRecebimentoDTO } | null>(null);
+  const [cobrar, setCobrar] = useState<ContaReceber | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [busy, setBusy] = useState(false);
 
@@ -300,6 +302,8 @@ export function Vfin0210Page(): JSX.Element {
                   parceiroLabel="Cliente" parceiroLoader={loadCustomers} parceiroCampo="cliente_id"
                   totalEncontrado={list.length} />
 
+                {cobrar && <CobrancaDoTitulo key={cobrar.id} titulo={cobrar} onFechar={() => setCobrar(null)} />}
+
                 {baixa && (
                   <div className="erp-fieldset">
                     <div className="erp-fieldset-head">
@@ -402,6 +406,7 @@ export function Vfin0210Page(): JSX.Element {
                                 <td>{statusPill(c.status)}</td>
                                 <td style={{ display: "flex", gap: 6 }}>
                                   {aberto && <button className="erp-btn erp-btn-sm" onClick={() => abrirBaixa(c)} disabled={busy}>Baixar</button>}
+                                  {aberto && <button className="erp-btn erp-btn-sm" onClick={() => { setCobrar(c); window.scrollTo?.(0, 0); }} disabled={busy} title="Emitir boleto com PIX no banco e avisar o cliente">Cobrar</button>}
                                   {aberto && <button className="erp-btn erp-btn-sm erp-btn-danger" onClick={() => void cancelar(c)} disabled={busy}>Cancelar</button>}
                                   {!aberto && <span className="erp-hint">{c.data_recebimento?.slice(0, 10) ?? "encerrado"}</span>}
                                 </td>

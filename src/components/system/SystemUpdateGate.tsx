@@ -21,6 +21,9 @@ type GateState = 'checking' | 'ready' | 'blocked' | 'unavailable';
 // na janela principal ("main"); as demais já foram validadas no login. Sem isto,
 // toda tela reexibiria o "Validando…/Atualização necessária" por alguns segundos.
 function isMainGateWindow(): boolean {
+  // O portal do cliente é página pública no navegador do cliente da empresa: a
+  // trava de versão é do desktop (e consultaria a API padrão, não a do link).
+  if (window.location.hash.startsWith('#/portal/')) return false;
   if (!isTauri()) return true; // navegador/dev: trata como janela principal
   try {
     return getCurrentWindow().label === 'main';

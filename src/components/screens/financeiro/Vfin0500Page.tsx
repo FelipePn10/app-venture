@@ -1,3 +1,4 @@
+import { DrePeloPlanoAba } from "./DrePeloPlanoAba";
 import { useState } from "react";
 import { type ReportData, type ReportRow, getReport } from "@/services/financialReportsService";
 import { errMessage } from "@/services/fiscalShared";
@@ -69,6 +70,7 @@ async function enrichEntityNames(rows: ReportRow[]): Promise<ReportRow[]> {
 
 export function Vfin0500Page(): JSX.Element {
   const [reportKey, setReportKey] = useState(REPORTS[0].key);
+  const [aba, setAba] = useState<"relatorios" | "dre">("relatorios");
   const [start, setStart] = useState(firstDayOfYear());
   const [end, setEnd] = useState(todayIso());
   const [entity, setEntity] = useState("");
@@ -173,8 +175,12 @@ export function Vfin0500Page(): JSX.Element {
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Relatórios Fiscais &amp; F</button></div>
+          <div className="erp-tabs">
+            <button className={`erp-tab${aba === "relatorios" ? " active" : ""}`} onClick={() => setAba("relatorios")}>Relatórios fiscais e financeiros</button>
+            <button className={`erp-tab${aba === "dre" ? " active" : ""}`} onClick={() => setAba("dre")}>DRE pelo plano de contas</button>
+          </div>
           <div className="erp-detail-body">
+        {aba === "dre" ? <DrePeloPlanoAba /> : (<>
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
 
@@ -206,6 +212,7 @@ export function Vfin0500Page(): JSX.Element {
             </table>
           </div></div></div>
         )}
+        </>)}
       </div></section></div>
 
       <footer className="erp-statusbar">

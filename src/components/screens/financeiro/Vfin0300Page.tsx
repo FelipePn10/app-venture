@@ -1,3 +1,4 @@
+import { FluxoComPedidosAba } from "./FluxoComPedidosAba";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   type FluxoCaixaItem, type FluxoProjetadoItem, type SaldoConta, type ContaBancaria,
@@ -27,7 +28,7 @@ import { loadBankAccounts } from "@/services/lookups";
  */
 
 type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
-type Tab = "realizado" | "projetado" | "saldos";
+type Tab = "realizado" | "projetado" | "pedidos" | "saldos";
 type Grouping = "dia" | "semana" | "mes";
 
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -35,6 +36,7 @@ const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFraction
 const ROTULO_DA_ABA: Record<Tab, string> = {
   realizado: "Realizado",
   projetado: "Projetado",
+  pedidos: "Projetado com pedidos",
   saldos: "Saldos das contas",
 };
 
@@ -135,6 +137,7 @@ export function Vfin0300Page(): JSX.Element {
     try {
       if (tab === "realizado") setRealizado(await getFluxoCaixa(start, end));
       else if (tab === "projetado") setProjetado(await getFluxoProjetado(start));
+      else if (tab === "pedidos") return; // a aba carrega sozinha
       else setSaldos(await getSaldoContas());
     } catch (e) {
       setFeedback({ type: "error", message: errMessage(e, "Falha ao carregar o fluxo de caixa.") });
@@ -206,7 +209,7 @@ export function Vfin0300Page(): JSX.Element {
       </header>
 
       <div className="erp-toolbar">
-        {tab !== "saldos" && (
+        {tab !== "saldos" && tab !== "pedidos" && (
           <div className="erp-tgroup">
             <span className="erp-tgroup-label">{tab === "realizado" ? "Início" : "A partir de"}</span>
             <input className="erp-input" style={{ width: 150, height: 32 }} type="date"
@@ -220,7 +223,7 @@ export function Vfin0300Page(): JSX.Element {
             )}
           </div>
         )}
-        {tab !== "saldos" && (
+        {tab !== "saldos" && tab !== "pedidos" && (
           <div className="erp-tgroup">
             <span className="erp-tgroup-label">Agrupar</span>
             <select className="erp-input" style={{ width: 110, height: 32 }} value={grouping}
@@ -230,7 +233,7 @@ export function Vfin0300Page(): JSX.Element {
           </div>
         )}
         <div className="erp-tspacer" />
-        <div className="erp-tgroup">
+        {tab !== "pedidos" && <div className="erp-tgroup">
           <span className="erp-tgroup-label">Ações</span>
           <button className="erp-btn erp-btn-primary" onClick={() => void reload()} disabled={busy}>
             {busy ? <><span className="erp-spin" />Carregando…</> : "Consultar"}
@@ -242,7 +245,7 @@ export function Vfin0300Page(): JSX.Element {
               conta: contaFiltro ? nomeDaConta(contaFiltro) : "todas",
               tipo: tipoFiltro || "todos",
             }} />
-        </div>
+        </div>}
       </div>
 
       <div className="erp-content">
@@ -260,7 +263,9 @@ export function Vfin0300Page(): JSX.Element {
           <div className="erp-detail-body">
             {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}
 
-            {tab !== "saldos" && (
+            {tab === "pedidos" && <FluxoComPedidosAba />}
+
+            {tab !== "saldos" && tab !== "pedidos" && (
               <div className="erp-fieldset">
                 <div className="erp-fieldset-head">
                   Recortes

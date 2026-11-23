@@ -12,7 +12,8 @@
     "  - group reúne empresas do mesmo grupo: no login, quem cai numa delas escolhe",
     "    em qual entrar (Tecnofer/Truckparts). Sem group, não há seletor (Usimac).",
     "",
-    "Este arquivo NÃO contém segredo: é só o mapa de para onde cada empresa fala."
+    "Este arquivo NÃO contém segredo: é só o mapa de para onde cada empresa fala.",
+    "  - tecnofer-treino: modo simulação (cópia da Tecnofer, sem valor fiscal); sem domínio de e-mail, aparece só no seletor do grupo Tecnofer."
   ],
   "defaultApiUrl": "https://api.venturerp.com",
   "defaultTenantId": "tecnofer",
@@ -33,6 +34,13 @@
       "emailDomains": [
         "truckpartsir.com.br"
       ],
+      "group": "tecnofer"
+    },
+    {
+      "id": "tecnofer-treino",
+      "name": "Tecnofer — Treino",
+      "apiUrl": "https://treino.api.venturerp.com",
+      "emailDomains": [],
       "group": "tecnofer"
     },
     {

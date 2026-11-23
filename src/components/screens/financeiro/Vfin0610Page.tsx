@@ -1,3 +1,4 @@
+import { RetornoCnabAba } from "./RetornoCnabAba";
 import { useEffect, useMemo, useState } from "react";
 import { type ContaBancaria, type ContaReceber, gerarRemessaCnab240, listContasBancarias, listContasReceber, saldoContaReceber } from "@/services/financialService";
 import { getFiscalConfig } from "@/services/fiscalConfigService";
@@ -32,6 +33,7 @@ const ESPECIES = [
  */
 export function Vfin0610Page(): JSX.Element {
   const isAdmin = useAuthStore((s) => s.user?.role?.toUpperCase() === "ADMIN");
+  const [aba, setAba] = useState<"remessa" | "retorno">("remessa");
   const [contaId, setContaId] = useState<number | undefined>();
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [empresa, setEmpresa] = useState<{ cnpj: string; nome: string } | null>(null);
@@ -110,21 +112,25 @@ export function Vfin0610Page(): JSX.Element {
     <div className="erp-screen">
       <header className="erp-titlebar">
         <div className="erp-brand"><div className="erp-brand-logo">V</div></div>
-        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Remessa bancária CNAB 240</span><span className="erp-crumb-code">VFIN0610</span></nav>
+        <nav className="erp-crumbs"><span className="erp-crumb-mut">Financeiro</span><span className="erp-crumb-sep">›</span><span className="erp-crumb-cur">Remessa e retorno bancário CNAB 240</span><span className="erp-crumb-code">VFIN0610</span></nav>
         <div className="erp-titlebar-spacer" />
       </header>
 
       <div className="erp-toolbar">
         <div className="erp-tgroup">
           <span className="erp-tgroup-label">Ações</span>
-          <button className="erp-btn erp-btn-primary" onClick={() => void gerar()} disabled={busy || !isAdmin} title={!isAdmin ? "Requer administrador" : undefined}>{busy && <span className="erp-spin" />}Gerar remessa</button>
+          <button className="erp-btn erp-btn-primary" onClick={() => void gerar()} disabled={busy || !isAdmin || aba !== "remessa"} title={!isAdmin ? "Requer administrador" : undefined}>{busy && <span className="erp-spin" />}Gerar remessa</button>
         </div>
       </div>
 
       <div className="erp-content">
         <section className="erp-detail-panel">
-          <div className="erp-tabs"><button className="erp-tab active">Remessa</button></div>
+          <div className="erp-tabs">
+            <button className={`erp-tab${aba === "remessa" ? " active" : ""}`} onClick={() => setAba("remessa")}>Remessa</button>
+            <button className={`erp-tab${aba === "retorno" ? " active" : ""}`} onClick={() => setAba("retorno")}>Retorno</button>
+          </div>
           <div className="erp-detail-body">
+            {aba === "retorno" ? <RetornoCnabAba /> : (<>
             {feedback && <div className={`erp-feedback ${feedback.type}`} role={feedback.type === "error" ? "alert" : undefined}>{feedback.message}</div>}
             {!isAdmin && <div className="erp-feedback info">Só um administrador pode gerar a remessa.</div>}
 
@@ -174,6 +180,7 @@ export function Vfin0610Page(): JSX.Element {
                 </table>
               </div>
             </div></div>
+            </>)}
           </div>
         </section>
       </div>

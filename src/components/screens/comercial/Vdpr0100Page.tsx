@@ -1,3 +1,4 @@
+import { SimuladorPromessaAba } from "./SimuladorPromessaAba";
 import { useState, useCallback, useMemo } from "react";
 import {
   type TankReservationLine,
@@ -10,7 +11,7 @@ import { loadItems, loadCustomers, loadRepresentatives } from "@/services/lookup
 import { hojeLocal } from "@/utils/dataLocal";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type View = "occupation" | "reservation" | "reschedule";
+type View = "occupation" | "reservation" | "reschedule" | "ctp";
 const today = () => hojeLocal();
 const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const money = (n?: number) => (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -127,6 +128,7 @@ export function Vdpr0100Page(): JSX.Element {
           <button className={`erp-btn${view === "occupation" ? " erp-btn-dark" : ""}`} onClick={() => setView("occupation")} disabled={busy}>Ocupação</button>
           <button className={`erp-btn${view === "reservation" ? " erp-btn-dark" : ""}`} onClick={() => setView("reservation")} disabled={busy}>Reserva de tanque</button>
           <button className={`erp-btn${view === "reschedule" ? " erp-btn-dark" : ""}`} onClick={() => setView("reschedule")} disabled={busy}>Reprogramação em lote</button>
+          <button className={`erp-btn${view === "ctp" ? " erp-btn-dark" : ""}`} onClick={() => setView("ctp")} disabled={busy} title="Quando dá para entregar: estoque, entradas previstas e reposição pela estrutura">Simular pelo estoque</button>
         </div>
         <div className="erp-tspacer" />
         <div className="erp-tgroup"><ExportButton title="VDPR0100 — Promessa de Entrega" filename="vdpr0100" /></div>
@@ -134,6 +136,8 @@ export function Vdpr0100Page(): JSX.Element {
 
       <div className="erp-content">
       {feedback && <div className={`erp-feedback ${feedback.type}`}>{busy && <span className="erp-spin" />}{feedback.message}</div>}
+
+      {view === "ctp" && <SimuladorPromessaAba />}
 
       {view === "occupation" && (
         <>

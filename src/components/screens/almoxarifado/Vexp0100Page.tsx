@@ -1,3 +1,4 @@
+import { ExpedicaoGuiadaPanel } from "./ExpedicaoGuiadaPanel";
 import { useState, useCallback } from "react";
 import {
   type ShipmentDTO, type ShipmentItemDTO, type ShipmentVolumeDTO, type ShipmentEventDTO,
@@ -34,7 +35,7 @@ export function Vexp0100Page(): JSX.Element {
   const [events, setEvents] = useState<ShipmentEventDTO[]>([]);
   const [newForm, setNewForm] = useState<ShipmentDTO>({ reference_type: "SALES_ORDER", sales_order_code: 0 });
   const [autoFillCode, setAutoFillCode] = useState<number | undefined>();
-  const [aba, setAba] = useState<"romaneios" | "cargas">("romaneios");
+  const [aba, setAba] = useState<"romaneios" | "cargas" | "pedido">("romaneios");
   const [itemForm, setItemForm] = useState<ShipmentItemDTO>({ ...EMPTY_ITEM });
   const [volForm, setVolForm] = useState<ShipmentVolumeDTO>({ ...EMPTY_VOL });
   const [transport, setTransport] = useState<{ shipping_carrier_id?: number; freight_modality: string; freight_value: number; insurance_value: number; vehicle_plate: string; driver_name: string; antt_code: string; seals: string; estimated_delivery: string }>({ freight_modality: "CIF", freight_value: 0, insurance_value: 0, vehicle_plate: "", driver_name: "", antt_code: "", seals: "", estimated_delivery: "" });
@@ -120,7 +121,9 @@ export function Vexp0100Page(): JSX.Element {
         <div className="erp-titlebar-spacer" />
       </header>
 
-      {aba === "romaneios" && (
+      {/* A grade da tela tem 4 linhas (título, barra, conteúdo, rodapé): sem a
+          barra nas outras abas o rodapé subia para o meio da tela. */}
+      {aba !== "romaneios" ? <div /> : (
       <div className="erp-toolbar">
         <div className="erp-tgroup"><span className="erp-tgroup-label">Status</span>
           <select className="erp-input" style={{ width: 130, height: 32 }} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -139,8 +142,9 @@ export function Vexp0100Page(): JSX.Element {
         <div className="erp-tabs">
           <button className={`erp-tab${aba === "romaneios" ? " active" : ""}`} onClick={() => setAba("romaneios")}>Romaneios</button>
           <button className={`erp-tab${aba === "cargas" ? " active" : ""}`} onClick={() => setAba("cargas")}>Cargas</button>
+          <button className={`erp-tab${aba === "pedido" ? " active" : ""}`} onClick={() => setAba("pedido")} title="Do pedido ao caminhão, um passo de cada vez">Por pedido (guiado)</button>
         </div>
-        {aba === "cargas" ? <CargasPanel /> : (
+        {aba === "pedido" ? <ExpedicaoGuiadaPanel /> : aba === "cargas" ? <CargasPanel /> : (
         <section className="erp-detail-panel">
           <div className="erp-detail-body">
         {feedback && <div className={`erp-feedback ${feedback.type}`}>{feedback.message}</div>}

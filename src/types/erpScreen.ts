@@ -98,6 +98,7 @@ export interface ErpScreen {
  */
 export const SHOP_FLOOR_SCREENS: readonly string[] = [
   'VPRO0900', // Ordem de Fabricação — apontamento de etapa, produção e consumo
+  'VPRO0950', // Apontamento no Posto — tablet/celular, leitura da etiqueta em 3 toques
   'VPRO1200', // Parada de Máquina — o operador registra a parada do próprio posto
   'VPRO1000', // Ficha de Ferramenta — conferir a ferramenta antes de produzir
 ];
@@ -128,7 +129,7 @@ export const MODULO_DE_PERMISSAO: Record<string, string> = {
 };
 
 /** Rotinas de uso pessoal que todo usuário abre, com qualquer perfil. */
-export const ROTINAS_PESSOAIS: readonly string[] = ['VSEC0100', 'VNOT0100', 'VAPR0100'];
+export const ROTINAS_PESSOAIS: readonly string[] = ['VSEC0100', 'VNOT0100', 'VAPR0100', 'VPEN0100'];
 
 /** Permissões do perfil, como o menu precisa (módulos que o usuário consulta). */
 export interface AcessoDoMenu { restrito: boolean; permissoes: { modulo: string; acao: string }[] }
@@ -144,6 +145,13 @@ export function screensForRole(screens: ErpScreen[], role?: string, acesso?: Ace
 }
 
 export const ERP_SCREENS: ErpScreen[] = [
+  // ── Rodada de validação (gestão e operação guiada)
+  { code: "VPEN0100", title: "Central de Pendências", description: "O que o seu perfil tem a resolver hoje: OFs atrasadas, notas a conferir, títulos vencidos, peças paradas no terceiro — cada uma abre a tela que resolve.", module: "planejamento" },
+  { code: "VPRO0950", title: "Apontamento no Posto (tablet)", description: "Tela do chão de fábrica para tablet ou celular: lê a etiqueta da etapa, aponta boas e refugo com operador e máquina em 3 toques e mostra a baixa automática do material.", module: "producao" },
+  { code: "VADM0800", title: "Painel de Implantação", description: "Placar do que falta cadastrar para a empresa rodar o ERP inteiro, com o que corrigir e a tela de cada verificação.", module: "cadastros" },
+  { code: "VADM0900", title: "Modo Simulação (treino)", description: "Copia os dados de hoje da empresa para o ambiente de treino, com NF-e em homologação e envios desligados.", module: "cadastros" },
+  { code: "VIND0100", title: "Indicadores Gerenciais", description: "OEE por máquina, giro do estoque, pontualidade de fornecedores e da promessa de entrega, com receita e margem do período (o detalhe da margem fica na VCUS0200).", module: "custo" },
+
   // ── Módulos de plataforma / novos (backend recém-exposto)
   {
     code: "VPCT0100",
@@ -160,7 +168,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VTPS0100",
     title: "Serviços de Terceiros",
-    description: "Preços de serviço por item×fornecedor×operação e ordens de serviço (OF→requisição→OC).",
+    description: "Preços de serviço por item×fornecedor×operação ordens de serviço (OF→requisição→OC), remessa e retorno, o que está em poder de cada terceiro e a NF-e de remessa.",
     module: "suprimento",
   },
   {
@@ -341,13 +349,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VCUS0200",
     title: "Margem de Contribuição",
-    description: "Quanto sobra de cada venda depois de impostos, custo, despesas e do descasamento de caixa; parâmetros do mês e apuração por item e cliente.",
+    description: "Quanto sobra de cada venda depois de impostos, custo, despesas e do descasamento de caixa; parâmetros do mês, apuração por item e cliente e a margem de um pedido (padrão × real).",
     module: "custo",
   },
   {
     code: "VCUS0100",
     title: "Custos — Centro, Compra, Alocação e Overhead",
-    description: "Custo/hora por centro de trabalho, custo de compra por item, base de alocação, overhead e rollup do custo padrão.",
+    description: "Custo/hora por centro de trabalho, custo de compra por item, base de alocação, overhead, rollup do custo padrão (um item ou todos) e a variação padrão × real das OFs encerradas.",
     module: "custo",
   },
 
@@ -371,7 +379,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VSUP0110",
     title: "Unidades e Conversões",
-    description: "Catálogo de unidades da empresa, sinônimos da nota fiscal, conversões padrão e conversões do item (1 CX = 12 UN, 3 M2 = 1 chapa) com vigência, encadeamento, cobertura, simulador, fator por lote e histórico.",
+    description: "Catálogo de unidades da empresa, sinônimos da nota fiscal, conversões padrão e conversões do item (1 CX = 12 UN, 3 M2 = 1 chapa) com vigência, encadeamento, cobertura, simulador, assistente por medidas (peso e conversões da peça), fator por lote e histórico.",
     module: "suprimento",
   },
   {
@@ -585,13 +593,13 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIN0210",
     title: "Contas a Receber",
-    description: "Lançar, baixar e cancelar contas a receber; aging.",
+    description: "Lançar, baixar, cobrar (boleto com PIX e aviso ao cliente) e cancelar contas a receber; aging.",
     module: "financeiro",
   },
   {
     code: "VFIN0300",
     title: "Fluxo de Caixa e Saldos",
-    description: "Extrato realizado, projeção de caixa e saldos das contas.",
+    description: "Extrato realizado, projeção de caixa (também com os pedidos ainda não faturados) e saldos das contas.",
     module: "financeiro",
   },
   {
@@ -723,7 +731,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIN0500",
     title: "Relatórios Fiscais e Financeiros",
-    description: "Relatórios R01–R19 (livros, DRE, aging, curva ABC, produtos).",
+    description: "Relatórios R01–R19 (livros, DRE, aging, curva ABC, produtos) e a DRE pelo plano de contas.",
     module: "financeiro",
   },
   {
@@ -735,7 +743,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VFIN0610",
     title: "Remessa Bancária CNAB 240",
-    description: "Gerar arquivo de remessa CNAB 240 para envio ao banco.",
+    description: "Gerar o arquivo de remessa CNAB 240 e processar o retorno do banco (baixa dos títulos liquidados).",
     module: "financeiro",
   },
   {
@@ -806,7 +814,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VEXP0100",
     title: "Expedição / Romaneio",
-    description: "Romaneios (separação, conferência, volumes e despacho) e cargas: montar com os romaneios prontos, caixa de despacho, orientações ao motorista, faturar e despachar.",
+    description: "Romaneios (separação, conferência, volumes e despacho) e cargas: montar com os romaneios prontos, caixa de despacho, orientações ao motorista, faturar e despachar; e o passo a passo guiado por pedido, com cotação de frete e rastreio.",
     module: "almoxarifado",
   },
   {
@@ -848,7 +856,7 @@ export const ERP_SCREENS: ErpScreen[] = [
   {
     code: "VDPR0100",
     title: "Promessa de Entrega — Ocupação e Reservas",
-    description: "Consultar ocupação diária de tanque/setor, criar/simular reserva comercial de capacidade, expirar reservas vencidas e reprogramar datas de entrega em lote.",
+    description: "Consultar ocupação diária de tanque/setor, criar/simular reserva comercial de capacidade, expirar reservas vencidas, reprogramar datas de entrega em lote e simular a data pelo estoque e pela estrutura.",
     module: "comercial",
   },
   // ── Fechamento funcional 2026: compras, configurador, terceiros, APS e engenharia

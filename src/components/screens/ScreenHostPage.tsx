@@ -15,6 +15,11 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  * `<Tela />` não dispara o import — quem dispara é renderizar, dentro do
  * `Suspense` lá embaixo.
  */
+// Rodada de validação: gestão, cobrança, custo, expedição guiada, terceiros, assistente e promessa.
+const Vadm0800Page = lazy(() => import("./gestao/Vadm0800Page").then((m) => ({ default: m.Vadm0800Page })));
+const Vpen0100Page = lazy(() => import("./gestao/Vpen0100Page").then((m) => ({ default: m.Vpen0100Page })));
+const Vind0100Page = lazy(() => import("./gestao/Vind0100Page").then((m) => ({ default: m.Vind0100Page })));
+const Vadm0900Page = lazy(() => import("./gestao/Vadm0900Page").then((m) => ({ default: m.Vadm0900Page })));
 const Vent0800Page = lazy(() => import("./almoxarifado/Vent0800Page").then((m) => ({ default: m.Vent0800Page })));
 const Vben0100Page = lazy(() => import("./beneficiamento/Vben0100Page").then((m) => ({ default: m.Vben0100Page })));
 const Vben0200Page = lazy(() => import("./beneficiamento/Vben0200Page").then((m) => ({ default: m.Vben0200Page })));
@@ -99,6 +104,7 @@ const Vvnd0400Page = lazy(() => import("./comercial/Vvnd0400Page").then((m) => (
 const Vvnd0500Page = lazy(() => import("./comercial/Vvnd0500Page").then((m) => ({ default: m.Vvnd0500Page })));
 const Vsac0100Page = lazy(() => import("./comercial/Vsac0100Page").then((m) => ({ default: m.Vsac0100Page })));
 const Vdpr0100Page = lazy(() => import("./comercial/Vdpr0100Page").then((m) => ({ default: m.Vdpr0100Page })));
+const Vpro0950Page = lazy(() => import("./producao/Vpro0950Page").then((m) => ({ default: m.Vpro0950Page })));
 const Vpro0900Page = lazy(() => import("./producao/Vpro0900Page").then((m) => ({ default: m.Vpro0900Page })));
 const Vpro1000Page = lazy(() => import("./producao/Vpro1000Page").then((m) => ({ default: m.Vpro1000Page })));
 const RoteiroFabricacaoPage = lazy(() => import("./engenharia/RoteiroFabricacaoPage").then((m) => ({ default: m.RoteiroFabricacaoPage })));
@@ -197,6 +203,7 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VSAC0100: <Vsac0100Page />,
   VDPR0100: <Vdpr0100Page />,
   VPRO0900: <Vpro0900Page />,
+  VPRO0950: <Vpro0950Page />,
   VPRO1000: <Vpro1000Page />,
   VENT0202: <RoteiroFabricacaoPage />,
   VPRO0200: <Vpro0200Page />,
@@ -283,6 +290,10 @@ const SCREEN_REGISTRY: Record<string, JSX.Element> = {
   VINS0200: <Vins0200Page />,
   VAVF0300: <Vavf0300Page />,
   VIMP0200: <Vimp0200Page />,
+  VADM0800: <Vadm0800Page />,
+  VPEN0100: <Vpen0100Page />,
+  VIND0100: <Vind0100Page />,
+  VADM0900: <Vadm0900Page />,
 };
 
 export function ScreenHostPage(): JSX.Element {

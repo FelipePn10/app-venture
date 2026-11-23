@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## Novidades
+- **Portal do cliente:** gere na ficha do cliente (aba "Portal do cliente") um link pessoal com validade. Pelo link, que abre no celular ou no computador em cliente.venturerp.com, o seu cliente acompanha os pedidos (o que está acontecendo com cada um, itens, preços, entrega e parcelas), baixa a nota fiscal oficial em PDF (DANFE) e o XML, copia o PIX ou o boleto e pede de novo um pedido — que chega para você confirmar. Na tela de Pedido de Venda aparece o aviso "pedidos feitos pelo cliente no portal" com o filtro para vê-los, e o pedido ganha o selo "Portal". O cliente não vê pedido de outro cliente, orçamento nem rascunho do vendedor; o mesmo pedido não é pedido duas vezes enquanto aguarda; pedido recusado aparece como "Não confirmado".
+- **Cobrança com boleto e PIX pelo Banco Inter:** emita a cobrança do título em Contas a Receber ("Cobrar") e avise o cliente por e-mail ou WhatsApp. Quando ele paga, o título baixa sozinho. Cancelar ou quitar o título à mão cancela também o boleto no banco. Em Contas Bancárias aparece o quadro "Integrações" com o que está ligado.
+- **Expedição guiada:** na Expedição, a aba "Por pedido (guiado)" leva do pedido ao caminhão passo a passo: montar o romaneio, separar, conferir item a item, emitir a NF-e e despachar, com cotação de frete e rastreio da carga.
+- **Apontamento no tablet (VPRO0950):** nova tela para o chão de fábrica. O operador lê a etiqueta da etapa, ajusta as peças boas e o refugo com botões grandes e aponta; a tela mostra o material que foi baixado do estoque.
+- **Central de Pendências (VPEN0100):** o que o seu perfil tem para resolver hoje, com o atalho para a tela certa — inclusive os pedidos que os clientes fizeram pelo portal.
+- **Painel de Implantação (VADM0800):** um placar do que falta cadastrar para a empresa rodar o ERP inteiro.
+- **Indicadores Gerenciais (VIND0100):** OEE por máquina, giro do estoque, pontualidade de fornecedores e da promessa de entrega.
+- **Modo simulação (VADM0900):** copie os dados de hoje da Tecnofer para o ambiente de treino com um clique. Para treinar, escolha "Tecnofer — Treino" no login; enquanto estiver no treino, uma faixa laranja "TREINO" fica na tela.
+
+## Melhorias
+- Prazo possível no pedido de venda: o sistema diz quando dá para entregar o saldo do pedido.
+- Pedido de compra também por WhatsApp, além do e-mail.
+- Assistente de conversão (aba da VSUP0110): calcula o peso da peça pelas medidas e sugere as conversões e o lote múltiplo.
+- Custos: variação entre o custo-padrão e o real de cada OF (VCUS0100), margem por pedido (VCUS0200) e apuração de todos os itens de uma vez.
+- Financeiro: retorno do banco (CNAB) baixa os títulos pagos (VFIN0610), fluxo de caixa com os pedidos ainda não faturados (VFIN0300) e DRE pelo plano de contas (VFIN0500).
+- Serviços de terceiros: o que está com cada fornecedor (aba "Em poder de terceiros"), a nota de remessa para industrialização e o retorno registrado pela nota do terceiro.
+- Promessa de entrega: simule pelo estoque antes de prometer (VDPR0100).
+- Repetir pedido de venda com o preço de hoje.
+
+## Correções
+- O romaneio montado a partir do pedido volta a separar, inclusive quando a linha do pedido não tem depósito; a falta de estoque aponta a linha e a quantidade.
+- O inventário compara com o saldo da hora da contagem e não deixa sobra errada.
+- A baixa automática aparece nos consumos da OF, também na leitura do coletor.
+- Cancelar a NF-e reabre o romaneio; a NF-e autorizada consome a reserva do romaneio.
+- Material comprado não acusa mais "componente ainda não tem OF".
+- Resíduo de conversão (0,000001 UN) não aparece mais no estoque nem distorce o custo médio.
+- O fechamento mostra a produção do mês mesmo com a contabilização desligada.
+- Datas do portal não aparecem mais um dia antes.
+
 ## [v1.19.12] — 2026-11-21
 
 ## Correções

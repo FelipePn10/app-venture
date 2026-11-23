@@ -73,7 +73,8 @@
     "audit:roundtrip": "node scripts/audit-roundtrip.mjs",
     "sim:telas": "node scripts/ui-sim/varrer.mjs",
     "sim:explorar": "bash scripts/ui-sim/explorar-tudo.sh",
-    "audit:grade": "node scripts/audit-grade.mjs"
+    "audit:grade": "node scripts/audit-grade.mjs",
+    "test:treino-banner": "node scripts/test-treino-banner.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.1",

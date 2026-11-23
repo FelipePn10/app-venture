@@ -1,3 +1,4 @@
+import { IntegracaoBancoPanel } from "./IntegracaoBancoPanel";
 import { useState, useCallback, useEffect } from "react";
 import { type ContaBancaria, type ContaBancariaDTO, listContasBancarias, createContaBancaria } from "@/services/financialService";
 import { errMessage } from "@/services/fiscalShared";
@@ -111,6 +112,7 @@ export function Vfin0100Page(): JSX.Element {
             </tbody>
           </table>
         </div></div></div>
+        <IntegracaoBancoPanel />
       </div></section></div>
 
       <footer className="erp-statusbar">

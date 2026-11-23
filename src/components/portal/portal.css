@@ -1,0 +1,105 @@
+/* Portal do Cliente — página pública, celular primeiro. Cores do ERP (sage/slate). */
+.portal { min-height: 100vh; background: #f4f6f4; color: #0f172a; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; }
+.portal * { box-sizing: border-box; }
+.portal-top { background: linear-gradient(135deg, #1e421e, #2d5f2d); color: #fff; padding: 22px 16px 54px; }
+.portal-top-in, .portal-main { max-width: 960px; margin: 0 auto; }
+.portal-marca { display: flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.portal-marca b { width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,.18); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.portal-top h1 { font-family: 'Outfit', 'Inter', sans-serif; font-weight: 600; font-size: 26px; margin: 14px 0 4px; }
+.portal-top p { margin: 0; opacity: .85; }
+.portal-main { padding: 0 16px 40px; margin-top: -34px; }
+.portal-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.portal-kpi { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+.portal-kpi span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+.portal-kpi strong { display: block; font-size: 22px; margin-top: 4px; font-family: 'Outfit', 'Inter', sans-serif; }
+.portal-filtros { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.portal-chip { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #334155; }
+.portal-chip.ativo { background: #2d5f2d; border-color: #2d5f2d; color: #fff; }
+.portal-pedido { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(15,23,42,.08); margin-bottom: 12px; overflow: hidden; }
+.portal-pedido-cab { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; border: 0; background: none; width: 100%; text-align: left; font: inherit; color: inherit; }
+.portal-pedido-cab:focus-visible { outline: 2px solid #5a9a5a; outline-offset: -2px; }
+.portal-pedido-num { font-weight: 700; font-size: 15px; }
+.portal-pedido-sub { color: #64748b; font-size: 12.5px; margin-top: 2px; }
+.portal-espaco { flex: 1; }
+.portal-valor { font-weight: 600; white-space: nowrap; }
+.portal-selo { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.portal-selo.ok { background: #e8f0e8; color: #2d5f2d; } .portal-selo.info { background: #e0ecfb; color: #1d4ed8; }
+.portal-selo.warn { background: #fdf2dc; color: #92400e; } .portal-selo.mut { background: #f1f5f9; color: #475569; }
+.portal-etapas { display: flex; gap: 0; padding: 0 16px 14px; }
+.portal-etapa { flex: 1; text-align: center; font-size: 11.5px; color: #94a3b8; position: relative; padding-top: 18px; }
+.portal-etapa::before { content: ''; position: absolute; top: 5px; left: 0; right: 0; height: 3px; background: #e2e8f0; }
+.portal-etapa::after { content: ''; position: absolute; top: 0; left: 50%; width: 13px; height: 13px; margin-left: -6px; border-radius: 50%; background: #e2e8f0; }
+.portal-etapa.feita { color: #2d5f2d; font-weight: 600; } .portal-etapa.feita::before, .portal-etapa.feita::after { background: #3d7a3d; }
+.portal-corpo { border-top: 1px solid #eef2f6; padding: 12px 16px 16px; }
+.portal-tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.portal-tabela th { text-align: left; color: #64748b; font-weight: 500; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px; border-bottom: 1px solid #eef2f6; }
+.portal-tabela td { padding: 8px 4px; border-bottom: 1px solid #f4f6f8; vertical-align: top; }
+.portal-tabela .num { text-align: right; white-space: nowrap; }
+.portal-notas { margin-top: 12px; display: grid; gap: 8px; }
+.portal-nota { display: flex; align-items: center; gap: 10px; background: #f8fafc; border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.portal-nota code { font-size: 11.5px; color: #475569; word-break: break-all; }
+.portal-btn { border: 0; border-radius: 9px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; background: #2d5f2d; color: #fff; }
+.portal-btn:disabled { opacity: .55; cursor: default; }
+.portal-btn.sec { background: #fff; color: #2d5f2d; border: 1px solid #b5d4b5; }
+.portal-acoes { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+.portal-aviso { border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 13.5px; }
+.portal-aviso.ok { background: #e8f0e8; color: #1e421e; } .portal-aviso.err { background: #fdecec; color: #991b1b; }
+.portal-vazio { text-align: center; padding: 48px 16px; color: #64748b; }
+.portal-vazio h2 { color: #0f172a; font-family: 'Outfit', 'Inter', sans-serif; font-weight: 600; }
+.portal-modal-fundo { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
+.portal-modal { background: #fff; width: 100%; max-width: 520px; border-radius: 16px 16px 0 0; padding: 20px 18px; }
+.portal-modal h3 { margin: 0 0 6px; font-family: 'Outfit', 'Inter', sans-serif; }
+.portal-modal textarea { width: 100%; min-height: 84px; border: 1px solid #cbd5e1; border-radius: 9px; padding: 10px; font: inherit; margin-top: 10px; }
+.portal-rodape { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 26px; }
+@media (min-width: 720px) { .portal-modal-fundo { align-items: center; } .portal-modal { border-radius: 16px; } }
+@media (max-width: 560px) {
+  .portal-resumo { grid-template-columns: 1fr 1fr; } .portal-resumo .portal-kpi:last-child { grid-column: span 2; }
+  .portal-esconde-celular { display: none; } .portal-top h1 { font-size: 22px; }
+}
+
+/* ── v2: abas, cartões, detalhe do pedido ── */
+.portal-resumo { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.portal-kpi { border: 0; text-align: left; font: inherit; color: inherit; cursor: default; }
+button.portal-kpi { cursor: pointer; } button.portal-kpi:hover { box-shadow: 0 2px 8px rgba(15,23,42,.14); }
+.portal-kpi em { display: block; font-style: normal; font-size: 12px; color: #64748b; margin-top: 2px; }
+.portal-kpi em.err { color: #b91c1c; font-weight: 600; }
+.portal-abas { display: flex; gap: 4px; border-bottom: 1px solid #dbe3ea; margin: 4px 0 14px; }
+.portal-aba { border: 0; background: none; padding: 10px 14px; font: inherit; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; }
+.portal-aba.ativa { color: #1e421e; border-bottom-color: #3d7a3d; }
+.portal-cartao { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(15,23,42,.08); margin-bottom: 12px; }
+.portal-pedido.novo { outline: 2px solid #f59e0b; }
+.portal-secao { padding: 16px; }
+.portal-secao h3, .portal-corpo h3 { font-family: 'Outfit', 'Inter', sans-serif; font-size: 15px; margin: 0 0 10px; color: #1e293b; }
+.portal-sub { color: #64748b; font-size: 12.5px; }
+.portal-pedido-id { min-width: 0; flex: 1; }
+.portal-pedido-estado { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.portal-seta { color: #94a3b8; font-size: 14px; margin-left: 4px; }
+.portal-frase { margin: -4px 16px 10px; color: #334155; font-size: 13.5px; }
+.portal-selo.err { background: #fdecec; color: #b91c1c; }
+.portal-corpo { display: grid; gap: 18px; }
+.portal-dados { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; margin: 0; }
+.portal-dados div { min-width: 0; } .portal-dados .largo { grid-column: span 2; }
+.portal-dados dt { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+.portal-dados dd { margin: 2px 0 0; font-weight: 500; }
+.portal-tabela-rolagem { overflow-x: auto; }
+.portal-tabela tfoot td { padding: 8px 4px; border-top: 2px solid #eef2f6; }
+.portal-ok { color: #2d5f2d; font-weight: 600; }
+.portal-nota { flex-wrap: wrap; align-items: flex-start; padding: 12px; }
+.portal-nota-info { flex: 1; min-width: 240px; display: grid; gap: 4px; }
+.portal-nota-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.portal-chave { font-size: 11px; color: #475569; word-break: break-all; }
+.portal-btn-sm { padding: 7px 12px; font-size: 13px; }
+.portal-acoes-linha { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.portal-entregas { margin: 0; padding-left: 18px; line-height: 1.7; }
+.portal-acoes { align-items: center; }
+.portal-acoes .portal-sub { flex: 1; min-width: 200px; }
+.portal-aviso { display: flex; align-items: flex-start; gap: 10px; }
+.portal-fechar { margin-left: auto; border: 0; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: inherit; opacity: .6; }
+.portal-lista { margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; }
+.portal-label { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; }
+@media (max-width: 760px) {
+  .portal-resumo { grid-template-columns: 1fr 1fr; }
+  .portal-dados { grid-template-columns: 1fr 1fr; }
+  .portal-pedido-cab { flex-wrap: wrap; }
+}
+@media (max-width: 560px) { .portal-resumo .portal-kpi:last-child { grid-column: auto; } .portal-dados .largo { grid-column: span 2; } }

@@ -1,3 +1,4 @@
+import { AssistenteConversaoAba } from "./AssistenteConversaoAba";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type ConversaoItem, type Cobertura, type ConversaoLote, type Evento, type Unidade,
@@ -15,8 +16,8 @@ import { AbaUnidades, AbaSinonimos, AbaConversoesPadrao, OpcoesDeUnidade } from 
 import { AbaSimulador, type RascunhoConversao } from "./Vsup0110Simulador";
 
 type Feedback = { type: "success" | "error" | "info"; message: string } | null;
-type Aba = "conversoes" | "cobertura" | "simulador" | "lotes" | "historico" | "unidades" | "sinonimos" | "padrao";
-const ABAS_DO_ITEM: Aba[] = ["conversoes", "cobertura", "simulador", "lotes", "historico"];
+type Aba = "conversoes" | "cobertura" | "simulador" | "assistente" | "lotes" | "historico" | "unidades" | "sinonimos" | "padrao";
+const ABAS_DO_ITEM: Aba[] = ["conversoes", "cobertura", "simulador", "assistente", "lotes", "historico"];
 
 const hoje = () => new Date().toLocaleDateString("sv-SE"); // AAAA-MM-DD no fuso local
 const dataBR = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
@@ -230,6 +231,7 @@ export function Vsup0110Page(): JSX.Element {
             <button className={`erp-tab${aba === "conversoes" ? " active" : ""}`} onClick={() => setAba("conversoes")}>Conversões do item ({conversoes.length})</button>
             <button className={`erp-tab${aba === "cobertura" ? " active" : ""}`} onClick={() => setAba("cobertura")}>Cobertura{faltando > 0 && <span className="erp-badge err" style={{ marginLeft: 6 }}>{faltando}</span>}</button>
             <button className={`erp-tab${aba === "simulador" ? " active" : ""}`} onClick={() => setAba("simulador")}>Simulador</button>
+            <button className={`erp-tab${aba === "assistente" ? " active" : ""}`} onClick={() => setAba("assistente")} title="Peso e conversões a partir das medidas da peça">Assistente por medidas</button>
             <button className={`erp-tab${aba === "lotes" ? " active" : ""}`} onClick={() => setAba("lotes")}>Por lote</button>
             <button className={`erp-tab${aba === "historico" ? " active" : ""}`} onClick={() => setAba("historico")}>Histórico</button>
             <span style={{ flex: 1 }} />
@@ -371,6 +373,7 @@ export function Vsup0110Page(): JSX.Element {
             )}
 
             {aba === "cobertura" && item && <AbaCobertura cobertura={cobertura} aoCadastrar={(u) => prepararNova(u, unidadeEstoque)} />}
+            {aba === "assistente" && item && <AssistenteConversaoAba item={item} onGravado={() => void carregarItem(item)} />}
             {aba === "simulador" && item && <AbaSimulador item={item} unidades={unidades} estoque={unidadeEstoque} aceitaFracao={cobertura?.accepts_fractional ?? true}
               conversoes={conversoes} cobertura={cobertura} aviso={aviso} aoUsarNoCadastro={(r) => prepararNova(r.from_uom, r.to_uom, r)} />}
             {aba === "lotes" && item && <AbaLotes item={item} unidades={unidades} estoque={unidadeEstoque} aviso={aviso} />}
