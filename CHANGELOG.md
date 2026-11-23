@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.14] — 2026-11-23
+
 ## Melhorias
 - Na tela de NF-e de Saída, o botão **Descartar** tira de uso a nota em rascunho ou rejeitada que não vai ser transmitida — ela não vai à SEFAZ e o romaneio e o saldo do pedido ficam livres para uma nota nova. A nota descartada aparece como "Descartada", sem número.
 
