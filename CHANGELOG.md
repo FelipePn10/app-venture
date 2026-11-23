@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.13] — 2026-11-23
+
 ## Novidades
 - **Portal do cliente:** gere na ficha do cliente (aba "Portal do cliente") um link pessoal com validade. Pelo link, que abre no celular ou no computador em cliente.venturerp.com, o seu cliente acompanha os pedidos (o que está acontecendo com cada um, itens, preços, entrega e parcelas), baixa a nota fiscal oficial em PDF (DANFE) e o XML, copia o PIX ou o boleto e pede de novo um pedido — que chega para você confirmar. Na tela de Pedido de Venda aparece o aviso "pedidos feitos pelo cliente no portal" com o filtro para vê-los, e o pedido ganha o selo "Portal". O cliente não vê pedido de outro cliente, orçamento nem rascunho do vendedor; o mesmo pedido não é pedido duas vezes enquanto aguarda; pedido recusado aparece como "Não confirmado".
 - **Cobrança com boleto e PIX pelo Banco Inter:** emita a cobrança do título em Contas a Receber ("Cobrar") e avise o cliente por e-mail ou WhatsApp. Quando ele paga, o título baixa sozinho. Cancelar ou quitar o título à mão cancela também o boleto no banco. Em Contas Bancárias aparece o quadro "Integrações" com o que está ligado.
