@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Melhorias
+- Ordem de produção: na aba Resumo, o botão **Incluir observação** (ou **Alterar observação**) registra a instrução para o operador mesmo com a ordem em produção — ela sai na ordem impressa.
+
+## Correções
+- A prioridade da ordem de produção aparece em português (Alta, Normal, Baixa, Urgente), na tela e na ordem impressa.
+- A ordem impressa traz, em cada etapa, a instrução do roteiro, as pausas e retomadas com o motivo e quem concluiu a etapa; as assinaturas saem com o nome e a data de quem emitiu, separou, executou e liberou a ordem na qualidade.
+
 ## [v1.19.14] — 2026-11-23
 
 ## Melhorias

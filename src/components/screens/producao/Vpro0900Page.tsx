@@ -8,12 +8,13 @@ import {
   filhaPendente, getProductionChain,
   addConsumption, addMaterial, baixarFichaDaOrdem, reapurarCustos, addScrapDestination, advanceOperation, allocateLots, appointProduction, cancelProductionOrder, closeProductionOrder,
   completeProductionOrder, createProductionOrder, createProductionScanToken, explodeOperations, getCost, getMaterialAvailability, getMaterialAvailabilitySummary,
-  getProductionOrder, listAppointments,
+  getProductionOrder, listAppointments, maintainProductionOrder,
   listConsumptions, listMaterials, listOperations, listProductionOrders, scanProductionOrder, scrapReturn, setProductionOrderOrigin, startProductionOrder,
 } from "@/services/productionOrderService";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { LookupField } from "@/components/ui/LookupField";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { pedirTexto } from "@/components/ui/dialogos";
 import { loadCostCentersById, loadCustomers, loadItems, loadMachinesById, loadProjects, loadWarehouses } from "@/services/lookups";
 import { type Aba, Abas, Aviso, Cabecalho, Progresso, Rodape, Selo, Vazio } from "../planejamento/planUi";
 import { data, duracao, normalizar, num, situacaoOF } from "../planejamento/planFormat";
@@ -224,6 +225,16 @@ export function Vpro0900Page(): JSX.Element {
     if (of?.id) setCusto(await getCost(of.id));
     setFeedback({ type: r.falhas?.length ? "error" : "success", message: `${r.reapuradas} OF(s) reapurada(s) pela regra atual.${r.falhas?.length ? ` Não reapuradas: ${r.falhas.join("; ")}` : ""}` });
   });
+  // A observação sai na ficha impressa: vale também com a ordem em produção.
+  const editarObservacao = () => { const id = of?.id; if (!id) return; void (async () => {
+    const texto = await pedirTexto({
+      titulo: "Observação da ordem", assunto: `OF ${id}`,
+      mensagem: "Instrução para o operador e para quem acompanha a ordem. Sai na ordem impressa, logo abaixo dos dados da ordem.",
+      rotulo: "Observação", valorInicial: of?.notes ?? "", multilinha: true, maximo: 1000, opcional: true, rotuloConfirmar: "Gravar",
+    });
+    if (texto === null) return;
+    await run(async () => { await maintainProductionOrder(id, { notes: texto.trim() }); await recarregar(); setFeedback({ type: "success", message: `OF ${id}: observação gravada.` }); });
+  })(); };
   const imprimir = () => { const id = of?.id; if (!id) return; void run(async () => { await baixarFichaDaOrdem(id); setFeedback({ type: "success", message: "Ordem impressa: confira o PDF baixado." }); }); };
 
   const apontar = () => { const id = of?.id; if (!id) return; void run(async () => {
@@ -472,7 +483,8 @@ export function Vpro0900Page(): JSX.Element {
               <div style={{ marginTop: 10 }}><Abas abas={ABAS} ativa={aba} onChange={setAba} /></div>
               <div className="erp-detail-body">
                 <Aviso feedback={feedback} busy={busy} />
-                {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} cadeia={cadeia} onAbrirOF={(id) => abrir(id)} />}
+                {aba === "resumo" && <ResumoTab of={of} operacoes={operacoes} apontamentos={apontamentos} consumos={consumos} cadeia={cadeia} onAbrirOF={(id) => abrir(id)}
+                  onEditarObservacao={st === "COMPLETED" || st === "CANCELLED" || st === "CLOSED" ? undefined : editarObservacao} />}
                 {aba === "execucao" && <ExecucaoTab key={of.id} of={of} busy={busy} gestor={gestor} operacoes={operacoes} materiais={linhasMat}
                   etapa={etapa} setEtapa={setEtapa} onAlterar={(i, s) => void alterarEtapa(i, s)} onGerarCodigo={gerarCodigo} onExplodir={explodir}
                   tokensEtapa={tokensEtapa} onEtiquetas={gerarEtiquetas} onImprimirEtiqueta={(i) => imprimirEtiquetas([i])} etiquetasImpressas={etiquetasImpressas}
