@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { rotuloDaNota,
   type FiscalExit, type PreviaNFe, type ExitStatus,
   listExits, authorizeExit, cancelExit, descartarExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
-  previewExit, getExitDocumentos, getExitXml, type XmlDaNFe,
+  previewExit, getExitDocumentos, getExitXml, getPreviaXml, type XmlDaNFe,
 } from "@/services/nfeService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -101,6 +101,7 @@ export function Vfis0200Page(): JSX.Element {
   const [filtroSituacao, setFiltroSituacao] = useState<"" | SituacaoNF>("");
   const [pendView, setPendView] = useState<{ id: number; list: PendenciaNFe[] } | null>(null);
   const [xmlView, setXmlView] = useState<XmlDaNFe | null>(null);
+  const [xmlPrevia, setXmlPrevia] = useState<{ arquivo: string; xml: string } | null>(null);
   const [previa, setPrevia] = useState<PreviaNFe | null>(null);
   /** A prévia está indo para a impressora (a folha sai sozinha, em A4). */
   const [imprimindoPrevia, setImprimindoPrevia] = useState(false);
@@ -461,6 +462,8 @@ export function Vfis0200Page(): JSX.Element {
                 <button className="erp-btn" onClick={() => setImprimindoPrevia(true)} disabled={imprimindoPrevia} title="Imprime a folha da prévia (sem valor fiscal)">Imprimir</button>
                 <PrintButton label="Exportar PDF" title="Baixa a prévia em PDF, no layout do DANFE" onPrint={() => exportarPreviaNFe(previa.fiscal_exit_id)}
                   onError={(message) => setFeedback({ type: "error", message })} />
+                <button className="erp-btn" title="O XML no layout da NF-e com o que seria enviado à SEFAZ (sem validade fiscal)"
+                  onClick={() => void getPreviaXml(previa.fiscal_exit_id).then(setXmlPrevia).catch((e) => setFeedback({ type: "error", message: errMessage(e) }))}>XML da prévia</button>
                 <button className="erp-btn" onClick={() => setPrevia(null)}>Fechar</button>
               </div>
             </div>
@@ -722,6 +725,12 @@ export function Vfis0200Page(): JSX.Element {
           xml={xmlView.xml} arquivo={`${xmlView.chave_acesso || `nfe-${xmlView.numero_nf}`}-nfe.xml`}
           cancelamento={xmlView.xml_cancelamento ? { xml: xmlView.xml_cancelamento, arquivo: `${xmlView.chave_acesso || `nfe-${xmlView.numero_nf}`}-can.xml` } : undefined}
           onFechar={() => setXmlView(null)} />
+      )}
+
+      {xmlPrevia && (
+        <XmlDaNotaModal titulo="XML da prévia da NF-e" campos={[]} xml={xmlPrevia.xml} arquivo={xmlPrevia.arquivo}
+          aviso="Prévia sem validade fiscal: é o XML que corresponde ao que seria enviado, mas ainda não foi assinado nem autorizado pela SEFAZ. O número e a chave só existem depois da autorização."
+          onFechar={() => setXmlPrevia(null)} />
       )}
 
       {cceView && (
