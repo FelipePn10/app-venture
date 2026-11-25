@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { pedirTexto } from "@/components/ui/dialogos";
-import { type NfseDTO, listNfse, createNfse, authorizeNfse, cancelNfse } from "@/services/nfseService";
+import { type NfseDTO, type XmlDaNFSe, listNfse, createNfse, authorizeNfse, cancelNfse, getNfseXml } from "@/services/nfseService";
+import { XmlDaNotaModal } from "./XmlDaNotaModal";
 import { errMessage } from "@/services/fiscalShared";
 import { validateCNPJOrCPF } from "@/utils/validation";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -41,6 +42,7 @@ export function Vnfs0100Page(): JSX.Element {
   const [tomadorCode, setTomadorCode] = useState<number | undefined>();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [xmlView, setXmlView] = useState<XmlDaNFSe | null>(null);
 
   const reload = useCallback(async () => {
     setBusy(true);
@@ -86,6 +88,12 @@ export function Vnfs0100Page(): JSX.Element {
     }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
+  async function verXml(id: number) {
+    setBusy(true); setFeedback(null);
+    try { setXmlView(await getNfseXml(id)); }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
   async function autorizar(id: number) {
     setBusy(true); setFeedback(null);
     try {
@@ -143,6 +151,7 @@ export function Vnfs0100Page(): JSX.Element {
                     <td>{statusPill(n.status)}</td>
                     <td>{n.id && <>
                       {podeAutorizar(n.status) && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void autorizar(n.id!)}>Autorizar</button>}
+                      {["AUTORIZADA", "CANCELADA"].includes((n.status || "").toUpperCase()) && <button className="erp-btn erp-btn-sm" disabled={busy} title="XML autorizado da NFS-e, para conferir o ISS e enviar" onClick={() => void verXml(n.id!)}>XML</button>}
                       {(n.status || "").toUpperCase() === "AUTORIZADA" && <button className="erp-btn erp-btn-sm erp-btn-danger" disabled={busy} onClick={() => void cancelar(n.id!)}>Cancelar</button>}</>}</td></tr>
                 ))}
               </tbody>
@@ -193,6 +202,12 @@ export function Vnfs0100Page(): JSX.Element {
           </>
         )}
       </div></section></div>
+
+      {xmlView && (
+        <XmlDaNotaModal titulo={`XML da NFS-e ${xmlView.numero_nfse}`}
+          campos={[{ rotulo: "Número da NFS-e", valor: xmlView.numero_nfse, mono: true }, { rotulo: "Código de verificação", valor: xmlView.codigo_verificacao, mono: true }, { rotulo: "Link da nota na prefeitura", valor: xmlView.url }]}
+          xml={xmlView.xml} arquivo={`nfse-${xmlView.numero_nfse}.xml`} onFechar={() => setXmlView(null)} />
+      )}
 
       <footer className="erp-statusbar">
         <div style={{display:"contents"}}><div className="erp-status-item">NFS-e: <strong>{list.length}</strong></div></div>

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { rotuloDaNota,
   type FiscalExit, type PreviaNFe, type ExitStatus,
   listExits, authorizeExit, cancelExit, descartarExit, cartaCorrecaoExit, getExitStatus, listCartasCorrecao, getExitPendencias, reprocessarEfeitos, type PendenciaNFe,
-  previewExit, getExitDocumentos,
+  previewExit, getExitDocumentos, getExitXml, type XmlDaNFe,
 } from "@/services/nfeService";
 import { errMessage, type Obj, parseStr, parseNum } from "@/services/fiscalShared";
 import { ExportButton } from "@/components/ui/ExportButton";
@@ -15,6 +15,7 @@ import { confirmar, pedirTexto } from "@/components/ui/dialogos";
 import { abrirDocumento } from "@/utils/abrirDocumento";
 import { chaveEmGrupos, documentoComMascara } from "@/utils/documentoFiscal";
 import { DanfePrevia, ImpressaoDaPrevia } from "./DanfePrevia";
+import { XmlDaNotaModal } from "./XmlDaNotaModal";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { exportarPreviaNFe } from "@/services/impressaoService";
 
@@ -99,6 +100,7 @@ export function Vfis0200Page(): JSX.Element {
   const [busca, setBusca] = useState("");
   const [filtroSituacao, setFiltroSituacao] = useState<"" | SituacaoNF>("");
   const [pendView, setPendView] = useState<{ id: number; list: PendenciaNFe[] } | null>(null);
+  const [xmlView, setXmlView] = useState<XmlDaNFe | null>(null);
   const [previa, setPrevia] = useState<PreviaNFe | null>(null);
   /** A prévia está indo para a impressora (a folha sai sozinha, em A4). */
   const [imprimindoPrevia, setImprimindoPrevia] = useState(false);
@@ -226,6 +228,12 @@ export function Vfis0200Page(): JSX.Element {
       setFeedback({ type: "success", message: `Carta de correção da ${rotuloDaNota(nf)} registrada na SEFAZ.` });
       if (cceView?.id === nf.id) setCceView({ id: nf.id, list: await listCartasCorrecao(nf.id) });
     }
+    catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
+  }
+
+  async function verXml(nf: FiscalExit) {
+    setBusy(true); setFeedback(null);
+    try { setXmlView(await getExitXml(nf.id)); }
     catch (e) { setFeedback({ type: "error", message: errMessage(e) }); } finally { setBusy(false); }
   }
 
@@ -389,6 +397,7 @@ export function Vfis0200Page(): JSX.Element {
                               {(sit === "rejeitada" || sit === "aguardando") && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void autorizar(nf.id)}
                                 title={sit === "rejeitada" ? "Transmite de novo depois da correção" : "Consulte o Status antes: a nota pode já ter chegado à SEFAZ"}>Reenviar</button>}
                               {(isAuth || sit === "cancelada") && transmitida && <button className="erp-btn erp-btn-sm erp-btn-primary" disabled={busy} title="Abre o PDF da nota" onClick={() => void abrirDanfe(nf)}>DANFE</button>}
+                              {(isAuth || sit === "cancelada") && transmitida && <button className="erp-btn erp-btn-sm" disabled={busy} title="XML autorizado e chave de acesso, para conferir os impostos e enviar" onClick={() => void verXml(nf)}>XML</button>}
                               {isAuth && transmitida && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void cce(nf)}>Nova CC-e</button>}
                               {(isAuth || sit === "cancelada") && !descartada && <button className="erp-btn erp-btn-sm" disabled={busy} onClick={() => void verCces(nf.id)}>Ver CC-e</button>}
                               {sit !== "rascunho" && !descartada && <button className="erp-btn erp-btn-sm" disabled={busy} title="Consulta a situação da nota na SEFAZ" onClick={() => void consultarStatus(nf)}>Status</button>}
@@ -705,6 +714,14 @@ export function Vfis0200Page(): JSX.Element {
             </div>
           </div>
         </div>
+      )}
+
+      {xmlView && (
+        <XmlDaNotaModal titulo={`XML da NF-e ${xmlView.numero_nf} — série ${xmlView.serie}`}
+          campos={[{ rotulo: "Chave de acesso", valor: xmlView.chave_acesso, mono: true }, { rotulo: "Protocolo de autorização", valor: xmlView.protocolo, mono: true }]}
+          xml={xmlView.xml} arquivo={`${xmlView.chave_acesso || `nfe-${xmlView.numero_nf}`}-nfe.xml`}
+          cancelamento={xmlView.xml_cancelamento ? { xml: xmlView.xml_cancelamento, arquivo: `${xmlView.chave_acesso || `nfe-${xmlView.numero_nf}`}-can.xml` } : undefined}
+          onFechar={() => setXmlView(null)} />
       )}
 
       {cceView && (

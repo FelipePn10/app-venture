@@ -336,6 +336,17 @@ export async function getExitStatus(id: number): Promise<ExitStatus> {
     avisos: Array.isArray(o.avisos) ? (o.avisos as unknown[]).map(String) : [],
   };
 }
+/** XML autorizado da NF-e (cópia guardada no ERP) com chave e protocolo. */
+export interface XmlDaNFe { numero_nf: number; serie: string; chave_acesso: string; protocolo: string; xml: string; xml_cancelamento: string }
+export async function getExitXml(id: number): Promise<XmlDaNFe> {
+  const { data } = await httpClient.get(`${BASE}/exits/${id}/xml`);
+  const o = unwrapObject(data);
+  return {
+    numero_nf: parseNum(o, 'numero_nf'), serie: parseStr(o, 'serie'),
+    chave_acesso: parseStr(o, 'chave_acesso'), protocolo: parseStr(o, 'protocolo'), xml: parseStr(o, 'xml'),
+    xml_cancelamento: parseStr(o, 'xml_cancelamento'),
+  };
+}
 /** Endereços do DANFE (PDF) e do XML de uma nota autorizada ou cancelada. */
 export async function getExitDocumentos(id: number): Promise<{ danfe_url: string; xml_url: string }> {
   const { data } = await httpClient.get(`${BASE}/exits/${id}/danfe`);

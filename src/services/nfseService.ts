@@ -92,6 +92,13 @@ export async function getNfse(code: number): Promise<NfseDTO> {
   const { data } = await httpClient.get(`${BASE}/${code}`);
   return parseNfse(data);
 }
+/** XML autorizado da NFS-e (cópia guardada no ERP) com número e código de verificação. */
+export interface XmlDaNFSe { numero_nfse: string; codigo_verificacao: string; url: string; xml: string }
+export async function getNfseXml(code: number): Promise<XmlDaNFSe> {
+  const { data } = await httpClient.get(`${BASE}/${code}/xml`);
+  const o = unwrapObject(data);
+  return { numero_nfse: parseStr(o, 'numero_nfse'), codigo_verificacao: parseStr(o, 'codigo_verificacao'), url: parseStr(o, 'url'), xml: parseStr(o, 'xml') };
+}
 export async function createNfse(dto: NfseDTO): Promise<NfseDTO> {
   const { data } = await httpClient.post(`${BASE}/create`, dto);
   return parseNfse(data);
