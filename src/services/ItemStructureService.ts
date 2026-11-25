@@ -5,12 +5,14 @@ import { unwrapArray, unwrapObject, parseNum, parseStr } from '@/services/fiscal
 
 export type UnitOfMeasurement =
   | 'MM' | 'CM' | 'M' | 'IN' | 'KG'
-  | 'M2' | 'M3' | 'UN' | 'MICROMETRO' | 'TONELADA';
+  | 'M2' | 'M3' | 'UN' | 'MICROMETRO' | 'TONELADA'
+  | 'L' | 'CX' | 'PC' | 'GL' | 'PAR';
 
 export type Health = 'ATIVO' | 'INATIVO' | 'FANTASMA';
 
 export const UNIT_OPTIONS: UnitOfMeasurement[] = [
   'UN', 'MM', 'CM', 'M', 'IN', 'KG', 'M2', 'M3', 'MICROMETRO', 'TONELADA',
+  'L', 'CX', 'PC', 'GL', 'PAR',
 ];
 export const HEALTH_OPTIONS: Health[] = ['ATIVO', 'INATIVO', 'FANTASMA'];
 
@@ -38,6 +40,7 @@ export interface ItemInfo {
   legacyCode: number;
   name: string;
   unit: UnitOfMeasurement;
+  ghost?: boolean;
 }
 
 export interface StructureComponent {
@@ -53,8 +56,13 @@ export interface StructureComponent {
   childDescription: string;
   parentMask: string | null;
   quantity: number;
+  /** Quantidade nominal persistida no banco quando `formulaApplied` substituiu `quantity` na leitura. */
+  nominalQuantity?: number;
+  formulaApplied?: boolean;
   effectiveQuantity: number;
   unitOfMeasurement: UnitOfMeasurement;
+  /** Unidade de medida carregada do servidor, para detectar troca de UM antes de salvar. */
+  loadedUom?: UnitOfMeasurement;
   /**
    * A engenharia escreve na unidade do desenho (m² de chapa); estoque, ordem e
    * custo trabalham na unidade em que o item é guardado (kg). Estes três campos
@@ -91,7 +99,7 @@ export interface StructureComponent {
   substituteGroup: number;
   /** Menor número = preferencial dentro do grupo de alternativos. */
   substitutePriority: number;
-  /** Herda o roteiro do filho para o pai (item fantasma). */
+  /** Herda a configuração (máscara) do pai quando o filho também é configurado. */
   inherit: boolean;
   /** Almoxarifado de onde o componente é baixado; vazio usa o do cadastro do item. */
   warehouseCode: number | null;
@@ -164,6 +172,8 @@ interface RawComponent {
   child_description: string;
   parent_mask?: string | null;
   quantity: number;
+  nominal_quantity?: number;
+  formula_applied?: boolean;
   effective_quantity: number;
   unit_of_measurement: string;
   quantity_stock_uom?: number;
@@ -230,14 +240,35 @@ function mapItemInfo(raw: unknown): ItemInfo {
   if (code == null) {
     throw new Error(`Item não encontrado. Resposta: ${JSON.stringify(inner).slice(0, 200)}`);
   }
-  const pdm = inner['PDM'] as Record<string, unknown> | undefined;
-  const wh  = inner['Warehouse'] as Record<string, unknown> | undefined;
+  const pdm = (inner['PDM'] ?? inner['pdm'] ?? inner['Pdm']) as Record<string, unknown> | undefined;
+  const wh  = (inner['Warehouse'] ?? inner['warehouse']) as Record<string, unknown> | undefined;
+  const pl  = (inner['Planning'] ?? inner['planning']) as Record<string, unknown> | undefined;
+  const desc = String(
+    pdm?.['description_technique'] ??
+    pdm?.['DescriptionTechnique'] ??
+    inner['description'] ??
+    inner['Description'] ??
+    inner['name'] ??
+    inner['Name'] ??
+    '',
+  );
+  const unit = String(
+    wh?.['unit_of_measurement'] ??
+    wh?.['UnitOfMeasurement'] ??
+    inner['uom'] ??
+    inner['unit'] ??
+    'UN',
+  ) as UnitOfMeasurement;
+  const ghost =
+    Boolean(pl?.['ghost'] ?? pl?.['Ghost']) ||
+    String(inner['health'] ?? inner['Health'] ?? '') === 'FANTASMA';
   return {
     id:   Number(inner['ID'] ?? inner['id'] ?? 0),
     code: String(code),
     legacyCode: Number(inner['legacy_code'] ?? inner['LegacyCode'] ?? 0),
-    name: String(pdm?.['DescriptionTechnique'] ?? inner['name'] ?? ''),
-    unit: (String(wh?.['UnitOfMeasurement'] ?? inner['unit'] ?? 'UN')) as UnitOfMeasurement,
+    name: desc,
+    unit,
+    ghost,
   };
 }
 
@@ -249,8 +280,11 @@ function mapComponent(r: RawComponent, level: number, hasChildren: boolean): Str
     childDescription:  r.child_description,
     parentMask:        r.parent_mask ?? null,
     quantity:          r.quantity,
+    nominalQuantity:   r.nominal_quantity ?? r.quantity,
+    formulaApplied:    r.formula_applied === true,
     effectiveQuantity: r.effective_quantity,
     unitOfMeasurement: r.unit_of_measurement as UnitOfMeasurement,
+    loadedUom:         r.unit_of_measurement as UnitOfMeasurement,
     quantityStockUom:  Number(r.quantity_stock_uom ?? r.quantity ?? 0),
     stockUnitOfMeasurement: (r.stock_unit_of_measurement as UnitOfMeasurement) ?? null,
     conversionFactor:  Number(r.conversion_factor ?? 1) || 1,

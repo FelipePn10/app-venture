@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Novidades
+- Adicionamos a busca por lupa no campo **Cód. Filho** do detalhe lateral da Estrutura de Produto, com filtros por tipo de item, pesquisa por código ou descrição e **seleção múltipla** para incluir vários componentes de uma só vez já preenchidos.
+- Adicionamos setas de navegação entre níveis na Estrutura de Produto (**Subnível →** / **Nível →** na grade e no detalhe, além de **← Voltar nível**, **⇈ Item raiz** e atalho `Alt + ←`), facilitando abrir subconjuntos e voltar aos níveis anteriores com aviso caso existam edições não salvas.
+
+## Correções
+- Ajustamos a Estrutura de Produto para sinalizar todos os indicadores na grade, selecionar almoxarifados e centro de custo pela lupa, bloquear a perda percentual quando há fórmula de perda, preservar a quantidade base em itens com fórmula e pedir confirmação antes de excluir um componente salvo.
+
 ## [v1.19.17] — 2026-11-25
 
 ## Novidades
