@@ -3,7 +3,7 @@
 ## Unreleased
 
 ## Novidades
-- NF-e e NFS-e emitidas: o botão **XML** abre o XML da nota com a chave de acesso e o protocolo, para conferir o cálculo dos impostos e enviar a quem precisar — com **Copiar XML** e **Baixar XML**. Na nota cancelada, a aba **Cancelamento** traz também o XML do cancelamento.
+- Adicionamos o botão **XML** nas notas fiscais emitidas (NF-e e NFS-e): ele mostra o XML da nota com a chave de acesso e o protocolo, para conferir o cálculo dos impostos e enviar a quem precisar, com **Copiar XML** e **Baixar XML**. Na nota cancelada, a aba **Cancelamento** traz também o XML do cancelamento.
 
 ## [v1.19.15] — 2026-11-23
 
