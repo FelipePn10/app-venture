@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.18] — 2026-11-25
+
 ## Novidades
 - Adicionamos a busca por lupa no campo **Cód. Filho** do detalhe lateral da Estrutura de Produto, com filtros por tipo de item, pesquisa por código ou descrição e **seleção múltipla** para incluir vários componentes de uma só vez já preenchidos.
 - Adicionamos setas de navegação entre níveis na Estrutura de Produto (**Subnível →** / **Nível →** na grade e no detalhe, além de **← Voltar nível**, **⇈ Item raiz** e atalho `Alt + ←`), facilitando abrir subconjuntos e voltar aos níveis anteriores com aviso caso existam edições não salvas.
