@@ -1,6 +1,6 @@
 {
   "name": "erp-desktop-frontend",
-  "version": "1.19.16",
+  "version": "1.19.17",
   "private": true,
   "type": "module",
   "scripts": {

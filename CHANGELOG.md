@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [v1.19.17] — 2026-11-25
+
 ## Novidades
 - Adicionamos o botão **XML da prévia** na prévia da NF-e: ele mostra o XML com o que seria enviado à SEFAZ, para conferir os impostos antes de transmitir, com **Copiar XML** e **Baixar XML**. Esse XML não tem validade fiscal até a nota ser autorizada.
 
