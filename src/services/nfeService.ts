@@ -336,6 +336,12 @@ export async function getExitStatus(id: number): Promise<ExitStatus> {
     avisos: Array.isArray(o.avisos) ? (o.avisos as unknown[]).map(String) : [],
   };
 }
+/** XML da prévia: o que seria enviado, no layout da NF-e, sem validade fiscal. */
+export async function getPreviaXml(id: number): Promise<{ arquivo: string; xml: string }> {
+  const { data } = await httpClient.get(`${BASE}/exits/${id}/previa/xml`);
+  const o = unwrapObject(data);
+  return { arquivo: parseStr(o, 'arquivo') || `previa-nfe-${id}.xml`, xml: parseStr(o, 'xml') };
+}
 /** XML autorizado da NF-e (cópia guardada no ERP) com chave e protocolo. */
 export interface XmlDaNFe { numero_nf: number; serie: string; chave_acesso: string; protocolo: string; xml: string; xml_cancelamento: string }
 export async function getExitXml(id: number): Promise<XmlDaNFe> {

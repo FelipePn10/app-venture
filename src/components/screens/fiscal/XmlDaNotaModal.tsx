@@ -21,8 +21,10 @@ function xmlIndentado(xml: string): string {
 }
 
 /** Janela com o XML autorizado da nota e o que a identifica, para copiar e repassar. */
-export function XmlDaNotaModal({ titulo, campos, xml, arquivo, cancelamento, onFechar }: {
+export function XmlDaNotaModal({ titulo, campos, xml, arquivo, cancelamento, aviso: avisoFixo, onFechar }: {
   titulo: string; campos: CampoDaNota[]; xml: string; arquivo: string;
+  /** Aviso fixo no topo (ex.: XML da prévia, sem validade fiscal). */
+  aviso?: string;
   /** XML do evento de cancelamento, quando a nota foi cancelada. */
   cancelamento?: { xml: string; arquivo: string };
   onFechar: () => void;
@@ -47,6 +49,7 @@ export function XmlDaNotaModal({ titulo, campos, xml, arquivo, cancelamento, onF
         <div className="erp-modal-head"><div><strong id="xml-da-nota">{titulo}</strong>
           <div className="erp-field-hint">O XML é o documento fiscal: nele estão as bases, alíquotas e valores de cada imposto. Copie ou baixe para conferir ou enviar a quem precisar.</div></div></div>
         <div className="erp-modal-body">
+          {avisoFixo && <div className="erp-feedback warn" style={{ marginBottom: 12 }}>{avisoFixo}</div>}
           {aviso && <div className={`erp-feedback ${aviso.type}`} style={{ marginBottom: 12 }}>{aviso.message}</div>}
           {campos.filter((c) => c.valor).map((c) => (
             <div key={c.rotulo} className="erp-field" style={{ marginBottom: 8 }}>
