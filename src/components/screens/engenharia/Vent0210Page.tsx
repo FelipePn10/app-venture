@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, memo } from 'react';
 import { confirmar } from "@/components/ui/dialogos";
 import { enumLabel } from "@/utils/enumLabels";
 import { LookupField } from "@/components/ui/LookupField";
-import { loadItems } from "@/services/lookups";
+import { loadItems, loadWarehouses, loadCostCenters, loadEstablishments } from "@/services/lookups";
+import { lerTenantAtivo } from "@/services/tenantDirectory";
 import {
   findItemByCode,
   resolveStructure,
@@ -28,6 +29,7 @@ import { StructureConfiguratorPanel } from './StructureConfiguratorPanel';
 import { StructureFormulaTester } from './StructureFormulaTester';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { StructureVersionsPanel } from './StructureVersionsPanel';
+import { StructureItemLookupModal, type CandidateStructureItem } from './StructureItemLookupModal';
 import { hojeLocal } from "@/utils/dataLocal";
 import { useUnidades, useRotulosDeUnidades } from "@/hooks/useUnidades";
 
@@ -44,6 +46,7 @@ interface LocalRow extends StructureComponent {
   localId: string;
   dirty: boolean;
   isNew: boolean;
+  quantityEdited?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -66,8 +69,16 @@ function ConversaoDeUnidade({ row }: { row: LocalRow }): JSX.Element | null {
   const doEstoque = row.stockUnitOfMeasurement;
   if (!doEstoque || doEstoque === daEstrutura) return null;
 
+  if (row.isNew || (row.loadedUom && row.loadedUom !== daEstrutura)) {
+    return (
+      <span className="fe-d-hint" style={{ color: 'var(--v-info)' }}>
+        Estocado em {enumLabel(doEstoque)} — salve para calcular e validar a conversão a partir de {enumLabel(daEstrutura)}.
+      </span>
+    );
+  }
+
   const fator = row.conversionFactor || 1;
-  const convertido = row.quantityStockUom || row.quantity * fator;
+  const convertido = row.dirty ? row.quantity * fator : (row.quantityStockUom || row.quantity * fator);
 
   // A equivalência é mostrada no sentido legível. Para um tubo de 6 metros o
   // fator armazenado é 1/6000 = 0,000166667 — um número que ninguém reconhece.
@@ -92,7 +103,7 @@ function nextPosition(rows: LocalRow[]): number {
   return Math.max(...rows.map((r) => r.position)) + 1;
 }
 
-function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
+function blankRow(parentCode: string, rows: LocalRow[], parentMask: string | null = null): LocalRow {
   return {
     localId: uid(),
     dirty: true,
@@ -101,7 +112,7 @@ function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
     parentCode,
     childCode: '',
     childDescription: '',
-    parentMask: null,
+    parentMask,
     quantity: 1,
     effectiveQuantity: 0,
     unitOfMeasurement: 'UN',
@@ -142,12 +153,20 @@ function blankRow(parentCode: string, rows: LocalRow[]): LocalRow {
   };
 }
 
-function toPayload(row: LocalRow, mask: string | null): CreateStructurePayload {
+function toPayload(row: LocalRow, fallbackMask: string | null): CreateStructurePayload {
+  const effectiveParentMask = row.parentMask !== null
+    ? (row.parentMask.trim() || null)
+    : (fallbackMask || null);
+  // Quando a quantidade exibida veio de uma fórmula avaliada para a máscara e o
+  // usuário não editou a quantidade fixa manualmente, preserva a nominal gravada.
+  const nominalQty = row.formulaApplied && !row.quantityEdited && row.nominalQuantity !== undefined
+    ? row.nominalQuantity
+    : row.quantity;
   return {
     parent_code:         row.parentCode,
     child_code:          row.childCode,
-    parent_mask:         mask || null,
-    quantity:            row.quantity,
+    parent_mask:         effectiveParentMask,
+    quantity:            nominalQty,
     unit_of_measurement: row.unitOfMeasurement,
     health:              row.health,
     loss_percentage:     row.lossPercentage,
@@ -212,8 +231,11 @@ function listarProblemas(rows: LocalRow[]): string[] {
     if (r.startDate && r.endDate && r.startDate > r.endDate) {
       problemas.push(`Item ${item}: o fim da vigência é anterior ao início.`);
     }
-    if (!r.quantityFormula && r.quantity <= 0 && !r.isCoproduct) {
+    if (!r.quantityFormula && r.quantity <= 0) {
       problemas.push(`Item ${item}: informe uma quantidade maior que zero ou uma fórmula.`);
+    }
+    if (r.quantity < 0) {
+      problemas.push(`Item ${item}: a quantidade não pode ser negativa.`);
     }
     if (r.quantityFormula) {
       const f = r.quantityFormula.trim();
@@ -229,6 +251,32 @@ function listarProblemas(rows: LocalRow[]): string[] {
       if (!/[A-Za-z_]/.test(f)) {
         problemas.push(`Item ${item}: a fórmula não usa nenhuma variável — use a quantidade fixa.`);
       }
+    }
+    if (r.lossFormula) {
+      const lf = r.lossFormula.trim();
+      const abre = (lf.match(/\(/g) ?? []).length;
+      const fecha = (lf.match(/\)/g) ?? []).length;
+      if (abre !== fecha) {
+        problemas.push(`Item ${item}: a fórmula da perda tem parênteses não fechados.`);
+      }
+      if (/[^A-Za-z0-9_ .,+\-*/()%]/.test(lf)) {
+        problemas.push(`Item ${item}: a fórmula da perda contém um caractere que não é aceito.`);
+      }
+      if (!/[A-Za-z_]/.test(lf)) {
+        problemas.push(`Item ${item}: a fórmula da perda não usa nenhuma variável — informe a perda percentual fixa.`);
+      }
+    }
+    if (r.lossPercentage < 0 || r.lossPercentage > 100) {
+      problemas.push(`Item ${item}: a perda percentual deve estar entre 0 e 100%.`);
+    }
+    if (r.setupLoss < 0) {
+      problemas.push(`Item ${item}: a perda de preparação não pode ser negativa.`);
+    }
+    if (r.costLoss < 0) {
+      problemas.push(`Item ${item}: a perda de custo não pode ser negativa.`);
+    }
+    if (r.costLossType === 'PERCENTUAL' && r.costLoss > 100) {
+      problemas.push(`Item ${item}: a perda de custo percentual deve estar entre 0 e 100%.`);
     }
     if (r.substituteGroup > 0 && r.substitutePriority < 1) {
       problemas.push(`Item ${item}: a prioridade do alternativo deve ser 1 ou maior.`);
@@ -311,6 +359,9 @@ const ComponentFlags = memo(function ComponentFlags({ row }: { row: LocalRow }) 
       {row.quantityFormula && (
         <span className="fe-flag f-formula" title={`Quantidade por fórmula: ${row.quantityFormula}`}>ƒ</span>
       )}
+      {row.lossFormula && (
+        <span className="fe-flag f-formula" title={`Perda por fórmula: ${row.lossFormula}`}>%ƒ</span>
+      )}
       {situacao === 'futuro' && (
         <span className="fe-flag f-futuro" title={`Entra em vigor em ${row.startDate}`}>◷</span>
       )}
@@ -322,6 +373,9 @@ const ComponentFlags = memo(function ComponentFlags({ row }: { row: LocalRow }) 
       )}
       {row.isCoproduct && <span className="fe-flag f-co" title="Co-produto: sai da ordem">↥</span>}
       {row.isFixedQty && <span className="fe-flag f-fixa" title="Quantidade por ordem, não por peça">▣</span>}
+      {row.inherit && <span className="fe-flag f-herda" title="Herda máscara do pai (configuração)">M</span>}
+      {row.isCriticalMps && <span className="fe-flag f-mps" title="Crítico para o plano mestre (MPS)">★</span>}
+      {row.generatesInspection && <span className="fe-flag f-insp" title="Gera inspeção no processo">✔</span>}
       {row.customerSupplied && <span className="fe-flag f-cli" title="Fornecido pelo cliente (beneficiamento)">⇆</span>}
       {row.health === 'FANTASMA' && <span className="fe-flag f-fant" title="Fantasma: não gera ordem">👻</span>}
     </>
@@ -343,11 +397,25 @@ let formulaCopiada: { formula: string; rounding: QuantityRounding; scale: number
 
 interface DetailPanelProps {
   row: LocalRow | null;
+  canStepUp: boolean;
+  parentLevelLabel?: string;
   onUpdate: (patch: Partial<LocalRow>) => void;
   onChildCodeBlur: (code: string) => void;
+  onOpenChildLookup: () => void;
+  onDrillDown: (row: LocalRow) => void;
+  onStepUp: () => void;
 }
 
-const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }: DetailPanelProps) {
+const DetailPanel = memo(function DetailPanel({
+  row,
+  canStepUp,
+  parentLevelLabel,
+  onUpdate,
+  onChildCodeBlur,
+  onOpenChildLookup,
+  onDrillDown,
+  onStepUp,
+}: DetailPanelProps) {
   // Catálogo da empresa (VSUP0110); a unidade já gravada fica na lista.
   const unidades = useUnidades(UNIT_OPTIONS, row?.unitOfMeasurement);
   const rotuloUM = useRotulosDeUnidades();
@@ -376,11 +444,34 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
       <div className="fe-d-row">
         <div className="fe-d-field">
           <label className="fe-d-label">Cód. Filho</label>
-          <input className="fe-d-input"
-            value={row.childCode || ''}
-            onChange={(e) => onUpdate({ childCode: e.target.value })}
-            onBlur={(e) => onChildCodeBlur(e.target.value)}
-            placeholder="Ex: 2206" style={{ textAlign: 'right' }}/>
+          <div className="fe-d-input-wrap">
+            <input className="fe-d-input"
+              value={row.childCode || ''}
+              readOnly={!row.isNew}
+              onChange={(e) => { if (row.isNew) onUpdate({ childCode: e.target.value }); }}
+              onBlur={(e) => { if (row.isNew) onChildCodeBlur(e.target.value); }}
+              onKeyDown={(e) => {
+                if (row.isNew && (e.key === 'F2' || e.key === 'F4')) {
+                  e.preventDefault();
+                  onOpenChildLookup();
+                }
+              }}
+              title={row.isNew ? 'Digite o código ou clique na lupa (F2)' : 'Componente já gravado — para substituir o item, remova ou encerre a vigência e inclua o novo'}
+              placeholder="Ex: 2206" style={{ textAlign: 'right' }}/>
+            <button
+              type="button"
+              className="fe-d-lookup-btn"
+              disabled={!row.isNew}
+              onClick={onOpenChildLookup}
+              aria-label="Pesquisar itens cadastrados"
+              title={row.isNew ? 'Pesquisar itens cadastrados (seleção simples ou múltipla)' : 'Disponível apenas ao incluir um item novo'}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div className="fe-d-field">
           <label className="fe-d-label">Posição</label>
@@ -393,10 +484,40 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
 
       <div className="fe-d-field">
         <label className="fe-d-label">Descrição</label>
-        <input className="fe-d-input" value={row.childDescription}
-          onChange={(e) => onUpdate({ childDescription: e.target.value })}
-          placeholder="Preenchida automaticamente"/>
+        <input className="fe-d-input" value={row.childDescription} readOnly
+          placeholder="Preenchida automaticamente pelo cadastro do item"/>
       </div>
+
+      {((!row.isNew && Boolean(row.childCode)) || canStepUp) && (
+        <div className="fe-d-level-nav">
+          {canStepUp && (
+            <button
+              type="button"
+              className="fe-level-btn back"
+              onClick={onStepUp}
+              title={parentLevelLabel ? `Voltar para ${parentLevelLabel} (Alt+←)` : 'Voltar ao nível anterior (Alt+←)'}
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <path d="M8.5 3L4.5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Nível anterior
+            </button>
+          )}
+          {!row.isNew && Boolean(row.childCode) && (
+            <button
+              type="button"
+              className={`fe-level-btn enter${row.hasChildren ? ' has-sub' : ''}`}
+              onClick={() => onDrillDown(row)}
+              title={row.hasChildren ? 'Entrar na subestrutura deste componente' : 'Entrar neste componente para cadastrar os filhos dele'}
+            >
+              {row.hasChildren ? 'Ver subestrutura' : 'Abrir nível do filho'}
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <path d="M5.5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="fe-d-sep"/>
       <div className="fe-d-sec">Quantidades e UM</div>
@@ -406,7 +527,8 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
           <label className="fe-d-label">Quantidade</label>
           <input className="fe-d-input" type="number" min={0} step="0.001"
             value={row.quantity}
-            onChange={(e) => onUpdate({ quantity: parseFloat(e.target.value) || 0 })}
+            disabled={Boolean(row.quantityFormula)}
+            onChange={(e) => onUpdate({ quantity: parseFloat(e.target.value) || 0, quantityEdited: true })}
             style={{ textAlign: 'right' }}/>
         </div>
         <div className="fe-d-field">
@@ -578,17 +700,27 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
       <div className="fe-d-row">
         <div className="fe-d-field">
           <label className="fe-d-label">Almoxarifado</label>
-          <input className="fe-d-input" type="number" min={1} value={row.warehouseCode ?? ''}
+          <LookupField<number>
+            value={row.warehouseCode ?? undefined}
+            loader={loadWarehouses}
+            entityLabel="almoxarifado"
             placeholder="Do cadastro do item"
-            onChange={(e) => onUpdate({ warehouseCode: e.target.value ? Number(e.target.value) : null })}
-            style={{ textAlign: 'right' }}/>
+            allowManualCode={false}
+            clearable
+            onChange={(code) => onUpdate({ warehouseCode: code ? Number(code) : null })}
+          />
         </div>
         <div className="fe-d-field">
           <label className="fe-d-label">Almox. de linha</label>
-          <input className="fe-d-input" type="number" min={1} value={row.lineWarehouseCode ?? ''}
+          <LookupField<number>
+            value={row.lineWarehouseCode ?? undefined}
+            loader={loadWarehouses}
+            entityLabel="almoxarifado"
             placeholder="Opcional"
-            onChange={(e) => onUpdate({ lineWarehouseCode: e.target.value ? Number(e.target.value) : null })}
-            style={{ textAlign: 'right' }}/>
+            allowManualCode={false}
+            clearable
+            onChange={(code) => onUpdate({ lineWarehouseCode: code ? Number(code) : null })}
+          />
         </div>
       </div>
       <span className="fe-d-hint">
@@ -605,10 +737,15 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
         </div>
         <div className="fe-d-field">
           <label className="fe-d-label">Centro de custo</label>
-          <input className="fe-d-input" type="number" min={1} value={row.costCenterCode ?? ''}
+          <LookupField<number>
+            value={row.costCenterCode ?? undefined}
+            loader={loadCostCenters}
+            entityLabel="centro de custo"
             placeholder="Opcional"
-            onChange={(e) => onUpdate({ costCenterCode: e.target.value ? Number(e.target.value) : null })}
-            style={{ textAlign: 'right' }}/>
+            allowManualCode={false}
+            clearable
+            onChange={(code) => onUpdate({ costCenterCode: code ? Number(code) : null })}
+          />
         </div>
       </div>
       <span className="fe-d-hint">
@@ -661,12 +798,6 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
       <div className="fe-d-checks">
         <label className="fe-d-check-label">
           <input type="checkbox" className="fe-d-checkbox"
-            checked={row.isActive}
-            onChange={(e) => onUpdate({ isActive: e.target.checked })}/>
-          Ativo
-        </label>
-        <label className="fe-d-check-label">
-          <input type="checkbox" className="fe-d-checkbox"
             checked={row.isCoproduct}
             onChange={(e) => onUpdate({ isCoproduct: e.target.checked })}/>
           Co-produto (saída da ordem)
@@ -677,11 +808,11 @@ const DetailPanel = memo(function DetailPanel({ row, onUpdate, onChildCodeBlur }
             onChange={(e) => onUpdate({ isFixedQty: e.target.checked })}/>
           Quantidade por ordem, não por peça
         </label>
-        <label className="fe-d-check-label">
+        <label className="fe-d-check-label" title="Quando o filho também é um item configurado (PDM), deriva automaticamente a máscara dele a partir das respostas do pai.">
           <input type="checkbox" className="fe-d-checkbox"
             checked={row.inherit}
             onChange={(e) => onUpdate({ inherit: e.target.checked })}/>
-          Herdar o roteiro deste filho
+          Herdar máscara do pai (configuração)
         </label>
         <label className="fe-d-check-label">
           <input type="checkbox" className="fe-d-checkbox"
@@ -748,17 +879,55 @@ export function Vent0210Page(): JSX.Element {
   const [configuradorAberto, setConfiguradorAberto] = useState(false);
   const [versoesAbertas, setVersoesAbertas] = useState(false);
   const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [lookupFilhoAberto, setLookupFilhoAberto] = useState(false);
+  const [empresaNome, setEmpresaNome] = useState<string>(() => lerTenantAtivo()?.name ?? 'Empresa ativa');
   const [problemas, setProblemas]             = useState<string[] | null>(null);
   /** Detalhe recolhido dá a largura inteira para a grade de componentes. */
   const [detalheAberto, setDetalheAberto]     = useState(true);
 
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resolvedChildRef = useRef<Map<string, string>>(new Map());
 
-  const currentLevel      = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1] : null;
-  const currentParentCode = currentLevel?.code ?? rootInfo?.code ?? null;
-  const selectedRow       = rows.find((r) => r.localId === selectedLocalId) ?? null;
-  const dirtyCount        = rows.filter((r) => r.dirty).length;
-  const hasRoot           = currentParentCode !== null;
+  useEffect(() => {
+    let ativo = true;
+    void loadEstablishments()
+      .then((lista) => {
+        if (!ativo || lista.length === 0) return;
+        const tenant = lerTenantAtivo();
+        if (tenant?.name) {
+          setEmpresaNome(tenant.name);
+        } else if (lista.length === 1) {
+          setEmpresaNome(lista[0].label);
+        }
+      })
+      .catch(() => undefined);
+    return () => { ativo = false; };
+  }, []);
+
+  const currentLevel        = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1] : null;
+  const currentParentCode   = currentLevel?.code ?? rootInfo?.code ?? null;
+  const mascaraDoNivelAtual = (breadcrumb.length > 0 ? currentLevel?.mask : rootMascara.trim()) || null;
+  const selectedRow         = rows.find((r) => r.localId === selectedLocalId) ?? null;
+  const dirtyCount          = rows.filter((r) => r.dirty).length;
+  const hasRoot             = currentParentCode !== null;
+
+  const forbiddenCodesForLookup = useMemo(() => {
+    const s = new Set<string>();
+    if (rootInfo?.code) s.add(rootInfo.code.trim().toUpperCase());
+    if (currentParentCode) s.add(currentParentCode.trim().toUpperCase());
+    for (const b of breadcrumb) s.add(b.code.trim().toUpperCase());
+    return s;
+  }, [rootInfo?.code, currentParentCode, breadcrumb]);
+
+  const existingChildCodesForLookup = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) {
+      if (r.localId === selectedLocalId && r.isNew) continue;
+      const c = r.childCode.trim().toUpperCase();
+      if (c) s.add(c);
+    }
+    return s;
+  }, [rows, selectedLocalId]);
 
   // ── load root structure ──────────────────────────────────────────────────────
 
@@ -809,12 +978,26 @@ export function Vent0210Page(): JSX.Element {
     await buscarItemPai(rootCodigo.trim());
   }
 
+  async function confirmarDescarteSeSujo(acao: string): Promise<boolean> {
+    if (dirtyCount === 0) return true;
+    return confirmar({
+      titulo: 'Alterações não salvas',
+      mensagem: `Há ${dirtyCount} alteração(ões) não salva(s) neste nível. ${acao} descarta o que não foi gravado.`,
+      rotulo: 'Descartar e continuar',
+      tom: 'perigo',
+    });
+  }
+
   async function buscarItemPai(codeStr: string) {
     if (!codeStr) return;
+    if (rootInfo && codeStr.trim().toUpperCase() !== rootInfo.code.trim().toUpperCase()) {
+      if (!(await confirmarDescarteSeSujo('Trocar o item pai'))) return;
+    }
     setIsLoading(true);
     setFeedback(null);
     setMaskError('');
     setBreadcrumb([]);
+    resolvedChildRef.current.clear();
     try {
       const info = await findItemByCode(codeStr);
       setRootInfo(info);
@@ -858,17 +1041,38 @@ export function Vent0210Page(): JSX.Element {
     }
   }
 
-  // ── breadcrumb ───────────────────────────────────────────────────────────────
+  // ── breadcrumb & level navigation ───────────────────────────────────────────
 
   async function handleBreadcrumbClick(index: number) {
+    if (!(await confirmarDescarteSeSujo('Voltar de nível'))) return;
+    resolvedChildRef.current.clear();
     if (index === -1) {
       setBreadcrumb([]);
       if (rootInfo) await loadRoot(rootInfo.code, rootMascara || null);
     } else {
+      const destino = breadcrumb[index];
       setBreadcrumb((p) => p.slice(0, index + 1));
-      await loadChildLevel(breadcrumb[index].code, breadcrumb[index].mask);
+      if (destino) await loadChildLevel(destino.code, destino.mask);
     }
   }
+
+  async function handleSubirNivel() {
+    if (breadcrumb.length === 0) return;
+    await handleBreadcrumbClick(breadcrumb.length - 2);
+  }
+
+  // Atalho de teclado Alt+← ou Alt+↑ para subir rapidamente um nível na árvore.
+  useEffect(() => {
+    if (breadcrumb.length === 0) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) {
+        e.preventDefault();
+        void handleSubirNivel();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
 
   // ── drill-down double click ──────────────────────────────────────────────────
 
@@ -904,19 +1108,39 @@ export function Vent0210Page(): JSX.Element {
 
   function handleAddRow() {
     if (!currentParentCode) return;
-    const row = blankRow(currentParentCode, rows);
+    const row = blankRow(currentParentCode, rows, mascaraDoNivelAtual);
     setRows((p) => [...p, row]);
     setSelectedLocalId(row.localId);
+    setDetalheAberto(true);
   }
 
-  function handleDeleteRow(localId: string) {
+  async function handleDeleteRow(localId: string) {
     const row = rows.find((r) => r.localId === localId);
-    setRows((p) => p.filter((r) => r.localId !== localId));
-    if (selectedLocalId === localId) setSelectedLocalId(null);
-    if (row && !row.isNew && row.childCode) {
-      void deleteComponent(row.parentCode, row.childCode, rootMascara || null)
-        .then(() => setFeedback({ type: 'success', msg: 'Componente removido da estrutura.' }))
-        .catch((e) => setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Falha ao remover componente.' }));
+    if (!row) return;
+    if (row.isNew || !row.childCode) {
+      resolvedChildRef.current.delete(localId);
+      setRows((p) => p.filter((r) => r.localId !== localId));
+      if (selectedLocalId === localId) setSelectedLocalId(null);
+      return;
+    }
+    const confirmado = await confirmar({
+      titulo: 'Remover componente da estrutura',
+      mensagem: 'O componente será removido deste item pai e deixará de ser considerado em novas ordens e cálculos do MRP.',
+      assunto: `${row.childCode}${row.childDescription ? ` — ${row.childDescription}` : ''}`,
+      rotulo: 'Remover',
+      tom: 'perigo',
+    });
+    if (!confirmado) return;
+    const mascaraDaLinha = row.parentMask ?? mascaraDoNivelAtual;
+    try {
+      await deleteComponent(row.parentCode, row.childCode, mascaraDaLinha);
+      resolvedChildRef.current.delete(localId);
+      setRows((p) => p.filter((r) => r.localId !== localId));
+      if (selectedLocalId === localId) setSelectedLocalId(null);
+      setTreeMeta((m) => ({ ...m, totalNodes: Math.max(0, m.totalNodes - 1) }));
+      setFeedback({ type: 'success', msg: 'Componente removido da estrutura.' });
+    } catch (e) {
+      setFeedback({ type: 'error', msg: e instanceof Error ? e.message : 'Falha ao remover componente.' });
     }
   }
 
@@ -926,7 +1150,14 @@ export function Vent0210Page(): JSX.Element {
       const target = dir === 'up' ? idx - 1 : idx + 1;
       if (idx < 0 || target < 0 || target >= prev.length) return prev;
       const next = [...prev];
-      [next[idx], next[target]] = [next[target], next[idx]];
+      const atual = next[idx];
+      const vizinho = next[target];
+      const posAtual = atual.position || idx + 1;
+      const posVizinho = vizinho.position || target + 1;
+      const novaPosAtual = posAtual === posVizinho ? target + 1 : posVizinho;
+      const novaPosVizinho = posAtual === posVizinho ? idx + 1 : posAtual;
+      next[idx] = { ...vizinho, position: novaPosVizinho, dirty: true };
+      next[target] = { ...atual, position: novaPosAtual, dirty: true };
       return next;
     });
   }
@@ -937,14 +1168,112 @@ export function Vent0210Page(): JSX.Element {
     );
   }, []);
 
-  /** Ao informar o código do filho, puxa descrição e UM do cadastro do item. */
+  /** Ao informar manualmente o código do filho, puxa descrição e UM sem chamadas redundantes. */
   const handleChildCodeBlur = useCallback((localId: string, code: string) => {
     const trimmed = code.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      resolvedChildRef.current.delete(localId);
+      updateRow(localId, { childDescription: '', stockUnitOfMeasurement: null });
+      return;
+    }
+    if (resolvedChildRef.current.get(localId) === trimmed.toUpperCase()) {
+      return;
+    }
     void findItemByCode(trimmed)
-      .then((info) => updateRow(localId, { childDescription: info.name, unitOfMeasurement: info.unit }))
-      .catch(() => undefined);
+      .then((info) => {
+        resolvedChildRef.current.set(localId, info.code.toUpperCase());
+        setRows((prev) =>
+          prev.map((r) =>
+            r.localId === localId
+              ? {
+                  ...r,
+                  childCode: info.code,
+                  childDescription: info.name,
+                  unitOfMeasurement: info.unit,
+                  stockUnitOfMeasurement: info.unit,
+                  conversionFactor: 1,
+                  quantityStockUom: r.quantity,
+                  health: info.ghost ? 'FANTASMA' : r.health,
+                  dirty: true,
+                }
+              : r,
+          ),
+        );
+      })
+      .catch(() => {
+        resolvedChildRef.current.delete(localId);
+      });
   }, [updateRow]);
+
+  /** Preenche a linha nova atual e cria linhas adicionais quando o usuário marca vários itens no modal. */
+  const handleConfirmarItensDoModal = useCallback((escolhidos: CandidateStructureItem[]) => {
+    if (!currentParentCode || escolhidos.length === 0) {
+      setLookupFilhoAberto(false);
+      return;
+    }
+    setLookupFilhoAberto(false);
+    setFeedback(null);
+
+    setRows((prev) => {
+      const targetIdx = prev.findIndex((r) => r.localId === selectedLocalId && r.isNew);
+      const usados = new Set<string>(forbiddenCodesForLookup);
+      prev.forEach((r, idx) => {
+        if (idx === targetIdx) return;
+        const c = r.childCode.trim().toUpperCase();
+        if (c) usados.add(c);
+      });
+
+      const unicos = escolhidos.filter((item) => {
+        const chave = item.code.trim().toUpperCase();
+        if (!chave || usados.has(chave)) return false;
+        usados.add(chave);
+        return true;
+      });
+      if (unicos.length === 0) return prev;
+
+      const next = [...prev];
+      let rest = unicos;
+      let ultimoLocalId = selectedLocalId;
+
+      if (targetIdx >= 0) {
+        const primeiro = unicos[0];
+        const base = next[targetIdx];
+        next[targetIdx] = {
+          ...base,
+          childCode: primeiro.code,
+          childDescription: primeiro.description,
+          unitOfMeasurement: primeiro.uom,
+          stockUnitOfMeasurement: primeiro.uom,
+          conversionFactor: 1,
+          quantityStockUom: base.quantity,
+          health: primeiro.ghost ? 'FANTASMA' : 'ATIVO',
+          dirty: true,
+        };
+        resolvedChildRef.current.set(base.localId, primeiro.code.toUpperCase());
+        ultimoLocalId = base.localId;
+        rest = unicos.slice(1);
+      }
+
+      for (const item of rest) {
+        const nova = blankRow(currentParentCode, next, mascaraDoNivelAtual);
+        nova.childCode = item.code;
+        nova.childDescription = item.description;
+        nova.unitOfMeasurement = item.uom;
+        nova.stockUnitOfMeasurement = item.uom;
+        nova.conversionFactor = 1;
+        nova.quantityStockUom = nova.quantity;
+        nova.health = item.ghost ? 'FANTASMA' : 'ATIVO';
+        resolvedChildRef.current.set(nova.localId, item.code.toUpperCase());
+        next.push(nova);
+        ultimoLocalId = nova.localId;
+      }
+
+      if (ultimoLocalId) {
+        setTimeout(() => setSelectedLocalId(ultimoLocalId), 0);
+      }
+      return next;
+    });
+  }, [currentParentCode, selectedLocalId, forbiddenCodesForLookup, mascaraDoNivelAtual]);
 
   // ── save ──────────────────────────────────────────────────────────────────────
 
@@ -982,7 +1311,7 @@ export function Vent0210Page(): JSX.Element {
     setFeedback(null);
     setProblemas(null);
     try {
-      const mask = rootMascara.trim() || null;
+      const mask = mascaraDoNivelAtual;
       const created = await Promise.all(newRows.map((r) => createComponent(toPayload(r, mask))));
       const updated = await Promise.all(editRows.map((r) => updateComponent(toPayload(r, mask))));
       const createdMap = new Map(newRows.map((r, i) => [r.localId, created[i]]));
@@ -1054,7 +1383,9 @@ export function Vent0210Page(): JSX.Element {
     setProblemas([...listarProblemas(rows), ...avisos, ...deConfiguracao]);
   }
 
-  function handleLimpar() {
+  async function handleLimpar() {
+    if (!(await confirmarDescarteSeSujo('Limpar a tela'))) return;
+    resolvedChildRef.current.clear();
     setRootInfo(null);
     setRootCodigo('');
     setRootMascara('');
@@ -1066,6 +1397,12 @@ export function Vent0210Page(): JSX.Element {
     setProblemas(null);
     setTreeMeta({ totalLevels: 0, totalNodes: 0 });
   }
+
+  const parentLevelLabel = breadcrumb.length === 0
+    ? undefined
+    : breadcrumb.length === 1
+      ? `${rootInfo?.code ?? rootCodigo}${rootInfo?.name ? ` — ${rootInfo.name}` : ''}`
+      : breadcrumb[breadcrumb.length - 2].label;
 
   const breadcrumbLabel = breadcrumb.length === 0
     ? (rootInfo ? `${rootInfo.code} — ${rootInfo.name}` : '—')
@@ -1192,6 +1529,22 @@ export function Vent0210Page(): JSX.Element {
         .fe-flag.f-fixa    { background: #eaf6f6; color: #1c6a6a; border: 1px solid #bde0e0; }
         .fe-flag.f-fant    { background: #eef0f8; border: 1px solid #ccd2e8; }
         .fe-flag.f-cli     { background: #fdf0e6; color: #8a4a12; border: 1px solid #f0cfae; }
+        .fe-flag.f-herda   { background: #e8f5ee; color: #1b5e36; border: 1px solid #b8dec6; }
+        .fe-flag.f-mps     { background: #fff0f4; color: #9c1f4b; border: 1px solid #f0bfd0; }
+        .fe-flag.f-insp    { background: #eef7ff; color: #1b568c; border: 1px solid #bcd8f4; }
+
+        .fe-level-back { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 6px; border: 1.5px solid #b9dac0; background: #edf7ea; color: #1e5c32; font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600; cursor: pointer; text-transform: none; letter-spacing: 0; transition: background 0.12s, border-color 0.12s; }
+        .fe-level-back:hover:not(:disabled) { background: #dcf0d8; border-color: #2f7d47; }
+        .fe-level-back:disabled { opacity: 0.45; cursor: not-allowed; }
+        .fe-level-pill { font-size: 10.5px; font-weight: 700; color: #1e5c32; background: #e4f3e2; border: 1px solid #bcdcc0; border-radius: 999px; padding: 2px 8px; text-transform: none; letter-spacing: 0; }
+        .fe-drill-btn { display: inline-flex; align-items: center; gap: 3px; height: 21px; padding: 0 6px; border-radius: 5px; border: 1px solid #cfe2cc; background: #f5faf3; color: #4a6b54; font-family: 'Inter', sans-serif; font-size: 10.5px; font-weight: 600; cursor: pointer; flex-shrink: 0; white-space: nowrap; transition: background 0.12s, border-color 0.12s, color 0.12s; }
+        .fe-drill-btn:hover { background: #e2f2df; border-color: #2f7d47; color: #1b562e; }
+        .fe-drill-btn.has-sub { background: #e6f5e8; border-color: #9ed0a8; color: #1c6634; }
+        .fe-drill-btn.has-sub:hover { background: #d2ecd6; border-color: #2f7d47; }
+        .fe-d-level-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+        .fe-level-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 7px; border: 1.5px solid #cde2c8; background: #f4faf2; color: #255734; font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.12s, border-color 0.12s; }
+        .fe-level-btn:hover { background: #e3f3e0; border-color: #2f7d47; }
+        .fe-level-btn.enter.has-sub { background: #e6f5e8; border-color: #8cc898; color: #18582d; }
         .fe-d-hint { display: block; font-size: 10.5px; color: #7a9a84; line-height: 1.4; margin-top: 3px; }
         .fe-d-linkbtn { align-self: flex-start; margin-top: 5px; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #2f7d47; text-decoration: underline; cursor: pointer; }
         .fe-d-linkbtn:hover { color: #1e6030; }
@@ -1202,6 +1555,14 @@ export function Vent0210Page(): JSX.Element {
         .fe-d-input { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1c2b22; outline: none; transition: border-color 0.12s; }
         .fe-d-input:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
         .fe-d-input::placeholder { color: #a9b6ac; font-size: 12px; }
+        .fe-d-input[readonly] { background: #eff4ed; color: #5b6e61; border-color: #dbe8d5; cursor: default; }
+        .fe-d-input-wrap { display: flex; align-items: center; }
+        .fe-d-input-wrap .fe-d-input { border-radius: 7px 0 0 7px; }
+        .fe-d-lookup-btn { height: 31px; width: 31px; flex-shrink: 0; background: #edf5ea; border: 1.5px solid #d4e8cc; border-left: none; border-radius: 0 7px 7px 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2f7d47; transition: background 0.12s, color 0.12s; }
+        .fe-d-lookup-btn:hover:not(:disabled) { background: #ddf0e0; color: #1e6030; }
+        .fe-d-lookup-btn:disabled { opacity: 0.45; cursor: not-allowed; color: #8aaa94; background: #eff4ed; }
+        .fe-right .erp-lookup-control { height: 31px; border: 1.5px solid #d4e8cc; border-radius: 7px; background: #f8fbf6; font-size: 12.5px; padding: 0 8px; }
+        .fe-right .erp-lookup-control:hover:not(:disabled) { border-color: #2f7d47; }
         .fe-d-select { width: 100%; height: 31px; background: #f8fbf6; border: 1.5px solid #d4e8cc; border-radius: 7px; padding: 0 24px 0 9px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: #1c2b22; outline: none; appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg width='9' height='5' viewBox='0 0 9 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3.5 3 3.5-3' stroke='%23789a84' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; transition: border-color 0.12s; }
         .fe-d-select:focus { border-color: #2f7d47; box-shadow: 0 0 0 2px rgba(62,150,84,0.1); }
         .fe-d-row { display: flex; gap: 8px; }
@@ -1295,11 +1656,43 @@ export function Vent0210Page(): JSX.Element {
             <button className="fe-btn fe-btn-ghost" onClick={() => setVersoesAbertas(true)} disabled={!rootInfo} title={rootInfo ? 'Versões aprovadas da estrutura (MBOM / EBOM)' : 'Busque o item pai para ver as versões'}>
               Versões
             </button>
-            <button className="fe-btn fe-btn-danger" onClick={handleLimpar}>
+            <button className="fe-btn fe-btn-danger" onClick={() => void handleLimpar()}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Limpar
             </button>
           </div>
+
+          {breadcrumb.length > 0 && (
+            <div className="fe-action-group">
+              <span className="fe-action-label">Nível {breadcrumb.length + 1}</span>
+              <button
+                type="button"
+                className="fe-btn fe-btn-ghost fe-btn-sm"
+                disabled={isLoading}
+                onClick={() => void handleSubirNivel()}
+                title={parentLevelLabel ? `Voltar para ${parentLevelLabel} (Alt+←)` : 'Voltar ao nível anterior (Alt+←)'}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Voltar nível
+              </button>
+              {breadcrumb.length > 1 && (
+                <button
+                  type="button"
+                  className="fe-btn fe-btn-ghost fe-btn-sm"
+                  disabled={isLoading}
+                  onClick={() => void handleBreadcrumbClick(-1)}
+                  title="Voltar direto para a estrutura do item pai raiz"
+                >
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                    <path d="M11.5 3.5L7 8l4.5 4.5M7.5 3.5L3 8l4.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Item raiz
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* BODY */}
@@ -1415,22 +1808,40 @@ export function Vent0210Page(): JSX.Element {
                 <div className="fe-grid-header">
                   <div className="fe-grid-title">
                     {breadcrumb.length === 0 ? (
-                      <span>Componentes</span>
+                      <>
+                        <span>Componentes</span>
+                        {hasRoot && <span className="fe-level-pill">Nível 1 · Raiz</span>}
+                      </>
                     ) : (
-                      <div className="fe-breadcrumb">
-                        <button className="fe-bc-btn" onClick={() => handleBreadcrumbClick(-1)}>
-                          {rootInfo?.code ?? rootCodigo}
+                      <>
+                        <button
+                          type="button"
+                          className="fe-level-back"
+                          disabled={isLoading}
+                          onClick={() => void handleSubirNivel()}
+                          title={parentLevelLabel ? `Subir um nível para ${parentLevelLabel} (Alt+←)` : 'Subir um nível (Alt+←)'}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                            <path d="M8.5 3L4.5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          Voltar
                         </button>
-                        {breadcrumb.map((crumb, i) => (
-                          <span key={crumb.code} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <span className="fe-bc-sep">›</span>
-                            {i === breadcrumb.length - 1
-                              ? <span className="fe-bc-cur">{crumb.label}</span>
-                              : <button className="fe-bc-btn" onClick={() => handleBreadcrumbClick(i)}>{crumb.label}</button>
-                            }
-                          </span>
-                        ))}
-                      </div>
+                        <span className="fe-level-pill">Nível {breadcrumb.length + 1}</span>
+                        <div className="fe-breadcrumb">
+                          <button type="button" className="fe-bc-btn" onClick={() => void handleBreadcrumbClick(-1)} title="Voltar ao item pai raiz">
+                            {rootInfo?.code ?? rootCodigo}
+                          </button>
+                          {breadcrumb.map((crumb, i) => (
+                            <span key={`${crumb.code}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <span className="fe-bc-sep">›</span>
+                              {i === breadcrumb.length - 1
+                                ? <span className="fe-bc-cur">{crumb.code} — {crumb.label}</span>
+                                : <button type="button" className="fe-bc-btn" onClick={() => void handleBreadcrumbClick(i)}>{crumb.code} — {crumb.label}</button>
+                              }
+                            </span>
+                          ))}
+                        </div>
+                      </>
                     )}
                     <span className="fe-grid-count">{rows.length} item{rows.length !== 1 ? 's' : ''}</span>
                     {dirtyCount > 0 && <span className="fe-dirty-badge">{dirtyCount} não salvo{dirtyCount !== 1 ? 's' : ''}</span>}
@@ -1467,7 +1878,6 @@ export function Vent0210Page(): JSX.Element {
                           <th style={{ width: 70 }}>Perda %</th>
                           <th style={{ width: 104 }}>Situação</th>
                           <th style={{ width: 130 }}>Observações</th>
-                          <th style={{ width: 50, textAlign: 'center' }}>Ativo</th>
                           <th style={{ width: 68 }}>Ações</th>
                         </tr>
                       </thead>
@@ -1477,7 +1887,7 @@ export function Vent0210Page(): JSX.Element {
                           return (
                             <tr
                               key={row.localId}
-                              className={[isSel ? 'sel' : '', !row.isActive ? 'inact' : ''].filter(Boolean).join(' ')}
+                              className={[isSel ? 'sel' : '', row.health === 'INATIVO' ? 'inact' : ''].filter(Boolean).join(' ')}
                               onClick={() => handleRowClick(row.localId)}
                               onDoubleClick={() => handleRowDoubleClick(row)}
                               title="Duplo clique abre a estrutura deste componente" 
@@ -1490,8 +1900,9 @@ export function Vent0210Page(): JSX.Element {
                               <td><div className="fe-td">
                                 <input className="fe-ci"
                                   value={row.childCode || ''}
-                                  onChange={(e) => updateRow(row.localId, { childCode: e.target.value })}
-                                  onBlur={(e) => handleChildCodeBlur(row.localId, e.target.value)}
+                                  readOnly={!row.isNew}
+                                  onChange={(e) => { if (row.isNew) updateRow(row.localId, { childCode: e.target.value }); }}
+                                  onBlur={(e) => { if (row.isNew) handleChildCodeBlur(row.localId, e.target.value); }}
                                   placeholder="Código"
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}
@@ -1500,12 +1911,24 @@ export function Vent0210Page(): JSX.Element {
 
                               <td><div className="fe-td">
                                 <input className="fe-ci" value={row.childDescription}
-                                  onChange={(e) => updateRow(row.localId, { childDescription: e.target.value })}
-                                  placeholder="Descrição"
+                                  readOnly
+                                  placeholder="Descrição do cadastro"
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}
                                   style={{ textOverflow: 'ellipsis' }}/>
-                                {row.hasChildren && <span className="fe-drill">↩</span>}
+                                {!row.isNew && Boolean(row.childCode) && (
+                                  <button
+                                    type="button"
+                                    className={`fe-drill-btn${row.hasChildren ? ' has-sub' : ''}`}
+                                    title={row.hasChildren ? 'Possui subestrutura — clique para abrir os filhos deste componente' : 'Entrar neste componente para cadastrar os filhos dele'}
+                                    onClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}
+                                  >
+                                    {row.hasChildren ? 'Subnível' : 'Nível'}
+                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                      <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  </button>
+                                )}
                               </div></td>
 
                               <td><div className="fe-td" style={{ gap: 3 }}>
@@ -1526,7 +1949,7 @@ export function Vent0210Page(): JSX.Element {
                                   value={row.quantity}
                                   disabled={Boolean(row.quantityFormula)}
                                   title={row.quantityFormula ? `Calculada pela fórmula: ${row.quantityFormula}` : undefined}
-                                  onChange={(e) => updateRow(row.localId, { quantity: parseFloat(e.target.value) || 0 })}
+                                  onChange={(e) => updateRow(row.localId, { quantity: parseFloat(e.target.value) || 0, quantityEdited: true })}
                                   style={{ textAlign: 'right', width: 60 }}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
                                   onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
@@ -1535,6 +1958,8 @@ export function Vent0210Page(): JSX.Element {
                               <td><div className="fe-td">
                                 <input className="fe-ci" type="number" min={0} max={100} step="0.01"
                                   value={row.lossPercentage}
+                                  disabled={Boolean(row.lossFormula)}
+                                  title={row.lossFormula ? `Calculada pela fórmula: ${row.lossFormula}` : undefined}
                                   onChange={(e) => updateRow(row.localId, { lossPercentage: parseFloat(e.target.value) || 0 })}
                                   style={{ textAlign: 'right', width: 55 }}
                                   onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
@@ -1559,13 +1984,6 @@ export function Vent0210Page(): JSX.Element {
                                   onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
                               </div></td>
 
-                              <td><div className="fe-td" style={{ justifyContent: 'center' }}>
-                                <input type="checkbox" className="fe-ck" checked={row.isActive}
-                                  onChange={(e) => updateRow(row.localId, { isActive: e.target.checked })}
-                                  onClick={(e) => { e.stopPropagation(); handleRowClick(row.localId); }}
-                                  onDoubleClick={(e) => { e.stopPropagation(); void handleRowDoubleClick(row); }}/>
-                              </div></td>
-
                               <td><div className="fe-td">
                                 <div className="fe-row-actions">
                                   <button className="fe-ib" title="Abrir a estrutura deste componente"
@@ -1582,7 +2000,7 @@ export function Vent0210Page(): JSX.Element {
                                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                   </button>
                                   <button className="fe-ib rm" title="Remover"
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteRow(row.localId); }}>
+                                    onClick={(e) => { e.stopPropagation(); void handleDeleteRow(row.localId); }}>
                                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
                                   </button>
                                 </div>
@@ -1607,8 +2025,13 @@ export function Vent0210Page(): JSX.Element {
                 </div>
                 <DetailPanel
                   row={selectedRow}
+                  canStepUp={breadcrumb.length > 0}
+                  parentLevelLabel={parentLevelLabel}
                   onUpdate={(patch) => { if (selectedLocalId) updateRow(selectedLocalId, patch); }}
                   onChildCodeBlur={(code) => { if (selectedLocalId) handleChildCodeBlur(selectedLocalId, code); }}
+                  onOpenChildLookup={() => { if (selectedRow?.isNew) setLookupFilhoAberto(true); }}
+                  onDrillDown={(r) => void handleRowDoubleClick(r)}
+                  onStepUp={() => void handleSubirNivel()}
                 />
               </div>
             </div>
@@ -1628,10 +2051,21 @@ export function Vent0210Page(): JSX.Element {
               </div>
             )}
           </div>
-          <div className="fe-footer-stat">Empresa: <strong>GRUPO VENTURE LTDA</strong></div>
+          <div className="fe-footer-stat">Empresa: <strong>{empresaNome}</strong></div>
         </footer>
 
       </div>
+
+      {lookupFilhoAberto && currentParentCode && (
+        <StructureItemLookupModal
+          parentCode={currentParentCode}
+          forbiddenCodes={forbiddenCodesForLookup}
+          existingChildCodes={existingChildCodesForLookup}
+          initialCode={selectedRow?.isNew ? selectedRow.childCode : undefined}
+          onConfirm={handleConfirmarItensDoModal}
+          onClose={() => setLookupFilhoAberto(false)}
+        />
+      )}
 
       {configuradorAberto && rootInfo && (
         <StructureConfiguratorPanel

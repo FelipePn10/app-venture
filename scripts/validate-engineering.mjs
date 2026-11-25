@@ -163,6 +163,24 @@ check('painéis da engenharia fecham com Esc',
   /useEscapeToClose/.test(read('src/components/screens/engenharia/StructureConfiguratorPanel.tsx'))
   && /useEscapeToClose/.test(simulador) && /useEscapeToClose/.test(historico));
 
+// ── VENT0210: lupa multi-seleção no item filho + correções da estrutura ──────
+const bomItemModal = read('src/components/screens/engenharia/StructureItemLookupModal.tsx');
+check('VENT0210 possui lupa no Cód. Filho da aba lateral abrindo modal multi-seleção',
+  /StructureItemLookupModal/.test(vent0210) && /fe-d-lookup-btn/.test(vent0210) && /handleConfirmarItensDoModal/.test(vent0210));
+check('modal de componentes permite seleção múltipla, filtra inativos e fecha com Esc',
+  /useEscapeToClose/.test(bomItemModal) && /selectedCodes/.test(bomItemModal) && /!i\.inactive/.test(bomItemModal));
+check('VENT0210 bloqueia edição de Cód. Filho em componentes já persistidos',
+  /readOnly=\{!row\.isNew\}/.test(vent0210) && /disabled=\{!row\.isNew\}/.test(vent0210));
+check('VENT0210 reordenação troca position e marca dirty',
+  /novaPosAtual/.test(vent0210) && /novaPosVizinho/.test(vent0210));
+check('VENT0210 pede confirmação antes de excluir componente salvo',
+  /Remover componente da estrutura/.test(vent0210));
+check('VENT0210 usa LookupField em almoxarifado e centro de custo e rotula herança de máscara',
+  /loader=\{loadWarehouses\}/.test(vent0210) && /loader=\{loadCostCenters\}/.test(vent0210)
+  && /Herdar máscara do pai/.test(vent0210) && !/Herdar o roteiro deste filho/.test(vent0210));
+check('VENT0210 possui setas e controles de navegação entre níveis da estrutura',
+  /fe-drill-btn/.test(vent0210) && /handleSubirNivel/.test(vent0210) && /fe-d-level-nav/.test(vent0210));
+
 // ── VENT0200: abrir item para alterar ───────────────────────────────────────
 check('VENT0200 abre item existente para alteração', /async function abrirItem/.test(vent0200) && /itemEmEdicao/.test(vent0200));
 check('VENT0200 grava alteração com PUT', /updateItem\(itemEmEdicao/.test(vent0200));
@@ -334,3 +352,5 @@ check('serviço da fila expõe reordenar, apontar, horários e excluir',
 check('fila lê prioridade manual de volta', /priority_override: parseNum/.test(filaSvc));
 
 console.log(`\n${checks.length}/${checks.length} validações de engenharia aprovadas.`);
+
+await import('./test-bom-vent0210.mjs');
